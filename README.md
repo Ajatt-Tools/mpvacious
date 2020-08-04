@@ -1,10 +1,14 @@
 # mpvacious
 Because voracious is bloated.
 
-## Installation
+## Requirements
+* A distribution of GNU/Linux. Preferably Arch-based. (Windows *might* work, but is not officially supported)
+* [Anki](https://wiki.archlinux.org/index.php/Anki)
+* [FFmpeg](https://wiki.archlinux.org/index.php/FFmpeg)
+* The [AnkiConnect](https://ankiweb.net/shared/info/2055492159) plugin
+* curl (you should already have this)
 
-Make sure you have [AnkiConnect](https://ankiweb.net/shared/info/2055492159)
-and [FFmpeg](https://wiki.archlinux.org/index.php/FFmpeg) installed.
+## Installation
 
 If you already have your dotfiles set up according to
 [Arch Wiki recommendations](https://wiki.archlinux.org/index.php/Dotfiles#Tracking_dotfiles_directly_with_Git), execute:
@@ -29,35 +33,52 @@ load("subs2srs/subs2srs.lua")
 Configuration file is located at ```~/.config/mpv/script-opts/subs2srs.conf```
 and should be created by the user.
 
-Available options:
-
-| Name                  | Default value        | Description                                                                                                                                     |
-| ---                   | ---                  | ---                                                                                                                                             |
-| `collection_path`     |                      | Full path to the `collection.media` folder.                                                                                                     |
-| `autoclip`            | `false`              | When mpv starts, automatically copy subs to the clipboard as they appear on screen.                                                             |
-| `nuke_spaces`         | `true`               | Remove all spaces from the subtitle text. Only makes sense for languages without spaces like japanese.                                          |
-| `human_readable_time` | `true`               | Format timestamps according to this pattern: `%dh%02dm%02ds%03dms`. Otherwise use seconds.                                                      |
-| `snapshot_quality`    | `5`                  | 0 = lowest, 100=highest                                                                                                                         |
-| `snapshot_width`      | `-2`                 | A positive integer. If either (but not both) of the width or height parameters is -2, the value will be calculated preserving the aspect-ratio. |
-| `snapshot_height`     | `200`                | Same as `snapshot_width`.                                                                                                                       |
-| `audio_bitrate`       | `18k`                | Sane values are from 16k to 32k.                                                                                                                |
-| `deck_name`           | `Learning`           | The deck will be created if it doesn't exist.                                                                                                   |
-| `model_name`          | `Japanese sentences` | Model names are listed in `Tools -> Manage note types` menu in Anki.                                                                            |
-| `sentence_field`      | `SentKanji`          |                                                                                                                                                 |
-| `audio_field`         | `SentAudio`          |                                                                                                                                                 |
-| `image_field`         | `Image`              |                                                                                                                                                 |
-
 Example configuration file:
 ```
-collection_path=/home/user/.local/share/Anki2/user/collection.media/
-deck_name=sub2srs
-sentence_field=Expression
+# Absolute path to the `collection.media` folder.
+# `~` or `$HOME` are not supported due to mpv limitaions.
+# Replace "user" and "profile" with your own.
+collection_path=/home/user/.local/share/Anki2/profile/collection.media/
+
+# The deck will be created if it doesn't exist. Subdecks are supported.
+deck_name=Bank::subs2srs
+
+# Model names are listed in `Tools -> Manage note types` menu in Anki.
+model_name=Japanese sentences
+
+# Field names as they appear in the selected note type.
+sentence_field=SentKanji
+audio_field=SentAudio
+image_field=Image
+
+# Togglebles. Possble values: `yes` or `no`.
+# When mpv starts, automatically copy subs to the clipboard as they appear on screen.
+# This option can be also toggled with `Ctrl+t`.
+autoclip=no
+# Remove all spaces from the subtitle text.
+# Only makes sense for languages without spaces like japanese.
+nuke_spaces=yes
+# Format timestamps according to this pattern: `%dh%02dm%02ds%03dms`. Use seconds otherwise.
+human_readable_time=yes
+
+# Media quality
+# 0 = lowest, 100=highest
+snapshot_quality=5
+# Sane values are from 16k to 32k.
+audio_bitrate=18k
+
+# Image dimensions
+# If either (but not both) of the width or height parameters is -2,
+# the value will be calculated preserving the aspect-ratio.
+snapshot_width=-2
+snapshot_height=200
 ```
+
 ## Usage
 * `Ctrl+t` toggles `autoclip` option. When enabled, you can use it in
 combination with Yomichan's clipboard monitor. Yomichan Search is activated
 by pressing `Alt+Insert` in your web browser.
-* `Ctrl+e` creates the card using currently visible sub-text.
+* `Ctrl+e` creates a card with currently visible subtitle text on the front.
 * `Ctrl+s` sets the starting line. Supposed to be used when the sentence spans
 multiple subtitle lines. After pressing `Ctrl+s` wait for the next line(s) to
 appear and then press `Ctrl+e` to set the ending line and create the card.
@@ -71,6 +92,7 @@ or similar software to add definitions to the card.
 * https://github.com/mpv-player/mpv/blob/master/player/lua/defaults.lua
 * https://github.com/SenneH/mpv2anki
 * https://github.com/kelciour/mpv-scripts/blob/master/subs2srs.lua
+* https://pastebin.com/M2gBksHT
 
 ## Further hacking
 * https://github.com/ayuryshev/subs2srs
