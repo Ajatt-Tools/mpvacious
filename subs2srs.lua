@@ -15,7 +15,7 @@
 -- * ankiconnect
 
 config = {
-    collection_path = os.getenv("HOME") .. '/.local/share/Anki2/' .. os.getenv("USER") .. '/collection.media/', -- trailing slash is necessary
+    collection_path = os.getenv("HOME") .. '/.local/share/Anki2/' .. os.getenv("USER") .. '/collection.media/',
     autoclip = false,           -- copy subs to the clipboard or not
     nuke_spaces = true,         -- remove all spaces or not
     human_readable_time = true, -- use seconds if false
@@ -48,10 +48,17 @@ config.check_sanity = function()
     if config.snapshot_width  < 1 then config.snapshot_width  = -2 end
     if config.snapshot_height < 1 then config.snapshot_height = -2 end
 
+    if config.snapshot_width  > 800 then config.snapshot_width  = 800 end
+    if config.snapshot_height > 800 then config.snapshot_height = 800 end
+
     if config.snapshot_width < 1 and config.snapshot_height < 1 then
         config.snapshot_width = -2
         config.snapshot_height = 200
         mp.osd_message("`snapshot_width` and `snapshot_height` can't be both less than 1.", 5)
+    end
+
+    if config.snapshot_quality < 0 or config.snapshot_quality > 100 then
+        config.snapshot_quality = 5
     end
 end
 
