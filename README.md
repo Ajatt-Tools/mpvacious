@@ -67,11 +67,11 @@ in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolib
 or similar software to add definitions to the card.
 
 ## Hacking
-https://mpv.io/manual/master/#lua-scripting
-https://github.com/mpv-player/mpv/blob/master/player/lua/defaults.lua
-https://github.com/SenneH/mpv2anki
-https://github.com/kelciour/mpv-scripts/blob/master/subs2srs.lua
+* https://mpv.io/manual/master/#lua-scripting
+* https://github.com/mpv-player/mpv/blob/master/player/lua/defaults.lua
+* https://github.com/SenneH/mpv2anki
+* https://github.com/kelciour/mpv-scripts/blob/master/subs2srs.lua
 
 ## Further hacking
-https://github.com/ayuryshev/subs2srs
-https://github.com/erjiang/subs2srs
+* https://github.com/ayuryshev/subs2srs
+* https://github.com/erjiang/subs2srs
