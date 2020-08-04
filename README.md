@@ -9,13 +9,13 @@ and [FFmpeg](https://wiki.archlinux.org/index.php/FFmpeg) installed.
 If you already have your dotfiles set up according to
 [Arch Wiki recommendations](https://wiki.archlinux.org/index.php/Dotfiles#Tracking_dotfiles_directly_with_Git), execute:
 ```
-config submodule add 'git@github.com:Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
+config submodule add 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
 
 ```
 If not, either proceed to Arch Wiki and come back when you're done, or simply clone the repo:
 
 ```
-$ git clone 'git@github.com:Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
+$ git clone 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
 
 ```
 Open  ```~/.config/mpv/scripts/modules.lua``` and add these lines:
