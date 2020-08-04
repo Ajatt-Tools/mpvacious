@@ -171,6 +171,23 @@ function add_extension(filename, extension)
     return filename .. extension
 end
 
+function get_audio_track_number()
+    local audio_track_number = 0
+    local tracks_count = mp.get_property_number("track-list/count")
+
+    for i = 1, tracks_count do
+        local track_type = mp.get_property(string.format("track-list/%d/type", i))
+        local track_index = mp.get_property_number(string.format("track-list/%d/ff-index", i))
+        local track_selected = mp.get_property(string.format("track-list/%d/selected", i))
+
+        if track_type == "audio" and track_selected == "yes" then
+            audio_track_number = track_index - 1
+            break
+        end
+    end
+    return audio_track_number
+end
+
 ffmpeg.execute = function(args)
     if next(args) ~= nil then
         for i, value in ipairs(ffmpeg.prefix) do
@@ -202,13 +219,14 @@ end
 ffmpeg.create_audio = function(sub, audio_filename)
     local video_path = mp.get_property("path")
     local fragment_path = config.collection_path .. audio_filename
+    local track_number = get_audio_track_number()
 
     ffmpeg.execute{'-vn',
                     '-ss', tostring(sub['start']),
                     '-to', tostring(sub['end']),
                     '-i', video_path,
                     '-map_metadata', '-1',
-                    '-map', 'a',
+                    '-map', string.format("0:a:%d", track_number),
                     '-ac', 1,
                     '-codec:a', 'libopus',
                     '-vbr', 'on',
