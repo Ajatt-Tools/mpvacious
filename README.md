@@ -78,10 +78,10 @@ snapshot_height=200
 
 ## Usage
 * `Ctrl+t` toggles `autoclip` option. When enabled, you can use it in
-combination with Yomichan's clipboard monitor. Yomichan Search is activated
+combination with [Yomichan](https://foosoft.net/projects/yomichan/)'s clipboard monitor. `Yomichan Search` is activated
 by pressing `Alt+Insert` in your web browser.
 * `Ctrl+e` creates a card with currently visible subtitle text on the front.
-* `Ctrl+s` sets the starting line. Supposed to be used when the sentence spans
+* `Ctrl+s` sets the starting line. It is supposed to be used when the sentence spans
 multiple subtitle lines. After pressing `Ctrl+s` wait for the next line(s) to
 appear and then press `Ctrl+e` to set the ending line and create the card.
 
