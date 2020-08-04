@@ -77,13 +77,16 @@ snapshot_height=200
 ```
 
 ## Usage
-* `Ctrl+t` **t**oggles `autoclip` option. When enabled, you can use it in
-combination with [Yomichan](https://foosoft.net/projects/yomichan/)'s clipboard monitor. `Yomichan Search` is activated
-by pressing `Alt+Insert` in your web browser.
+* `Ctrl+t` **t**oggles `autoclip` option.
+When enabled, you can use it in combination with
+[Yomichan](https://foosoft.net/projects/yomichan/)'s clipboard monitor.
+`Yomichan Search` is activated by pressing `Alt+Insert` in your web browser.
 * `Ctrl+e` **e**xports a card with currently visible subtitle text on the front.
-* `Ctrl+s` sets the **s**tarting line. It is supposed to be used when the sentence spans
-multiple subtitle lines. After pressing `Ctrl+s` wait for the next line(s) to
-appear and then press `Ctrl+e` to set the **e**nding line and create the card.
+* `Ctrl+s` sets the **s**tarting line.
+It is supposed to be used when the sentence spans multiple subtitle lines.
+After pressing `Ctrl+s` wait for the next line(s) to appear
+and then press `Ctrl+e` to set the **e**nding line and create the card.
+* `Ctrl+a` **a**borts string concatenation process started by `Ctrl+s`.
 
 After the card is created, you can find it by typing ```tag:subs2srs added:1```
 in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolibri/)
