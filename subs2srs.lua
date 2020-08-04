@@ -39,9 +39,20 @@ clip_autocopy = {}
 ffmpeg = {prefix = {"ffmpeg", "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet"}}
 ankiconnect = {}
 
-if config.collection_path[-1] ~= '/' then
-    -- The user forgot to add a slash at the end of the collection path
-    config.collection_path = config.collection_path .. '/'
+config.check_sanity = function()
+    if config.collection_path[-1] ~= '/' then
+        -- The user forgot to add a slash at the end of the collection path
+        config.collection_path = config.collection_path .. '/'
+    end
+
+    if config.snapshot_width  < 1 then config.snapshot_width  = -2 end
+    if config.snapshot_height < 1 then config.snapshot_height = -2 end
+
+    if config.snapshot_width < 1 and config.snapshot_height < 1 then
+        config.snapshot_width = -2
+        config.snapshot_height = 200
+        mp.osd_message("`snapshot_width` and `snapshot_height` can't be both less than 1.", 5)
+    end
 end
 
 function split_str(str)
@@ -349,10 +360,6 @@ function export_to_anki()
     end
 end
 
-if config.autoclip == true then
-    clip_autocopy.enable()
-end
-
 clip_autocopy.enable = function()
     mp.observe_property("sub-text", "string", set_clipboard)
     mp.osd_message("Clipboard autocopy is enabled.", 1)
@@ -373,6 +380,9 @@ clip_autocopy.toggle = function()
     end
 end
 
+if config.autoclip == true then clip_autocopy.enable() end
+
+config.check_sanity()
 ankiconnect.create_deck_if_doesnt_exist(config.deck_name)
 mp.add_key_binding("ctrl+e", "anki-add-note", export_to_anki)
 mp.add_key_binding("ctrl+s", "set-starting-point", subs.set_starting_point)
