@@ -93,7 +93,7 @@ function remove_text_in_parentheses(str)
 end
 
 function remove_newlines(str)
-    return str:gsub('\r', ''):gsub('%s*\n', '')
+    return str:gsub('\r', ''):gsub('%s*\n', ' ')
 end
 
 function escape_apostrophes(str)
