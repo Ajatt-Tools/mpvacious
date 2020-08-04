@@ -28,8 +28,16 @@ load("subs2srs/subs2srs.lua")
 ```
 If you're using [voidrice](https://github.com/LukeSmithxyz/voidrice), you should [already have it](https://github.com/LukeSmithxyz/voidrice/blob/master/.config/mpv/scripts/modules.lua). In this case only add the last line: ```load("subs2srs/subs2srs.lua")```.
 
+## Updating
+Submodules are updated using standard git commands:
+```
+$ config submodule update --remote --merge
+```
+or
+```
+$ cd ~/.config/mpv/scripts/subs2srs && git pull
+```
 ## Configuration
-
 Configuration file is located at ```~/.config/mpv/script-opts/subs2srs.conf```
 and should be created by the user. If a parameter is not specified
 in the config file, the default value will be used.
