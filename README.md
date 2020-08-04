@@ -14,13 +14,11 @@ If you already have your dotfiles set up according to
 [Arch Wiki recommendations](https://wiki.archlinux.org/index.php/Dotfiles#Tracking_dotfiles_directly_with_Git), execute:
 ```
 $ config submodule add 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
-
 ```
 If not, either proceed to Arch Wiki and come back when you're done, or simply clone the repo:
 
 ```
 $ git clone 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
-
 ```
 Open or create  ```~/.config/mpv/scripts/modules.lua``` and add these lines:
 ```
@@ -101,6 +99,32 @@ After the card is created, you can find it by typing ```tag:subs2srs added:1```
 in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolibri/)
 or similar software to add definitions to the card.
 
+## Additional mpv key bindings
+I recommend adding these lines to your ```~/.config/mpv/input.conf```
+for smoother experience.
+```
+# vim-like seeking
+l seek 5
+h seek -5
+j seek -60
+k seek 60
+
+# Cycle between subtitle files
+K cycle sub
+J cycle sub down
+
+# Skip to previous/next subtitle line
+H no-osd sub-seek -1
+L no-osd sub-seek 1
+
+# Add/subtract 50 ms delay from subs
+Z add sub-delay +0.05
+z add sub-delay -0.05
+
+# Adjust timing to previous/next subtitle
+X sub-step 1
+x sub-step -1
+```
 ## Hacking
 * https://mpv.io/manual/master/#lua-scripting
 * https://github.com/mpv-player/mpv/blob/master/player/lua/defaults.lua
