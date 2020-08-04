@@ -33,7 +33,8 @@ If you're using [voidrice](https://github.com/LukeSmithxyz/voidrice), you should
 ## Configuration
 
 Configuration file is located at ```~/.config/mpv/script-opts/subs2srs.conf```
-and should be created by the user.
+and should be created by the user. If a parameter is not specified
+in the config file, the default value will be used.
 
 Example configuration file:
 ```
@@ -76,6 +77,14 @@ snapshot_width=-2
 snapshot_height=200
 ```
 
+Key bindings are configured in ```~/.config/mpv/input.conf```.
+This step is not necessary.
+```
+Ctrl+e script-binding anki-export-note
+Ctrl+s script-binding set-starting-point
+Ctrl+a script-binding abort-multiline-export
+Ctrl+t script-binding toggle-sub-autocopy
+```
 ## Usage
 * `Ctrl+t` **t**oggles `autoclip` option.
 When enabled, you can use it in combination with

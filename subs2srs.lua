@@ -392,7 +392,7 @@ if config.autoclip == true then clip_autocopy.enable() end
 
 config.check_sanity()
 ankiconnect.create_deck_if_doesnt_exist(config.deck_name)
-mp.add_key_binding("ctrl+e", "anki-add-note", export_to_anki)
+mp.add_key_binding("ctrl+e", "anki-export-note", export_to_anki)
 mp.add_key_binding("ctrl+s", "set-starting-point", subs.set_starting_point)
 mp.add_key_binding("ctrl+a", "abort-multiline-export", subs.clear)
 mp.add_key_binding("ctrl+t", "toggle-sub-autocopy", clip_autocopy.toggle)
