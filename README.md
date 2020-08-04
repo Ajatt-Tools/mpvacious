@@ -39,7 +39,7 @@ in the config file, the default value will be used.
 Example configuration file:
 ```
 # Absolute path to the `collection.media` folder.
-# `~` or `$HOME` are not supported due to mpv limitaions.
+# `~` or `$HOME` are not supported due to mpv limitations.
 # Replace "user" and "profile" with your own.
 collection_path=/home/user/.local/share/Anki2/profile/collection.media/
 
@@ -59,7 +59,7 @@ image_field=Image
 # This option can be also toggled with `Ctrl+t`.
 autoclip=no
 # Remove all spaces from the subtitle text.
-# Only makes sense for languages without spaces like japanese.
+# Only makes sense for languages without spaces like Japanese.
 nuke_spaces=yes
 # Format timestamps according to this pattern: `%dh%02dm%02ds%03dms`. Use seconds otherwise.
 human_readable_time=yes
