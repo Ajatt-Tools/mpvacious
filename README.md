@@ -1,5 +1,5 @@
 # mpvacious
-
+Because voracious is bloated.
 
 ## Installation
 
@@ -56,7 +56,7 @@ sentence_field=Expression
 ## Usage
 * `Ctrl+t` toggles `autoclip` option. When enabled, you can use it in
 combination with Yomichan's clipboard monitor. Yomichan Search is activated
-by pressing `Alt+Insert` in a browser.
+by pressing `Alt+Insert` in your web browser.
 * `Ctrl+e` creates the card using currently visible sub-text.
 * `Ctrl+s` sets the starting line. Supposed to be used when the sentence spans
 multiple subtitle lines. After pressing `Ctrl+s` wait for the next line(s) to
@@ -65,3 +65,13 @@ appear and then press `Ctrl+e` to set the ending line and create the card.
 After the card is created, you can find it by typing ```tag:subs2srs added:1```
 in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolibri/)
 or similar software to add definitions to the card.
+
+## Hacking
+https://mpv.io/manual/master/#lua-scripting
+https://github.com/mpv-player/mpv/blob/master/player/lua/defaults.lua
+https://github.com/SenneH/mpv2anki
+https://github.com/kelciour/mpv-scripts/blob/master/subs2srs.lua
+
+## Further hacking
+https://github.com/ayuryshev/subs2srs
+https://github.com/erjiang/subs2srs
