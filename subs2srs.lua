@@ -216,7 +216,7 @@ ankiconnect.execute = function(request)
     local request_json, error = utils.format_json(request)
 
     if error ~= nil or request_json == "null" then
-        print("Couldn't parse request.")
+        mp.msg.error("Couldn't parse request.")
         return
     end
 
@@ -270,7 +270,7 @@ ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filena
     local ret = ankiconnect.execute(args)
 
     if ret.status ~= 0 then
-        print("Error: Ankiconnect isn't running.")
+        mp.msg.error("Error: Ankiconnect isn't running.")
         mp.osd_message("Error: Ankiconnect isn't running.", 1)
         return
     end
@@ -314,7 +314,7 @@ subs.get = function()
     }
 
     if sub['start'] > sub['end'] then
-        print("First line can't start later than last one ends.")
+        mp.msg.warn("First line can't start later than last one ends.")
         return nil
     end
 
@@ -356,7 +356,8 @@ function export_to_anki()
 
         ankiconnect.add_note(sub['text'], audio_filename, snapshot_filename)
     else
-        print("Nothing to export.")
+        mp.msg.warn("Nothing to export.")
+        mp.osd_message("Nothing to export.", 1)
     end
 end
 
