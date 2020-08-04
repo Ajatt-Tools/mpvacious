@@ -22,12 +22,14 @@ If not, either proceed to Arch Wiki and come back when you're done, or simply cl
 $ git clone 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
 
 ```
-Open  ```~/.config/mpv/scripts/modules.lua``` and add these lines:
+Open or create  ```~/.config/mpv/scripts/modules.lua``` and add these lines:
 ```
 local mpv_scripts_dir_path = os.getenv("HOME") ..  "/.config/mpv/scripts/"
 function load(relative_path) dofile(mpv_scripts_dir_path .. relative_path) end
 load("subs2srs/subs2srs.lua")
 ```
+If you're using [voidrice](https://github.com/LukeSmithxyz/voidrice), you should [already have it](https://github.com/LukeSmithxyz/voidrice/blob/master/.config/mpv/scripts/modules.lua). In this case only add the last line: ```load("subs2srs/subs2srs.lua")```.
+
 ## Configuration
 
 Configuration file is located at ```~/.config/mpv/script-opts/subs2srs.conf```
