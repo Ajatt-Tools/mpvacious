@@ -13,7 +13,7 @@ Because voracious is bloated.
 If you already have your dotfiles set up according to
 [Arch Wiki recommendations](https://wiki.archlinux.org/index.php/Dotfiles#Tracking_dotfiles_directly_with_Git), execute:
 ```
-config submodule add 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
+$ config submodule add 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
 
 ```
 If not, either proceed to Arch Wiki and come back when you're done, or simply clone the repo:
