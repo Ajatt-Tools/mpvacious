@@ -2,8 +2,9 @@
 Because voracious is bloated.
 
 ## Requirements
-* A [distribution](https://www.gnu.org/distros/free-distros.html) of [GNU/Linux](https://www.gnu.org/gnu/about-gnu.html).
-Preferably [Arch-based](https://www.parabola.nu/). (Windows *might* work, but is not officially supported)
+* A [distribution](https://www.gnu.org/distros/free-distros.html) of
+[GNU/Linux](https://www.gnu.org/gnu/about-gnu.html).
+Preferably [Arch-based](https://www.parabola.nu/).
 * [Anki](https://wiki.archlinux.org/index.php/Anki)
 * [FFmpeg](https://wiki.archlinux.org/index.php/FFmpeg)
 * The [AnkiConnect](https://ankiweb.net/shared/info/2055492159) plugin
@@ -27,7 +28,9 @@ local mpv_scripts_dir_path = os.getenv("HOME") ..  "/.config/mpv/scripts/"
 function load(relative_path) dofile(mpv_scripts_dir_path .. relative_path) end
 load("subs2srs/subs2srs.lua")
 ```
-If you're using [voidrice](https://github.com/LukeSmithxyz/voidrice), you should [already have it](https://github.com/LukeSmithxyz/voidrice/blob/master/.config/mpv/scripts/modules.lua). In this case only add the last line: ```load("subs2srs/subs2srs.lua")```.
+If you're using [voidrice](https://github.com/LukeSmithxyz/voidrice),
+you should [already have it](https://github.com/LukeSmithxyz/voidrice/blob/master/.config/mpv/scripts/modules.lua).
+In this case only add the last line: ```load("subs2srs/subs2srs.lua")```.
 
 ## Updating
 Submodules are updated using standard git commands:
@@ -62,13 +65,15 @@ audio_field=SentAudio
 image_field=Image
 
 # Togglebles. Possble values: `yes` or `no`.
-# When mpv starts, automatically copy subs to the clipboard as they appear on screen.
+# When mpv starts, automatically copy subs to the clipboard
+# as they appear on screen.
 # This option can be also toggled with `Ctrl+t`.
 autoclip=no
 # Remove all spaces from the subtitle text.
 # Only makes sense for languages without spaces like Japanese.
 nuke_spaces=yes
-# Format timestamps according to this pattern: `%dh%02dm%02ds%03dms`. Use seconds otherwise.
+# Format timestamps according to this pattern: `%dh%02dm%02ds%03dms`.
+# Use seconds otherwise.
 human_readable_time=yes
 
 # Media quality
@@ -83,26 +88,26 @@ audio_bitrate=18k
 snapshot_width=-2
 snapshot_height=200
 ```
-
 Key bindings are configured in ```~/.config/mpv/input.conf```.
 This step is not necessary.
 ```
 Ctrl+e script-binding anki-export-note
 Ctrl+s script-binding set-starting-point
-Ctrl+a script-binding abort-multiline-export
+Ctrl+r script-binding reset-starting-point
 Ctrl+t script-binding toggle-sub-autocopy
 ```
 ## Usage
-* `Ctrl+t` **t**oggles `autoclip` option.
+* `Ctrl+t` - **T**oggles the `autoclip` option.
 When enabled, you can use it in combination with
 [Yomichan](https://foosoft.net/projects/yomichan/)'s clipboard monitor.
 `Yomichan Search` is activated by pressing `Alt+Insert` in your web browser.
-* `Ctrl+e` **e**xports a card with currently visible subtitle text on the front.
-* `Ctrl+s` sets the **s**tarting line.
-It is supposed to be used when the sentence spans multiple subtitle lines.
-After pressing `Ctrl+s` wait for the next line(s) to appear
+* `Ctrl+e` - **E**xports a card with the currently visible subtitle line on the front.
+* `Ctrl+s` - Sets the **s**tarting line.
+It is supposed to be used when a sentence spans multiple subtitle lines.
+After pressing `Ctrl+s`, wait for the next line(s) to appear
 and then press `Ctrl+e` to set the **e**nding line and create the card.
-* `Ctrl+a` **a**borts string concatenation process started by `Ctrl+s`.
+* `Ctrl+r` - If you pressed `Ctrl+s` but changed your mind,
+it **r**esets the starting line.
 
 After the card is created, you can find it by typing ```tag:subs2srs added:1```
 in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolibri/)
