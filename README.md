@@ -2,7 +2,8 @@
 Because voracious is bloated.
 
 ## Requirements
-* A distribution of GNU/Linux. Preferably Arch-based. (Windows *might* work, but is not officially supported)
+* A [distribution](https://www.gnu.org/distros/free-distros.html) of [GNU/Linux](https://www.gnu.org/gnu/about-gnu.html).
+Preferably [Arch-based](https://www.parabola.nu/). (Windows *might* work, but is not officially supported)
 * [Anki](https://wiki.archlinux.org/index.php/Anki)
 * [FFmpeg](https://wiki.archlinux.org/index.php/FFmpeg)
 * The [AnkiConnect](https://ankiweb.net/shared/info/2055492159) plugin
