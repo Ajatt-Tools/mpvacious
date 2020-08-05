@@ -105,9 +105,8 @@ function escape_quotes(str)
 end
 
 function copy_to_clipboard(text)
-    text = escape_apostrophes(text)
-    text = escape_quotes(text)
-    os.execute("printf -- '%s\n' '" .. text .. "' | xclip -selection clipboard &")
+    local toclip_path = os.getenv("HOME") .. '/.config/mpv/scripts/subs2srs/toclip.sh'
+    mp.commandv("run", "sh", toclip_path, text)
 end
 
 function set_clipboard(name, sub)
