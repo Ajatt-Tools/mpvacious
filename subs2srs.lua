@@ -359,11 +359,19 @@ end
 subs.set_starting_point = function()
     subs.list = {}
     mp.observe_property("sub-text", "string", subs.append)
+
+    local starting_point = seconds_to_human_readable_time(subs.get_current()['start'])
+    mp.osd_message("Starting point is set to " .. starting_point, 2)
 end
 
 subs.clear = function()
     mp.unobserve_property(subs.append)
     subs.list = {}
+end
+
+subs.reset_starting_point = function()
+    subs.clear()
+    mp.osd_message("Starting point is reset.", 2)
 end
 
 function export_to_anki()
@@ -411,5 +419,5 @@ config.check_sanity()
 ankiconnect.create_deck_if_doesnt_exist(config.deck_name)
 mp.add_key_binding("ctrl+e", "anki-export-note", export_to_anki)
 mp.add_key_binding("ctrl+s", "set-starting-point", subs.set_starting_point)
-mp.add_key_binding("ctrl+a", "abort-multiline-export", subs.clear)
+mp.add_key_binding("ctrl+r", "reset-starting-point", subs.reset_starting_point)
 mp.add_key_binding("ctrl+t", "toggle-sub-autocopy", clip_autocopy.toggle)
