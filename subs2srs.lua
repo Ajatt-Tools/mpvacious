@@ -320,7 +320,7 @@ subs.get_current = function()
     local sub_delay = mp.get_property_native("sub-delay")
 
     return {
-        ['text'] = trim(sub_text),
+        ['text']   = trim(sub_text),
         ['start']  = mp.get_property_number("sub-start") + sub_delay,
         ['end']    = mp.get_property_number("sub-end")   + sub_delay
     }
