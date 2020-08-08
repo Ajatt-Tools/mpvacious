@@ -363,7 +363,8 @@ subs.set_starting_point = function()
     subs.list = {}
     mp.observe_property("sub-text", "string", subs.append)
 
-    local starting_point = seconds_to_human_readable_time(subs.get_current()['start'])
+    local starting_point = subs.get_current()['start']
+    starting_point = seconds_to_human_readable_time(starting_point)
     mp.osd_message("Starting point is set to " .. starting_point, 2)
 end
 
