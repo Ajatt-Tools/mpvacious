@@ -89,7 +89,10 @@ function remove_text_in_brackets(str)
 end
 
 function remove_text_in_parentheses(str)
-    return str:gsub('%b()',''):gsub('（[^(）)]-）','') -- remove text like （泣き声） or （ドアの開く音）
+    -- Remove text like （泣き声） or （ドアの開く音）
+    -- Note: the modifier `-´ matches zero or more occurrences.
+    -- However, instead of matching the longest sequence, it matches the shortest one.
+    return str:gsub('%b()',''):gsub('（.-）','')
 end
 
 function remove_newlines(str)
