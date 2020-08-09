@@ -88,6 +88,11 @@ audio_bitrate=18k
 snapshot_width=-2
 snapshot_height=200
 ```
+Note that by default mpvacious assumes that "user" and "profile" are equal.
+So if your collection path looks like this:
+`/home/john/.local/share/Anki2/john/collection.media/`
+then you don't need to specify `collection_path` in the config.
+
 Key bindings are configured in ```~/.config/mpv/input.conf```.
 This step is not necessary.
 ```
