@@ -15,7 +15,7 @@
 -- * ankiconnect
 
 config = {
-    collection_path = os.getenv("HOME") .. '/.local/share/Anki2/' .. os.getenv("USER") .. '/collection.media/',
+    collection_path = string.format('%s/.local/share/Anki2/%s/collection.media/', os.getenv("HOME"), os.getenv("USER")),
     autoclip = false,           -- copy subs to the clipboard or not
     nuke_spaces = true,         -- remove all spaces or not
     human_readable_time = true, -- use seconds if false
@@ -160,11 +160,12 @@ function construct_filename(sub)
     filename = remove_text_in_brackets(filename)
     filename = remove_special_characters(filename)
 
-    filename = filename
-    .. '_'
-    .. format_time(sub['start'])
-    .. '-'
-    .. format_time(sub['end'])
+    filename = string.format(
+        '%s_(%s-%s)',
+        filename,
+        format_time(sub['start']),
+        format_time(sub['end'])
+    )
 
     return filename
 end
