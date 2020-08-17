@@ -191,6 +191,15 @@ function get_audio_track_number()
     return audio_track_number
 end
 
+function sub_rewind()
+    pcall(
+        function ()
+            local sub_start_time = subs.get_current()['start']
+            mp.commandv('seek', sub_start_time, 'absolute')
+        end
+    )
+end
+
 ffmpeg.execute = function(args)
     if next(args) ~= nil then
         for i, value in ipairs(ffmpeg.prefix) do
@@ -432,3 +441,4 @@ mp.add_key_binding("ctrl+e", "anki-export-note", export_to_anki)
 mp.add_key_binding("ctrl+s", "set-starting-point", subs.set_starting_point)
 mp.add_key_binding("ctrl+r", "reset-starting-point", subs.reset_starting_point)
 mp.add_key_binding("ctrl+t", "toggle-sub-autocopy", clip_autocopy.toggle)
+mp.add_key_binding("ctrl+h", "sub-rewind", sub_rewind)

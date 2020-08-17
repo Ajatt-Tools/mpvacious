@@ -100,6 +100,7 @@ Ctrl+e script-binding anki-export-note
 Ctrl+s script-binding set-starting-point
 Ctrl+r script-binding reset-starting-point
 Ctrl+t script-binding toggle-sub-autocopy
+Ctrl+h script-binding sub-rewind
 ```
 ## Usage
 * `Ctrl+t` - **T**oggles the `autoclip` option.
@@ -113,6 +114,7 @@ After pressing `Ctrl+s`, wait for the next line(s) to appear
 and then press `Ctrl+e` to set the **e**nding line and create the card.
 * `Ctrl+r` - If you pressed `Ctrl+s` but changed your mind,
 it **r**esets the starting line.
+* Ctrl+h - Seeks to the starting point of the currently visible subtitle.
 
 After the card is created, you can find it by typing ```tag:subs2srs added:1```
 in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolibri/)
