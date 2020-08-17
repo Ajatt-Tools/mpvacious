@@ -364,9 +364,15 @@ subs.set_starting_point = function()
     subs.list = {}
     mp.observe_property("sub-text", "string", subs.append)
 
-    local starting_point = subs.get_current()['start']
-    starting_point = seconds_to_human_readable_time(starting_point)
-    mp.osd_message("Starting point is set to " .. starting_point, 2)
+    local current_sub = subs.get_current()
+
+    if current_sub ~= nil then
+        local starting_point = current_sub['start']
+        starting_point = seconds_to_human_readable_time(starting_point)
+        mp.osd_message("Starting point is set to " .. starting_point, 2)
+    else
+        mp.osd_message("There's no visible subtitle.", 2)
+    end
 end
 
 subs.clear = function()
