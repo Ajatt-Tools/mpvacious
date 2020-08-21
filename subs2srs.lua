@@ -30,9 +30,11 @@ config = {
     image_field = "Image",
 }
 
-utils = require 'mp.utils'
-require 'mp.options'
-read_options(config, "subs2srs")
+utils = require('mp.utils')
+msg = require('mp.msg')
+mpopt = require('mp.options')
+
+mpopt.read_options(config, "subs2srs")
 
 subs = {list = {}}
 clip_autocopy = {}
@@ -74,6 +76,10 @@ end
 
 function is_emptytable(tab)
     return tab == nil or next(tab) == nil
+end
+
+function add_extension(filename, extension)
+    return filename .. extension
 end
 
 function remove_extension(filename)
@@ -170,10 +176,6 @@ function construct_filename(sub)
     return filename
 end
 
-function add_extension(filename, extension)
-    return filename .. extension
-end
-
 function get_audio_track_number()
     local audio_track_number = 0
     local tracks_count = mp.get_property_number("track-list/count")
@@ -219,11 +221,11 @@ ffmpeg.create_snapshot = function(sub, snapshot_filename)
                     '-ss', timestamp,
                     '-i', video_path,
                     '-vcodec', 'libwebp',
-                    '-lossless', 0,
-                    '-compression_level', 6,
-                    '-qscale:v', config.snapshot_quality,
-                    '-vf', 'scale=' .. config.snapshot_width .. ':' .. config.snapshot_height,
-                    '-vframes', 1,
+                    '-lossless', '0',
+                    '-compression_level', '6',
+                    '-qscale:v', tostring(config.snapshot_quality),
+                    '-vf', string.format('scale=%d:%d', config.snapshot_width, config.snapshot_height),
+                    '-vframes', '1',
                     snapshot_path
     }
 end
@@ -239,12 +241,12 @@ ffmpeg.create_audio = function(sub, audio_filename)
                     '-i', video_path,
                     '-map_metadata', '-1',
                     '-map', string.format("0:a:%d", track_number),
-                    '-ac', 1,
+                    '-ac', '1',
                     '-codec:a', 'libopus',
                     '-vbr', 'on',
-                    '-compression_level', 10,
+                    '-compression_level', '10',
                     '-application', 'voip',
-                    '-b:a', config.audio_bitrate,
+                    '-b:a', tostring(config.audio_bitrate),
                     fragment_path
     }
 end
@@ -253,7 +255,7 @@ ankiconnect.execute = function(request)
     local request_json, error = utils.format_json(request)
 
     if error ~= nil or request_json == "null" then
-        mp.msg.error("Couldn't parse request.")
+        msg.error("Couldn't parse request.")
         return
     end
 
@@ -307,7 +309,7 @@ ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filena
     local ret = ankiconnect.execute(args)
 
     if ret.status ~= 0 then
-        mp.msg.error("Error: Ankiconnect isn't running.")
+        msg.error("Error: Ankiconnect isn't running.")
         mp.osd_message("Error: Ankiconnect isn't running.", 1)
         return
     end
@@ -351,7 +353,7 @@ subs.get = function()
     }
 
     if sub['start'] > sub['end'] then
-        mp.msg.warn("First line can't start later than last one ends.")
+        msg.warn("First line can't start later than last one ends.")
         return nil
     end
 
@@ -408,7 +410,7 @@ function export_to_anki()
 
         ankiconnect.add_note(sub['text'], audio_filename, snapshot_filename)
     else
-        mp.msg.warn("Nothing to export.")
+        msg.warn("Nothing to export.")
         mp.osd_message("Nothing to export.", 1)
     end
 end
