@@ -14,7 +14,7 @@
 -- * ffmpeg
 -- * ankiconnect
 
-config = {
+local config = {
     collection_path = string.format('%s/.local/share/Anki2/%s/collection.media/', os.getenv("HOME"), os.getenv("USER")),
     autoclip = false,           -- copy subs to the clipboard or not
     nuke_spaces = true,         -- remove all spaces or not
@@ -30,18 +30,19 @@ config = {
     image_field = "Image",
 }
 
-utils = require('mp.utils')
-msg = require('mp.msg')
-mpopt = require('mp.options')
+local utils = require('mp.utils')
+local msg = require('mp.msg')
+local mpopt = require('mp.options')
 
 mpopt.read_options(config, "subs2srs")
 
-subs = {list = {}}
-clip_autocopy = {}
-ffmpeg = {prefix = {"ffmpeg", "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet"}}
-ankiconnect = {}
+local subs
+local clip_autocopy
+local ffmpeg
+local ankiconnect
 
-config.check_sanity = function()
+
+local function check_config_sanity()
     if config.collection_path[-1] ~= '/' then
         -- The user forgot to add a slash at the end of the collection path
         config.collection_path = config.collection_path .. '/'
@@ -64,70 +65,70 @@ config.check_sanity = function()
     end
 end
 
-function split_str(str)
+local function split_str(str)
     t = {}
     str:gsub('[^%s]+', function(c) table.insert(t,c) end)
     return t
 end
 
-function is_emptystring(str)
+local function is_emptystring(str)
     return str == nil or str == ''
 end
 
-function is_emptytable(tab)
+local function is_emptytable(tab)
     return tab == nil or next(tab) == nil
 end
 
-function add_extension(filename, extension)
+local function add_extension(filename, extension)
     return filename .. extension
 end
 
-function remove_extension(filename)
+local function remove_extension(filename)
     return filename:gsub('%.%w+$','')
 end
 
-function remove_special_characters(str)
+local function remove_special_characters(str)
     return str:gsub('[%c%p%s]','')
 end
 
-function remove_text_in_brackets(str)
+local function remove_text_in_brackets(str)
     return str:gsub('%b[]','')
 end
 
-function remove_text_in_parentheses(str)
+local function remove_text_in_parentheses(str)
     -- Remove text like （泣き声） or （ドアの開く音）
     -- Note: the modifier `-´ matches zero or more occurrences.
     -- However, instead of matching the longest sequence, it matches the shortest one.
     return str:gsub('%b()',''):gsub('（.-）','')
 end
 
-function remove_newlines(str)
+local function remove_newlines(str)
     return str:gsub('\r', ''):gsub('%s*\n', ' ')
 end
 
-function escape_apostrophes(str)
+local function escape_apostrophes(str)
     return str:gsub("'", "&apos;")
 end
 
-function escape_quotes(str)
+local function escape_quotes(str)
     return str:gsub('"', '&quot;')
 end
 
-function copy_to_clipboard(text)
+local function copy_to_clipboard(text)
     local toclip_path = os.getenv("HOME") .. '/.config/mpv/scripts/subs2srs/toclip.sh'
     mp.commandv("run", "sh", toclip_path, text)
 end
 
-function set_clipboard(name, sub)
+local function set_clipboard(name, sub)
     if is_emptystring(sub) then return end
     copy_to_clipboard(sub)
 end
 
-function contains_non_latin_letters(str)
+local function contains_non_latin_letters(str)
     return str:match("[^%c%p%s%w]")
 end
 
-function trim(str)
+local function trim(str)
     str = remove_text_in_parentheses(str)
     str = remove_newlines(str)
     str = escape_apostrophes(str)
@@ -142,7 +143,7 @@ function trim(str)
     return str
 end
 
-function seconds_to_human_readable_time(time)
+local function seconds_to_human_readable_time(time)
     local hours = math.floor(time / 3600)
     local mins = math.floor(time / 60) % 60
     local secs = math.floor(time % 60)
@@ -151,7 +152,7 @@ function seconds_to_human_readable_time(time)
     return string.format("%dh%02dm%02ds%03dms", hours, mins, secs, milliseconds)
 end
 
-function format_time(time)
+local function format_time(time)
     if config.human_readable_time == true then
         return seconds_to_human_readable_time(time)
     else
@@ -159,7 +160,7 @@ function format_time(time)
     end
 end
 
-function construct_filename(sub)
+local function construct_filename(sub)
     local filename = mp.get_property("filename") -- filename without path
 
     filename = remove_extension(filename)
@@ -176,7 +177,7 @@ function construct_filename(sub)
     return filename
 end
 
-function get_audio_track_number()
+local function get_audio_track_number()
     local audio_track_number = 0
     local tracks_count = mp.get_property_number("track-list/count")
 
@@ -193,7 +194,7 @@ function get_audio_track_number()
     return audio_track_number
 end
 
-function sub_rewind()
+local function sub_rewind()
     pcall(
         function ()
             local sub_start_time = subs.get_current()['start']
@@ -201,6 +202,8 @@ function sub_rewind()
         end
     )
 end
+
+ffmpeg = {prefix = {"ffmpeg", "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet"}}
 
 ffmpeg.execute = function(args)
     if next(args) ~= nil then
@@ -250,6 +253,8 @@ ffmpeg.create_audio = function(sub, audio_filename)
                     fragment_path
     }
 end
+
+ankiconnect = {}
 
 ankiconnect.execute = function(request)
     local request_json, error = utils.format_json(request)
@@ -325,6 +330,8 @@ ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filena
     end
 end
 
+subs = {list = {}}
+
 subs.get_current = function()
     local sub_text = mp.get_property("sub-text")
 
@@ -396,24 +403,8 @@ subs.reset_starting_point = function()
     mp.osd_message("Starting point is reset.", 2)
 end
 
-function export_to_anki()
-    local sub = subs.get()
-    subs.clear()
 
-    if sub ~= nil then
-        local filename = construct_filename(sub)
-        local snapshot_filename = add_extension(filename, '.webp')
-        local audio_filename = add_extension(filename, '.ogg')
-
-        ffmpeg.create_snapshot(sub, snapshot_filename)
-        ffmpeg.create_audio(sub, audio_filename)
-
-        ankiconnect.add_note(sub['text'], audio_filename, snapshot_filename)
-    else
-        msg.warn("Nothing to export.")
-        mp.osd_message("Nothing to export.", 1)
-    end
-end
+clip_autocopy = {}
 
 clip_autocopy.enable = function()
     mp.observe_property("sub-text", "string", set_clipboard)
@@ -435,9 +426,28 @@ clip_autocopy.toggle = function()
     end
 end
 
+local function export_to_anki()
+    local sub = subs.get()
+    subs.clear()
+
+    if sub ~= nil then
+        local filename = construct_filename(sub)
+        local snapshot_filename = add_extension(filename, '.webp')
+        local audio_filename = add_extension(filename, '.ogg')
+
+        ffmpeg.create_snapshot(sub, snapshot_filename)
+        ffmpeg.create_audio(sub, audio_filename)
+
+        ankiconnect.add_note(sub['text'], audio_filename, snapshot_filename)
+    else
+        msg.warn("Nothing to export.")
+        mp.osd_message("Nothing to export.", 1)
+    end
+end
+
 if config.autoclip == true then clip_autocopy.enable() end
 
-config.check_sanity()
+check_config_sanity()
 ankiconnect.create_deck_if_doesnt_exist(config.deck_name)
 mp.add_key_binding("ctrl+e", "anki-export-note", export_to_anki)
 mp.add_key_binding("ctrl+s", "set-starting-point", subs.set_starting_point)
