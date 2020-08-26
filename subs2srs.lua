@@ -41,6 +41,8 @@ local clip_autocopy
 local ffmpeg
 local ankiconnect
 
+------------------------------------------------------------
+-- utility functions
 
 local function check_config_sanity()
     if config.collection_path[-1] ~= '/' then
@@ -203,6 +205,9 @@ local function sub_rewind()
     )
 end
 
+------------------------------------------------------------
+-- ffmpeg helper
+
 ffmpeg = {prefix = {"ffmpeg", "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet"}}
 
 ffmpeg.execute = function(args)
@@ -253,6 +258,9 @@ ffmpeg.create_audio = function(sub, audio_filename)
                     fragment_path
     }
 end
+
+------------------------------------------------------------
+-- ankiconnect requests
 
 ankiconnect = {}
 
@@ -330,6 +338,9 @@ ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filena
     end
 end
 
+------------------------------------------------------------
+-- subtitles and timings
+
 subs = {list = {}}
 
 subs.get_current = function()
@@ -403,6 +414,8 @@ subs.reset_starting_point = function()
     mp.osd_message("Starting point is reset.", 2)
 end
 
+------------------------------------------------------------
+-- send subs to clipboard as they appear
 
 clip_autocopy = {}
 
@@ -425,6 +438,9 @@ clip_autocopy.toggle = function()
         config.autoclip = true
     end
 end
+
+------------------------------------------------------------
+-- main
 
 local function export_to_anki()
     local sub = subs.get()
