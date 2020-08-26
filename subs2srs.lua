@@ -105,7 +105,7 @@ local function remove_text_in_parentheses(str)
 end
 
 local function remove_newlines(str)
-    return str:gsub('\r', ''):gsub('%s*\n', ' ')
+    return str:gsub('[\n\r]+',' ')
 end
 
 local function escape_apostrophes(str)
