@@ -145,9 +145,9 @@ local function trim(str)
     str = escape_quotes(str)
 
     if config.nuke_spaces == true and contains_non_latin_letters(str) then
-        str = string.gsub(str, "%s*", "")
+        str = remove_all_spaces(str)
     else
-        str = string.gsub(str, "^%s*(.-)%s*$", "%1")
+        str = remove_leading_trailing_spaces(str)
     end
 
     return str
