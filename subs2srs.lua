@@ -337,13 +337,18 @@ ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filena
 
     ret.json = utils.parse_json(ret.stdout)
 
-    for k, v in pairs(ret.json) do print(k, '=', v) end
+    if ret.json == nil then
+        msg.error("Fatal error from Ankiconnect.")
+        mp.osd_message("Fatal error from Ankiconnect.", 2)
+    end
 
     if ret.json.error == nil then
         mp.osd_message("Note added. ID = " .. ret.json.result, 1)
     else
         mp.osd_message("Error: " .. ret.json.error, 1)
     end
+
+    for k, v in pairs(ret.json) do print(k, '=', v) end
 end
 
 ------------------------------------------------------------
