@@ -90,7 +90,7 @@ local function remove_extension(filename)
 end
 
 local function remove_special_characters(str)
-    return str:gsub('[%c%p%s]','')
+    return str:gsub('[%c%p%s]',''):gsub('　', '')
 end
 
 local function remove_text_in_brackets(str)
