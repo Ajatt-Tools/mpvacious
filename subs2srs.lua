@@ -170,12 +170,43 @@ local function format_time(time)
     end
 end
 
+local function anki_compatible_length(str)
+    -- anki forcibly mutilates all filenames longer than 64 characters
+    -- leave 25 characters for the filename
+    -- the rest is reserved for the timestamp, which is added later
+    local args = {
+        'awk',
+        '-v', string.format('str=%s', str),
+        '-v', 'limit=25',
+        'BEGIN{print substr(str, 1, limit); exit}'
+    }
+
+    local ret = mp.command_native{
+        name = "subprocess",
+        playback_only = false,
+        capture_stdout = true,
+        args = args
+    }
+
+    if ret.status == 0 then
+        ret.stdout = remove_newlines(ret.stdout)
+        ret.stdout = remove_leading_trailing_spaces(ret.stdout)
+        return ret.stdout
+    else
+        return 'subs2srs'
+    end
+end
+
 local function construct_filename(sub)
     local filename = mp.get_property("filename") -- filename without path
 
     filename = remove_extension(filename)
     filename = remove_text_in_brackets(filename)
     filename = remove_special_characters(filename)
+
+    if contains_non_latin_letters(filename) then
+        filename = anki_compatible_length(filename)
+    end
 
     filename = string.format(
         '%s_(%s-%s)',
