@@ -94,7 +94,7 @@ local function remove_special_characters(str)
 end
 
 local function remove_text_in_brackets(str)
-    return str:gsub('%b[]','')
+    return str:gsub('%b[]',''):gsub('【.-】', '')
 end
 
 local function remove_text_in_parentheses(str)
