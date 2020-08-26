@@ -108,6 +108,14 @@ local function remove_newlines(str)
     return str:gsub('[\n\r]+',' ')
 end
 
+local function remove_leading_trailing_spaces(str)
+    return str:gsub('^%s*(.-)%s*$', '%1')
+end
+
+local function remove_all_spaces(str)
+    return str:gsub('%s*', '')
+end
+
 local function escape_apostrophes(str)
     return str:gsub("'", "&apos;")
 end
