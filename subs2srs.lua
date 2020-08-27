@@ -27,11 +27,13 @@ local config = {
     sentence_field = "SentKanji",
     audio_field = "SentAudio",
     image_field = "Image",
+    menu_font_size = 24,
 }
 
 local utils = require('mp.utils')
 local msg = require('mp.msg')
 local mpopt = require('mp.options')
+local overlay = mp.create_osd_overlay('ass-events')
 
 mpopt.read_options(config, "subs2srs")
 
@@ -40,9 +42,11 @@ local subs
 local clip_autocopy
 local ffmpeg
 local ankiconnect
+local menu
 
 -- classes
 local Subtitle
+local OSD
 
 ------------------------------------------------------------
 -- utility functions
@@ -294,9 +298,9 @@ ffmpeg.execute = function(args)
     end
 end
 
-ffmpeg.create_snapshot = function(timestamp, snapshot_filename)
+ffmpeg.create_snapshot = function(timestamp, filename)
     local video_path = mp.get_property("path")
-    local snapshot_path = config.collection_path .. snapshot_filename
+    local snapshot_path = config.collection_path .. filename
 
     ffmpeg.execute{
         '-an',
@@ -312,9 +316,9 @@ ffmpeg.create_snapshot = function(timestamp, snapshot_filename)
     }
 end
 
-ffmpeg.create_audio = function(start_timestamp, end_timestamp, audio_filename)
+ffmpeg.create_audio = function(start_timestamp, end_timestamp, filename)
     local video_path = mp.get_property("path")
-    local fragment_path = config.collection_path .. audio_filename
+    local fragment_path = config.collection_path .. filename
     local track_number = get_audio_track_number()
 
     ffmpeg.execute{
@@ -431,6 +435,7 @@ end
 subs = {}
 
 subs.list = {}
+subs.forced_timings = {}
 
 subs.get_current = function()
     local sub_text = mp.get_property("sub-text")
@@ -448,26 +453,43 @@ subs.get_current = function()
     }
 end
 
-subs.get = function()
-    if is_emptytable(subs.list) then
-        return subs.get_current()
+subs.get_timing = function(position)
+    if subs.forced_timings[position] ~= nil and subs.forced_timings[position] > 0 then
+        return subs.forced_timings[position]
+    else
+        if is_emptytable(subs.list) then return nil end
+        table.sort(subs.list)
+        if position == 'start' then return subs.list[1]['start'] end
+        if position == 'end' then return subs.list[#subs.list]['end'] end
     end
+end
 
-    table.sort(subs.list)
+subs.get_text = function()
+    local text = ''
+    for index, value in ipairs(subs.list) do
+        text = text .. value['text']
+    end
+    return text
+end
 
-    local sub = Subtitle:new{
-        ['text'] = '',
-        ['start'] = subs.list[1]['start'],
-        ['end'] = subs.list[#subs.list]['end'],
-    }
+subs.get = function()
+    local sub
+
+    if is_emptytable(subs.list) then
+        sub = subs.get_current()
+        if sub == nil then return nil end
+    else
+        table.sort(subs.list)
+        sub = Subtitle:new{
+            ['text'] = subs.get_text(),
+            ['start'] = subs.get_timing('start'),
+            ['end'] =  subs.get_timing('end'),
+        }
+    end
 
     if sub['start'] > sub['end'] then
         msg.warn("First line can't start later than last one ends.")
         return nil
-    end
-
-    for index, value in ipairs(subs.list) do
-        sub['text'] = sub['text'] .. value['text']
     end
 
     subs.clear()
@@ -479,6 +501,15 @@ subs.append = function()
     if sub ~= nil and not table.contains(subs.list, sub) then
         table.insert(subs.list, sub)
     end
+end
+
+subs.override_timing = function(position)
+    if is_emptytable(subs.list) then
+        subs.list = {}
+        mp.observe_property("sub-text", "string", subs.append)
+    end
+
+    subs.forced_timings[position] = mp.get_property_number('time-pos')
 end
 
 subs.set_starting_point = function()
@@ -498,6 +529,7 @@ end
 subs.clear = function()
     mp.unobserve_property(subs.append)
     subs.list = {}
+    subs.forced_timings = {}
 end
 
 subs.reset_timings = function()
@@ -555,6 +587,96 @@ Subtitle.__lt = function (lhs, rhs)
 end
 
 ------------------------------------------------------------
+-- main menu
+
+menu = {}
+
+menu.keybinds = {
+    { key = 's', fn = function() subs.override_timing('start'); menu.update() end },
+    { key = 'e', fn = function() subs.override_timing('end'); menu.update() end },
+    { key = 'r', fn = function() subs.clear(); menu.update() end },
+    { key = 'S', fn = function() subs.set_starting_point(); menu.update() end },
+    { key = 'E', fn = function() menu.close(); export_to_anki(true) end },
+    { key = 'ESC', fn = function() menu.close() end },
+}
+
+menu.update = function(message)
+    local osd = OSD:new():size(config.menu_font_size)
+    osd:bold('mpvacious: advanced options'):newline()
+    osd:newline()
+    osd:bold('Start time: '):append(human_readable_time(subs.get_timing('start'))):newline()
+    osd:bold('End time: '):append(human_readable_time(subs.get_timing('end'))):newline()
+    osd:newline()
+    osd:bold('Bindings:'):newline()
+    osd:tab():bold('s: '):append('Set start time to current position'):newline()
+    osd:tab():bold('e: '):append('Set end time to current position'):newline()
+    osd:tab():bold('r: '):append('Reset sub timings'):newline()
+    osd:newline()
+    osd:tab():bold('S: '):append('Set start time to the start of the current subtitle'):newline()
+    osd:tab():bold('E: '):append('Export note using the `Add Cards` dialog'):newline()
+    osd:newline()
+    osd:tab():bold('ESC: '):append('Close'):newline()
+
+    if message ~= nil then
+        osd:newline():append(message):newline()
+    end
+
+    osd:draw()
+end
+
+menu.close = function()
+    for _, val in pairs(menu.keybinds) do
+        mp.remove_key_binding(val.key)
+    end
+    mp.unobserve_property(menu.update)
+    overlay:remove()
+end
+
+menu.open = function()
+    for _, val in pairs(menu.keybinds) do
+        mp.add_key_binding(val.key, val.key, val.fn)
+    end
+    menu.update()
+    mp.observe_property("sub-text", "string", menu.update)
+end
+
+------------------------------------------------------------
+-- Helper class for styling OSD messages
+
+OSD = {}
+OSD.__index = OSD
+
+function OSD:new()
+    return setmetatable({text=''}, self)
+end
+
+function OSD:append(s)
+    self.text = self.text .. s
+    return self
+end
+
+function OSD:bold(s)
+    return self:append('{\\b1}' .. s .. '{\\b0}')
+end
+
+function OSD:newline()
+    return self:append('\\N')
+end
+
+function OSD:tab()
+    return self:append('\\h\\h\\h\\h')
+end
+
+function OSD:size(size)
+    return self:append('{\\fs' .. size .. '}')
+end
+
+function OSD:draw()
+    overlay.data = self.text
+    overlay:update()
+end
+
+------------------------------------------------------------
 -- main
 
 if config.autoclip == true then clip_autocopy.enable() end
@@ -566,3 +688,5 @@ mp.add_key_binding("ctrl+s", "set-starting-point", subs.set_starting_point)
 mp.add_key_binding("ctrl+r", "reset-timings", subs.reset_timings)
 mp.add_key_binding("ctrl+t", "toggle-sub-autocopy", clip_autocopy.toggle)
 mp.add_key_binding("ctrl+h", "sub-rewind", sub_rewind)
+
+mp.add_key_binding('a', 'mpvacious-menu-open', menu.open) -- a for advanced
