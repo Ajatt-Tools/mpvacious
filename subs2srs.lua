@@ -241,7 +241,9 @@ end
 ------------------------------------------------------------
 -- ffmpeg helper
 
-ffmpeg = {prefix = {"ffmpeg", "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet"}}
+ffmpeg = {}
+
+ffmpeg.prefix = {"ffmpeg", "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet"}
 
 ffmpeg.execute = function(args)
     if next(args) ~= nil then
@@ -379,7 +381,9 @@ end
 ------------------------------------------------------------
 -- subtitles and timings
 
-subs = {list = {}}
+subs = {}
+
+subs.list = {}
 
 subs.get_current = function()
     local sub_text = mp.get_property("sub-text")
