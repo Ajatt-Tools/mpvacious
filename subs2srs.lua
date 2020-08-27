@@ -43,8 +43,12 @@ local ankiconnect
 ------------------------------------------------------------
 -- utility functions
 
+function string:endswith(suffix)
+    return self:match(string.format('%s$', suffix))
+end
+
 local function check_config_sanity()
-    if config.collection_path[-1] ~= '/' then
+    if not config.collection_path:endswith('/') then
         -- The user forgot to add a slash at the end of the collection path
         config.collection_path = config.collection_path .. '/'
     end
@@ -56,7 +60,7 @@ local function check_config_sanity()
     if config.snapshot_height > 800 then config.snapshot_height = 800 end
 
     if config.snapshot_width < 1 and config.snapshot_height < 1 then
-        config.snapshot_width = -2
+        config.snapshot_width  = -2
         config.snapshot_height = 200
         mp.osd_message("`snapshot_width` and `snapshot_height` can't be both less than 1.", 5)
     end

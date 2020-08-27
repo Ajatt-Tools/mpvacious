@@ -45,6 +45,7 @@ $ cd ~/.config/mpv/scripts/subs2srs && git pull
 Configuration file is located at ```~/.config/mpv/script-opts/subs2srs.conf```
 and should be created by the user. If a parameter is not specified
 in the config file, the default value will be used.
+mpv doesn't tolerate spaces before and after `=`.
 
 Example configuration file:
 ```
