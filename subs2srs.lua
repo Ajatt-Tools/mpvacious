@@ -258,7 +258,7 @@ local function sub_rewind()
     )
 end
 
-local function export_to_anki()
+local function export_to_anki(gui)
     local sub = subs.get()
 
     if sub ~= nil then
@@ -270,7 +270,7 @@ local function export_to_anki()
         ffmpeg.create_snapshot(snapshot_timestamp, snapshot_filename)
         ffmpeg.create_audio(sub['start'], sub['end'], audio_filename)
 
-        ankiconnect.add_note(sub['text'], audio_filename, snapshot_filename)
+        ankiconnect.add_note(sub['text'], audio_filename, snapshot_filename, gui)
     else
         msg.warn("Nothing to export.")
         mp.osd_message("Nothing to export.", 1)
@@ -372,9 +372,16 @@ ankiconnect.create_deck_if_doesnt_exist = function(deck_name)
     ankiconnect.execute(args)
 end
 
-ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filename)
+ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filename, gui)
+    local action
+    if gui then
+        action = 'guiAddCards'
+    else
+        action = 'addNote'
+    end
+
     local args = {
-        action = "addNote",
+        action = action,
         version = 6,
         params = {
             note = {
