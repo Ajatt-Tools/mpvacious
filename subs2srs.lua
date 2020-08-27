@@ -67,12 +67,6 @@ local function check_config_sanity()
     end
 end
 
-local function split_str(str)
-    t = {}
-    str:gsub('[^%s]+', function(c) table.insert(t,c) end)
-    return t
-end
-
 local function is_emptystring(str)
     return str == nil or str == ''
 end
