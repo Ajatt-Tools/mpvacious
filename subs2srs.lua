@@ -258,6 +258,25 @@ local function sub_rewind()
     )
 end
 
+local function export_to_anki()
+    local sub = subs.get()
+
+    if sub ~= nil then
+        local filename = construct_filename(sub)
+        local snapshot_filename = add_extension(filename, '.webp')
+        local audio_filename = add_extension(filename, '.ogg')
+        local snapshot_timestamp = (sub['start'] + sub['end']) / 2
+
+        ffmpeg.create_snapshot(snapshot_timestamp, snapshot_filename)
+        ffmpeg.create_audio(sub['start'], sub['end'], audio_filename)
+
+        ankiconnect.add_note(sub['text'], audio_filename, snapshot_filename)
+    else
+        msg.warn("Nothing to export.")
+        mp.osd_message("Nothing to export.", 1)
+    end
+end
+
 ------------------------------------------------------------
 -- ffmpeg helper
 
@@ -531,25 +550,6 @@ end
 
 ------------------------------------------------------------
 -- main
-
-local function export_to_anki()
-    local sub = subs.get()
-
-    if sub ~= nil then
-        local filename = construct_filename(sub)
-        local snapshot_filename = add_extension(filename, '.webp')
-        local audio_filename = add_extension(filename, '.ogg')
-        local snapshot_timestamp = (sub['start'] + sub['end']) / 2
-
-        ffmpeg.create_snapshot(snapshot_timestamp, snapshot_filename)
-        ffmpeg.create_audio(sub['start'], sub['end'], audio_filename)
-
-        ankiconnect.add_note(sub['text'], audio_filename, snapshot_filename)
-    else
-        msg.warn("Nothing to export.")
-        mp.osd_message("Nothing to export.", 1)
-    end
-end
 
 if config.autoclip == true then clip_autocopy.enable() end
 
