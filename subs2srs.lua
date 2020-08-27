@@ -35,16 +35,29 @@ local mpopt = require('mp.options')
 
 mpopt.read_options(config, "subs2srs")
 
+-- namespaces
 local subs
 local clip_autocopy
 local ffmpeg
 local ankiconnect
+
+-- classes
+local Subtitle
 
 ------------------------------------------------------------
 -- utility functions
 
 function string:endswith(suffix)
     return self:match(string.format('%s$', suffix))
+end
+
+function table.contains(table, element)
+    for _, value in pairs(table) do
+        if value == element then
+            return true
+        end
+    end
+    return false
 end
 
 local function check_config_sanity()
@@ -402,7 +415,7 @@ subs.get_current = function()
 
     local sub_delay = mp.get_property_native("sub-delay")
 
-    return {
+    return Subtitle:new{
         ['text']   = trim(sub_text),
         ['start']  = mp.get_property_number("sub-start") + sub_delay,
         ['end']    = mp.get_property_number("sub-end")   + sub_delay
@@ -414,7 +427,9 @@ subs.get = function()
         return subs.get_current()
     end
 
-    local sub = {
+    table.sort(subs.list)
+
+    local sub = Subtitle:new{
         ['text'] = '',
         ['start'] = subs.list[1]['start'],
         ['end'] = subs.list[#subs.list]['end'],
@@ -429,12 +444,13 @@ subs.get = function()
         sub['text'] = sub['text'] .. value['text']
     end
 
+    subs.clear()
     return sub
 end
 
 subs.append = function()
     local sub = subs.get_current()
-    if sub ~= nil then
+    if sub ~= nil and not table.contains(subs.list, sub) then
         table.insert(subs.list, sub)
     end
 end
@@ -490,11 +506,34 @@ clip_autocopy.toggle = function()
 end
 
 ------------------------------------------------------------
+-- Subtitle class provides methods for comparing subtitle lines
+
+Subtitle = {
+    ['text']   = '',
+    ['start']  = 0,
+    ['end']    = 0,
+}
+
+function Subtitle:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    return o
+end
+
+Subtitle.__eq = function(lhs, rhs)
+	return lhs['text'] == rhs['text']
+end
+
+Subtitle.__lt = function (lhs, rhs)
+    return lhs['start'] < rhs['start']
+end
+
+------------------------------------------------------------
 -- main
 
 local function export_to_anki()
     local sub = subs.get()
-    subs.clear()
 
     if sub ~= nil then
         local filename = construct_filename(sub)
