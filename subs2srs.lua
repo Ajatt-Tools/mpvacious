@@ -262,42 +262,43 @@ ffmpeg.execute = function(args)
     end
 end
 
-ffmpeg.create_snapshot = function(sub, snapshot_filename)
+ffmpeg.create_snapshot = function(timestamp, snapshot_filename)
     local video_path = mp.get_property("path")
-    local timestamp = tostring((sub['start'] + sub['end']) / 2)
     local snapshot_path = config.collection_path .. snapshot_filename
 
-    ffmpeg.execute{'-an',
-                    '-ss', timestamp,
-                    '-i', video_path,
-                    '-vcodec', 'libwebp',
-                    '-lossless', '0',
-                    '-compression_level', '6',
-                    '-qscale:v', tostring(config.snapshot_quality),
-                    '-vf', string.format('scale=%d:%d', config.snapshot_width, config.snapshot_height),
-                    '-vframes', '1',
-                    snapshot_path
+    ffmpeg.execute{
+        '-an',
+        '-ss', tostring(timestamp),
+        '-i', video_path,
+        '-vcodec', 'libwebp',
+        '-lossless', '0',
+        '-compression_level', '6',
+        '-qscale:v', tostring(config.snapshot_quality),
+        '-vf', string.format('scale=%d:%d', config.snapshot_width, config.snapshot_height),
+        '-vframes', '1',
+        snapshot_path
     }
 end
 
-ffmpeg.create_audio = function(sub, audio_filename)
+ffmpeg.create_audio = function(start_timestamp, end_timestamp, audio_filename)
     local video_path = mp.get_property("path")
     local fragment_path = config.collection_path .. audio_filename
     local track_number = get_audio_track_number()
 
-    ffmpeg.execute{'-vn',
-                    '-ss', tostring(sub['start']),
-                    '-to', tostring(sub['end']),
-                    '-i', video_path,
-                    '-map_metadata', '-1',
-                    '-map', string.format("0:a:%d", track_number),
-                    '-ac', '1',
-                    '-codec:a', 'libopus',
-                    '-vbr', 'on',
-                    '-compression_level', '10',
-                    '-application', 'voip',
-                    '-b:a', tostring(config.audio_bitrate),
-                    fragment_path
+    ffmpeg.execute{
+        '-vn',
+        '-ss', tostring(start_timestamp),
+        '-to', tostring(end_timestamp),
+        '-i', video_path,
+        '-map_metadata', '-1',
+        '-map', string.format("0:a:%d", track_number),
+        '-ac', '1',
+        '-codec:a', 'libopus',
+        '-vbr', 'on',
+        '-compression_level', '10',
+        '-application', 'voip',
+        '-b:a', tostring(config.audio_bitrate),
+        fragment_path
     }
 end
 
@@ -499,9 +500,10 @@ local function export_to_anki()
         local filename = construct_filename(sub)
         local snapshot_filename = add_extension(filename, '.webp')
         local audio_filename = add_extension(filename, '.ogg')
+        local snapshot_timestamp = (sub['start'] + sub['end']) / 2
 
-        ffmpeg.create_snapshot(sub, snapshot_filename)
-        ffmpeg.create_audio(sub, audio_filename)
+        ffmpeg.create_snapshot(snapshot_timestamp, snapshot_filename)
+        ffmpeg.create_audio(sub['start'], sub['end'], audio_filename)
 
         ankiconnect.add_note(sub['text'], audio_filename, snapshot_filename)
     else
