@@ -18,7 +18,6 @@ local config = {
     collection_path = string.format('%s/.local/share/Anki2/%s/collection.media/', os.getenv("HOME"), os.getenv("USER")),
     autoclip = false,           -- copy subs to the clipboard or not
     nuke_spaces = true,         -- remove all spaces or not
-    human_readable_time = true, -- use seconds if false
     snapshot_quality = 5,       -- from 0=lowest to 100=highest
     snapshot_width = -2,        -- a positive integer or -2 for auto
     snapshot_height = 200,      -- same
@@ -147,21 +146,25 @@ local function trim(str)
     return str
 end
 
-local function seconds_to_human_readable_time(time)
-    local hours = math.floor(time / 3600)
-    local mins = math.floor(time / 60) % 60
-    local secs = math.floor(time % 60)
-    local milliseconds = math.floor((time * 1000) % 1000)
-
-    return string.format("%dh%02dm%02ds%03dms", hours, mins, secs, milliseconds)
-end
-
-local function format_time(time)
-    if config.human_readable_time == true then
-        return seconds_to_human_readable_time(time)
-    else
-        return string.format("%.3f", time)
+local function human_readable_time(seconds)
+    if type(seconds) ~= 'number' or seconds < 0 then
+        return 'empty'
     end
+
+    local parts = {}
+
+    parts.h  = math.floor(seconds / 3600)
+    parts.m  = math.floor(seconds / 60) % 60
+    parts.s  = math.floor(seconds % 60)
+    parts.ms = math.floor((seconds * 1000) % 1000)
+
+    local ret = string.format("%02dm%02ds%03dms", parts.m, parts.s, parts.ms)
+
+    if parts.h > 0 then
+        ret = string.format('%dh%s', parts.h, ret)
+    end
+
+    return ret
 end
 
 local function anki_compatible_length(str)
@@ -205,8 +208,8 @@ local function construct_filename(sub)
     filename = string.format(
         '%s_(%s-%s)',
         filename,
-        format_time(sub['start']),
-        format_time(sub['end'])
+        human_readable_time(sub['start']),
+        human_readable_time(sub['end'])
     )
 
     return filename
@@ -439,7 +442,7 @@ subs.set_starting_point = function()
 
     if current_sub ~= nil then
         local starting_point = current_sub['start']
-        starting_point = seconds_to_human_readable_time(starting_point)
+        starting_point = human_readable_time(starting_point)
         mp.osd_message("Starting point is set to " .. starting_point, 2)
     else
         mp.osd_message("There's no visible subtitle.", 2)

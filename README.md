@@ -72,9 +72,6 @@ autoclip=no
 # Remove all spaces from the subtitle text.
 # Only makes sense for languages without spaces like Japanese.
 nuke_spaces=yes
-# Format timestamps according to this pattern: `%dh%02dm%02ds%03dms`.
-# Use seconds otherwise.
-human_readable_time=yes
 
 # Media quality
 # 0 = lowest, 100=highest
