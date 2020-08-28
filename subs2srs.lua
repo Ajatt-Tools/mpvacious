@@ -512,7 +512,7 @@ subs.override_timing = function(position)
     subs.forced_timings[position] = mp.get_property_number('time-pos')
 end
 
-subs.set_starting_point = function()
+subs.set_starting_line = function()
     subs.clear()
 
     local current_sub = subs.get_current()
@@ -595,7 +595,7 @@ menu.keybinds = {
     { key = 's', fn = function() subs.override_timing('start'); menu.update() end },
     { key = 'e', fn = function() subs.override_timing('end'); menu.update() end },
     { key = 'r', fn = function() subs.clear(); menu.update() end },
-    { key = 'S', fn = function() subs.set_starting_point(); menu.update() end },
+    { key = 'S', fn = function() subs.set_starting_line(); menu.update() end },
     { key = 'E', fn = function() menu.close(); export_to_anki(true) end },
     { key = 'ESC', fn = function() menu.close() end },
 }
@@ -684,7 +684,7 @@ if config.autoclip == true then clip_autocopy.enable() end
 check_config_sanity()
 ankiconnect.create_deck_if_doesnt_exist(config.deck_name)
 mp.add_key_binding("ctrl+e", "anki-export-note", export_to_anki)
-mp.add_key_binding("ctrl+s", "set-starting-point", subs.set_starting_point)
+mp.add_key_binding("ctrl+s", "set-starting-line", subs.set_starting_line)
 mp.add_key_binding("ctrl+r", "reset-timings", subs.reset_timings)
 mp.add_key_binding("ctrl+t", "toggle-sub-autocopy", clip_autocopy.toggle)
 mp.add_key_binding("ctrl+h", "sub-rewind", sub_rewind)
