@@ -503,9 +503,8 @@ subs.append = function()
     end
 end
 
-subs.override_timing = function(position)
+subs.set_timing = function(position)
     if is_emptytable(subs.list) then
-        subs.list = {}
         mp.observe_property("sub-text", "string", subs.append)
     end
 
@@ -592,8 +591,8 @@ end
 menu = {}
 
 menu.keybinds = {
-    { key = 's', fn = function() subs.override_timing('start'); menu.update() end },
-    { key = 'e', fn = function() subs.override_timing('end'); menu.update() end },
+    { key = 's', fn = function() subs.set_timing('start'); menu.update() end },
+    { key = 'e', fn = function() subs.set_timing('end'); menu.update() end },
     { key = 'r', fn = function() subs.clear(); menu.update() end },
     { key = 'S', fn = function() subs.set_starting_line(); menu.update() end },
     { key = 'E', fn = function() menu.close(); export_to_anki(true) end },
