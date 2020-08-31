@@ -264,6 +264,7 @@ end
 
 local function export_to_anki(gui)
     local sub = subs.get()
+    subs.clear()
 
     if sub ~= nil then
         local filename = construct_filename(sub)
@@ -435,7 +436,11 @@ end
 subs = {}
 
 subs.list = {}
-subs.forced_timings = {}
+
+subs.user_timings = {
+    ['start'] = 0,
+    ['end'] = 0,
+}
 
 subs.get_current = function()
     local sub_text = mp.get_property("sub-text")
@@ -454,13 +459,18 @@ subs.get_current = function()
 end
 
 subs.get_timing = function(position)
-    if subs.forced_timings[position] ~= nil and subs.forced_timings[position] > 0 then
-        return subs.forced_timings[position]
-    else
-        if is_emptytable(subs.list) then return nil end
-        table.sort(subs.list)
-        if position == 'start' then return subs.list[1]['start'] end
-        if position == 'end' then return subs.list[#subs.list]['end'] end
+    if subs.user_timings[position] > 0 then
+        return subs.user_timings[position]
+    end
+
+    if is_emptytable(subs.list) then
+        return nil
+    end
+
+    if position == 'start' then
+        return subs.list[1]['start']
+    elseif position == 'end' then
+        return subs.list[#subs.list]['end']
     end
 end
 
@@ -473,18 +483,20 @@ subs.get_text = function()
 end
 
 subs.get = function()
-    local sub
-
     if is_emptytable(subs.list) then
-        sub = subs.get_current()
-        if sub == nil then return nil end
-    else
-        table.sort(subs.list)
-        sub = Subtitle:new{
-            ['text'] = subs.get_text(),
-            ['start'] = subs.get_timing('start'),
-            ['end'] =  subs.get_timing('end'),
-        }
+        return subs.get_current()
+    end
+
+    table.sort(subs.list)
+
+    local sub = Subtitle:new{
+        ['text']  = subs.get_text(),
+        ['start'] = subs.get_timing('start'),
+        ['end']   = subs.get_timing('end'),
+    }
+
+    if is_emptystring(sub['text']) then
+        return nil
     end
 
     if sub['start'] > sub['end'] then
@@ -492,23 +504,23 @@ subs.get = function()
         return nil
     end
 
-    subs.clear()
     return sub
 end
 
 subs.append = function()
     local sub = subs.get_current()
+
     if sub ~= nil and not table.contains(subs.list, sub) then
         table.insert(subs.list, sub)
     end
 end
 
 subs.set_timing = function(position)
+    subs.user_timings[position] = mp.get_property_number('time-pos')
+
     if is_emptytable(subs.list) then
         mp.observe_property("sub-text", "string", subs.append)
     end
-
-    subs.forced_timings[position] = mp.get_property_number('time-pos')
 end
 
 subs.set_starting_line = function()
@@ -518,8 +530,8 @@ subs.set_starting_line = function()
 
     if current_sub ~= nil then
         local starting_point = human_readable_time(current_sub['start'])
-        mp.observe_property("sub-text", "string", subs.append)
         mp.osd_message("Starting point is set to " .. starting_point, 2)
+        mp.observe_property("sub-text", "string", subs.append)
     else
         mp.osd_message("There's no visible subtitle.", 2)
     end
@@ -528,7 +540,10 @@ end
 subs.clear = function()
     mp.unobserve_property(subs.append)
     subs.list = {}
-    subs.forced_timings = {}
+    subs.user_timings = {
+        ['start'] = 0,
+        ['end'] = 0,
+    }
 end
 
 subs.reset_timings = function()
@@ -593,33 +608,31 @@ menu = {}
 menu.keybinds = {
     { key = 's', fn = function() subs.set_timing('start'); menu.update() end },
     { key = 'e', fn = function() subs.set_timing('end'); menu.update() end },
-    { key = 'r', fn = function() subs.clear(); menu.update() end },
-    { key = 'S', fn = function() subs.set_starting_line(); menu.update() end },
-    { key = 'E', fn = function() menu.close(); export_to_anki(true) end },
+    { key = 'g', fn = function() menu.close(); export_to_anki(true) end },
+    { key = 'a', fn = function() menu.close() end },
     { key = 'ESC', fn = function() menu.close() end },
 }
 
 menu.update = function(message)
+    table.sort(subs.list)
     local osd = OSD:new():size(config.menu_font_size)
     osd:bold('mpvacious: advanced options'):newline()
     osd:newline()
     osd:bold('Start time: '):append(human_readable_time(subs.get_timing('start'))):newline()
     osd:bold('End time: '):append(human_readable_time(subs.get_timing('end'))):newline()
     osd:newline()
-    osd:bold('Bindings:'):newline()
+    osd:bold('Menu bindings:'):newline()
     osd:tab():bold('s: '):append('Set start time to current position'):newline()
     osd:tab():bold('e: '):append('Set end time to current position'):newline()
-    osd:tab():bold('r: '):append('Reset sub timings'):newline()
-    osd:newline()
-    osd:tab():bold('S: '):append('Set start time to the start of the current subtitle'):newline()
-    osd:tab():bold('E: '):append('Export note using the `Add Cards` dialog'):newline()
-    osd:newline()
+    osd:tab():bold('g: '):append('Export note using the `Add Cards` dialog'):newline()
     osd:tab():bold('ESC: '):append('Close'):newline()
-
-    if message ~= nil then
-        osd:newline():append(message):newline()
-    end
-
+    osd:newline()
+    osd:bold('Global bindings:'):newline()
+    osd:tab():bold('ctrl+e: '):append('Export note'):newline()
+    osd:tab():bold('ctrl+s: '):append('Set starting line'):newline()
+    osd:tab():bold('ctrl+r: '):append('Reset timings'):newline()
+    osd:tab():bold('ctrl+t '):append('Toggle sub autocopy'):newline()
+    osd:tab():bold('ctrl+h '):append('Seek to the start of the line'):newline()
     osd:draw()
 end
 
