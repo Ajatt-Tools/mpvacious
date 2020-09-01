@@ -294,9 +294,9 @@ ffmpeg.execute = function(args)
     end
 end
 
-ffmpeg.create_snapshot = function(timestamp, snapshot_filename)
+ffmpeg.create_snapshot = function(timestamp, filename)
     local video_path = mp.get_property("path")
-    local snapshot_path = config.collection_path .. snapshot_filename
+    local snapshot_path = config.collection_path .. filename
 
     ffmpeg.execute{
         '-an',
@@ -312,9 +312,9 @@ ffmpeg.create_snapshot = function(timestamp, snapshot_filename)
     }
 end
 
-ffmpeg.create_audio = function(start_timestamp, end_timestamp, audio_filename)
+ffmpeg.create_audio = function(start_timestamp, end_timestamp, filename)
     local video_path = mp.get_property("path")
-    local fragment_path = config.collection_path .. audio_filename
+    local fragment_path = config.collection_path .. filename
     local track_number = get_audio_track_number()
 
     ffmpeg.execute{
