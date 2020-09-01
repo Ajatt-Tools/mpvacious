@@ -432,6 +432,11 @@ subs = {}
 
 subs.list = {}
 
+subs.user_timings = {
+    ['start'] = 0,
+    ['end'] = 0,
+}
+
 subs.get_current = function()
     local sub_text = mp.get_property("sub-text")
 
@@ -448,6 +453,30 @@ subs.get_current = function()
     }
 end
 
+subs.get_timing = function(position)
+    if subs.user_timings[position] > 0 then
+        return subs.user_timings[position]
+    end
+
+    if is_emptytable(subs.list) then
+        return nil
+    end
+
+    if position == 'start' then
+        return subs.list[1]['start']
+    elseif position == 'end' then
+        return subs.list[#subs.list]['end']
+    end
+end
+
+subs.get_text = function()
+    local text = ''
+    for index, value in ipairs(subs.list) do
+        text = text .. value['text']
+    end
+    return text
+end
+
 subs.get = function()
     if is_emptytable(subs.list) then
         return subs.get_current()
@@ -456,28 +485,36 @@ subs.get = function()
     table.sort(subs.list)
 
     local sub = Subtitle:new{
-        ['text'] = '',
-        ['start'] = subs.list[1]['start'],
-        ['end'] = subs.list[#subs.list]['end'],
+        ['text']  = subs.get_text(),
+        ['start'] = subs.get_timing('start'),
+        ['end']   = subs.get_timing('end'),
     }
+
+    if is_emptystring(sub['text']) then
+        return nil
+    end
 
     if sub['start'] > sub['end'] then
         msg.warn("First line can't start later than last one ends.")
         return nil
     end
 
-    for index, value in ipairs(subs.list) do
-        sub['text'] = sub['text'] .. value['text']
-    end
-
-    subs.clear()
     return sub
 end
 
 subs.append = function()
     local sub = subs.get_current()
+
     if sub ~= nil and not table.contains(subs.list, sub) then
         table.insert(subs.list, sub)
+    end
+end
+
+subs.set_timing = function(position)
+    subs.user_timings[position] = mp.get_property_number('time-pos')
+
+    if is_emptytable(subs.list) then
+        mp.observe_property("sub-text", "string", subs.append)
     end
 end
 
@@ -488,8 +525,8 @@ subs.set_starting_line = function()
 
     if current_sub ~= nil then
         local starting_point = human_readable_time(current_sub['start'])
-        mp.observe_property("sub-text", "string", subs.append)
         mp.osd_message("Starting point is set to " .. starting_point, 2)
+        mp.observe_property("sub-text", "string", subs.append)
     else
         mp.osd_message("There's no visible subtitle.", 2)
     end
@@ -498,6 +535,10 @@ end
 subs.clear = function()
     mp.unobserve_property(subs.append)
     subs.list = {}
+    subs.user_timings = {
+        ['start'] = 0,
+        ['end'] = 0,
+    }
 end
 
 subs.reset_timings = function()
