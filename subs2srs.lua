@@ -481,7 +481,7 @@ subs.append = function()
     end
 end
 
-subs.set_starting_point = function()
+subs.set_starting_line = function()
     subs.clear()
 
     local current_sub = subs.get_current()
@@ -562,7 +562,7 @@ if config.autoclip == true then clip_autocopy.enable() end
 check_config_sanity()
 ankiconnect.create_deck_if_doesnt_exist(config.deck_name)
 mp.add_key_binding("ctrl+e", "anki-export-note", export_to_anki)
-mp.add_key_binding("ctrl+s", "set-starting-point", subs.set_starting_point)
+mp.add_key_binding("ctrl+s", "set-starting-line", subs.set_starting_line)
 mp.add_key_binding("ctrl+r", "reset-timings", subs.reset_timings)
 mp.add_key_binding("ctrl+t", "toggle-sub-autocopy", clip_autocopy.toggle)
 mp.add_key_binding("ctrl+h", "sub-rewind", sub_rewind)

@@ -95,7 +95,7 @@ Key bindings are configured in ```~/.config/mpv/input.conf```.
 This step is not necessary.
 ```
 Ctrl+e script-binding anki-export-note
-Ctrl+s script-binding set-starting-point
+Ctrl+s script-binding set-starting-line
 Ctrl+r script-binding reset-timings
 Ctrl+t script-binding toggle-sub-autocopy
 Ctrl+h script-binding sub-rewind
