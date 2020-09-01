@@ -260,6 +260,7 @@ end
 
 local function export_to_anki(gui)
     local sub = subs.get()
+    subs.clear()
 
     if sub ~= nil then
         local filename = construct_filename(sub)
