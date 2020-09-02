@@ -99,6 +99,7 @@ Ctrl+s script-binding set-starting-line
 Ctrl+r script-binding reset-timings
 Ctrl+t script-binding toggle-sub-autocopy
 Ctrl+h script-binding sub-rewind
+a      script-binding mpvacious-menu-open
 ```
 ## Usage
 * `Ctrl+t` - **T**oggles the `autoclip` option.
@@ -113,6 +114,7 @@ and then press `Ctrl+e` to set the **e**nding line and create the card.
 * `Ctrl+r` - If you pressed `Ctrl+s` but changed your mind,
 it **r**esets the starting line.
 * `Ctrl+h` - Seeks to the starting point of the currently visible subtitle.
+* `a` - Opens **a**dvanced menu with a list of all available keybindings.
 
 After the card is created, you can find it by typing ```tag:subs2srs added:1```
 in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolibri/)
