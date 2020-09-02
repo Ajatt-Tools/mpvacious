@@ -246,7 +246,7 @@ local function get_audio_track_number()
         local track_selected = mp.get_property(string.format("track-list/%d/selected", i))
 
         if track_type == "audio" and track_selected == "yes" then
-            audio_track_number = track_index - 1
+            audio_track_number = track_index
             break
         end
     end
@@ -328,7 +328,7 @@ ffmpeg.create_audio = function(start_timestamp, end_timestamp, filename)
         '-to', tostring(end_timestamp),
         '-i', video_path,
         '-map_metadata', '-1',
-        '-map', string.format("0:a:%d", track_number),
+        '-map', string.format("0:%d", track_number),
         '-ac', '1',
         '-codec:a', 'libopus',
         '-vbr', 'on',
