@@ -150,6 +150,7 @@ x sub-step -1
 * https://github.com/SenneH/mpv2anki
 * https://github.com/kelciour/mpv-scripts/blob/master/subs2srs.lua
 * https://pastebin.com/M2gBksHT
+* https://pastebin.com/NBudhMUk
 
 ## Further hacking
 * https://github.com/ayuryshev/subs2srs
