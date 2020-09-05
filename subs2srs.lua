@@ -629,10 +629,10 @@ menu.active = false
 menu.keybinds = {
     { key = 's', fn = function() subs.set_timing('start') end },
     { key = 'e', fn = function() subs.set_timing('end') end },
-    { key = 't', fn = function() subs.set_starting_line() end },
+    { key = 'c', fn = function() subs.set_starting_line() end },
     { key = 'r', fn = function() subs.reset_timings() end },
     { key = 'g', fn = function() export_to_anki(true) end },
-    { key = 'c', fn = function() clip_autocopy.toggle() end },
+    { key = 't', fn = function() clip_autocopy.toggle() end },
     { key = 'a', fn = function() menu.close() end },
     { key = 'ESC', fn = function() menu.close() end },
 }
@@ -653,18 +653,18 @@ menu.update = function()
     osd:newline()
 
     osd:bold('Menu bindings:'):newline()
-    osd:tab():bold('t: '):append('Set timings to the current sub'):newline()
+    osd:tab():bold('c: '):append('Set timings to the current sub'):newline()
     osd:tab():bold('s: '):append('Set start time to current position'):newline()
     osd:tab():bold('e: '):append('Set end time to current position'):newline()
-    osd:tab():bold('g: '):append('Export note using the `Add Cards` dialog'):newline()
     osd:tab():bold('r: '):append('Reset timings'):newline()
-    osd:tab():bold('c: '):append('Toggle clipboard autocopy'):newline()
+    osd:tab():bold('g: '):append('Export note using the `Add Cards` dialog'):newline()
+    osd:tab():bold('t: '):append('Toggle clipboard autocopy'):newline()
     osd:tab():bold('ESC: '):append('Close'):newline()
     osd:newline()
 
     osd:bold('Global bindings:'):newline()
     osd:tab():bold('ctrl+e: '):append('Export note'):newline()
-    osd:tab():bold('ctrl+h '):append('Seek to the start of the line'):newline()
+    osd:tab():bold('ctrl+h: '):append('Seek to the start of the line'):newline()
     osd:draw()
 end
 
