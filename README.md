@@ -98,7 +98,7 @@ Ctrl+e script-binding anki-export-note
 Ctrl+h script-binding sub-rewind
 a      script-binding mpvacious-menu-open
 ```
-These additional bindings aren't enabled by default but can be accesesed via thqe menu (`a`).
+These additional bindings aren't enabled by default but can be accesesed via the menu (`a`).
 ```
 Ctrl+s script-binding set-starting-line
 Ctrl+r script-binding reset-timings
