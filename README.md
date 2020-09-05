@@ -4,7 +4,7 @@ Because voracious is bloated.
 ## Requirements
 * A [distribution](https://www.gnu.org/distros/free-distros.html) of
 [GNU/Linux](https://www.gnu.org/gnu/about-gnu.html).
-Preferably [Arch-based](https://www.parabola.nu/).
+Preferably [Arch-based](https://www.parabola.nu/). Probably works on windows too.
 * [Anki](https://wiki.archlinux.org/index.php/Anki)
 * [FFmpeg](https://wiki.archlinux.org/index.php/FFmpeg)
 * The [AnkiConnect](https://ankiweb.net/shared/info/2055492159) plugin
