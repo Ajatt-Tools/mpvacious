@@ -133,6 +133,8 @@ If above fails, you have to manually set timings.
 * `s` - Set the start time.
 * `e` - Set the end time.
 
+Then, as always, press `ctrl+e` to make the card.
+
 ### How do I add definitions to the card I just made
 After the card is created, you can find it by typing ```tag:subs2srs added:1```
 in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolibri/)
