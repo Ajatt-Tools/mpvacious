@@ -171,6 +171,9 @@ X sub-step 1
 x sub-step -1
 ```
 ## Hacking
+If you want to modify this script
+or make an entirely new one from scratch,
+these links may help.
 * https://mpv.io/manual/master/#lua-scripting
 * https://github.com/mpv-player/mpv/blob/master/player/lua/defaults.lua
 * https://github.com/SenneH/mpv2anki
