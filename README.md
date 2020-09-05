@@ -95,32 +95,56 @@ Key bindings are configured in ```~/.config/mpv/input.conf```.
 This step is not necessary.
 ```
 Ctrl+e script-binding anki-export-note
-Ctrl+s script-binding set-starting-line
-Ctrl+r script-binding reset-timings
-Ctrl+t script-binding toggle-sub-autocopy
 Ctrl+h script-binding sub-rewind
 a      script-binding mpvacious-menu-open
 ```
+These additional bindings aren't enabled by default but can be accesesed via thqe menu (`a`).
+```
+Ctrl+s script-binding set-starting-line
+Ctrl+r script-binding reset-timings
+Ctrl+t script-binding toggle-sub-autocopy
+```
 ## Usage
-* `Ctrl+t` - **T**oggles the `autoclip` option.
-When enabled, you can use it in combination with
-[Yomichan](https://foosoft.net/projects/yomichan/)'s clipboard monitor.
-`Yomichan Search` is activated by pressing `Alt+Insert` in your web browser.
-* `Ctrl+e` - **E**xports a card with the currently visible subtitle line on the front.
-* `Ctrl+s` - Sets the **s**tarting line.
-It is supposed to be used when a sentence spans multiple subtitle lines.
-After pressing `Ctrl+s`, wait for the next line(s) to appear
-and then press `Ctrl+e` to set the **e**nding line and create the card.
-* `Ctrl+r` - If you pressed `Ctrl+s` but changed your mind,
-it **r**esets the starting line.
-* `Ctrl+h` - Seeks to the starting point of the currently visible subtitle.
-* `a` - Opens **a**dvanced menu with a list of all available keybindings.
+### Global bindings
+* `Ctrl+e` - **E**xport a card with the currently visible subtitle line on the front.
+Use this when your subs are perfectly timed and the target sentence doesn't span multiple subs.
+* `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
+### Menu options
+* `a` - Open `advanced menu` with a list of all available keybindings.
 
+Let's say your subs are still perfectly timed,
+but the sentence you want to add is split between multiple subs.
+We need to combine the lines before making a card.
+* `c` - Set timings to the current sub and remember the corresponding line.
+It does nothing if there's no subs on screen.
+
+Then seek or continue watching until the next line that you want to combine appears on screen.
+Press `Ctrl+e` to make the card.
+
+* `r` - Forget all previously saved timings and associated dialogs.
+
+If subs are badly timed, first of all, you could try to retime them. 
+[ffsubsync](https://github.com/smacke/ffsubsync) is a program that will do it for you.
+Another option would be to shift timings using key bindings provided by mpv.
+
+* `z` and `shift+z` - Adjust subtitle delay.
+
+If above fails, you have to manually set timings.
+* `s` - Set the start time.
+* `e` - Set the end time.
+
+### How do I add definitions to the card I just made
 After the card is created, you can find it by typing ```tag:subs2srs added:1```
 in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolibri/)
 or similar software to add definitions to the card.
 
-## Additional mpv key bindings
+Pressing `t` in the `advanced menu` toggles the `autoclip` option.
+Now as subtitles appear on the screen, they will be immidiately copied to the clipboard.
+You can use it in combination with
+[Yomichan](https://foosoft.net/projects/yomichan/) clipboard monitor.
+`Yomichan Search` is activated by pressing `Alt+Insert` in your web browser.
+
+### Additional mpv key bindings
 I recommend adding these lines to your ```~/.config/mpv/input.conf```
 for smoother experience.
 ```
