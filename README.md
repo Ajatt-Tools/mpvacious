@@ -98,7 +98,7 @@ Ctrl+e script-binding anki-export-note
 Ctrl+h script-binding sub-rewind
 a      script-binding mpvacious-menu-open
 ```
-These additional bindings aren't enabled by default but can be accesesed via the menu (`a`).
+These additional bindings aren't enabled by default but can be accessed via the menu (`a`).
 ```
 Ctrl+s script-binding set-starting-line
 Ctrl+r script-binding reset-timings
@@ -106,7 +106,7 @@ Ctrl+t script-binding toggle-sub-autocopy
 ```
 ## Usage
 ### Global bindings
-* `Ctrl+e` - **E**xport a card with the currently visible subtitle line on the front.
+* `Ctrl+e` - Export a card with the currently visible subtitle line on the front.
 Use this when your subs are perfectly timed and the target sentence doesn't span multiple subs.
 * `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
 ### Menu options
@@ -123,7 +123,7 @@ Press `Ctrl+e` to make the card.
 
 * `r` - Forget all previously saved timings and associated dialogs.
 
-If subs are badly timed, first of all, you could try to retime them. 
+If subs are badly timed, first of all, you could try to re-time them. 
 [ffsubsync](https://github.com/smacke/ffsubsync) is a program that will do it for you.
 Another option would be to shift timings using key bindings provided by mpv.
 
@@ -139,7 +139,7 @@ in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolib
 or similar software to add definitions to the card.
 
 Pressing `t` in the `advanced menu` toggles the `autoclip` option.
-Now as subtitles appear on the screen, they will be immidiately copied to the clipboard.
+Now as subtitles appear on the screen, they will be immediately copied to the clipboard.
 You can use it in combination with
 [Yomichan](https://foosoft.net/projects/yomichan/) clipboard monitor.
 `Yomichan Search` is activated by pressing `Alt+Insert` in your web browser.
