@@ -263,6 +263,7 @@ local function sub_rewind()
 end
 
 local function export_to_anki(gui)
+    menu.close()
     local sub = subs.get()
     subs.clear()
 
@@ -279,6 +280,12 @@ local function export_to_anki(gui)
     else
         msg.warn("Nothing to export.")
         mp.osd_message("Nothing to export.", 1)
+    end
+end
+
+local function menu_aware_message(message, duration)
+    if menu.active == false then
+        mp.osd_message(message, duration)
     end
 end
 
@@ -512,6 +519,7 @@ subs.append = function()
 
     if sub ~= nil and not table.contains(subs.list, sub) then
         table.insert(subs.list, sub)
+        menu.update()
     end
 end
 
@@ -521,6 +529,7 @@ subs.set_timing = function(position)
     if is_emptytable(subs.list) then
         mp.observe_property("sub-text", "string", subs.append)
     end
+    menu.update()
 end
 
 subs.set_starting_line = function()
@@ -529,11 +538,11 @@ subs.set_starting_line = function()
     local current_sub = subs.get_current()
 
     if current_sub ~= nil then
-        local starting_point = human_readable_time(current_sub['start'])
-        mp.osd_message("Starting point is set to " .. starting_point, 2)
         mp.observe_property("sub-text", "string", subs.append)
+        local starting_point = human_readable_time(current_sub['start'])
+        menu_aware_message("Starting point is set to " .. starting_point, 2)
     else
-        mp.osd_message("There's no visible subtitle.", 2)
+        menu_aware_message("There's no visible subtitle.", 2)
     end
 end
 
@@ -548,7 +557,8 @@ end
 
 subs.reset_timings = function()
     subs.clear()
-    mp.osd_message("Timings have been reset.", 2)
+    menu_aware_message("Timings have been reset.", 2)
+    menu.update()
 end
 
 ------------------------------------------------------------
@@ -558,12 +568,12 @@ clip_autocopy = {}
 
 clip_autocopy.enable = function()
     mp.observe_property("sub-text", "string", set_clipboard)
-    mp.osd_message("Clipboard autocopy is enabled.", 1)
+    menu_aware_message("Clipboard autocopy is enabled.", 1)
 end
 
 clip_autocopy.disable = function()
     mp.unobserve_property(set_clipboard)
-    mp.osd_message("Clipboard autocopy is disabled.", 1)
+    menu_aware_message("Clipboard autocopy is disabled.", 1)
 end
 
 clip_autocopy.toggle = function()
@@ -573,6 +583,15 @@ clip_autocopy.toggle = function()
     else
         clip_autocopy.enable()
         config.autoclip = true
+    end
+    menu.update()
+end
+
+clip_autocopy.enabled = function()
+    if config.autoclip == true then
+        return 'yes'
+    else
+        return 'no'
     end
 end
 
@@ -605,51 +624,72 @@ end
 
 menu = {}
 
+menu.active = false
+
 menu.keybinds = {
-    { key = 's', fn = function() subs.set_timing('start'); menu.update() end },
-    { key = 'e', fn = function() subs.set_timing('end'); menu.update() end },
-    { key = 'g', fn = function() menu.close(); export_to_anki(true) end },
+    { key = 's', fn = function() subs.set_timing('start') end },
+    { key = 'e', fn = function() subs.set_timing('end') end },
+    { key = 't', fn = function() subs.set_starting_line() end },
+    { key = 'r', fn = function() subs.reset_timings() end },
+    { key = 'g', fn = function() export_to_anki(true) end },
+    { key = 'c', fn = function() clip_autocopy.toggle() end },
     { key = 'a', fn = function() menu.close() end },
     { key = 'ESC', fn = function() menu.close() end },
 }
 
-menu.update = function(message)
+menu.update = function()
+    if menu.active == false then
+        return
+    end
+
     table.sort(subs.list)
     local osd = OSD:new():size(config.menu_font_size)
     osd:bold('mpvacious: advanced options'):newline()
     osd:newline()
+
     osd:bold('Start time: '):append(human_readable_time(subs.get_timing('start'))):newline()
     osd:bold('End time: '):append(human_readable_time(subs.get_timing('end'))):newline()
+    osd:bold('Clipboard autocopy: '):append(clip_autocopy.enabled()):newline()
     osd:newline()
+
     osd:bold('Menu bindings:'):newline()
+    osd:tab():bold('t: '):append('Set timings to the current sub'):newline()
     osd:tab():bold('s: '):append('Set start time to current position'):newline()
     osd:tab():bold('e: '):append('Set end time to current position'):newline()
     osd:tab():bold('g: '):append('Export note using the `Add Cards` dialog'):newline()
+    osd:tab():bold('r: '):append('Reset timings'):newline()
+    osd:tab():bold('c: '):append('Toggle clipboard autocopy'):newline()
     osd:tab():bold('ESC: '):append('Close'):newline()
     osd:newline()
+
     osd:bold('Global bindings:'):newline()
     osd:tab():bold('ctrl+e: '):append('Export note'):newline()
-    osd:tab():bold('ctrl+s: '):append('Set starting line'):newline()
-    osd:tab():bold('ctrl+r: '):append('Reset timings'):newline()
-    osd:tab():bold('ctrl+t '):append('Toggle sub autocopy'):newline()
     osd:tab():bold('ctrl+h '):append('Seek to the start of the line'):newline()
     osd:draw()
 end
 
-menu.close = function()
-    for _, val in pairs(menu.keybinds) do
-        mp.remove_key_binding(val.key)
-    end
-    mp.unobserve_property(menu.update)
-    overlay:remove()
-end
-
 menu.open = function()
+    if menu.active == true then
+        return
+    end
+
     for _, val in pairs(menu.keybinds) do
         mp.add_key_binding(val.key, val.key, val.fn)
     end
+    menu.active = true
     menu.update()
-    mp.observe_property("sub-text", "string", menu.update)
+end
+
+menu.close = function()
+    if menu.active == false then
+        return
+    end
+
+    for _, val in pairs(menu.keybinds) do
+        mp.remove_key_binding(val.key)
+    end
+    overlay:remove()
+    menu.active = false
 end
 
 ------------------------------------------------------------
@@ -696,9 +736,8 @@ if config.autoclip == true then clip_autocopy.enable() end
 check_config_sanity()
 ankiconnect.create_deck_if_doesnt_exist(config.deck_name)
 mp.add_key_binding("ctrl+e", "anki-export-note", export_to_anki)
-mp.add_key_binding("ctrl+s", "set-starting-line", subs.set_starting_line)
-mp.add_key_binding("ctrl+r", "reset-timings", subs.reset_timings)
-mp.add_key_binding("ctrl+t", "toggle-sub-autocopy", clip_autocopy.toggle)
 mp.add_key_binding("ctrl+h", "sub-rewind", sub_rewind)
-
 mp.add_key_binding('a', 'mpvacious-menu-open', menu.open) -- a for advanced
+mp.add_key_binding(null, "set-starting-line", subs.set_starting_line)
+mp.add_key_binding(null, "reset-timings", subs.reset_timings)
+mp.add_key_binding(null, "toggle-sub-autocopy", clip_autocopy.toggle)
