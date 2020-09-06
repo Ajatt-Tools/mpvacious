@@ -85,6 +85,9 @@ audio_bitrate=18k
 # the value will be calculated preserving the aspect-ratio.
 snapshot_width=-2
 snapshot_height=200
+
+# Size of the font used in the menu
+menu_font_size=24
 ```
 Note that by default mpvacious assumes that "user" and "profile" are equal.
 So if your collection path looks like this:
@@ -123,7 +126,7 @@ Press `Ctrl+e` to make the card.
 
 * `r` - Forget all previously saved timings and associated dialogs.
 
-If subs are badly timed, first of all, you could try to re-time them. 
+If subs are badly timed, first of all, you could try to re-time them.
 [ffsubsync](https://github.com/smacke/ffsubsync) is a program that will do it for you.
 Another option would be to shift timings using key bindings provided by mpv.
 
