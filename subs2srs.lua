@@ -527,11 +527,14 @@ end
 
 subs.set_timing = function(position)
     subs.user_timings[position] = mp.get_property_number('time-pos')
+    local time_human = human_readable_time(subs.user_timings[position])
 
     if is_emptytable(subs.list) then
         mp.observe_property("sub-text", "string", subs.append)
     end
+
     menu.update()
+    mp.osd_message(string.format("%s is set to %s.", position, time_human), 2)
 end
 
 subs.set_starting_line = function()
