@@ -605,8 +605,8 @@ end
 
 Subtitle = {
     ['text']   = '',
-    ['start']  = 0,
-    ['end']    = 0,
+    ['start']  = -1,
+    ['end']    = -1,
 }
 
 function Subtitle:new(o)
