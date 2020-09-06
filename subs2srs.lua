@@ -267,9 +267,9 @@ local function sub_rewind()
 end
 
 local function export_to_anki(gui)
-    menu.close()
     local sub = subs.get()
     subs.clear()
+    menu.close()
 
     if sub ~= nil then
         local filename = construct_filename(sub)
@@ -681,6 +681,7 @@ menu.open = function()
     for _, val in pairs(menu.keybinds) do
         mp.add_key_binding(val.key, val.key, val.fn)
     end
+
     menu.active = true
     menu.update()
 end
@@ -693,6 +694,7 @@ menu.close = function()
     for _, val in pairs(menu.keybinds) do
         mp.remove_key_binding(val.key)
     end
+
     overlay:remove()
     menu.active = false
 end
