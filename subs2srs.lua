@@ -739,6 +739,7 @@ menu.keybinds = {
     { key = 'c', fn = function() subs.set_starting_line() end },
     { key = 'r', fn = function() subs.reset_timings() end },
     { key = 'g', fn = function() export_to_anki(true) end },
+    { key = 'm', fn = function() update_last_note() end },
     { key = 't', fn = function() clip_autocopy.toggle() end },
     { key = 'a', fn = function() menu.close() end },
     { key = 'ESC', fn = function() menu.close() end },
@@ -765,6 +766,7 @@ menu.update = function()
     osd:tab():bold('e: '):append('Set end time to current position'):newline()
     osd:tab():bold('r: '):append('Reset timings'):newline()
     osd:tab():bold('g: '):append('Export note using the `Add Cards` dialog'):newline()
+    osd:tab():bold('m: '):append('Add audio and image to the last added note'):newline()
     osd:tab():bold('t: '):append('Toggle clipboard autocopy'):newline()
     osd:tab():bold('ESC: '):append('Close'):newline()
     osd:newline()
