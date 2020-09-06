@@ -647,7 +647,7 @@ menu.update = function()
     end
 
     table.sort(subs.list)
-    local osd = OSD:new():size(config.menu_font_size)
+    local osd = OSD:new():size(config.menu_font_size):align(4)
     osd:bold('mpvacious: advanced options'):newline()
     osd:newline()
 
@@ -725,6 +725,10 @@ end
 
 function OSD:size(size)
     return self:append('{\\fs' .. size .. '}')
+end
+
+function OSD:align(number)
+    return self:append('{\\an' .. number .. '}')
 end
 
 function OSD:draw()
