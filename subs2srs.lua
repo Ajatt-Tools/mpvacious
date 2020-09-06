@@ -266,6 +266,10 @@ local function sub_rewind()
     )
 end
 
+local function minutes_ago(m)
+    return (os.time() - 60 * m) * 1000
+end
+
 local function export_to_anki(gui)
     local sub = subs.get()
     subs.clear()
