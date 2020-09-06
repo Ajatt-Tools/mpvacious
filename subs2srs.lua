@@ -514,8 +514,8 @@ subs.get = function()
         return nil
     end
 
-    if sub['start'] > sub['end'] then
-        msg.warn("First line can't start later than last one ends.")
+    if sub['start'] >= sub['end'] then
+        msg.warn("First line can't start later or at the same time than last one ends.")
         return nil
     end
 
