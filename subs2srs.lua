@@ -8,7 +8,7 @@
 -- 3. Use key bindings to manipulate the script
 -- * `Ctrl + e` - Creates a note from the current sub.
 -- * `a` - Opens advanced options.
---   There you can adjust and reset timings, 
+--   There you can adjust and reset timings,
 --   concatenate subtitle lines, toggle clipboard autocopy, and more.
 
 -- Requirements:

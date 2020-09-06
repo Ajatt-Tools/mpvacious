@@ -9,9 +9,9 @@ Probably works on windows too, but you're completely on your own there.
 * [Anki](https://wiki.archlinux.org/index.php/Anki)
 * [FFmpeg](https://wiki.archlinux.org/index.php/FFmpeg)
 * The [AnkiConnect](https://ankiweb.net/shared/info/2055492159) plugin
-* curl (you should already have this)
 * [xdotool](https://www.archlinux.org/packages/community/x86_64/xdotool/)
 (to avoid a certain Ankiconnect [bug](https://github.com/FooSoft/anki-connect/issues/82))
+* [curl](https://www.archlinux.org/packages/core/x86_64/curl/) (you should already have this)
 
 ## Installation
 
@@ -112,6 +112,7 @@ Ctrl+t script-binding toggle-sub-autocopy
 ```
 ## Usage
 ### Global bindings
+These bindings work everywhere, even if the menu (covered later) is not envoked.
 * `Ctrl+e` - Export a card with the currently visible subtitle line on the front.
 Use this when your subs are perfectly timed and the target sentence doesn't span multiple subs.
 * `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
@@ -125,7 +126,7 @@ We need to combine the lines before making a card.
 It does nothing if there's no subs on screen.
 
 Then seek or continue watching until the next line that you want to combine appears on screen.
-Press `Ctrl+e` to make the card.
+Press `n` to make the card.
 
 * `r` - Forget all previously saved timings and associated dialogs.
 
@@ -139,7 +140,7 @@ If above fails, you have to manually set timings.
 * `s` - Set the start time.
 * `e` - Set the end time.
 
-Then, as always, press `ctrl+e` to make the card.
+Then, as earlier, press `n` to make the card.
 
 ### How do I add definitions to the card I just made
 After the card is created, you can find it by typing ```tag:subs2srs added:1```
