@@ -376,6 +376,27 @@ ankiconnect.execute = function(request)
     return ret
 end
 
+ankiconnect.parse_result = function(curl_output)
+    -- there are two values that we actually care about: result and error
+    -- but we need to crawl inside to get them.
+
+    if curl_output.status ~= 0 then
+        return nil, "Ankiconnect isn't running"
+    end
+
+    local stdout_json = utils.parse_json(curl_output.stdout)
+
+    if stdout_json == nil then
+        return nil, "Fatal error from Ankiconnect"
+    end
+
+    if stdout_json.error ~= nil then
+        return nil, tostring(stdout_json.error)
+    end
+
+    return stdout_json.result, nil
+end
+
 ankiconnect.create_deck_if_doesnt_exist = function(deck_name)
     local args = {
         action = "changeDeck",
