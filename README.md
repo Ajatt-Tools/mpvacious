@@ -10,6 +10,8 @@ Probably works on windows too, but you're completely on your own there.
 * [FFmpeg](https://wiki.archlinux.org/index.php/FFmpeg)
 * The [AnkiConnect](https://ankiweb.net/shared/info/2055492159) plugin
 * curl (you should already have this)
+* [xdotool](https://www.archlinux.org/packages/community/x86_64/xdotool/)
+(to avoid a certain Ankiconnect [bug](https://github.com/FooSoft/anki-connect/issues/82))
 
 ## Installation
 
