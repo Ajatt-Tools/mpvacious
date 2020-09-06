@@ -291,6 +291,34 @@ local function export_to_anki(gui)
     end
 end
 
+local function update_last_note()
+    local sub = subs.get()
+    local last_note_id = ankiconnect.last_note_id()
+    subs.clear()
+    menu.close()
+
+    if sub == nil then
+        msg.warn("Nothing to export.")
+        mp.osd_message("Nothing to export. Have you set the timings?", 2)
+        return
+    end
+
+    if last_note_id < minutes_ago(10) then
+        msg.error("Couldn't find the target note.")
+        mp.osd_message("Couldn't find the target note.", 2)
+        return
+    end
+
+    local filename = construct_filename(sub)
+    local snapshot_filename = add_extension(filename, '.webp')
+    local audio_filename = add_extension(filename, '.ogg')
+    local snapshot_timestamp = (sub['start'] + sub['end']) / 2
+
+    ffmpeg.create_snapshot(snapshot_timestamp, snapshot_filename)
+    ffmpeg.create_audio(sub['start'], sub['end'], audio_filename)
+    ankiconnect.append_media(last_note_id, audio_filename, snapshot_filename)
+end
+
 local function get_empty_timings()
     return {
         ['start'] = -1,
