@@ -454,6 +454,26 @@ ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filena
     end
 end
 
+ankiconnect.last_note_id = function()
+    local args = {
+        action = "findNotes",
+        version = 6,
+        params = {
+            query = "added:1" -- find all notes added today
+        }
+    }
+
+    local ret = ankiconnect.execute(args)
+    local note_ids, _ = ankiconnect.parse_result(ret)
+
+    if note_ids ~= nil then
+        local last_note_id = math.max(table.unpack(note_ids))
+        return last_note_id
+    else
+        return -1
+    end
+end
+
 ------------------------------------------------------------
 -- subtitles and timings
 
