@@ -293,6 +293,13 @@ local function menu_aware_message(message, duration)
     end
 end
 
+local function get_empty_timings()
+    return {
+        ['start'] = -1,
+        ['end'] = -1,
+    }
+end
+
 ------------------------------------------------------------
 -- ffmpeg helper
 
@@ -448,10 +455,7 @@ subs = {}
 
 subs.list = {}
 
-subs.user_timings = {
-    ['start'] = 0,
-    ['end'] = 0,
-}
+subs.user_timings = get_empty_timings()
 
 subs.get_current = function()
     local sub_text = mp.get_property("sub-text")
@@ -470,7 +474,7 @@ subs.get_current = function()
 end
 
 subs.get_timing = function(position)
-    if subs.user_timings[position] > 0 then
+    if subs.user_timings[position] >= 0 then
         return subs.user_timings[position]
     end
 
@@ -553,10 +557,7 @@ end
 subs.clear = function()
     mp.unobserve_property(subs.append)
     subs.list = {}
-    subs.user_timings = {
-        ['start'] = 0,
-        ['end'] = 0,
-    }
+    subs.user_timings = get_empty_timings()
 end
 
 subs.reset_timings = function()
