@@ -4,7 +4,8 @@ Because voracious is bloated.
 ## Requirements
 * A [distribution](https://www.gnu.org/distros/free-distros.html) of
 [GNU/Linux](https://www.gnu.org/gnu/about-gnu.html).
-Preferably [Arch-based](https://www.parabola.nu/). Probably works on windows too.
+Preferably [Arch-based](https://www.parabola.nu/).
+Probably works on windows too, but you're completely on your own there.
 * [Anki](https://wiki.archlinux.org/index.php/Anki)
 * [FFmpeg](https://wiki.archlinux.org/index.php/FFmpeg)
 * The [AnkiConnect](https://ankiweb.net/shared/info/2055492159) plugin
@@ -135,6 +136,8 @@ Another option would be to shift timings using key bindings provided by mpv.
 If above fails, you have to manually set timings.
 * `s` - Set the start time.
 * `e` - Set the end time.
+
+Then, as always, press `ctrl+e` to make the card.
 
 ### How do I add definitions to the card I just made
 After the card is created, you can find it by typing ```tag:subs2srs added:1```

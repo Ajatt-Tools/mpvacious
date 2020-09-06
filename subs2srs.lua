@@ -5,10 +5,11 @@
 -- * Config file isn't created automatically.
 --
 -- 2. Open a video
--- 3.
--- * `Ctrl + e` creates a note from the current sub.
--- * `Ctrl + s` sets a starting line of the note (then continue watching and press `Ctrl + e` to set the ending line)
--- * `Ctrl + t` toggles clipboard autocopy (to use with Yomichan)
+-- 3. Use key bindings to manipulate the script
+-- * `Ctrl + e` - Creates a note from the current sub.
+-- * `a` - Opens advanced options.
+--   There you can adjust and reset timings, 
+--   concatenate subtitle lines, toggle clipboard autocopy, and more.
 
 -- Requirements:
 -- * ffmpeg
