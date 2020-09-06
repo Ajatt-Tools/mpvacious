@@ -287,12 +287,6 @@ local function export_to_anki(gui)
     end
 end
 
-local function menu_aware_message(message, duration)
-    if menu.active == false then
-        mp.osd_message(message, duration)
-    end
-end
-
 local function get_empty_timings()
     return {
         ['start'] = -1,
@@ -548,9 +542,9 @@ subs.set_starting_line = function()
     if current_sub ~= nil then
         mp.observe_property("sub-text", "string", subs.append)
         local starting_point = human_readable_time(current_sub['start'])
-        menu_aware_message("Starting point is set to " .. starting_point, 2)
+        mp.osd_message("Starting point is set to " .. starting_point, 2)
     else
-        menu_aware_message("There's no visible subtitle.", 2)
+        mp.osd_message("There's no visible subtitle.", 2)
     end
 end
 
@@ -562,8 +556,8 @@ end
 
 subs.reset_timings = function()
     subs.clear()
-    menu_aware_message("Timings have been reset.", 2)
     menu.update()
+    mp.osd_message("Timings have been reset.", 2)
 end
 
 ------------------------------------------------------------
@@ -573,12 +567,12 @@ clip_autocopy = {}
 
 clip_autocopy.enable = function()
     mp.observe_property("sub-text", "string", set_clipboard)
-    menu_aware_message("Clipboard autocopy is enabled.", 1)
+    mp.osd_message("Clipboard autocopy is enabled.", 1)
 end
 
 clip_autocopy.disable = function()
     mp.unobserve_property(set_clipboard)
-    menu_aware_message("Clipboard autocopy is disabled.", 1)
+    mp.osd_message("Clipboard autocopy is disabled.", 1)
 end
 
 clip_autocopy.toggle = function()
