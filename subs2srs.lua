@@ -427,8 +427,8 @@ ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filena
                 modelName = config.model_name,
                 fields = {
                     [config.sentence_field] = subtitle_string,
-                    [config.audio_field]    = '[sound:' .. audio_filename .. ']',
-                    [config.image_field]    = '<img src="' .. snapshot_filename .. '">'
+                    [config.audio_field] = string.format('[sound:%s]', audio_filename),
+                    [config.image_field] = string.format('<img src="%s" alt="snapshot">', snapshot_filename),
                 },
                 options = {
                     allowDuplicate = false,
