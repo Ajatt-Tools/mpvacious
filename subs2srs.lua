@@ -307,7 +307,7 @@ ffmpeg.execute = function(args)
             table.insert(args, i, value)
         end
 
-        mp.commandv("run", unpack(args))
+        mp.commandv("run", table.unpack(args))
     end
 end
 
