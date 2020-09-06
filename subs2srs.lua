@@ -144,8 +144,11 @@ local function copy_to_clipboard(text)
     mp.commandv("run", "sh", toclip_path, text)
 end
 
-local function set_clipboard(name, sub)
-    if is_emptystring(sub) then return end
+local function set_clipboard(_, sub)
+    -- roughly called as in fn(name, mp.get_property_string(name))
+    if is_emptystring(sub) then
+        return
+    end
     copy_to_clipboard(sub)
 end
 
@@ -484,7 +487,7 @@ end
 
 subs.get_text = function()
     local text = ''
-    for index, value in ipairs(subs.list) do
+    for _, value in ipairs(subs.list) do
         text = text .. value['text']
     end
     return text
