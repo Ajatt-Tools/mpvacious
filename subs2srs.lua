@@ -423,7 +423,7 @@ ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filena
         version = 6,
         params = {
             note = {
-                deckName  = config.deck_name,
+                deckName = config.deck_name,
                 modelName = config.model_name,
                 fields = {
                     [config.sentence_field] = subtitle_string,
@@ -432,35 +432,26 @@ ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filena
                 },
                 options = {
                     allowDuplicate = false,
-                    duplicateScope = "deck"
+                    duplicateScope = "deck",
                 },
-                tags = {"subs2srs"}
+                tags = { "subs2srs" }
             }
         }
     }
 
     local ret = ankiconnect.execute(args)
+    local result, error = ankiconnect.parse_result(ret)
+    local message = ''
 
-    if ret.status ~= 0 then
-        msg.error("Error: Ankiconnect isn't running.")
-        mp.osd_message("Error: Ankiconnect isn't running.", 1)
-        return
-    end
-
-    ret.json = utils.parse_json(ret.stdout)
-
-    if ret.json == nil then
-        msg.error("Fatal error from Ankiconnect.")
-        mp.osd_message("Fatal error from Ankiconnect.", 2)
-    end
-
-    if ret.json.error == nil then
-        mp.osd_message("Note added. ID = " .. ret.json.result, 1)
+    if error == nil then
+        message = string.format("Note added. ID = %s.", result)
+        print(message)
+        mp.osd_message(message, 1)
     else
-        mp.osd_message("Error: " .. ret.json.error, 1)
+        message = string.format("Error: %s.", error)
+        msg.error(message)
+        mp.osd_message(message, 2)
     end
-
-    for k, v in pairs(ret.json) do print(k, '=', v) end
 end
 
 ------------------------------------------------------------
