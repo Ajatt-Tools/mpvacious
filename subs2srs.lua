@@ -591,9 +591,9 @@ end
 
 clip_autocopy.enabled = function()
     if config.autoclip == true then
-        return 'yes'
+        return 'enabled'
     else
-        return 'no'
+        return 'disabled'
     end
 end
 
