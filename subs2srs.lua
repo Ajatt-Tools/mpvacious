@@ -824,6 +824,10 @@ function OSD:bold(s)
     return self:append('{\\b1}' .. s .. '{\\b0}')
 end
 
+function OSD:italics(s)
+    return self:append('{\\i1}' .. s .. '{\\i0}')
+end
+
 function OSD:newline()
     return self:append('\\N')
 end
