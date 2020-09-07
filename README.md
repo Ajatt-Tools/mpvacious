@@ -153,6 +153,22 @@ You can use it in combination with
 [Yomichan](https://foosoft.net/projects/yomichan/) clipboard monitor.
 `Yomichan Search` is activated by pressing `Alt+Insert` in your web browser.
 
+### Adding media to existing cards
+You can add a card using Yomichan first,
+and then append an audioclip and snapshot to it.
+You'll need:
+* Clipboard Inserter
+([chrome](https://chrome.google.com/webstore/detail/clipboard-inserter/deahejllghicakhplliloeheabddjajm))
+([firefox](https://addons.mozilla.org/ja/firefox/addon/clipboard-inserter/))
+* An [html page](https://pastebin.com/zDY6s3NK)
+to paste the contents of you clipboard to
+
+First add the card with Yomichan,
+then go back to mpv and press `a` to open `advanced menu`,
+then press `m` to add the snaphot and the audio clip to the card you've just made.
+
+Don't forget to set the right timings if the sentence is split between multiple subs.
+
 ### Additional mpv key bindings
 I recommend adding these lines to your ```~/.config/mpv/input.conf```
 for smoother experience.
