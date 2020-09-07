@@ -156,16 +156,24 @@ You can use it in combination with
 ### Adding media to existing cards
 You can add a card using Yomichan first,
 and then append an audioclip and snapshot to it.
-You'll need:
+
+####You'll need:
 * Clipboard Inserter
 ([chrome](https://chrome.google.com/webstore/detail/clipboard-inserter/deahejllghicakhplliloeheabddjajm))
 ([firefox](https://addons.mozilla.org/ja/firefox/addon/clipboard-inserter/))
 * An [html page](https://pastebin.com/zDY6s3NK)
 to paste the contents of you clipboard to
 
-First add the card with Yomichan,
-then go back to mpv and press `a` to open `advanced menu`,
-then press `m` to add the snaphot and the audio clip to the card you've just made.
+You can use any html page as long as it has \<body\>\</body\> in it.
+
+####The process:
+1) Open the html page in a web browser
+2) Enable Clipboard Inserter on the page
+3) Enable `clipboard autocopy` in mpvacious
+by pressing `t` in the `advanced menu`
+4) When you find an unknown word, make a card with Yomichan
+5) Go back to mpv and add the snaphot and the audio clip to the card you've just made
+by pressing `m` in the `advanced menu`
 
 Don't forget to set the right timings if the sentence is split between multiple subs.
 
