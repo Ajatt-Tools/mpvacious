@@ -157,7 +157,7 @@ You can use it in combination with
 You can add a card using Yomichan first,
 and then append an audioclip and snapshot to it.
 
-####You'll need:
+#### You'll need:
 * Clipboard Inserter
 ([chrome](https://chrome.google.com/webstore/detail/clipboard-inserter/deahejllghicakhplliloeheabddjajm))
 ([firefox](https://addons.mozilla.org/ja/firefox/addon/clipboard-inserter/))
@@ -166,7 +166,7 @@ to paste the contents of you clipboard to
 
 You can use any html page as long as it has \<body\>\</body\> in it.
 
-####The process:
+#### The process:
 1) Open the html page in a web browser
 2) Enable Clipboard Inserter on the page
 3) Enable `clipboard autocopy` in mpvacious
