@@ -150,7 +150,7 @@ local function copy_to_clipboard(_, text)
 end
 
 local function copy_sub_to_clipboard()
-    copy_to_clipboard('copy-on-demand', mp.get_property('sub-text'))
+    copy_to_clipboard('copy-on-demand', mp.get_property_string('sub-text'))
 end
 
 local function contains_non_latin_letters(str)
@@ -552,7 +552,7 @@ subs.list = {}
 subs.user_timings = get_empty_timings()
 
 subs.get_current = function()
-    local sub_text = mp.get_property("sub-text")
+    local sub_text = mp.get_property_string("sub-text")
 
     if is_emptystring(sub_text) then
         return nil
