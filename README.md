@@ -214,6 +214,7 @@ these links may help.
 * https://github.com/kelciour/mpv-scripts/blob/master/subs2srs.lua
 * https://pastebin.com/M2gBksHT
 * https://pastebin.com/NBudhMUk
+* https://pastebin.com/W5YV1A9q
 
 ## Further hacking
 * https://github.com/ayuryshev/subs2srs
