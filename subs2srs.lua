@@ -193,6 +193,15 @@ local function human_readable_time(seconds)
     return ret
 end
 
+local function subprocess(args)
+    return mp.command_native {
+        name = "subprocess",
+        playback_only = false,
+        capture_stdout = true,
+        args = args
+    }
+end
+
 local function anki_compatible_length(str)
     -- anki forcibly mutilates all filenames longer than 64 characters
     -- leave 25 characters for the filename
