@@ -510,13 +510,7 @@ ankiconnect.append_media = function(note_id, audio_filename, snapshot_filename)
     -- Ankiconnet will fail to update the note if the Anki Browser is open.
     -- First, try to close the Anki Browser.
     -- https://github.com/FooSoft/anki-connect/issues/82
-    mp.commandv("run",
-                "xdotool",
-                "search",
-                "--name",
-                "Browse \\([0-9]{1,} cards shown; [0-9]{1,} selected\\)",
-                "key",
-                "Escape")
+    os.execute([[xdotool search --name 'Browse \([0-9]{1,} cards? shown; [0-9]{1,} selected\)' key Escape]])
 
     local args = {
         action = "updateNoteFields",
