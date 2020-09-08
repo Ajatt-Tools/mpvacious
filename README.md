@@ -116,6 +116,7 @@ These bindings work everywhere, even if the menu (covered later) is not envoked.
 * `Ctrl+e` - Export a card with the currently visible subtitle line on the front.
 Use this when your subs are perfectly timed and the target sentence doesn't span multiple subs.
 * `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
+* `Ctrl+c` - Copy current subtitle string to the system clipboard. For automatic copying see `advanced menu`.
 ### Menu options
 * `a` - Open `advanced menu` with a list of all available keybindings.
 

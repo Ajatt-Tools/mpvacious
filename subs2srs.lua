@@ -139,17 +139,18 @@ local function escape_quotes(str)
     return str:gsub('"', '&quot;')
 end
 
-local function copy_to_clipboard(text)
+local function copy_to_clipboard(_, text)
+    -- roughly called as in fn(name, mp.get_property_string(name))
+    if is_emptystring(text) then
+        return
+    end
+
     local toclip_path = os.getenv("HOME") .. '/.config/mpv/scripts/subs2srs/toclip.sh'
     mp.commandv("run", "sh", toclip_path, text)
 end
 
-local function set_clipboard(_, sub)
-    -- roughly called as in fn(name, mp.get_property_string(name))
-    if is_emptystring(sub) then
-        return
-    end
-    copy_to_clipboard(sub)
+local function copy_sub_to_clipboard()
+    copy_to_clipboard('copy-on-demand', mp.get_property('sub-text'))
 end
 
 local function contains_non_latin_letters(str)
@@ -668,12 +669,12 @@ end
 clip_autocopy = {}
 
 clip_autocopy.enable = function()
-    mp.observe_property("sub-text", "string", set_clipboard)
+    mp.observe_property("sub-text", "string", copy_to_clipboard)
     mp.osd_message("Clipboard autocopy is enabled.", 1)
 end
 
 clip_autocopy.disable = function()
-    mp.unobserve_property(set_clipboard)
+    mp.unobserve_property(copy_to_clipboard)
     mp.osd_message("Clipboard autocopy is disabled.", 1)
 end
 
@@ -769,6 +770,7 @@ menu.update = function()
     osd:bold('Global bindings:'):newline()
     osd:tab():bold('ctrl+e: '):append('Export note'):newline()
     osd:tab():bold('ctrl+h: '):append('Seek to the start of the line'):newline()
+    osd:tab():bold('ctrl+c: '):append('Copy current subtitle to clipboard'):newline()
     osd:draw()
 end
 
@@ -853,6 +855,7 @@ ankiconnect.create_deck_if_doesnt_exist(config.deck_name)
 mp.add_key_binding("ctrl+e", "anki-export-note", export_to_anki)
 mp.add_key_binding("ctrl+h", "sub-rewind", sub_rewind)
 mp.add_key_binding('a', 'mpvacious-menu-open', menu.open) -- a for advanced
+mp.add_key_binding("ctrl+c", "copy-sub-to-clipboard", copy_sub_to_clipboard)
 mp.add_key_binding(null, "set-starting-line", subs.set_starting_line)
 mp.add_key_binding(null, "reset-timings", subs.reset_timings)
 mp.add_key_binding(null, "toggle-sub-autocopy", clip_autocopy.toggle)
