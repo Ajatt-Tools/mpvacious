@@ -852,9 +852,9 @@ if config.autoclip == true then clip_autocopy.enable() end
 
 check_config_sanity()
 ankiconnect.create_deck_if_doesnt_exist(config.deck_name)
+mp.add_key_binding('a', 'mpvacious-menu-open', menu.open) -- a for advanced
 mp.add_key_binding("ctrl+e", "anki-export-note", export_to_anki)
 mp.add_key_binding("ctrl+h", "sub-rewind", sub_rewind)
-mp.add_key_binding('a', 'mpvacious-menu-open', menu.open) -- a for advanced
 mp.add_key_binding("ctrl+c", "copy-sub-to-clipboard", copy_sub_to_clipboard)
 mp.add_key_binding(null, "set-starting-line", subs.set_starting_line)
 mp.add_key_binding(null, "reset-timings", subs.reset_timings)
