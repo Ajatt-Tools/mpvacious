@@ -100,6 +100,7 @@ then you don't need to specify `collection_path` in the config.
 Key bindings are configured in ```~/.config/mpv/input.conf```.
 This step is not necessary.
 ```
+Ctrl+c script-binding copy-sub-to-clipboard
 Ctrl+e script-binding anki-export-note
 Ctrl+h script-binding sub-rewind
 a      script-binding mpvacious-menu-open
