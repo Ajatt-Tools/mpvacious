@@ -213,12 +213,7 @@ local function anki_compatible_length(str)
         'BEGIN{print substr(str, 1, limit); exit}'
     }
 
-    local ret = mp.command_native{
-        name = "subprocess",
-        playback_only = false,
-        capture_stdout = true,
-        args = args
-    }
+    local ret = subprocess(args)
 
     if ret.status == 0 then
         ret.stdout = remove_newlines(ret.stdout)
