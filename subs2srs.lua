@@ -394,11 +394,13 @@ end
 ankiconnect = {}
 
 ankiconnect.execute = function(request)
+    -- utils.format_json returns a string
+    -- On error, request_json will contain "null", not nil.
     local request_json, error = utils.format_json(request)
 
     if error ~= nil or request_json == "null" then
         msg.error("Couldn't parse request.")
-        return
+        return nil
     end
 
     return subprocess { 'curl', '-s', 'localhost:8765', '-X', 'POST', '-d', request_json }
