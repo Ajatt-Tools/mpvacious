@@ -97,6 +97,11 @@ So if your collection path looks like this:
 `/home/john/.local/share/Anki2/john/collection.media/`
 then you don't need to specify `collection_path` in the config.
 
+Sentence field should be first in the note type settings.
+Otherwise Anki won't allow mpvacious to add new notes.
+Alternatively, refer to [Adding media to existing cards](#adding-media-to-existing-cards)
+or use an addon that [allows empty first field](https://ankiweb.net/shared/info/46741504).
+
 Key bindings are configured in ```~/.config/mpv/input.conf```.
 This step is not necessary.
 ```
