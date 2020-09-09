@@ -401,16 +401,7 @@ ankiconnect.execute = function(request)
         return
     end
 
-    local args = {'curl', '-s', 'localhost:8765', '-X', 'POST', '-d', request_json}
-
-    local ret = mp.command_native{
-        name = "subprocess",
-        playback_only = false,
-        capture_stdout = true,
-        args = args
-    }
-
-    return ret
+    return subprocess { 'curl', '-s', 'localhost:8765', '-X', 'POST', '-d', request_json }
 end
 
 ankiconnect.parse_result = function(curl_output)
