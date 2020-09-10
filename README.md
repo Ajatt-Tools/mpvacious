@@ -71,7 +71,7 @@ image_field=Image
 # Togglebles. Possble values: `yes` or `no`.
 # When mpv starts, automatically copy subs to the clipboard
 # as they appear on screen.
-# This option can be also toggled with `Ctrl+t`.
+# This option can be also toggled in the addon's OSD menu.
 autoclip=no
 # Remove all spaces from the subtitle text.
 # Only makes sense for languages without spaces like Japanese.
