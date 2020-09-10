@@ -206,14 +206,13 @@ local function anki_compatible_length(str)
     -- anki forcibly mutilates all filenames longer than 64 characters
     -- leave 25 characters for the filename
     -- the rest is reserved for the timestamp, which is added later
-    local args = {
+
+    local ret = subprocess {
         'awk',
         '-v', string.format('str=%s', str),
         '-v', 'limit=25',
         'BEGIN{print substr(str, 1, limit); exit}'
     }
-
-    local ret = subprocess(args)
 
     if ret.status == 0 then
         ret.stdout = remove_newlines(ret.stdout)
@@ -852,7 +851,9 @@ end
 ------------------------------------------------------------
 -- main
 
-if config.autoclip == true then clip_autocopy.enable() end
+if config.autoclip == true then
+    clip_autocopy.enable()
+end
 
 check_config_sanity()
 ankiconnect.create_deck_if_doesnt_exist(config.deck_name)
