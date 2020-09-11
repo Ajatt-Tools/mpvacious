@@ -5,7 +5,7 @@ Because voracious is bloated.
 * A [distribution](https://www.gnu.org/distros/free-distros.html) of
 [GNU/Linux](https://www.gnu.org/gnu/about-gnu.html).
 Preferably [Arch-based](https://www.parabola.nu/).
-Probably works on windows too, but you're completely on your own there.
+Follow this [link](https://github.com/Ajatt-Tools/mpvacious/tree/windows) if you use Windows.
 * [Anki](https://wiki.archlinux.org/index.php/Anki)
 * [FFmpeg](https://wiki.archlinux.org/index.php/FFmpeg)
 * The [AnkiConnect](https://ankiweb.net/shared/info/2055492159) plugin
