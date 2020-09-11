@@ -409,6 +409,10 @@ ankiconnect.parse_result = function(curl_output)
     -- there are two values that we actually care about: result and error
     -- but we need to crawl inside to get them.
 
+    if curl_output == nil then
+        return nil, "Failed to format json"
+    end
+
     if curl_output.status ~= 0 then
         return nil, "Ankiconnect isn't running"
     end
