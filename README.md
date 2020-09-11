@@ -1,6 +1,8 @@
 # mpvacious
 Because voracious is bloated.
+
 ![screenshot](https://user-images.githubusercontent.com/69171671/92428880-de3e8000-f17f-11ea-8d8a-0c2f0abae395.jpg)
+
 ## Requirements
 * A [distribution](https://www.gnu.org/distros/free-distros.html) of
 [GNU/Linux](https://www.gnu.org/gnu/about-gnu.html).
