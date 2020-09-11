@@ -815,7 +815,7 @@ OSD = {}
 OSD.__index = OSD
 
 function OSD:new()
-    return setmetatable({text=''}, self)
+    return setmetatable({ text = '' }, self)
 end
 
 function OSD:append(s)
