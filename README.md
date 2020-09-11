@@ -221,7 +221,5 @@ these links may help.
 * https://pastebin.com/M2gBksHT
 * https://pastebin.com/NBudhMUk
 * https://pastebin.com/W5YV1A9q
-
-## Further hacking
 * https://github.com/ayuryshev/subs2srs
 * https://github.com/erjiang/subs2srs
