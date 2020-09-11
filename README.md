@@ -186,6 +186,11 @@ by pressing `m` in the `advanced menu`
 
 Don't forget to set the right timings if the sentence is split between multiple subs.
 
+### Example sentence card
+With the addon you can make cards like this in just a few seconds.
+
+![card-example](https://user-images.githubusercontent.com/69171671/92900057-e102d480-f40e-11ea-8cfc-b00848ca66ff.png)
+
 ### Additional mpv key bindings
 I recommend adding these lines to your ```~/.config/mpv/input.conf```
 for smoother experience.
