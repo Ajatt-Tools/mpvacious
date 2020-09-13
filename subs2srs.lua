@@ -9,11 +9,11 @@
 -- * `Ctrl + e` - Creates a note from the current sub.
 -- * `a` - Opens advanced options.
 --   There you can adjust and reset timings,
---   concatenate subtitle lines, toggle clipboard autocopy, and more.
+--   concatenate subtitle lines, toggle clipboard auto copy, and more.
 
 -- Requirements:
--- * ffmpeg
--- * ankiconnect
+-- * FFmpeg
+-- * AnkiConnect
 
 local config = {
     collection_path = string.format('%s/.local/share/Anki2/%s/collection.media/', os.getenv("HOME"), os.getenv("USER")),
@@ -387,7 +387,7 @@ ffmpeg.create_audio = function(start_timestamp, end_timestamp, filename)
 end
 
 ------------------------------------------------------------
--- ankiconnect requests
+-- AnkiConnect requests
 
 ankiconnect = {}
 
@@ -507,7 +507,7 @@ ankiconnect.last_note_id = function()
 end
 
 ankiconnect.append_media = function(note_id, audio_filename, snapshot_filename)
-    -- Ankiconnet will fail to update the note if the Anki Browser is open.
+    -- AnkiConnect will fail to update the note if the Anki Browser is open.
     -- First, try to close the Anki Browser.
     -- https://github.com/FooSoft/anki-connect/issues/82
     subprocess {
