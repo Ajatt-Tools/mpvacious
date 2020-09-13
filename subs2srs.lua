@@ -734,7 +734,7 @@ menu = {}
 
 menu.active = false
 
-menu.overlay = mp.create_osd_overlay('ass-events')
+menu.overlay = mp.create_osd_overlay and mp.create_osd_overlay('ass-events')
 
 menu.overlay_draw = function(text)
     menu.overlay.data = text
@@ -789,6 +789,13 @@ menu.update = function()
 end
 
 menu.open = function()
+    if menu.overlay == nil then
+        local message = "OSD overlay is not supported in this version of mpv."
+        mp.osd_message(message, 5)
+        msg.error(message)
+        return
+    end
+
     if menu.active == true then
         return
     end
