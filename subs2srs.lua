@@ -34,7 +34,6 @@ local config = {
 local utils = require('mp.utils')
 local msg = require('mp.msg')
 local mpopt = require('mp.options')
-local overlay = mp.create_osd_overlay('ass-events')
 
 mpopt.read_options(config, "subs2srs")
 
@@ -735,6 +734,13 @@ menu = {}
 
 menu.active = false
 
+menu.overlay = mp.create_osd_overlay('ass-events')
+
+menu.overlay_draw = function(text)
+    menu.overlay.data = text
+    menu.overlay:update()
+end
+
 menu.keybinds = {
     { key = 's', fn = function() subs.set_timing('start') end },
     { key = 'e', fn = function() subs.set_timing('end') end },
@@ -778,7 +784,8 @@ menu.update = function()
     osd:tab():bold('ctrl+e: '):append('Export note'):newline()
     osd:tab():bold('ctrl+h: '):append('Seek to the start of the line'):newline()
     osd:tab():bold('ctrl+c: '):append('Copy current subtitle to clipboard'):newline()
-    osd:draw()
+
+    menu.overlay_draw(osd.text)
 end
 
 menu.open = function()
@@ -803,7 +810,7 @@ menu.close = function()
         mp.remove_key_binding(val.key)
     end
 
-    overlay:remove()
+    menu.overlay:remove()
     menu.active = false
 end
 
@@ -845,11 +852,6 @@ end
 
 function OSD:align(number)
     return self:append('{\\an' .. number .. '}')
-end
-
-function OSD:draw()
-    overlay.data = self.text
-    overlay:update()
 end
 
 ------------------------------------------------------------
