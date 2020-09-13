@@ -12,7 +12,7 @@ Follow this [link](https://github.com/Ajatt-Tools/mpvacious/tree/windows) if you
 * [FFmpeg](https://wiki.archlinux.org/index.php/FFmpeg)
 * The [AnkiConnect](https://ankiweb.net/shared/info/2055492159) plugin
 * [xdotool](https://www.archlinux.org/packages/community/x86_64/xdotool/)
-(to avoid a certain Ankiconnect [bug](https://github.com/FooSoft/anki-connect/issues/82))
+(to avoid a certain AnkiConnect [bug](https://github.com/FooSoft/anki-connect/issues/82))
 * [curl](https://www.archlinux.org/packages/core/x86_64/curl/) (you should already have this)
 
 ## Installation
@@ -120,7 +120,7 @@ Ctrl+t script-binding toggle-sub-autocopy
 ```
 ## Usage
 ### Global bindings
-These bindings work everywhere, even if the menu (covered later) is not envoked.
+These bindings work everywhere, even if the menu (covered later) is closed.
 * `Ctrl+e` - Export a card with the currently visible subtitle line on the front.
 Use this when your subs are perfectly timed and the target sentence doesn't span multiple subs.
 * `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
@@ -164,7 +164,7 @@ You can use it in combination with
 
 ### Adding media to existing cards
 You can add a card using Yomichan first,
-and then append an audioclip and snapshot to it.
+and then append an audio clip and snapshot to it.
 
 #### You'll need:
 * Clipboard Inserter
@@ -181,7 +181,7 @@ You can use any html page as long as it has \<body\>\</body\> in it.
 3) Enable `clipboard autocopy` in mpvacious
 by pressing `t` in the `advanced menu`
 4) When you find an unknown word, make a card with Yomichan
-5) Go back to mpv and add the snaphot and the audio clip to the card you've just made
+5) Go back to mpv and add the snapshot and the audio clip to the card you've just made
 by pressing `m` in the `advanced menu`
 
 Don't forget to set the right timings if the sentence is split between multiple subs.
