@@ -70,14 +70,24 @@ local function check_config_sanity()
         config.collection_path = config.collection_path .. '/'
     end
 
-    if config.snapshot_width  < 1 then config.snapshot_width  = -2 end
-    if config.snapshot_height < 1 then config.snapshot_height = -2 end
+    if config.snapshot_width < 1 then
+        config.snapshot_width = -2
+    end
 
-    if config.snapshot_width  > 800 then config.snapshot_width  = 800 end
-    if config.snapshot_height > 800 then config.snapshot_height = 800 end
+    if config.snapshot_height < 1 then
+        config.snapshot_height = -2
+    end
+
+    if config.snapshot_width > 800 then
+        config.snapshot_width = 800
+    end
+
+    if config.snapshot_height > 800 then
+        config.snapshot_height = 800
+    end
 
     if config.snapshot_width < 1 and config.snapshot_height < 1 then
-        config.snapshot_width  = -2
+        config.snapshot_width = -2
         config.snapshot_height = 200
         mp.osd_message("`snapshot_width` and `snapshot_height` can't be both less than 1.", 5)
     end
@@ -178,9 +188,9 @@ local function human_readable_time(seconds)
 
     local parts = {}
 
-    parts.h  = math.floor(seconds / 3600)
-    parts.m  = math.floor(seconds / 60) % 60
-    parts.s  = math.floor(seconds % 60)
+    parts.h = math.floor(seconds / 3600)
+    parts.m = math.floor(seconds / 60) % 60
+    parts.s = math.floor(seconds % 60)
     parts.ms = math.floor((seconds * 1000) % 1000)
 
     local ret = string.format("%02dm%02ds%03dms", parts.m, parts.s, parts.ms)
@@ -234,10 +244,10 @@ local function construct_filename(sub)
     end
 
     filename = string.format(
-        '%s_(%s-%s)',
-        filename,
-        human_readable_time(sub['start']),
-        human_readable_time(sub['end'])
+            '%s_(%s-%s)',
+            filename,
+            human_readable_time(sub['start']),
+            human_readable_time(sub['end'])
     )
 
     return filename
@@ -350,7 +360,7 @@ ffmpeg.create_snapshot = function(timestamp, filename)
     local video_path = mp.get_property("path")
     local snapshot_path = config.collection_path .. filename
 
-    ffmpeg.execute{
+    ffmpeg.execute {
         '-an',
         '-ss', tostring(timestamp),
         '-i', video_path,
@@ -604,10 +614,10 @@ subs.get = function()
 
     table.sort(subs.list)
 
-    local sub = Subtitle:new{
-        ['text']  = subs.get_text(),
+    local sub = Subtitle:new {
+        ['text'] = subs.get_text(),
         ['start'] = subs.get_timing('start'),
-        ['end']   = subs.get_timing('end'),
+        ['end'] = subs.get_timing('end'),
     }
 
     if is_emptystring(sub['text']) then
