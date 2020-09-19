@@ -547,6 +547,9 @@ ankiconnect.append_media = function(note_id, audio_filename, snapshot_filename)
         'Escape'
     }
 
+    local audio_field = string.format('[sound:%s]', audio_filename)
+    local image_field = string.format('<img src="%s" alt="snapshot">', snapshot_filename)
+
     local args = {
         action = "updateNoteFields",
         version = 6,
@@ -554,8 +557,8 @@ ankiconnect.append_media = function(note_id, audio_filename, snapshot_filename)
             note = {
                 id = note_id,
                 fields = {
-                    [config.audio_field] = string.format('[sound:%s]', audio_filename),
-                    [config.image_field] = string.format('<img src="%s" alt="snapshot">', snapshot_filename),
+                    [config.audio_field] = audio_field,
+                    [config.image_field] = image_field,
                 },
             }
         }
