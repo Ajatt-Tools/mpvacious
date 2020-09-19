@@ -526,7 +526,9 @@ ankiconnect.get_note_fields = function(note_id)
     })
 
     if error == nil then
-        return result[1].fields
+        result = result[1].fields
+        for key,value in pairs(result) do result[key] = value.value end
+        return result
     else
         return nil
     end
