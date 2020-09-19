@@ -516,6 +516,22 @@ ankiconnect.last_note_id = function()
     end
 end
 
+ankiconnect.get_note_fields = function(note_id)
+    local result, error = ankiconnect.parse_result(ankiconnect.execute {
+        action = "notesInfo",
+        version = 6,
+        params = {
+            notes = { note_id }
+        }
+    })
+
+    if error == nil then
+        return result[1].fields
+    else
+        return nil
+    end
+end
+
 ankiconnect.append_media = function(note_id, audio_filename, snapshot_filename)
     -- AnkiConnect will fail to update the note if the Anki Browser is open.
     -- First, try to close the Anki Browser.
