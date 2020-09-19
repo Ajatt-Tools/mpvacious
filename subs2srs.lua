@@ -306,7 +306,7 @@ end
 
 local function update_last_note()
     local sub = subs.get()
-    local last_note_id = ankiconnect.last_note_id()
+    local last_note_id = ankiconnect.get_last_note_id()
     subs.clear()
     menu.close()
 
@@ -496,7 +496,7 @@ ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filena
     end
 end
 
-ankiconnect.last_note_id = function()
+ankiconnect.get_last_note_id = function()
     local args = {
         action = "findNotes",
         version = 6,
