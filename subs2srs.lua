@@ -550,6 +550,18 @@ ankiconnect.append_media = function(note_id, audio_filename, snapshot_filename, 
     local audio_field = string.format('[sound:%s]', audio_filename)
     local image_field = string.format('<img src="%s" alt="snapshot">', snapshot_filename)
 
+    if not overwrite then
+        local fields = ankiconnect.get_note_fields(note_id)
+        if fields ~= nil then
+            if fields[config.audio_field] then
+                audio_field = fields[config.audio_field] .. audio_field
+            end
+            if fields[config.image_field] then
+                image_field = fields[config.image_field] .. image_field
+            end
+        end
+    end
+
     local args = {
         action = "updateNoteFields",
         version = 6,
