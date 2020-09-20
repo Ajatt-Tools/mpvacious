@@ -110,26 +110,26 @@ local function add_extension(filename, extension)
 end
 
 local function remove_extension(filename)
-    return filename:gsub('%.%w+$','')
+    return filename:gsub('%.%w+$', '')
 end
 
 local function remove_special_characters(str)
-    return str:gsub('[%c%p%s]',''):gsub('　', '')
+    return str:gsub('[%c%p%s]', ''):gsub('　', '')
 end
 
 local function remove_text_in_brackets(str)
-    return str:gsub('%b[]',''):gsub('【.-】', '')
+    return str:gsub('%b[]', ''):gsub('【.-】', '')
 end
 
 local function remove_text_in_parentheses(str)
     -- Remove text like （泣き声） or （ドアの開く音）
     -- Note: the modifier `-´ matches zero or more occurrences.
     -- However, instead of matching the longest sequence, it matches the shortest one.
-    return str:gsub('%b()',''):gsub('（.-）','')
+    return str:gsub('%b()', ''):gsub('（.-）', '')
 end
 
 local function remove_newlines(str)
-    return str:gsub('[\n\r]+',' ')
+    return str:gsub('[\n\r]+', ' ')
 end
 
 local function remove_leading_trailing_spaces(str)
@@ -272,10 +272,10 @@ end
 
 local function sub_rewind()
     pcall(
-        function ()
-            local sub_start_time = subs.get_current()['start']
-            mp.commandv('seek', sub_start_time, 'absolute')
-        end
+            function()
+                local sub_start_time = subs.get_current()['start']
+                mp.commandv('seek', sub_start_time, 'absolute')
+            end
     )
 end
 
