@@ -792,6 +792,7 @@ menu.keybinds = {
     { key = 'g', fn = function() export_to_anki(true) end },
     { key = 'n', fn = function() export_to_anki() end },
     { key = 'm', fn = function() update_last_note() end },
+    { key = 'M', fn = function() update_last_note(true) end },
     { key = 't', fn = function() clip_autocopy.toggle() end },
     { key = 'ESC', fn = function() menu.close() end },
 }
@@ -818,7 +819,7 @@ menu.update = function()
     osd:tab():bold('r: '):append('Reset timings'):newline()
     osd:tab():bold('n: '):append('Export note'):newline()
     osd:tab():bold('g: '):append('Export note using the `Add Cards` GUI'):newline()
-    osd:tab():bold('m: '):append('Add audio and image to the last added note'):newline()
+    osd:tab():bold('m: '):append('Add audio and image to the last added note '):italics('(+shift to overwrite)'):newline()
     osd:tab():bold('t: '):append('Toggle clipboard autocopy'):newline()
     osd:tab():bold('ESC: '):append('Close'):newline()
     osd:newline()
