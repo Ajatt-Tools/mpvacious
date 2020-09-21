@@ -344,7 +344,7 @@ end
 
 ffmpeg = {}
 
-ffmpeg.prefix = {"ffmpeg", "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet"}
+ffmpeg.prefix = { "ffmpeg", "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet" }
 
 ffmpeg.execute = function(args)
     if next(args) ~= nil then
@@ -379,7 +379,7 @@ ffmpeg.create_audio = function(start_timestamp, end_timestamp, filename)
     local fragment_path = config.collection_path .. filename
     local track_number = get_audio_track_number()
 
-    ffmpeg.execute{
+    ffmpeg.execute {
         '-vn',
         '-ss', tostring(start_timestamp),
         '-to', tostring(end_timestamp),
@@ -527,7 +527,9 @@ ankiconnect.get_note_fields = function(note_id)
 
     if error == nil then
         result = result[1].fields
-        for key,value in pairs(result) do result[key] = value.value end
+        for key, value in pairs(result) do
+            result[key] = value.value
+        end
         return result
     else
         return nil
@@ -609,10 +611,10 @@ subs.get_current = function()
 
     local sub_delay = mp.get_property_native("sub-delay")
 
-    return Subtitle:new{
-        ['text']   = trim(sub_text),
-        ['start']  = mp.get_property_number("sub-start") + sub_delay,
-        ['end']    = mp.get_property_number("sub-end")   + sub_delay
+    return Subtitle:new {
+        ['text'] = trim(sub_text),
+        ['start'] = mp.get_property_number("sub-start") + sub_delay,
+        ['end'] = mp.get_property_number("sub-end") + sub_delay
     }
 end
 
@@ -750,9 +752,9 @@ end
 -- Subtitle class provides methods for comparing subtitle lines
 
 Subtitle = {
-    ['text']   = '',
-    ['start']  = -1,
-    ['end']    = -1,
+    ['text'] = '',
+    ['start'] = -1,
+    ['end'] = -1,
 }
 
 function Subtitle:new(o)
@@ -763,10 +765,10 @@ function Subtitle:new(o)
 end
 
 Subtitle.__eq = function(lhs, rhs)
-	return lhs['text'] == rhs['text']
+    return lhs['text'] == rhs['text']
 end
 
-Subtitle.__lt = function (lhs, rhs)
+Subtitle.__lt = function(lhs, rhs)
     return lhs['start'] < rhs['start']
 end
 
