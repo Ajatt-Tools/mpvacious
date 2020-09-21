@@ -244,7 +244,7 @@ local function anki_compatible_length(str)
         ret.stdout = remove_leading_trailing_spaces(ret.stdout)
         return ret.stdout
     else
-        return 'subs2srs'
+        return 'subs2srs_' .. os.time()
     end
 end
 
