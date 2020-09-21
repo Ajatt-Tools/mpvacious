@@ -1,19 +1,35 @@
--- Usage:
--- 1. Change `config` according to your needs
--- * Options can be changed right in this file or in a separate config file.
--- * Config path: ~/.config/mpv/script-opts/subs2srs.conf
--- * Config file isn't created automatically.
---
--- 2. Open a video
--- 3. Use key bindings to manipulate the script
--- * `Ctrl + e` - Creates a note from the current sub.
--- * `a` - Opens advanced options.
---   There you can adjust and reset timings,
---   concatenate subtitle lines, toggle clipboard auto copy, and more.
+--[[
+Copyright (C) 2020 Ren Tatsumoto
 
--- Requirements:
--- * FFmpeg
--- * AnkiConnect
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+Requirements:
+* FFmpeg
+* AnkiConnect
+
+Usage:
+1. Change `config` according to your needs
+* Options can be changed right in this file or in a separate config file.
+* Config path: ~/.config/mpv/script-opts/subs2srs.conf
+* Config file isn't created automatically.
+
+2. Open a video
+
+3. Use key bindings to manipulate the script
+* Create a note from the current subtitle line - `Ctrl + e`
+* Open advanced options - `a`
+]]
 
 local config = {
     collection_path = string.format('%s/.local/share/Anki2/%s/collection.media/', os.getenv("HOME"), os.getenv("USER")),
