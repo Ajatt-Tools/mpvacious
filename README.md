@@ -1,5 +1,7 @@
 # mpvacious
-Because voracious is bloated.
+mpvacious is your semi-automatic subs2srs for mpv.
+It supports multiple workflows and allows you to quickly create Anki cards
+while watching your favorite TV show.
 
 ![screenshot](https://user-images.githubusercontent.com/69171671/92428880-de3e8000-f17f-11ea-8d8a-0c2f0abae395.jpg)
 
