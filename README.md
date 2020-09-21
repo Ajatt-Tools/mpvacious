@@ -181,8 +181,9 @@ You can use any html page as long as it has \<body\>\</body\> in it.
 3) Enable `clipboard autocopy` in mpvacious
 by pressing `t` in the `advanced menu`
 4) When you find an unknown word, make a card with Yomichan
-5) Go back to mpv and add the snapshot and the audio clip to the card you've just made
-by pressing `m` in the `advanced menu`
+5) Go back to mpv and add the snapshot and the audio clip
+to the card you've just made by pressing `m` in the `advanced menu`.
+Pressing `shift+m` will overwrite any existing data in media fields.
 
 Don't forget to set the right timings if the sentence is split between multiple subs.
 
