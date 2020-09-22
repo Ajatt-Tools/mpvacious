@@ -114,7 +114,7 @@ local function check_config_sanity()
     if config.snapshot_width < 1 and config.snapshot_height < 1 then
         config.snapshot_width = -2
         config.snapshot_height = 200
-        mp.osd_message("`snapshot_width` and `snapshot_height` can't be both less than 1.", 5)
+        notify("`snapshot_width` and `snapshot_height` can't be both less than 1.", "warn", 5)
     end
 
     if config.snapshot_quality < 0 or config.snapshot_quality > 100 then
@@ -322,8 +322,7 @@ local function export_to_anki(gui)
 
         ankiconnect.add_note(sub['text'], audio_filename, snapshot_filename, gui)
     else
-        msg.warn("Nothing to export.")
-        mp.osd_message("Nothing to export.", 1)
+        notify("Nothing to export.", "warn", 1)
     end
 end
 
@@ -334,14 +333,12 @@ local function update_last_note(overwrite)
     menu.close()
 
     if sub == nil then
-        msg.warn("Nothing to export.")
-        mp.osd_message("Nothing to export. Have you set the timings?", 2)
+        notify("Nothing to export. Have you set the timings?", "warn", 2)
         return
     end
 
     if last_note_id < minutes_ago(10) then
-        msg.error("Couldn't find the target note.")
-        mp.osd_message("Couldn't find the target note.", 2)
+        notify("Couldn't find the target note.", "warn", 2)
         return
     end
 
@@ -428,7 +425,7 @@ ankiconnect.execute = function(request)
     local request_json, error = utils.format_json(request)
 
     if error ~= nil or request_json == "null" then
-        msg.error("Couldn't parse request.")
+        notify("Couldn't parse request.", "error", 2)
         return nil
     end
 
@@ -504,16 +501,11 @@ ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filena
 
     local ret = ankiconnect.execute(args)
     local result, error = ankiconnect.parse_result(ret)
-    local message = ''
 
     if error == nil then
-        message = string.format("Note added. ID = %s.", result)
-        print(message)
-        mp.osd_message(message, 1)
+        notify(string.format("Note added. ID = %s.", result))
     else
-        message = string.format("Error: %s.", error)
-        msg.error(message)
-        mp.osd_message(message, 2)
+        notify(string.format("Error: %s.", error), "error", 2)
     end
 end
 
@@ -601,16 +593,11 @@ ankiconnect.append_media = function(note_id, audio_filename, snapshot_filename, 
 
     local ret = ankiconnect.execute(args)
     local _, error = ankiconnect.parse_result(ret)
-    local message = ''
 
     if error == nil then
-        message = string.format("Note #%d updated.", note_id)
-        print(message)
-        mp.osd_message(message, 1)
+        notify(string.format("Note #%d updated.", note_id))
     else
-        message = string.format("Error: %s.", error)
-        msg.error(message)
-        mp.osd_message(message, 2)
+        notify(string.format("Error: %s.", error), "error", 2)
     end
 end
 
@@ -681,7 +668,7 @@ subs.get = function()
     end
 
     if sub['start'] >= sub['end'] then
-        msg.warn("First line can't start later or at the same time than last one ends.")
+        notify("First line can't start later or at the same time than last one ends.", "error", 3)
         return nil
     end
 
@@ -716,10 +703,9 @@ subs.set_starting_line = function()
 
     if current_sub ~= nil then
         mp.observe_property("sub-text", "string", subs.append)
-        local starting_point = human_readable_time(current_sub['start'])
-        mp.osd_message("Starting point is set to " .. starting_point, 2)
+        notify("Timings have been set to the current sub.", "info", 2)
     else
-        mp.osd_message("There's no visible subtitle.", 2)
+        notify("There's no visible subtitle.", "info", 2)
     end
 end
 
@@ -732,7 +718,7 @@ end
 subs.reset_timings = function()
     subs.clear()
     menu.update()
-    mp.osd_message("Timings have been reset.", 2)
+    notify("Timings have been reset.", "info", 2)
 end
 
 ------------------------------------------------------------
@@ -742,12 +728,12 @@ clip_autocopy = {}
 
 clip_autocopy.enable = function()
     mp.observe_property("sub-text", "string", copy_to_clipboard)
-    mp.osd_message("Clipboard autocopy is enabled.", 1)
+    notify("Clipboard autocopy has been enabled.", "info", 1)
 end
 
 clip_autocopy.disable = function()
     mp.unobserve_property(copy_to_clipboard)
-    mp.osd_message("Clipboard autocopy is disabled.", 1)
+    notify("Clipboard autocopy has been disabled.", "info", 1)
 end
 
 clip_autocopy.toggle = function()
@@ -857,9 +843,7 @@ end
 
 menu.open = function()
     if menu.overlay == nil then
-        local message = "OSD overlay is not supported in this version of mpv."
-        mp.osd_message(message, 5)
-        msg.error(message)
+        notify("OSD overlay is not supported in this version of mpv.", "error", 5)
         return
     end
 
