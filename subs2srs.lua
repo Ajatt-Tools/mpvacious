@@ -248,7 +248,7 @@ local function anki_compatible_length(str)
     end
 end
 
-local function construct_filename(sub)
+local function construct_media_filenames(sub)
     local filename = mp.get_property("filename") -- filename without path
 
     filename = remove_extension(filename)
@@ -266,7 +266,7 @@ local function construct_filename(sub)
             human_readable_time(sub['end'])
     )
 
-    return filename
+    return filename .. '.webp', filename .. '.ogg'
 end
 
 local function get_audio_track_number()
@@ -305,9 +305,7 @@ local function export_to_anki(gui)
     menu.close()
 
     if sub ~= nil then
-        local filename = construct_filename(sub)
-        local snapshot_filename = add_extension(filename, '.webp')
-        local audio_filename = add_extension(filename, '.ogg')
+        local snapshot_filename, audio_filename = construct_media_filenames(sub)
         local snapshot_timestamp = (sub['start'] + sub['end']) / 2
 
         ffmpeg.create_snapshot(snapshot_timestamp, snapshot_filename)
@@ -338,9 +336,7 @@ local function update_last_note(overwrite)
         return
     end
 
-    local filename = construct_filename(sub)
-    local snapshot_filename = add_extension(filename, '.webp')
-    local audio_filename = add_extension(filename, '.ogg')
+    local snapshot_filename, audio_filename = construct_media_filenames(sub)
     local snapshot_timestamp = (sub['start'] + sub['end']) / 2
 
     ffmpeg.create_snapshot(snapshot_timestamp, snapshot_filename)
