@@ -647,11 +647,11 @@ subs.get_timing = function(position)
 end
 
 subs.get_text = function()
-    local text = ''
-    for _, value in ipairs(subs.list) do
-        text = text .. value['text']
+    local speech = {}
+    for _, sub in ipairs(subs.list) do
+        table.insert(speech, sub['text'])
     end
-    return text
+    return table.concat(speech)
 end
 
 subs.get = function()
