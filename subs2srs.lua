@@ -80,6 +80,13 @@ function table.contains(table, element)
     return false
 end
 
+local function notify(message, level, duration)
+    level = level or 'info'
+    duration = duration or 1
+    msg[level](message)
+    mp.osd_message(message, duration)
+end
+
 local function check_config_sanity()
     if not config.collection_path:endswith('/') then
         -- The user forgot to add a slash at the end of the collection path
