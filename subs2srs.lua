@@ -134,10 +134,6 @@ local function is_emptytable(tab)
     return tab == nil or next(tab) == nil
 end
 
-local function add_extension(filename, extension)
-    return filename .. extension
-end
-
 local function remove_extension(filename)
     return filename:gsub('%.%w+$', '')
 end
