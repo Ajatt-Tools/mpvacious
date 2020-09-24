@@ -70,7 +70,7 @@ local OSD
 -- utility functions
 
 function string:endswith(suffix)
-    return self:match(string.format('%s$', suffix))
+    return suffix == "" or self:sub(-#suffix) == suffix
 end
 
 function table.contains(table, element)
