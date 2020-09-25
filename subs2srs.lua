@@ -347,7 +347,7 @@ local function update_last_note(overwrite)
 
     ffmpeg.create_snapshot(snapshot_timestamp, snapshot_filename)
     ffmpeg.create_audio(sub['start'], sub['end'], audio_filename)
-    ankiconnect.append_media(last_note_id, audio_filename, snapshot_filename, overwrite)
+    ankiconnect.append_media(last_note_id, sub['text'], audio_filename, snapshot_filename, overwrite)
 end
 
 local function get_empty_timings()
@@ -549,7 +549,7 @@ ankiconnect.get_note_fields = function(note_id)
     end
 end
 
-ankiconnect.append_media = function(note_id, audio_filename, snapshot_filename, overwrite)
+ankiconnect.append_media = function(note_id, sentence, audio_filename, snapshot_filename, overwrite)
     -- AnkiConnect will fail to update the note if the Anki Browser is open.
     -- First, try to close the Anki Browser.
     -- https://github.com/FooSoft/anki-connect/issues/82
@@ -584,6 +584,7 @@ ankiconnect.append_media = function(note_id, audio_filename, snapshot_filename, 
             note = {
                 id = note_id,
                 fields = {
+                    [config.sentence_field] = sentence,
                     [config.audio_field] = audio_field,
                     [config.image_field] = image_field,
                 },
