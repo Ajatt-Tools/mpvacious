@@ -69,10 +69,6 @@ local OSD
 ------------------------------------------------------------
 -- utility functions
 
-function string:endswith(suffix)
-    return suffix == "" or self:sub(-#suffix) == suffix
-end
-
 function table.contains(table, element)
     for _, value in pairs(table) do
         if value == element then
@@ -94,11 +90,6 @@ local function notify(message, level, duration)
 end
 
 local function check_config_sanity()
-    if not config.collection_path:endswith('/') then
-        -- The user forgot to add a slash at the end of the collection path
-        config.collection_path = config.collection_path .. '/'
-    end
-
     if config.snapshot_width < 1 then
         config.snapshot_width = -2
     end
@@ -319,7 +310,6 @@ local function export_to_anki(gui)
 
         ffmpeg.create_snapshot(snapshot_timestamp, snapshot_filename)
         ffmpeg.create_audio(sub['start'], sub['end'], audio_filename)
-
         ankiconnect.add_note(sub['text'], audio_filename, snapshot_filename, gui)
     else
         notify("Nothing to export.", "warn", 1)
@@ -376,7 +366,7 @@ end
 
 ffmpeg.create_snapshot = function(timestamp, filename)
     local video_path = mp.get_property("path")
-    local snapshot_path = config.collection_path .. filename
+    local snapshot_path = utils.join_path(config.collection_path, filename)
 
     ffmpeg.execute {
         '-an',
@@ -394,7 +384,7 @@ end
 
 ffmpeg.create_audio = function(start_timestamp, end_timestamp, filename)
     local video_path = mp.get_property("path")
-    local fragment_path = config.collection_path .. filename
+    local fragment_path = utils.join_path(config.collection_path, filename)
     local track_number = get_audio_track_number()
 
     ffmpeg.execute {
