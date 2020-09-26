@@ -1,4 +1,6 @@
 # mpvacious
+![GitHub](https://img.shields.io/github/license/Ajatt-Tools/mpvacious) ![GitHub top language](https://img.shields.io/github/languages/top/Ajatt-Tools/mpvacious) ![Lines of code](https://img.shields.io/tokei/lines/github/Ajatt-Tools/mpvacious)
+
 mpvacious is your semi-automatic subs2srs for mpv.
 It supports multiple workflows and allows you to quickly create Anki cards
 while watching your favorite TV show.
