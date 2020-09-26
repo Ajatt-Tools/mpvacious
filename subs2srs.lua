@@ -347,6 +347,23 @@ local function get_empty_timings()
     }
 end
 
+local function join_media_fields(note1, note2)
+    if note2 == nil then
+        goto ret
+    end
+
+    if note2[config.audio_field] then
+        note1[config.audio_field] = note2[config.audio_field] .. note1[config.audio_field]
+    end
+
+    if note2[config.image_field] then
+        note1[config.image_field] = note2[config.image_field] .. note1[config.image_field]
+    end
+
+    :: ret ::
+    return note1
+end
+
 ------------------------------------------------------------
 -- ffmpeg helper
 
