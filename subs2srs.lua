@@ -451,7 +451,7 @@ ankiconnect.parse_result = function(curl_output)
     -- but we need to crawl inside to get them.
 
     if curl_output == nil then
-        return nil, "Failed to format json"
+        return nil, "Failed to format json or no args passed"
     end
 
     if curl_output.status ~= 0 then
