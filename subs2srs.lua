@@ -318,7 +318,9 @@ local function export_to_anki(gui)
 
         ffmpeg.create_snapshot(snapshot_timestamp, snapshot_filename)
         ffmpeg.create_audio(sub['start'], sub['end'], audio_filename)
-        ankiconnect.add_note(sub['text'], audio_filename, snapshot_filename, gui)
+
+        local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
+        ankiconnect.add_note(note_fields, gui)
     else
         notify("Nothing to export.", "warn", 1)
     end
@@ -492,7 +494,7 @@ ankiconnect.create_deck_if_doesnt_exist = function(deck_name)
     ankiconnect.execute(args)
 end
 
-ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filename, gui)
+ankiconnect.add_note = function(note_fields, gui)
     local action
     if gui then
         action = 'guiAddCards'
@@ -507,11 +509,7 @@ ankiconnect.add_note = function(subtitle_string, audio_filename, snapshot_filena
             note = {
                 deckName = config.deck_name,
                 modelName = config.model_name,
-                fields = {
-                    [config.sentence_field] = subtitle_string,
-                    [config.audio_field] = string.format('[sound:%s]', audio_filename),
-                    [config.image_field] = string.format('<img src="%s" alt="snapshot">', snapshot_filename),
-                },
+                fields = note_fields,
                 options = {
                     allowDuplicate = false,
                     duplicateScope = "deck",
