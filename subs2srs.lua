@@ -269,6 +269,14 @@ local function construct_media_filenames(sub)
     return filename .. '.webp', filename .. '.ogg'
 end
 
+local function construct_note_fields(sub_text, snapshot_filename, audio_filename)
+    return {
+        [config.sentence_field] = sub_text,
+        [config.image_field] = string.format('<img src="%s" alt="snapshot">', snapshot_filename),
+        [config.audio_field] = string.format('[sound:%s]', audio_filename),
+    }
+end
+
 local function get_audio_track_number()
     local audio_track_number = 0
     local tracks_count = mp.get_property_number("track-list/count")
