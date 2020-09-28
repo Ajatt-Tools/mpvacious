@@ -838,7 +838,7 @@ menu.update = function()
     osd:tab():bold('ctrl+h: '):append('Seek to the start of the line'):newline()
     osd:tab():bold('ctrl+c: '):append('Copy current subtitle to clipboard'):newline()
 
-    menu.overlay_draw(osd.text)
+    menu.overlay_draw(osd:get_text())
 end
 
 menu.open = function()
@@ -880,20 +880,20 @@ OSD = {}
 OSD.__index = OSD
 
 function OSD:new()
-    return setmetatable({ text = '' }, self)
+    return setmetatable({ messages = { } }, self)
 end
 
 function OSD:append(s)
-    self.text = self.text .. s
+    table.insert(self.messages, s)
     return self
 end
 
 function OSD:bold(s)
-    return self:append('{\\b1}' .. s .. '{\\b0}')
+    return self:append('{\\b1}'):append(s):append('{\\b0}')
 end
 
 function OSD:italics(s)
-    return self:append('{\\i1}' .. s .. '{\\i0}')
+    return self:append('{\\i1}'):append(s):append('{\\i0}')
 end
 
 function OSD:newline()
@@ -905,11 +905,15 @@ function OSD:tab()
 end
 
 function OSD:size(size)
-    return self:append('{\\fs' .. size .. '}')
+    return self:append('{\\fs'):append(size):append('}')
 end
 
 function OSD:align(number)
-    return self:append('{\\an' .. number .. '}')
+    return self:append('{\\an'):append(number):append('}')
+end
+
+function OSD:get_text()
+    return table.concat(self.messages)
 end
 
 ------------------------------------------------------------
