@@ -348,12 +348,7 @@ local function update_last_note(overwrite)
     ffmpeg.create_snapshot(snapshot_timestamp, snapshot_filename)
     ffmpeg.create_audio(sub['start'], sub['end'], audio_filename)
 
-    local note_fields = {
-        [config.sentence_field] = sub['text'],
-        [config.audio_field] = string.format('[sound:%s]', audio_filename),
-        [config.image_field] = string.format('<img src="%s" alt="snapshot">', snapshot_filename),
-    }
-
+    local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
     ankiconnect.append_media(last_note_id, note_fields, overwrite)
 end
 
