@@ -896,6 +896,26 @@ function OSD:italics(s)
     return self:append('{\\i1}'):append(s):append('{\\i0}')
 end
 
+function OSD:color(code)
+    return self:append('{\\1c&H')
+               :append(code:sub(5, 6))
+               :append(code:sub(3, 4))
+               :append(code:sub(1, 2))
+               :append('&}')
+end
+
+function OSD:text(text)
+    return self:color('ffffff'):append(text)
+end
+
+function OSD:submenu(text)
+    return self:color('ffe1d0'):bold(text)
+end
+
+function OSD:item(text)
+    return self:color('fef6dd'):bold(text)
+end
+
 function OSD:newline()
     return self:append('\\N')
 end
