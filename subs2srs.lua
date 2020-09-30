@@ -397,40 +397,48 @@ ffmpeg.create_snapshot = function(timestamp, filename)
     local video_path = mp.get_property("path")
     local snapshot_path = utils.join_path(config.collection_path, filename)
 
-    ffmpeg.execute {
-        '-an',
-        '-ss', tostring(timestamp),
-        '-i', video_path,
-        '-vcodec', 'libwebp',
-        '-lossless', '0',
-        '-compression_level', '6',
-        '-qscale:v', tostring(config.snapshot_quality),
-        '-vf', string.format('scale=%d:%d', config.snapshot_width, config.snapshot_height),
-        '-vframes', '1',
-        snapshot_path
-    }
+    mp.commandv(
+            'run',
+            'mpv',
+            video_path,
+            '--loop-file=no',
+            '--audio=no',
+            '--no-ocopy-metadata',
+            '--no-sub',
+            '--frames=1',
+            '--ovc=libwebp',
+            '--ovcopts-add=lossless=0',
+            '--ovcopts-add=compression_level=6',
+            table.concat { '-start=', timestamp },
+            table.concat { '--ovcopts-add=quality=', tostring(config.snapshot_quality) },
+            table.concat { '--vf-add=scale=', config.snapshot_width, ':', config.snapshot_height },
+            table.concat { '-o=', snapshot_path }
+    )
 end
 
 ffmpeg.create_audio = function(start_timestamp, end_timestamp, filename)
     local video_path = mp.get_property("path")
     local fragment_path = utils.join_path(config.collection_path, filename)
-    local track_number = get_audio_track_number()
 
-    ffmpeg.execute {
-        '-vn',
-        '-ss', tostring(start_timestamp),
-        '-to', tostring(end_timestamp),
-        '-i', video_path,
-        '-map_metadata', '-1',
-        '-map', string.format("0:%d", track_number),
-        '-ac', '1',
-        '-codec:a', 'libopus',
-        '-vbr', 'on',
-        '-compression_level', '10',
-        '-application', 'voip',
-        '-b:a', tostring(config.audio_bitrate),
-        fragment_path
-    }
+    mp.commandv(
+            'run',
+            'mpv',
+            video_path,
+            '--loop-file=no',
+            '--video=no',
+            '--no-ocopy-metadata',
+            '--no-sub',
+            '--oac=libopus',
+            '--oacopts-add=vbr=on',
+            '--oacopts-add=application=voip',
+            '--oacopts-add=compression_level=10',
+            '--audio-channels=1',
+            table.concat { '--start=', start_timestamp },
+            table.concat { '--end=', end_timestamp },
+            table.concat { '--aid=', mp.get_property("aid") }, -- track number
+            table.concat { '--oacopts-add=b=', config.audio_bitrate },
+            table.concat { '-o=', fragment_path }
+    )
 end
 
 ------------------------------------------------------------
