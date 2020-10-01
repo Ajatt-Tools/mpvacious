@@ -164,20 +164,6 @@ local function escape_quotes(str)
     return str:gsub('"', '&quot;')
 end
 
-local function copy_to_clipboard(_, text)
-    -- roughly called as in fn(name, mp.get_property_string(name))
-    if is_emptystring(text) then
-        return
-    end
-
-    local toclip_path = os.getenv("HOME") .. '/.config/mpv/scripts/subs2srs/toclip.sh'
-    mp.commandv("run", "sh", toclip_path, text)
-end
-
-local function copy_sub_to_clipboard()
-    copy_to_clipboard("copy-on-demand", mp.get_property("sub-text"))
-end
-
 local function contains_non_latin_letters(str)
     return str:match("[^%c%p%s%w]")
 end
@@ -195,6 +181,23 @@ local function trim(str)
     end
 
     return str
+end
+
+local copy_to_clipboard = (function()
+    local clip_filepath = '/tmp/mpvacious_clipboard'
+    mp.register_event('shutdown', function() os.remove(clip_filepath) end)
+
+    return function(_, text)
+        if is_emptystring(text) then
+            return
+        end
+        assert(io.open(clip_filepath, "w")):write(text):close()
+        mp.commandv("run", "xclip", "-selection", "clipboard", clip_filepath)
+    end
+end)()
+
+local function copy_sub_to_clipboard()
+    copy_to_clipboard("copy-on-demand", mp.get_property("sub-text"))
 end
 
 local function human_readable_time(seconds)
