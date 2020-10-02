@@ -14,8 +14,8 @@ while watching your favorite TV show.
 [GNU/Linux](https://www.gnu.org/gnu/about-gnu.html).
 Preferably [Arch-based](https://www.parabola.nu/).
 Follow this [link](https://github.com/Ajatt-Tools/mpvacious/tree/windows) if you use Windows.
+* [mpv](https://wiki.archlinux.org/index.php/Mpv) `0.32.0` or newer
 * [Anki](https://wiki.archlinux.org/index.php/Anki)
-* [FFmpeg](https://wiki.archlinux.org/index.php/FFmpeg)
 * The [AnkiConnect](https://ankiweb.net/shared/info/2055492159) plugin
 * [xdotool](https://www.archlinux.org/packages/community/x86_64/xdotool/)
 (to avoid a certain AnkiConnect [bug](https://github.com/FooSoft/anki-connect/issues/82))
