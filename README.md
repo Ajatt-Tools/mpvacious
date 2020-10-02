@@ -20,6 +20,7 @@ Follow this [link](https://github.com/Ajatt-Tools/mpvacious/tree/windows) if you
 * [xdotool](https://www.archlinux.org/packages/community/x86_64/xdotool/)
 (to avoid a certain AnkiConnect [bug](https://github.com/FooSoft/anki-connect/issues/82))
 * [curl](https://www.archlinux.org/packages/core/x86_64/curl/) (you should already have this)
+* [xclip](https://www.archlinux.org/packages/extra/x86_64/xclip/)
 
 ## Installation
 

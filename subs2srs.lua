@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 Requirements:
 * mpv >= 0.32.0
 * AnkiConnect
+* curl
+* xclip
 
 Usage:
 1. Change `config` according to your needs
