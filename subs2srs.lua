@@ -58,7 +58,7 @@ mpopt.read_options(config, "subs2srs")
 -- namespaces
 local subs
 local clip_autocopy
-local ffmpeg
+local encoder
 local ankiconnect
 local menu
 
@@ -319,8 +319,8 @@ local function export_to_anki(gui)
         local snapshot_filename, audio_filename = construct_media_filenames(sub)
         local snapshot_timestamp = (sub['start'] + sub['end']) / 2
 
-        ffmpeg.create_snapshot(snapshot_timestamp, snapshot_filename)
-        ffmpeg.create_audio(sub['start'], sub['end'], audio_filename)
+        encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
+        encoder.create_audio(sub['start'], sub['end'], audio_filename)
 
         local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
         ankiconnect.add_note(note_fields, gui)
@@ -348,8 +348,8 @@ local function update_last_note(overwrite)
     local snapshot_filename, audio_filename = construct_media_filenames(sub)
     local snapshot_timestamp = (sub['start'] + sub['end']) / 2
 
-    ffmpeg.create_snapshot(snapshot_timestamp, snapshot_filename)
-    ffmpeg.create_audio(sub['start'], sub['end'], audio_filename)
+    encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
+    encoder.create_audio(sub['start'], sub['end'], audio_filename)
 
     local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
     ankiconnect.append_media(last_note_id, note_fields, overwrite)
@@ -380,23 +380,11 @@ local function join_media_fields(note1, note2)
 end
 
 ------------------------------------------------------------
--- ffmpeg helper
+-- provides interface for creating audioclips and snapshots
 
-ffmpeg = {}
+encoder = {}
 
-ffmpeg.prefix = { "ffmpeg", "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet" }
-
-ffmpeg.execute = function(args)
-    if next(args) ~= nil then
-        for i, value in ipairs(ffmpeg.prefix) do
-            table.insert(args, i, value)
-        end
-
-        mp.commandv("run", table.unpack(args))
-    end
-end
-
-ffmpeg.create_snapshot = function(timestamp, filename)
+encoder.create_snapshot = function(timestamp, filename)
     local video_path = mp.get_property("path")
     local snapshot_path = utils.join_path(config.collection_path, filename)
 
@@ -419,7 +407,7 @@ ffmpeg.create_snapshot = function(timestamp, filename)
     )
 end
 
-ffmpeg.create_audio = function(start_timestamp, end_timestamp, filename)
+encoder.create_audio = function(start_timestamp, end_timestamp, filename)
     local video_path = mp.get_property("path")
     local fragment_path = utils.join_path(config.collection_path, filename)
 
