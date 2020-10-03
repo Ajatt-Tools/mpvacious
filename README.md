@@ -13,10 +13,10 @@ while watching your favorite TV show.
 * A [distribution](https://www.gnu.org/distros/free-distros.html) of
 [GNU/Linux](https://www.gnu.org/gnu/about-gnu.html).
 Preferably [Arch-based](https://www.parabola.nu/).
-Follow this [link](https://github.com/Ajatt-Tools/mpvacious/tree/windows) if you use Windows.
+If you use Windows, follow [this link](https://github.com/Ajatt-Tools/mpvacious/tree/windows).
 * [mpv](https://wiki.archlinux.org/index.php/Mpv) `0.32.0` or newer
 * [Anki](https://wiki.archlinux.org/index.php/Anki)
-* The [AnkiConnect](https://ankiweb.net/shared/info/2055492159) plugin
+* [AnkiConnect](https://ankiweb.net/shared/info/2055492159)
 * [xdotool](https://www.archlinux.org/packages/community/x86_64/xdotool/)
 (to avoid a certain AnkiConnect [bug](https://github.com/FooSoft/anki-connect/issues/82))
 * [curl](https://www.archlinux.org/packages/core/x86_64/curl/) (you should already have this)

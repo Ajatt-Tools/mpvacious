@@ -29,8 +29,8 @@ Usage:
 2. Open a video
 
 3. Use key bindings to manipulate the script
+* Open mpvacious menu - `a`
 * Create a note from the current subtitle line - `Ctrl + e`
-* Open advanced options - `a`
 
 For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/master/README.md>
 ]]
