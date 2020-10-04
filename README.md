@@ -22,6 +22,11 @@ If you use Windows, follow [this link](https://github.com/Ajatt-Tools/mpvacious/
 * [curl](https://www.archlinux.org/packages/core/x86_64/curl/) (you should already have this)
 * [xclip](https://www.archlinux.org/packages/extra/x86_64/xclip/)
 
+Install all dependencies at once (on Arch-based):
+```
+$ sudo pacman -Syu mpv anki xdotool curl xclip --needed
+```
+
 ## Installation
 
 If you already have your dotfiles set up according to
