@@ -48,7 +48,7 @@ local config = {
     sentence_field = "SentKanji",
     audio_field = "SentAudio",
     image_field = "Image",
-    menu_font_size = 24,
+    menu_font_size = 25,
 }
 
 local utils = require('mp.utils')
