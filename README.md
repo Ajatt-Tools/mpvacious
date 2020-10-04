@@ -29,6 +29,15 @@ $ sudo pacman -Syu mpv anki xdotool curl xclip --needed
 
 ## Installation
 
+Save [subs2srs.lua](https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua)
+in  `~/.config/mpv/scripts/`:
+
+```
+curl -o ~/.config/mpv/scripts/subs2srs.lua 'https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua'
+```
+
+However, if you want to keep up with the updates, it's better to install the script using `git`.
+
 If you already have your dotfiles set up according to
 [Arch Wiki recommendations](https://wiki.archlinux.org/index.php/Dotfiles#Tracking_dotfiles_directly_with_Git), execute:
 ```
