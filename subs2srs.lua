@@ -282,23 +282,6 @@ local function construct_note_fields(sub_text, snapshot_filename, audio_filename
     }
 end
 
-local function get_audio_track_number()
-    local audio_track_number = 0
-    local tracks_count = mp.get_property_number("track-list/count")
-
-    for i = 1, tracks_count do
-        local track_type = mp.get_property(string.format("track-list/%d/type", i))
-        local track_index = mp.get_property_number(string.format("track-list/%d/ff-index", i))
-        local track_selected = mp.get_property(string.format("track-list/%d/selected", i))
-
-        if track_type == "audio" and track_selected == "yes" then
-            audio_track_number = track_index
-            break
-        end
-    end
-    return audio_track_number
-end
-
 local function sub_rewind()
     pcall(
             function()
