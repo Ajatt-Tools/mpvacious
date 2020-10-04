@@ -207,12 +207,12 @@ local function human_readable_time(seconds)
         return 'empty'
     end
 
-    local parts = {}
-
-    parts.h = math.floor(seconds / 3600)
-    parts.m = math.floor(seconds / 60) % 60
-    parts.s = math.floor(seconds % 60)
-    parts.ms = math.floor((seconds * 1000) % 1000)
+    local parts = {
+        h = math.floor(seconds / 3600),
+        m = math.floor(seconds / 60) % 60,
+        s = math.floor(seconds % 60),
+        ms = math.floor((seconds * 1000) % 1000),
+    }
 
     local ret = string.format("%02dm%02ds%03dms", parts.m, parts.s, parts.ms)
 
