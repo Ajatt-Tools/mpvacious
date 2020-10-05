@@ -36,6 +36,10 @@ in  `~/.config/mpv/scripts/`:
 curl -o ~/.config/mpv/scripts/subs2srs.lua 'https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua'
 ```
 
+Note: in [Celluloid](https://www.archlinux.org/packages/community/x86_64/celluloid/)
+user scripts are installed by switching to the "Plugins" tab
+in the preferences dialog and dropping the files there.
+
 However, if you want to keep up with the updates, it's better to install the script using `git`.
 
 If you already have your dotfiles set up according to
