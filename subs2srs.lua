@@ -276,7 +276,7 @@ end
 
 local function construct_note_fields(sub_text, snapshot_filename, audio_filename)
     return {
-        [config.sentence_field] = sub_text,
+        [config.sentence_field] = trim(sub_text),
         [config.image_field] = string.format('<img src="%s" alt="snapshot">', snapshot_filename),
         [config.audio_field] = string.format('[sound:%s]', audio_filename),
     }
@@ -605,7 +605,7 @@ subs.get_current = function()
     local sub_delay = mp.get_property_native("sub-delay")
 
     return Subtitle:new {
-        ['text'] = trim(sub_text),
+        ['text'] = sub_text,
         ['start'] = mp.get_property_number("sub-start") + sub_delay,
         ['end'] = mp.get_property_number("sub-end") + sub_delay
     }
@@ -632,7 +632,7 @@ subs.get_text = function()
     for _, sub in ipairs(subs.list) do
         table.insert(speech, sub['text'])
     end
-    return table.concat(speech)
+    return table.concat(speech, ' ')
 end
 
 subs.get = function()
