@@ -12,7 +12,6 @@ while watching your favorite TV show.
 ## Requirements
 * A [distribution](https://www.gnu.org/distros/free-distros.html) of
 [GNU/Linux](https://www.gnu.org/gnu/about-gnu.html).
-Preferably [Arch-based](https://www.parabola.nu/).
 If you use Windows, follow [this link](https://github.com/Ajatt-Tools/mpvacious/tree/windows).
 * [mpv](https://wiki.archlinux.org/index.php/Mpv) `0.32.0` or newer
 * [Anki](https://wiki.archlinux.org/index.php/Anki)
@@ -22,7 +21,7 @@ If you use Windows, follow [this link](https://github.com/Ajatt-Tools/mpvacious/
 * [curl](https://www.archlinux.org/packages/core/x86_64/curl/) (you should already have this)
 * [xclip](https://www.archlinux.org/packages/extra/x86_64/xclip/)
 
-Install all dependencies at once (on Arch-based):
+Install all dependencies at once (on [Arch-based](https://www.parabola.nu/) distros):
 ```
 $ sudo pacman -Syu mpv anki xdotool curl xclip --needed
 ```
