@@ -520,7 +520,7 @@ ankiconnect.get_last_note_id = function()
     local ret = ankiconnect.execute(args)
     local note_ids, _ = ankiconnect.parse_result(ret)
 
-    if note_ids ~= nil then
+    if not is_emptytable(note_ids) then
         local last_note_id = math.max(table.unpack(note_ids))
         return last_note_id
     else
