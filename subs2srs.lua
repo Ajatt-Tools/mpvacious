@@ -91,33 +91,6 @@ local function notify(message, level, duration)
     mp.osd_message(message, duration)
 end
 
-local function check_config_sanity()
-    if config.snapshot_width < 1 then
-        config.snapshot_width = -2
-    end
-
-    if config.snapshot_height < 1 then
-        config.snapshot_height = -2
-    end
-
-    if config.snapshot_width > 800 then
-        config.snapshot_width = 800
-    end
-
-    if config.snapshot_height > 800 then
-        config.snapshot_height = 800
-    end
-
-    if config.snapshot_width < 1 and config.snapshot_height < 1 then
-        config.snapshot_width = -2
-        config.snapshot_height = 200
-        notify("`snapshot_width` and `snapshot_height` can't be both less than 1.", "warn", 5)
-    end
-
-    if config.snapshot_quality < 0 or config.snapshot_quality > 100 then
-        config.snapshot_quality = 5
-    end
-end
 
 local function is_emptystring(str)
     return str == nil or str == ''
@@ -362,6 +335,34 @@ local function join_media_fields(note1, note2)
 
     :: ret ::
     return note1
+end
+
+local function check_config_sanity()
+    if config.snapshot_width < 1 then
+        config.snapshot_width = -2
+    end
+
+    if config.snapshot_height < 1 then
+        config.snapshot_height = -2
+    end
+
+    if config.snapshot_width > 800 then
+        config.snapshot_width = 800
+    end
+
+    if config.snapshot_height > 800 then
+        config.snapshot_height = 800
+    end
+
+    if config.snapshot_width < 1 and config.snapshot_height < 1 then
+        config.snapshot_width = -2
+        config.snapshot_height = 200
+        notify("`snapshot_width` and `snapshot_height` can't be both less than 1.", "warn", 5)
+    end
+
+    if config.snapshot_quality < 0 or config.snapshot_quality > 100 then
+        config.snapshot_quality = 5
+    end
 end
 
 ------------------------------------------------------------
