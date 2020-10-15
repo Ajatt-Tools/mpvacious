@@ -80,6 +80,10 @@ function table.contains(table, element)
     return false
 end
 
+local function is_empty(var)
+    return var == nil or var == '' or (type(var) == 'table' and next(var) == nil)
+end
+
 local function capitalize_first_letter(string)
     return string:gsub("^%l", string.upper)
 end
@@ -89,15 +93,6 @@ local function notify(message, level, duration)
     duration = duration or 1
     msg[level](message)
     mp.osd_message(message, duration)
-end
-
-
-local function is_emptystring(str)
-    return str == nil or str == ''
-end
-
-local function is_emptytable(tab)
-    return tab == nil or next(tab) == nil
 end
 
 local function remove_extension(filename)
@@ -163,7 +158,7 @@ local copy_to_clipboard = (function()
     mp.register_event('shutdown', function() os.remove(clip_filepath) end)
 
     return function(_, text)
-        if is_emptystring(text) then
+        if is_empty(text) then
             return
         end
         assert(io.open(clip_filepath, "w")):write(text):close()
@@ -521,7 +516,7 @@ ankiconnect.get_last_note_id = function()
     local ret = ankiconnect.execute(args)
     local note_ids, _ = ankiconnect.parse_result(ret)
 
-    if not is_emptytable(note_ids) then
+    if not is_empty(note_ids) then
         local last_note_id = math.max(table.unpack(note_ids))
         return last_note_id
     else
@@ -599,7 +594,7 @@ subs.user_timings = get_empty_timings()
 subs.get_current = function()
     local sub_text = mp.get_property("sub-text")
 
-    if is_emptystring(sub_text) then
+    if is_empty(sub_text) then
         return nil
     end
 
@@ -617,7 +612,7 @@ subs.get_timing = function(position)
         return subs.user_timings[position]
     end
 
-    if is_emptytable(subs.list) then
+    if is_empty(subs.list) then
         return nil
     end
 
@@ -637,7 +632,7 @@ subs.get_text = function()
 end
 
 subs.get = function()
-    if is_emptytable(subs.list) then
+    if is_empty(subs.list) then
         return subs.get_current()
     end
 
@@ -649,7 +644,7 @@ subs.get = function()
         ['end'] = subs.get_timing('end'),
     }
 
-    if is_emptystring(sub['text']) then
+    if is_empty(sub['text']) then
         return nil
     end
 
@@ -673,7 +668,7 @@ end
 subs.set_timing = function(position)
     subs.user_timings[position] = mp.get_property_number('time-pos')
 
-    if is_emptytable(subs.list) then
+    if is_empty(subs.list) then
         mp.observe_property("sub-text", "string", subs.append)
     end
 
