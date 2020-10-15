@@ -36,7 +36,8 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 ]]
 
 local config = {
-    collection_path = string.format('%s/.local/share/Anki2/%s/collection.media/', os.getenv("HOME"), os.getenv("USER")),
+    collection_path = '',       -- full path to the collection. most users should leave it empty.
+    anki_user = 'User 1',       -- your anki username. it is displayed on the title bar of the Anki window.
     autoclip = false,           -- copy subs to the clipboard or not
     nuke_spaces = true,         -- remove all spaces or not
     snapshot_quality = 5,       -- from 0=lowest to 100=highest
@@ -82,6 +83,17 @@ end
 
 local function is_empty(var)
     return var == nil or var == '' or (type(var) == 'table' and next(var) == nil)
+end
+
+local function is_dir(path)
+    if is_empty(path) then
+        return false
+    end
+    local file_info = utils.file_info(path)
+    if file_info == nil then
+        return false
+    end
+    return file_info.is_dir == true
 end
 
 local function capitalize_first_letter(string)
@@ -332,7 +344,16 @@ local function join_media_fields(note1, note2)
     return note1
 end
 
+local function construct_collection_path()
+    return string.format('%s/.local/share/Anki2/%s/collection.media/', os.getenv("HOME"), config.anki_user)
+end
+
 local function check_config_sanity()
+    if not is_dir(config.collection_path) then
+        -- collection path wasn't specified. construct it using config.anki_user
+        config.collection_path = construct_collection_path()
+    end
+
     if config.snapshot_width < 1 then
         config.snapshot_width = -2
     end
