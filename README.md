@@ -80,10 +80,8 @@ mpv doesn't tolerate spaces before and after `=`.
 
 Example configuration file:
 ```
-# Absolute path to the `collection.media` folder.
-# `~` or `$HOME` are not supported due to mpv limitations.
-# Replace "user" and "profile" with your own.
-collection_path=/home/user/.local/share/Anki2/profile/collection.media/
+# Your Anki username. It is displayed on the title bar of the Anki window.
+anki_user=User 1
 
 # The deck will be created if it doesn't exist. Subdecks are supported.
 deck_name=Bank::subs2srs
@@ -120,11 +118,6 @@ snapshot_height=200
 # Size of the font used in the menu
 menu_font_size=24
 ```
-Note that by default mpvacious assumes that "user" and "profile" are equal.
-So if your collection path looks like this:
-`/home/john/.local/share/Anki2/john/collection.media/`
-then you don't need to specify `collection_path` in the config.
-
 Sentence field should be first in the note type settings.
 Otherwise Anki won't allow mpvacious to add new notes.
 Alternatively, refer to [Adding media to existing cards](#adding-media-to-existing-cards)
