@@ -429,6 +429,7 @@ encoder.create_audio = function(start_timestamp, end_timestamp, filename)
             table.concat { '--start=', start_timestamp },
             table.concat { '--end=', end_timestamp },
             table.concat { '--aid=', mp.get_property("aid") }, -- track number
+            table.concat { '--volume=', mp.get_property('volume') },
             table.concat { '--oacopts-add=b=', config.audio_bitrate },
             table.concat { '-o=', fragment_path }
     )
