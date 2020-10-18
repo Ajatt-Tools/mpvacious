@@ -173,7 +173,9 @@ local copy_to_clipboard = (function()
         if is_empty(text) then
             return
         end
-        assert(io.open(clip_filepath, "w")):write(text):close()
+        local handle = assert(io.open(clip_filepath, "w"))
+        handle:write(text)
+        handle:close()
         mp.commandv("run", "xclip", "-selection", "clipboard", clip_filepath)
     end
 end)()
@@ -329,7 +331,7 @@ end
 
 local function join_media_fields(note1, note2)
     if note2 == nil then
-        goto ret
+        return note1
     end
 
     if note2[config.audio_field] then
@@ -340,7 +342,6 @@ local function join_media_fields(note1, note2)
         note1[config.image_field] = note2[config.image_field] .. note1[config.image_field]
     end
 
-    :: ret ::
     return note1
 end
 
