@@ -43,6 +43,7 @@ local config = {
     snapshot_quality = 5,       -- from 0=lowest to 100=highest
     snapshot_width = -2,        -- a positive integer or -2 for auto
     snapshot_height = 200,      -- same
+    audio_format = "opus",      -- opus or mp3
     audio_bitrate = "18k",      -- from 16k to 32k
     deck_name = "Learning",     -- the deck will be created if needed
     model_name = "Japanese sentences", -- Tools -> Manage note types
@@ -253,7 +254,7 @@ local function construct_media_filenames(sub)
             human_readable_time(sub['end'])
     )
 
-    return filename .. '.webp', filename .. '.ogg'
+    return filename .. '.webp', filename .. config.audio_extension
 end
 
 local function construct_note_fields(sub_text, snapshot_filename, audio_filename)
@@ -380,6 +381,14 @@ local function check_config_sanity()
     if config.snapshot_quality < 0 or config.snapshot_quality > 100 then
         config.snapshot_quality = 5
     end
+
+    if config.audio_format == 'opus' then
+        config.audio_codec = 'libopus'
+        config.audio_extension = '.ogg'
+    else
+        config.audio_codec = 'libmp3lame'
+        config.audio_extension = '.mp3'
+    end
 end
 
 ------------------------------------------------------------
@@ -422,11 +431,11 @@ encoder.create_audio = function(start_timestamp, end_timestamp, filename)
             '--video=no',
             '--no-ocopy-metadata',
             '--no-sub',
-            '--oac=libopus',
             '--audio-channels=mono',
             '--oacopts-add=vbr=on',
             '--oacopts-add=application=voip',
             '--oacopts-add=compression_level=10',
+            table.concat { '--oac=', config.audio_codec },
             table.concat { '--start=', start_timestamp },
             table.concat { '--end=', end_timestamp },
             table.concat { '--aid=', mp.get_property("aid") }, -- track number
