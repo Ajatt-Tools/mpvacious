@@ -423,10 +423,10 @@ encoder.create_audio = function(start_timestamp, end_timestamp, filename)
             '--no-ocopy-metadata',
             '--no-sub',
             '--oac=libopus',
+            '--audio-channels=mono',
             '--oacopts-add=vbr=on',
             '--oacopts-add=application=voip',
             '--oacopts-add=compression_level=10',
-            '--audio-channels=1',
             table.concat { '--start=', start_timestamp },
             table.concat { '--end=', end_timestamp },
             table.concat { '--aid=', mp.get_property("aid") }, -- track number
@@ -608,11 +608,10 @@ end
 ------------------------------------------------------------
 -- subtitles and timings
 
-subs = {}
-
-subs.list = {}
-
-subs.user_timings = get_empty_timings()
+subs = {
+    list = {},
+    user_timings = get_empty_timings(),
+}
 
 subs.get_current = function()
     local sub_text = mp.get_property("sub-text")
