@@ -254,7 +254,7 @@ local function construct_media_filenames(sub)
             human_readable_time(sub['end'])
     )
 
-    return filename .. '.webp', filename .. config.audio_extension
+    return filename .. config.image_extension, filename .. config.audio_extension
 end
 
 local function construct_note_fields(sub_text, snapshot_filename, audio_filename)
@@ -389,6 +389,8 @@ local function validate_config()
         config.audio_codec = 'libmp3lame'
         config.audio_extension = '.mp3'
     end
+
+    config.image_extension = '.webp'
 end
 
 ------------------------------------------------------------
