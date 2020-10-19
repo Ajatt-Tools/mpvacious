@@ -350,7 +350,7 @@ local function construct_collection_path()
     return string.format('%s/.local/share/Anki2/%s/collection.media/', os.getenv("HOME"), config.anki_user)
 end
 
-local function check_config_sanity()
+local function validate_config()
     if not is_dir(config.collection_path) then
         -- collection path wasn't specified. construct it using config.anki_user
         config.collection_path = construct_collection_path()
@@ -948,7 +948,7 @@ if config.autoclip == true then
     clip_autocopy.enable()
 end
 
-check_config_sanity()
+validate_config()
 ankiconnect.create_deck_if_doesnt_exist(config.deck_name)
 mp.add_forced_key_binding("ctrl+c", "copy-sub-to-clipboard", copy_sub_to_clipboard)
 mp.add_key_binding('a', 'mpvacious-menu-open', menu.open) -- a for advanced
