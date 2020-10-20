@@ -1,5 +1,5 @@
 PROJECT = mpvacious
-VERSION = v0.3
+VERSION = v0.4
 MD2HTML = md2html --github --full-html
 ZIPNAME = $(PROJECT)_$(VERSION).zip
 OBJECTS = windows linux LICENSE
