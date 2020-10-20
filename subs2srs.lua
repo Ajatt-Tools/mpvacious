@@ -36,8 +36,8 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 ]]
 
 local config = {
-    collection_path = '',       -- full path to the collection. most users should leave it empty.
-    anki_user = 'User 1',       -- your anki username. it is displayed on the title bar of the Anki window.
+    collection_path = "",       -- full path to the collection. most users should leave it empty.
+    anki_user = "User 1",       -- your anki username. it is displayed on the title bar of the Anki window.
     autoclip = false,           -- copy subs to the clipboard or not
     nuke_spaces = true,         -- remove all spaces or not
     snapshot_quality = 5,       -- from 0=lowest to 100=highest
