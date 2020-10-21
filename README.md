@@ -106,10 +106,13 @@ autoclip=no
 # Only makes sense for languages without spaces like Japanese.
 nuke_spaces=yes
 
-# Media settings
+# Images
+snapshot_format=webp
+#snapshot_format=jpg
 # 0 = lowest, 100=highest
 snapshot_quality=5
-# If you use the Anki iOS app, choose mp3. In other cases, I recommend opus.
+
+# Audio
 audio_format=opus
 #audio_format=mp3
 # Sane values are 16k-32k for opus, 64k-128k for mp3.
