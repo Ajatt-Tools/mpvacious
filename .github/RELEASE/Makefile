@@ -1,31 +1,22 @@
 PROJECT = mpvacious
-VERSION = v0.4
+VERSION = v0.5
 MD2HTML = md2html --github --full-html
-ZIPNAME = $(PROJECT)_$(VERSION).zip
-OBJECTS = windows linux LICENSE
+ZIP     = $(PROJECT)_$(VERSION).zip
+SCRIPT  = $(PROJECT)_$(VERSION).lua
+BRANCH  = remotes/origin/master
 
-LINUXBRANCH = remotes/origin/master
-WINDOWSBRANCH = remotes/origin/windows
+.PHONY: all clean
 
-.PHONY: clean all windows linux
+all: $(ZIP)
 
-all: $(ZIPNAME)
+$(ZIP): $(PROJECT)
+	zip -r $@ -- $^
 
-$(ZIPNAME): $(OBJECTS)
-	zip -r $(ZIPNAME) -- $^
-
-linux:
+$(PROJECT):
 	mkdir -p -- ./$@
-	git show "$(LINUXBRANCH):subs2srs.lua" > ./$@/$(PROJECT)_$@_$(VERSION).lua
-	git show "$(LINUXBRANCH):README.md" | $(MD2HTML) -o ./$@/readme_$@.html
-
-windows:
-	mkdir -p -- ./$@
-	git show "$(WINDOWSBRANCH):subs2srs.lua" > ./$@/$(PROJECT)_$@_$(VERSION).lua
-	git show "$(WINDOWSBRANCH):README.md" | $(MD2HTML) -o ./$@/readme_$@.html
-
-LICENSE:
-	git show "master:$@" > $@
+	git show "$(BRANCH):subs2srs.lua" > ./$@/$(SCRIPT)
+	git show "$(BRANCH):README.md" | $(MD2HTML) -o ./$@/README_$(VERSION).html
+	git show "$(BRANCH):LICENSE" > ./$@/LICENSE
 
 clean:
-	rm -rf -- $(OBJECTS) ./*.zip
+	rm -rf -- ./$(PROJECT)*
