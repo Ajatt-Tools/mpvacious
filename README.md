@@ -132,6 +132,11 @@ Otherwise Anki won't allow mpvacious to add new notes.
 Alternatively, refer to [Adding media to existing cards](#adding-media-to-existing-cards)
 or use an addon that [allows empty first field](https://ankiweb.net/shared/info/46741504).
 
+If you are having problems playing media files on older mobile devices,
+set `audio_format` to `mp3` and/or `snapshot_format` to `jpg`.
+Otherwise, I recommend sticking with `opus` and `webp`,
+as they greatly reduce the size of the generated files.
+
 Key bindings are configured in ```~/.config/mpv/input.conf```.
 This step is not necessary.
 ```
