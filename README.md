@@ -196,8 +196,8 @@ You can use it in combination with
 `Yomichan Search` is activated by pressing `Alt+Insert` in your web browser.
 
 ### Adding media to existing cards
-You can add a card using Yomichan first,
-and then append an audio clip and snapshot to it.
+You can add a card first using Yomichan,
+and then append an audio clip and a snapshot to it.
 
 #### You'll need:
 * Clipboard Inserter
