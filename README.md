@@ -14,7 +14,8 @@ while watching your favorite TV show.
 ## Requirements
 * A [distribution](https://www.gnu.org/distros/free-distros.html) of
 [GNU/Linux](https://www.gnu.org/gnu/about-gnu.html).
-If you use Windows, follow [this link](https://github.com/Ajatt-Tools/mpvacious/tree/windows).
+If you use [Windows](https://www.gnu.org/proprietary/malware-microsoft.en.html),
+follow [this link](https://github.com/Ajatt-Tools/mpvacious/tree/windows).
 * [mpv](https://wiki.archlinux.org/index.php/Mpv) `0.32.0` or newer
 * [Anki](https://wiki.archlinux.org/index.php/Anki)
 * [AnkiConnect](https://ankiweb.net/shared/info/2055492159)
