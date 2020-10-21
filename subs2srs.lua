@@ -40,6 +40,7 @@ local config = {
     anki_user = "User 1",       -- your anki username. it is displayed on the title bar of the Anki window.
     autoclip = false,           -- copy subs to the clipboard or not
     nuke_spaces = true,         -- remove all spaces or not
+    snapshot_format = "webp",   -- webp or jpg
     snapshot_quality = 5,       -- from 0=lowest to 100=highest
     snapshot_width = -2,        -- a positive integer or -2 for auto
     snapshot_height = 200,      -- same
@@ -254,7 +255,7 @@ local function construct_media_filenames(sub)
             human_readable_time(sub['end'])
     )
 
-    return filename .. config.image_extension, filename .. config.audio_extension
+    return filename .. config.snapshot_extension, filename .. config.audio_extension
 end
 
 local function construct_note_fields(sub_text, snapshot_filename, audio_filename)
@@ -390,7 +391,13 @@ local function validate_config()
         config.audio_extension = '.mp3'
     end
 
-    config.image_extension = '.webp'
+    if config.snapshot_format == 'webp' then
+        config.snapshot_extension = '.webp'
+        config.snapshot_codec = 'libwebp'
+    else
+        config.snapshot_extension = '.jpg'
+        config.snapshot_codec = 'mjpeg'
+    end
 end
 
 ------------------------------------------------------------
@@ -411,9 +418,9 @@ encoder.create_snapshot = function(timestamp, filename)
             '--no-ocopy-metadata',
             '--no-sub',
             '--frames=1',
-            '--ovc=libwebp',
             '--ovcopts-add=lossless=0',
             '--ovcopts-add=compression_level=6',
+            table.concat { '--ovc=', config.snapshot_codec },
             table.concat { '-start=', timestamp },
             table.concat { '--ovcopts-add=quality=', tostring(config.snapshot_quality) },
             table.concat { '--vf-add=scale=', config.snapshot_width, ':', config.snapshot_height },
