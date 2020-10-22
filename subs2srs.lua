@@ -66,6 +66,7 @@ local clip_autocopy
 local encoder
 local ankiconnect
 local menu
+local platform
 
 -- classes
 local Subtitle
@@ -413,6 +414,76 @@ local function validate_config()
         config.snapshot_codec = 'mjpeg'
     end
 end
+
+------------------------------------------------------------
+-- platform specific
+
+local function init_platform_windows()
+    local self = {}
+    local curl_tmpfile_path = utils.join_path(os.getenv('TEMP'), 'curl_tmp.txt')
+    mp.register_event('shutdown', function() os.remove(curl_tmpfile_path) end)
+
+    self.copy_to_clipboard = function(_, text)
+        if not is_empty(text) then
+            text = remove_newlines(text)
+            mp.commandv("run", "cmd.exe", "/d", "/c", string.format("@echo off & chcp 65001 & echo %s|clip", text))
+        end
+    end
+
+    self.construct_collection_path = function()
+        return string.format([[%s\Anki2\%s\collection.media\]], os.getenv('APPDATA'), config.anki_user)
+    end
+
+    self.curl_request = function(request_json)
+        io.open(curl_tmpfile_path, "w"):write(request_json):close()
+        return subprocess {
+            'curl',
+            '-s',
+            'localhost:8765',
+            '-H',
+            'Content-Type: application/json; charset=UTF-8',
+            '-X',
+            'POST',
+            '--data-binary',
+            table.concat { '@', curl_tmpfile_path }
+        }
+    end
+
+    return self
+end
+
+local function init_platform_nix()
+    local self = {}
+    local clipfile_path = '/tmp/mpvacious_clipboard'
+    mp.register_event('shutdown', function() os.remove(clipfile_path) end)
+
+    self.copy_to_clipboard = function(_, text)
+        if not is_empty(text) then
+            local handle = assert(io.open(clipfile_path, "w"))
+            handle:write(text)
+            handle:close()
+            mp.commandv("run", "xclip", "-selection", "clipboard", clipfile_path)
+        end
+    end
+
+    self.construct_collection_path = function()
+        return string.format('%s/.local/share/Anki2/%s/collection.media/', os.getenv('HOME'), config.anki_user)
+    end
+
+    self.curl_request = function(request_json)
+        return subprocess { 'curl', '-s', 'localhost:8765', '-X', 'POST', '-d', request_json }
+    end
+
+    return self
+end
+
+platform = (function()
+    if is_running_windows() then
+        return init_platform_windows()
+    else
+        return init_platform_nix()
+    end
+end)()
 
 ------------------------------------------------------------
 -- provides interface for creating audioclips and snapshots
