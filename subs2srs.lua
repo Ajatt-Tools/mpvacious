@@ -97,6 +97,10 @@ local function is_empty(var)
     return var == nil or var == '' or (type(var) == 'table' and next(var) == nil)
 end
 
+local function is_running_windows()
+    return mp.get_property('options/vo-mmcss-profile') ~= nil
+end
+
 local function is_dir(path)
     if is_empty(path) then
         return false
