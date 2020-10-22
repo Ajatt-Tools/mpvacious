@@ -13,36 +13,70 @@ It supports multiple workflows and allows you to quickly create Anki cards
 while watching your favorite TV show.
 
 ## Requirements
-* A [distribution](https://www.gnu.org/distros/free-distros.html) of
-[GNU/Linux](https://www.gnu.org/gnu/about-gnu.html).
-If you use [Windows](https://www.gnu.org/proprietary/malware-microsoft.en.html),
-follow [this link](https://github.com/Ajatt-Tools/mpvacious/tree/windows).
-* [mpv](https://wiki.archlinux.org/index.php/Mpv) `0.32.0` or newer
-* [Anki](https://wiki.archlinux.org/index.php/Anki)
-* [AnkiConnect](https://ankiweb.net/shared/info/2055492159)
-* [xdotool](https://www.archlinux.org/packages/community/x86_64/xdotool/)
-(to avoid a certain AnkiConnect [bug](https://github.com/FooSoft/anki-connect/issues/82))
-* [curl](https://www.archlinux.org/packages/core/x86_64/curl/) (you should already have this)
-* [xclip](https://www.archlinux.org/packages/extra/x86_64/xclip/)
+<table>
+<tr>
+    <th><a href="https://www.gnu.org/gnu/about-gnu.html">GNU/Linux</a></th>
+    <th><a href="https://www.gnu.org/proprietary/malware-microsoft.en.html">Windows 10</a></th>
+    <th>Comments</th>
+</tr>
+<tr>
+    <td><a href="https://wiki.archlinux.org/index.php/Mpv">mpv</a></td>
+    <td><a href="https://mpv.io/installation/">mpv</a></td>
+    <td>v0.32.0 or newer</td>
+</tr>
+<tr>
+    <td><a href="https://wiki.archlinux.org/index.php/Anki">Anki</a></td>
+    <td><a href="https://apps.ankiweb.net/">Anki</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td colspan="2" align="center"><a href="https://ankiweb.net/shared/info/2055492159">AnkiConnect</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="https://www.archlinux.org/packages/community/x86_64/xdotool/">xdotool</a></td>
+    <td></td>
+    <td>To avoid <a href="https://github.com/FooSoft/anki-connect/issues/82/">this</a> bug</td>
+</tr>
+<tr>
+    <td colspan="2" align="center"><a href="https://www.archlinux.org/packages/core/x86_64/curl/">curl</a></td>
+    <td>Should be installed by default on all platforms</td>
+</tr>
+<tr>
+    <td><a href="https://www.archlinux.org/packages/extra/x86_64/xclip/">xclip</a></td>
+    <td></td>
+    <td>To copy subtitle text to clipboard</td>
+</tr>
+</table>
 
-Install all dependencies at once (on [Arch-based](https://www.parabola.nu/) distros):
+Install all dependencies at once (on [Arch-based](https://www.parabola.nu/)
+[distros](https://www.gnu.org/distros/free-distros.en.html)):
+
 ```
 $ sudo pacman -Syu mpv anki xdotool curl xclip --needed
 ```
 
 ## Installation
+### Manually
 
 Save [subs2srs.lua](https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua)
-in  `~/.config/mpv/scripts/`:
+in  the [mpv scripts](https://github.com/mpv-player/mpv/wiki/User-Scripts) folder:
 
-```
-curl -o ~/.config/mpv/scripts/subs2srs.lua 'https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua'
-```
+| OS | Location |
+| --- | --- |
+| GNU/Linux | `~/.config/mpv/scripts/` |
+| Windows | `C:/Users/Username/AppData/Roaming/mpv/scripts/` |
 
 Note: in [Celluloid](https://www.archlinux.org/packages/community/x86_64/celluloid/)
 user scripts are installed by switching to the "Plugins" tab
 in the preferences dialog and dropping the files there.
 
+### Using curl
+```
+$ curl -o ~/.config/mpv/scripts/subs2srs.lua 'https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua'
+```
+
+### Using git
 However, if you want to keep up with the updates, it's better to install the script using `git`.
 
 If you already have your dotfiles set up according to
@@ -57,7 +91,7 @@ $ git clone 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts
 ```
 Since you've just cloned the script to its own subfolder,
 you need to tell mpv where to look for it.
-Open or create  ```~/.config/mpv/scripts/modules.lua``` and add these lines:
+Open or create  `~/.config/mpv/scripts/modules.lua` and add these lines:
 ```
 local mpv_scripts_dir_path = os.getenv("HOME") ..  "/.config/mpv/scripts/"
 function load(relative_path) dofile(mpv_scripts_dir_path .. relative_path) end
@@ -67,18 +101,21 @@ If you're using [voidrice](https://github.com/LukeSmithxyz/voidrice),
 you should [already have it](https://github.com/LukeSmithxyz/voidrice/blob/master/.config/mpv/scripts/modules.lua).
 In this case only add the last line: ```load("subs2srs/subs2srs.lua")```.
 
-## Updating
-Submodules are updated using standard git commands:
-```
-$ config submodule update --remote --merge
-```
-or
-```
-$ cd ~/.config/mpv/scripts/subs2srs && git pull
-```
+### Updating with git
+| Install method | Command |
+| --- | --- |
+| Submodules | `$ config submodule update --remote --merge` |
+| Plain git | `$ cd ~/.config/mpv/scripts/subs2srs && git pull` |
+
 ## Configuration
-Configuration file is located at ```~/.config/mpv/script-opts/subs2srs.conf```
-and should be created by the user. If a parameter is not specified
+The config file should be created by the user.
+
+| OS | Config location |
+| --- | --- |
+| GNU/Linux | `~/.config/mpv/script-opts/subs2srs.conf` |
+| Windows | `C:/Users/Username/AppData/Roaming/mpv/script-opts/subs2srs.conf` |
+
+If a parameter is not specified
 in the config file, the default value will be used.
 mpv doesn't tolerate spaces before and after `=`.
 
@@ -128,6 +165,7 @@ snapshot_height=200
 # Size of the font used in the menu
 menu_font_size=24
 ```
+
 Sentence field should be first in the note type settings.
 Otherwise Anki won't allow mpvacious to add new notes.
 Alternatively, refer to [Adding media to existing cards](#adding-media-to-existing-cards)
@@ -138,15 +176,22 @@ set `audio_format` to `mp3` and/or `snapshot_format` to `jpg`.
 Otherwise, I recommend sticking with `opus` and `webp`,
 as they greatly reduce the size of the generated files.
 
-Key bindings are configured in ```~/.config/mpv/input.conf```.
-This step is not necessary.
+### Key bindings
+The user may change some of the key bindings, though this step is not necessary.
+
+| OS | Config location |
+| --- | --- |
+| GNU/Linux | `~/.config/mpv/input.conf` |
+| Windows | `C:/Users/Username/AppData/Roaming/mpv/input.conf` |
+
+Default bindings:
 ```
 Ctrl+c script-binding copy-sub-to-clipboard
 Ctrl+e script-binding anki-export-note
 Ctrl+h script-binding sub-rewind
 a      script-binding mpvacious-menu-open
 ```
-These additional bindings aren't enabled by default but can be accessed via the menu (`a`).
+These additional bindings aren't enabled by default but can be accessed via the menu by pressing `a`.
 ```
 Ctrl+s script-binding set-starting-line
 Ctrl+r script-binding reset-timings
@@ -227,8 +272,7 @@ With the addon you can make cards like this in just a few seconds.
 ![card-example](https://user-images.githubusercontent.com/69171671/92900057-e102d480-f40e-11ea-8cfc-b00848ca66ff.png)
 
 ### Additional mpv key bindings
-I recommend adding these lines to your ```~/.config/mpv/input.conf```
-for smoother experience.
+I recommend adding these lines to your [input.conf](#key-bindings) for smoother experience.
 ```
 # vim-like seeking
 l seek 5
