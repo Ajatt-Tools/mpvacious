@@ -182,23 +182,8 @@ local function trim(str)
     return str
 end
 
-local copy_to_clipboard = (function()
-    local clip_filepath = '/tmp/mpvacious_clipboard'
-    mp.register_event('shutdown', function() os.remove(clip_filepath) end)
-
-    return function(_, text)
-        if is_empty(text) then
-            return
-        end
-        local handle = assert(io.open(clip_filepath, "w"))
-        handle:write(text)
-        handle:close()
-        mp.commandv("run", "xclip", "-selection", "clipboard", clip_filepath)
-    end
-end)()
-
 local function copy_sub_to_clipboard()
-    copy_to_clipboard("copy-on-demand", mp.get_property("sub-text"))
+    platform.copy_to_clipboard("copy-on-demand", mp.get_property("sub-text"))
 end
 
 local function human_readable_time(seconds)
@@ -362,14 +347,10 @@ local function join_media_fields(note1, note2)
     return note1
 end
 
-local function construct_collection_path()
-    return string.format('%s/.local/share/Anki2/%s/collection.media/', os.getenv("HOME"), config.anki_user)
-end
-
 local function validate_config()
     if not is_dir(config.collection_path) then
         -- collection path wasn't specified. construct it using config.anki_user
-        config.collection_path = construct_collection_path()
+        config.collection_path = platform.construct_collection_path()
     end
 
     if config.snapshot_width < 1 then
@@ -554,7 +535,7 @@ ankiconnect.execute = function(request)
         return nil
     end
 
-    return subprocess { 'curl', '-s', 'localhost:8765', '-X', 'POST', '-d', request_json }
+    return platform.curl_request(request_json)
 end
 
 ankiconnect.parse_result = function(curl_output)
@@ -831,12 +812,12 @@ end
 clip_autocopy = {}
 
 clip_autocopy.enable = function()
-    mp.observe_property("sub-text", "string", copy_to_clipboard)
+    mp.observe_property("sub-text", "string", platform.copy_to_clipboard)
     notify("Clipboard autocopy has been enabled.", "info", 1)
 end
 
 clip_autocopy.disable = function()
-    mp.unobserve_property(copy_to_clipboard)
+    mp.unobserve_property(platform.copy_to_clipboard)
     notify("Clipboard autocopy has been disabled.", "info", 1)
 end
 
