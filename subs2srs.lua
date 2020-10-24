@@ -435,7 +435,7 @@ end
 
 local function init_platform_nix()
     local self = {}
-    local clipfile_path = '/tmp/mpvacious_clipboard'
+    local clipfile_path = os.tmpname()
     mp.register_event('shutdown', function() os.remove(clipfile_path) end)
 
     self.copy_to_clipboard = function(_, text)
