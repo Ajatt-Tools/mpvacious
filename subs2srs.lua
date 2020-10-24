@@ -882,6 +882,7 @@ menu.open = function()
     end
 
     if menu.active == true then
+        menu.close()
         return
     end
 
