@@ -811,11 +811,11 @@ end
 ------------------------------------------------------------
 -- main menu
 
-menu = {}
-
-menu.active = false
-
-menu.overlay = mp.create_osd_overlay and mp.create_osd_overlay('ass-events')
+menu = {
+    active = false,
+    show_hints = false,
+    overlay = mp.create_osd_overlay and mp.create_osd_overlay('ass-events'),
+}
 
 menu.overlay_draw = function(text)
     menu.overlay.data = text
@@ -832,6 +832,7 @@ menu.keybinds = {
     { key = 'm', fn = function() update_last_note(false) end },
     { key = 'M', fn = function() update_last_note(true) end },
     { key = 't', fn = function() clip_autocopy.toggle() end },
+    { key = 'i', fn = function() menu.hints_toggle() end },
     { key = 'ESC', fn = function() menu.close() end },
 }
 
@@ -846,22 +847,32 @@ menu.update = function()
     osd:item('Start time: '):text(human_readable_time(subs.get_timing('start'))):newline()
     osd:item('End time: '):text(human_readable_time(subs.get_timing('end'))):newline()
     osd:item('Clipboard autocopy: '):text(clip_autocopy.enabled()):newline()
-    osd:submenu('Menu bindings'):newline()
-    osd:tab():item('c: '):text('Set timings to the current sub'):newline()
-    osd:tab():item('s: '):text('Set start time to current position'):newline()
-    osd:tab():item('e: '):text('Set end time to current position'):newline()
-    osd:tab():item('r: '):text('Reset timings'):newline()
-    osd:tab():item('n: '):text('Export note'):newline()
-    osd:tab():item('g: '):text('Export note using the `Add Cards` GUI'):newline()
-    osd:tab():item('m: '):text('Update the last added note '):italics('(+shift to overwrite)'):newline()
-    osd:tab():item('t: '):text('Toggle clipboard autocopy'):newline()
-    osd:tab():item('ESC: '):text('Close'):newline()
-    osd:submenu('Global bindings'):newline()
-    osd:tab():item('ctrl+e: '):text('Export note'):newline()
-    osd:tab():item('ctrl+h: '):text('Seek to the start of the line'):newline()
-    osd:tab():item('ctrl+c: '):text('Copy current subtitle to clipboard'):newline()
+
+    if menu.show_hints then
+        osd:submenu('Menu bindings'):newline()
+        osd:tab():item('c: '):text('Set timings to the current sub'):newline()
+        osd:tab():item('s: '):text('Set start time to current position'):newline()
+        osd:tab():item('e: '):text('Set end time to current position'):newline()
+        osd:tab():item('r: '):text('Reset timings'):newline()
+        osd:tab():item('n: '):text('Export note'):newline()
+        osd:tab():item('g: '):text('Export note using the `Add Cards` GUI'):newline()
+        osd:tab():item('m: '):text('Update the last added note '):italics('(+shift to overwrite)'):newline()
+        osd:tab():item('t: '):text('Toggle clipboard autocopy'):newline()
+        osd:tab():item('ESC: '):text('Close'):newline()
+        osd:submenu('Global bindings'):newline()
+        osd:tab():item('ctrl+e: '):text('Export note'):newline()
+        osd:tab():item('ctrl+h: '):text('Seek to the start of the line'):newline()
+        osd:tab():item('ctrl+c: '):text('Copy current subtitle to clipboard'):newline()
+    else
+        osd:italics("Press "):item('i'):italics(" to toggle hints."):newline()
+    end
 
     menu.overlay_draw(osd:get_text())
+end
+
+menu.hints_toggle = function()
+    menu.show_hints = not menu.show_hints
+    menu.update()
 end
 
 menu.open = function()
@@ -916,7 +927,7 @@ function OSD:bold(s)
 end
 
 function OSD:italics(s)
-    return self:append('{\\i1}'):append(s):append('{\\i0}')
+    return self:color('ffffff'):append('{\\i1}'):append(s):append('{\\i0}')
 end
 
 function OSD:color(code)
