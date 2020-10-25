@@ -34,11 +34,6 @@ while watching your favorite TV show.
     <td></td>
 </tr>
 <tr>
-    <td><a href="https://www.archlinux.org/packages/community/x86_64/xdotool/">xdotool</a></td>
-    <td></td>
-    <td>To avoid <a href="https://github.com/FooSoft/anki-connect/issues/82/">this</a> bug</td>
-</tr>
-<tr>
     <td colspan="2" align="center"><a href="https://www.archlinux.org/packages/core/x86_64/curl/">curl</a></td>
     <td>Should be installed by default on all platforms</td>
 </tr>
@@ -53,7 +48,7 @@ Install all dependencies at once (on [Arch-based](https://www.parabola.nu/)
 [distros](https://www.gnu.org/distros/free-distros.en.html)):
 
 ```
-$ sudo pacman -Syu mpv anki xdotool curl xclip --needed
+$ sudo pacman -Syu mpv anki curl xclip --needed
 ```
 
 ## Installation

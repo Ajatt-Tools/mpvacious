@@ -650,18 +650,21 @@ ankiconnect.get_note_fields = function(note_id)
     end
 end
 
-ankiconnect.append_media = function(note_id, note_fields, overwrite)
-    -- AnkiConnect will fail to update the note if the Anki Browser is open.
-    -- First, try to close the Anki Browser.
-    -- https://github.com/FooSoft/anki-connect/issues/82
-    subprocess {
-        'xdotool',
-        'search',
-        '--name',
-        [[Browse \([0-9]{1,} cards? shown; [0-9]{1,} selected\)]],
-        'key',
-        'Escape'
+ankiconnect.gui_browse = function(query)
+    ankiconnect.execute {
+        action = 'guiBrowse',
+        version = 6,
+        params = {
+            query = query
+        }
     }
+end
+
+ankiconnect.append_media = function(note_id, note_fields, overwrite)
+    -- AnkiConnect will fail to update the note if it's selected in the Anki Browser.
+    -- https://github.com/FooSoft/anki-connect/issues/82
+    -- Switch focus from the current note to avoid it.
+    ankiconnect.gui_browse("nid:1") -- impossible nid
 
     if not overwrite then
         note_fields = join_media_fields(note_fields, ankiconnect.get_note_fields(note_id))
@@ -683,6 +686,7 @@ ankiconnect.append_media = function(note_id, note_fields, overwrite)
 
     if error == nil then
         notify(string.format("Note #%d updated.", note_id))
+        ankiconnect.gui_browse(string.format("nid:%d", note_id)) -- select the updated note in the card browser
     else
         notify(string.format("Error: %s.", error), "error", 2)
     end
