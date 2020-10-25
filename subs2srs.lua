@@ -1040,10 +1040,18 @@ end
 
 validate_config()
 ankiconnect.create_deck_if_doesnt_exist(config.deck_name)
+
+-- Key bindings
 mp.add_forced_key_binding("ctrl+e", "anki-export-note", export_to_anki)
 mp.add_forced_key_binding("ctrl+c", "copy-sub-to-clipboard", copy_sub_to_clipboard)
 mp.add_key_binding('a', 'mpvacious-menu-open', menu.open) -- a for advanced
 mp.add_key_binding("ctrl+h", "sub-rewind", sub_rewind)
+
+-- Vim-like seeking between subtitle lines
+mp.add_key_binding("H", "mpvacious-sub-seek-back", function() mp.commandv("sub_seek", "-1") end)
+mp.add_key_binding("L", "mpvacious-sub-seek-forward", function() mp.commandv("sub_seek", "1") end)
+
+-- Unset by default
 mp.add_key_binding(nil, "set-starting-line", subs.set_starting_line)
 mp.add_key_binding(nil, "reset-timings", subs.reset_timings)
 mp.add_key_binding(nil, "toggle-sub-autocopy", clip_autocopy.toggle)

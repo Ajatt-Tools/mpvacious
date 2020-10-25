@@ -195,6 +195,7 @@ Ctrl+t script-binding toggle-sub-autocopy
 ## Usage
 ### Global bindings
 These bindings work everywhere, even if the menu (covered later) is closed.
+* `Shift+h` and `Shift+l` - Seek to the next or the previous subtitle.
 * `Ctrl+e` - Export a card with the currently visible subtitle line on the front.
 Use this when your subs are perfectly timed and the target sentence doesn't span multiple subs.
 * `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
