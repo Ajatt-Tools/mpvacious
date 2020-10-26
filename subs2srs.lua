@@ -440,7 +440,7 @@ local function init_platform_nix()
 
     self.copy_to_clipboard = function(_, text)
         if not is_empty(text) then
-            local handle = assert(io.open(clipfile_path, "w"))
+            local handle = io.open(clipfile_path, "w")
             handle:write(text)
             handle:close()
             mp.commandv("run", "xclip", "-selection", "clipboard", clipfile_path)
@@ -458,13 +458,7 @@ local function init_platform_nix()
     return self
 end
 
-platform = (function()
-    if is_running_windows() then
-        return init_platform_windows()
-    else
-        return init_platform_nix()
-    end
-end)()
+platform = is_running_windows() and init_platform_windows() or init_platform_nix()
 
 ------------------------------------------------------------
 -- provides interface for creating audioclips and snapshots
@@ -702,34 +696,26 @@ subs = {
 
 subs.get_current = function()
     local sub_text = mp.get_property("sub-text")
-
-    if is_empty(sub_text) then
-        return nil
+    if not is_empty(sub_text) then
+        local sub_delay = mp.get_property_native("sub-delay")
+        return Subtitle:new {
+            ['text'] = sub_text,
+            ['start'] = mp.get_property_number("sub-start") + sub_delay,
+            ['end'] = mp.get_property_number("sub-end") + sub_delay
+        }
     end
-
-    local sub_delay = mp.get_property_native("sub-delay")
-
-    return Subtitle:new {
-        ['text'] = sub_text,
-        ['start'] = mp.get_property_number("sub-start") + sub_delay,
-        ['end'] = mp.get_property_number("sub-end") + sub_delay
-    }
+    return nil
 end
 
 subs.get_timing = function(position)
     if subs.user_timings[position] >= 0 then
         return subs.user_timings[position]
     end
-
-    if is_empty(subs.list) then
-        return nil
+    if not is_empty(subs.list) then
+        local i = position == 'start' and 1 or #subs.list
+        return subs.list[i][position]
     end
-
-    if position == 'start' then
-        return subs.list[1]['start']
-    elseif position == 'end' then
-        return subs.list[#subs.list]['end']
-    end
+    return nil
 end
 
 subs.get_text = function()
@@ -743,26 +729,14 @@ end
 subs.get = function()
     if is_empty(subs.list) then
         return subs.get_current()
+    else
+        table.sort(subs.list)
+        return Subtitle:new {
+            ['text'] = subs.get_text(),
+            ['start'] = subs.get_timing('start'),
+            ['end'] = subs.get_timing('end'),
+        }
     end
-
-    table.sort(subs.list)
-
-    local sub = Subtitle:new {
-        ['text'] = subs.get_text(),
-        ['start'] = subs.get_timing('start'),
-        ['end'] = subs.get_timing('end'),
-    }
-
-    if is_empty(sub['text']) then
-        return nil
-    end
-
-    if sub['start'] >= sub['end'] then
-        notify("First line can't start later or at the same time than last one ends.", "error", 3)
-        return nil
-    end
-
-    return sub
 end
 
 subs.append = function()
@@ -776,21 +750,19 @@ end
 
 subs.set_timing = function(position)
     subs.user_timings[position] = mp.get_property_number('time-pos')
+    menu.update()
+    notify(capitalize_first_letter(position) .. " time has been set.")
 
     if is_empty(subs.list) then
         mp.observe_property("sub-text", "string", subs.append)
     end
-
-    menu.update()
-    notify(capitalize_first_letter(position) .. " time has been set.")
 end
 
 subs.set_starting_line = function()
     subs.clear()
+    local sub_text = mp.get_property("sub-text")
 
-    local current_sub = subs.get_current()
-
-    if current_sub ~= nil then
+    if not is_empty(sub_text) then
         mp.observe_property("sub-text", "string", subs.append)
         notify("Timings have been set to the current sub.", "info", 2)
     else
@@ -802,11 +774,11 @@ subs.clear = function()
     mp.unobserve_property(subs.append)
     subs.list = {}
     subs.user_timings = get_empty_timings()
+    menu.update()
 end
 
-subs.reset_timings = function()
+subs.clear_and_notify = function()
     subs.clear()
-    menu.update()
     notify("Timings have been reset.", "info", 2)
 end
 
@@ -836,7 +808,7 @@ clip_autocopy.toggle = function()
     menu.update()
 end
 
-clip_autocopy.enabled = function()
+clip_autocopy.is_enabled = function()
     if config.autoclip == true then
         return 'enabled'
     else
@@ -886,7 +858,7 @@ menu.keybinds = {
     { key = 's', fn = function() subs.set_timing('start') end },
     { key = 'e', fn = function() subs.set_timing('end') end },
     { key = 'c', fn = function() subs.set_starting_line() end },
-    { key = 'r', fn = function() subs.reset_timings() end },
+    { key = 'r', fn = function() subs.clear_and_notify() end },
     { key = 'g', fn = function() export_to_anki(true) end },
     { key = 'n', fn = function() export_to_anki(false) end },
     { key = 'm', fn = function() update_last_note(false) end },
@@ -906,7 +878,7 @@ menu.update = function()
     osd:submenu('mpvacious options'):newline()
     osd:item('Start time: '):text(human_readable_time(subs.get_timing('start'))):newline()
     osd:item('End time: '):text(human_readable_time(subs.get_timing('end'))):newline()
-    osd:item('Clipboard autocopy: '):text(clip_autocopy.enabled()):newline()
+    osd:item('Clipboard autocopy: '):text(clip_autocopy.is_enabled()):newline()
 
     if menu.show_hints then
         osd:submenu('Menu bindings'):newline()
@@ -1053,5 +1025,5 @@ mp.add_key_binding("L", "mpvacious-sub-seek-forward", function() mp.commandv("su
 
 -- Unset by default
 mp.add_key_binding(nil, "set-starting-line", subs.set_starting_line)
-mp.add_key_binding(nil, "reset-timings", subs.reset_timings)
+mp.add_key_binding(nil, "reset-timings", subs.clear_and_notify)
 mp.add_key_binding(nil, "toggle-sub-autocopy", clip_autocopy.toggle)
