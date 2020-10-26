@@ -12,6 +12,7 @@
 mpvacious is your semi-automatic subs2srs for mpv.
 It supports multiple workflows and allows you to quickly create Anki cards
 while watching your favorite TV show.
+[Video demonstration](https://youtu.be/vU85ramvyo4).
 
 ## Requirements
 <table>
