@@ -3,6 +3,7 @@
 </p>
 
 # mpvacious
+
 ![GitHub](https://img.shields.io/github/license/Ajatt-Tools/mpvacious)
 ![GitHub top language](https://img.shields.io/github/languages/top/Ajatt-Tools/mpvacious)
 ![Lines of code](https://img.shields.io/tokei/lines/github/Ajatt-Tools/mpvacious)
@@ -52,6 +53,7 @@ $ sudo pacman -Syu mpv anki curl xclip --needed
 ```
 
 ## Installation
+
 ### Manually
 
 Save [subs2srs.lua](https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua)
@@ -67,6 +69,7 @@ user scripts are installed by switching to the "Plugins" tab
 in the preferences dialog and dropping the files there.
 
 ### Using curl
+
 ```
 $ curl -o ~/.config/mpv/scripts/subs2srs.lua 'https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua'
 ```
@@ -97,13 +100,15 @@ you should [already have it](https://github.com/LukeSmithxyz/voidrice/blob/maste
 In this case only add the last line: ```load("subs2srs/subs2srs.lua")```.
 
 ### Updating with git
+
 | Install method | Command |
 | --- | --- |
 | Submodules | `$ config submodule update --remote --merge` |
 | Plain git | `$ cd ~/.config/mpv/scripts/subs2srs && git pull` |
 
 ## Configuration
-The config file should be created by the user.
+
+The config file should be created by the user, if needed.
 
 | OS | Config location |
 | --- | --- |
@@ -172,6 +177,7 @@ Otherwise, I recommend sticking with `opus` and `webp`,
 as they greatly reduce the size of the generated files.
 
 ### Key bindings
+
 The user may change some of the key bindings, though this step is not necessary.
 
 | OS | Config location |
@@ -180,27 +186,35 @@ The user may change some of the key bindings, though this step is not necessary.
 | Windows | `C:/Users/Username/AppData/Roaming/mpv/input.conf` |
 
 Default bindings:
+
 ```
 Ctrl+c script-binding copy-sub-to-clipboard
 Ctrl+e script-binding anki-export-note
 Ctrl+h script-binding sub-rewind
 a      script-binding mpvacious-menu-open
 ```
+
 These additional bindings aren't enabled by default but can be accessed via the menu by pressing `a`.
+
 ```
 Ctrl+s script-binding set-starting-line
 Ctrl+r script-binding reset-timings
 Ctrl+t script-binding toggle-sub-autocopy
 ```
+
 ## Usage
+
 ### Global bindings
+
 These bindings work everywhere, even if the menu (covered later) is closed.
 * `Shift+h` and `Shift+l` - Seek to the next or the previous subtitle.
+* `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
 * `Ctrl+e` - Export a card with the currently visible subtitle line on the front.
 Use this when your subs are perfectly timed and the target sentence doesn't span multiple subs.
-* `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
 * `Ctrl+c` - Copy current subtitle string to the system clipboard. For automatic copying see `advanced menu`.
+
 ### Menu options
+
 * `a` - Open `advanced menu` with a list of all available keybindings.
 
 Let's say your subs are still perfectly timed,
@@ -218,7 +232,7 @@ If subs are badly timed, first of all, you could try to re-time them.
 [ffsubsync](https://github.com/smacke/ffsubsync) is a program that will do it for you.
 Another option would be to shift timings using key bindings provided by mpv.
 
-* `z` and `shift+z` - Adjust subtitle delay.
+* `z` and `Shift+z` - Adjust subtitle delay.
 
 If above fails, you have to manually set timings.
 * `s` - Set the start time.
@@ -227,6 +241,7 @@ If above fails, you have to manually set timings.
 Then, as earlier, press `n` to make the card.
 
 ### How do I add definitions to the card I just made
+
 After the card is created, you can find it by typing ```tag:subs2srs added:1```
 in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolibri/)
 or similar software to add definitions to the card.
@@ -250,11 +265,13 @@ by pressing `t` in the `advanced menu`
 4) When you find an unknown word, make a card with Yomichan
 5) Go back to mpv and add the snapshot and the audio clip
 to the card you've just made by pressing `m` in the `advanced menu`.
-Pressing `shift+m` will overwrite any existing data in media fields.
+Pressing `Shift+m` will overwrite any existing data in media fields.
 
-Don't forget to set the right timings if the sentence is split between multiple subs.
+Don't forget to set the right timings and join lines together
+if the sentence is split between multiple subs.
 
 ### Example sentence card
+
 With the addon you can make cards like this in just a few seconds.
 
 ![card-example](https://user-images.githubusercontent.com/69171671/92900057-e102d480-f40e-11ea-8cfc-b00848ca66ff.png)
@@ -271,6 +288,7 @@ If you don't like the default Yomichan Search tool, try:
 You can use any html page as long as it has \<body\>\</body\> in it.
 
 ### Additional mpv key bindings
+
 I recommend adding these lines to your [input.conf](#key-bindings) for smoother experience.
 ```
 # vim-like seeking
@@ -295,7 +313,9 @@ z add sub-delay -0.05
 X sub-step 1
 x sub-step -1
 ```
+
 ## Hacking
+
 If you want to modify this script
 or make an entirely new one from scratch,
 these links may help.
