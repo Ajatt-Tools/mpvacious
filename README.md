@@ -246,16 +246,15 @@ After the card is created, you can find it by typing ```tag:subs2srs added:1```
 in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolibri/)
 or similar software to add definitions to the card.
 
-Pressing `t` in the `advanced menu` toggles the `autoclip` option.
-Now as subtitles appear on the screen, they will be immediately copied to the clipboard.
-You can use it in combination with
-[Yomichan](https://foosoft.net/projects/yomichan/) clipboard monitor.
-`Yomichan Search` is activated by pressing `Alt+Insert` in your web browser.
 
 ### Adding media to existing cards
 You can add a card first using Yomichan,
 and then append an audio clip and a snapshot to it.
 
+Pressing `t` in the `advanced menu` toggles the `autoclip` option.
+Now as subtitles appear on the screen, they will be immediately copied to the clipboard.
+You can use it in combination with
+[Yomichan](https://foosoft.net/projects/yomichan/) clipboard monitor.
 
 #### The process:
 1) Open the html page in a web browser
