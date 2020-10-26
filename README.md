@@ -257,12 +257,11 @@ You can use it in combination with
 [Yomichan](https://foosoft.net/projects/yomichan/) clipboard monitor.
 
 #### The process:
-1) Open the html page in a web browser
-2) Enable Clipboard Inserter on the page
-3) Enable `clipboard autocopy` in mpvacious
-by pressing `t` in the `advanced menu`
-4) When you find an unknown word, make a card with Yomichan
-5) Go back to mpv and add the snapshot and the audio clip
+
+1) Open `Yomichan Search` by pressing `Alt+Insert` in your web browser.
+2) Enable `Clipboard autocopy` in mpvacious by pressing `t` in the `advanced menu`.
+3) When you find an unknown word, click ![＋](https://foosoft.net/projects/yomichan/img/btn-add-expression.png) in Yomichan to make a card for it.
+4) Go back to mpv and add the snapshot and the audio clip
 to the card you've just made by pressing `m` in the `advanced menu`.
 Pressing `Shift+m` will overwrite any existing data in media fields.
 
