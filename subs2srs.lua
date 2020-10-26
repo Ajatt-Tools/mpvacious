@@ -282,7 +282,6 @@ end
 local function export_to_anki(gui)
     local sub = subs.get()
     subs.clear()
-    menu.close()
 
     if sub ~= nil then
         local snapshot_filename, audio_filename = construct_media_filenames(sub)
@@ -302,7 +301,6 @@ local function update_last_note(overwrite)
     local sub = subs.get()
     local last_note_id = ankiconnect.get_last_note_id()
     subs.clear()
-    menu.close()
 
     if sub == nil then
         notify("Nothing to export. Have you set the timings?", "warn", 2)
