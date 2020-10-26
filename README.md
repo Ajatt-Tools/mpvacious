@@ -241,14 +241,6 @@ You can use it in combination with
 You can add a card first using Yomichan,
 and then append an audio clip and a snapshot to it.
 
-#### You'll need:
-* Clipboard Inserter
-([chrome](https://chrome.google.com/webstore/detail/clipboard-inserter/deahejllghicakhplliloeheabddjajm))
-([firefox](https://addons.mozilla.org/ja/firefox/addon/clipboard-inserter/))
-* An [html page](https://pastebin.com/zDY6s3NK)
-to paste the contents of you clipboard to
-
-You can use any html page as long as it has \<body\>\</body\> in it.
 
 #### The process:
 1) Open the html page in a web browser
@@ -266,6 +258,17 @@ Don't forget to set the right timings if the sentence is split between multiple 
 With the addon you can make cards like this in just a few seconds.
 
 ![card-example](https://user-images.githubusercontent.com/69171671/92900057-e102d480-f40e-11ea-8cfc-b00848ca66ff.png)
+
+### Other tools
+
+If you don't like the default Yomichan Search tool, try:
+
+* Clipboard Inserter browser add-on
+([chrome](https://chrome.google.com/webstore/detail/clipboard-inserter/deahejllghicakhplliloeheabddjajm))
+([firefox](https://addons.mozilla.org/ja/firefox/addon/clipboard-inserter/))
+* An [html page](https://pastebin.com/zDY6s3NK) to paste the contents of you clipboard to
+
+You can use any html page as long as it has \<body\>\</body\> in it.
 
 ### Additional mpv key bindings
 I recommend adding these lines to your [input.conf](#key-bindings) for smoother experience.
