@@ -345,52 +345,57 @@ local function join_media_fields(note1, note2)
     return note1
 end
 
-local function validate_config()
-    if not is_dir(config.collection_path) then
-        -- collection path wasn't specified. construct it using config.anki_user
-        config.collection_path = platform.construct_collection_path()
+local validate_config
+do
+    local function set_collection_path()
+        if not is_dir(config.collection_path) then
+            -- collection path wasn't specified. construct it using config.anki_user
+            config.collection_path = platform.construct_collection_path()
+        end
     end
 
-    if config.snapshot_width < 1 then
-        config.snapshot_width = -2
+    local function set_audio_format()
+        if config.audio_format == 'opus' then
+            config.audio_codec = 'libopus'
+            config.audio_extension = '.ogg'
+        else
+            config.audio_codec = 'libmp3lame'
+            config.audio_extension = '.mp3'
+        end
     end
 
-    if config.snapshot_height < 1 then
-        config.snapshot_height = -2
+    local function set_video_format()
+        if config.snapshot_format == 'webp' then
+            config.snapshot_extension = '.webp'
+            config.snapshot_codec = 'libwebp'
+        else
+            config.snapshot_extension = '.jpg'
+            config.snapshot_codec = 'mjpeg'
+        end
     end
 
-    if config.snapshot_width > 800 then
-        config.snapshot_width = 800
+    local function ensure_in_range(dimension)
+        config[dimension] = config[dimension] < 42 and -2 or config[dimension]
+        config[dimension] = config[dimension] > 640 and 640 or config[dimension]
     end
 
-    if config.snapshot_height > 800 then
-        config.snapshot_height = 800
+    local function check_snapshot_settings()
+        ensure_in_range('snapshot_width')
+        ensure_in_range('snapshot_height')
+        if config.snapshot_width < 1 and config.snapshot_height < 1 then
+            config.snapshot_width = -2
+            config.snapshot_height = 200
+        end
+        if config.snapshot_quality < 0 or config.snapshot_quality > 100 then
+            config.snapshot_quality = 15
+        end
     end
 
-    if config.snapshot_width < 1 and config.snapshot_height < 1 then
-        config.snapshot_width = -2
-        config.snapshot_height = 200
-        notify("`snapshot_width` and `snapshot_height` can't be both less than 1.", "warn", 5)
-    end
-
-    if config.snapshot_quality < 0 or config.snapshot_quality > 100 then
-        config.snapshot_quality = 5
-    end
-
-    if config.audio_format == 'opus' then
-        config.audio_codec = 'libopus'
-        config.audio_extension = '.ogg'
-    else
-        config.audio_codec = 'libmp3lame'
-        config.audio_extension = '.mp3'
-    end
-
-    if config.snapshot_format == 'webp' then
-        config.snapshot_extension = '.webp'
-        config.snapshot_codec = 'libwebp'
-    else
-        config.snapshot_extension = '.jpg'
-        config.snapshot_codec = 'mjpeg'
+    validate_config = function()
+        set_collection_path()
+        set_audio_format()
+        set_video_format()
+        check_snapshot_settings()
     end
 end
 
