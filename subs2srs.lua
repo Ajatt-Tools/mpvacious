@@ -52,6 +52,7 @@ local config = {
     audio_field = "SentAudio",
     image_field = "Image",
     menu_font_size = 25,
+    note_tag = "subs2srs",
 }
 
 local utils = require('mp.utils')
@@ -581,6 +582,7 @@ ankiconnect.add_note = function(note_fields, gui)
         action = 'addNote'
     end
 
+    local tags = is_empty(config.note_tag) and {} or { config.note_tag }
     local args = {
         action = action,
         version = 6,
@@ -593,7 +595,7 @@ ankiconnect.add_note = function(note_fields, gui)
                     allowDuplicate = false,
                     duplicateScope = "deck",
                 },
-                tags = { "subs2srs" }
+                tags = tags,
             }
         }
     }

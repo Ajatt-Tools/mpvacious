@@ -166,6 +166,11 @@ snapshot_height=200
 
 # Size of the font used in the menu
 menu_font_size=24
+
+# The tag that is added to new notes.
+# Leave nothing after `=` to disable tagging completely.
+note_tag=subs2srs
+#note_tag=
 ```
 
 Sentence field should be first in the note type settings.
