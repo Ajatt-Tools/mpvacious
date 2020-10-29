@@ -217,24 +217,34 @@ local function subprocess(args)
     }
 end
 
-local function anki_compatible_length(str)
-    -- anki forcibly mutilates all filenames longer than 64 characters
-    -- leave 25 characters for the filename
-    -- the rest is reserved for the timestamp, which is added later
+local anki_compatible_length
+do
+    -- Anki forcibly mutilates all filenames longer than 119 bytes when you run `Tools->Check Media...`.
+    local allowed_bytes = 119
+    local timestamp_bytes = #'_(99h99m99s999ms-99h99m99s999ms).webp'
+    local limit_bytes = allowed_bytes - timestamp_bytes
 
-    local ret = subprocess {
-        'awk',
-        '-v', string.format('str=%s', str),
-        '-v', 'limit=25',
-        'BEGIN{print substr(str, 1, limit); exit}'
-    }
+    anki_compatible_length = function(str)
+        if #str <= limit_bytes then
+            return str
+        end
 
-    if ret.status == 0 then
-        ret.stdout = remove_newlines(ret.stdout)
-        ret.stdout = remove_leading_trailing_spaces(ret.stdout)
-        return ret.stdout
-    else
-        return 'subs2srs_' .. os.time()
+        local bytes_per_char = contains_non_latin_letters(str) and #'車' or #'z'
+        local limit_chars = math.floor(limit_bytes / bytes_per_char)
+        local ret = subprocess {
+            'awk',
+            '-v', string.format('str=%s', str),
+            '-v', string.format('limit=%d', limit_chars),
+            'BEGIN{print substr(str, 1, limit); exit}'
+        }
+
+        if ret.status == 0 then
+            ret.stdout = remove_newlines(ret.stdout)
+            ret.stdout = remove_leading_trailing_spaces(ret.stdout)
+            return ret.stdout
+        else
+            return 'subs2srs_' .. os.time()
+        end
     end
 end
 
@@ -244,10 +254,7 @@ local function construct_media_filenames(sub)
     filename = remove_extension(filename)
     filename = remove_text_in_brackets(filename)
     filename = remove_special_characters(filename)
-
-    if contains_non_latin_letters(filename) then
-        filename = anki_compatible_length(filename)
-    end
+    filename = anki_compatible_length(filename)
 
     filename = string.format(
             '%s_(%s-%s)',
