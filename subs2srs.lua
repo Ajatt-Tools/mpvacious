@@ -288,6 +288,14 @@ local function minutes_ago(m)
 end
 
 local function export_to_anki(gui)
+    do
+        local error = ankiconnect.ensure_target_deck_exists()
+        if error ~= nil then
+            notify(string.format("Error: %s.", error), "error", 2)
+            return
+        end
+    end
+
     local sub = subs.get()
     subs.clear()
 
@@ -568,8 +576,8 @@ ankiconnect.parse_result = function(curl_output)
     return stdout_json.result, nil
 end
 
-ankiconnect.create_deck_if_doesnt_exist = function(deck_name)
-    local args = {
+ankiconnect.create_deck = function(deck_name)
+    local ret = ankiconnect.execute {
         action = "changeDeck",
         version = 6,
         params = {
@@ -577,8 +585,21 @@ ankiconnect.create_deck_if_doesnt_exist = function(deck_name)
             deck = deck_name
         }
     }
+    return ankiconnect.parse_result(ret)
+end
 
-    ankiconnect.execute(args)
+ankiconnect.ensure_target_deck_exists = function()
+    if ankiconnect.target_deck_exists == true then
+        return nil
+    end
+
+    local _, error = ankiconnect.create_deck(config.deck_name)
+
+    if error == nil then
+        ankiconnect.target_deck_exists = true
+    end
+
+    return error
 end
 
 ankiconnect.add_note = function(note_fields, gui)
@@ -1023,7 +1044,6 @@ if config.autoclip == true then
 end
 
 validate_config()
-ankiconnect.create_deck_if_doesnt_exist(config.deck_name)
 
 -- Key bindings
 mp.add_forced_key_binding("ctrl+e", "anki-export-note", export_to_anki)
