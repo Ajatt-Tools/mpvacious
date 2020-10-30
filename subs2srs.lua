@@ -604,13 +604,7 @@ ankiconnect.ensure_target_deck_exists = function()
 end
 
 ankiconnect.add_note = function(note_fields, gui)
-    local action
-    if gui then
-        action = 'guiAddCards'
-    else
-        action = 'addNote'
-    end
-
+    local action = gui and 'guiAddCards' or 'addNote'
     local tags = is_empty(config.note_tag) and {} or { config.note_tag }
     local args = {
         action = action,
