@@ -14,6 +14,25 @@ It supports multiple workflows and allows you to quickly create Anki cards
 while watching your favorite TV show.
 [Video demonstration](https://youtu.be/vU85ramvyo4).
 
+## Table of contents
+
+* [Requirements](#requirements)
+* [Installation](#installation)
+    * [Manually](#manually)
+    * [Using curl](#using-curl)
+    * [Using git](#using-git)
+    * [Updating with git](#updating-with-git)
+* [Configuration](#configuration)
+* [Usage](#usage)
+    * [Global bindings](#global-bindings)
+    * [Menu options](#menu-options)
+    * [How to add definitions to new cards](#how-to-add-definitions-to-new-cards)
+    * [Modifying cards added with Yomichan](#modifying-cards-added-with-yomichan)
+    * [Example sentence card](#example-sentence-card)
+    * [Other tools](#other-tools)
+    * [Additional mpv key bindings](#additional-mpv-key-bindings)
+* [Hacking](#hacking)
+
 ## Requirements
 
 <table>
