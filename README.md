@@ -175,7 +175,7 @@ note_tag=subs2srs
 
 Sentence field should be first in the note type settings.
 Otherwise Anki won't allow mpvacious to add new notes.
-Alternatively, refer to [Adding media to existing cards](#adding-media-to-existing-cards)
+Alternatively, refer to [Modifying cards added with Yomichan](#modifying-cards-added-with-yomichan)
 or use an addon that [allows empty first field](https://ankiweb.net/shared/info/46741504).
 
 If you are having problems playing media files on older mobile devices,
@@ -218,7 +218,8 @@ These bindings work everywhere, even if the menu (covered later) is closed.
 * `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
 * `Ctrl+e` - Export a card with the currently visible subtitle line on the front.
 Use this when your subs are perfectly timed and the target sentence doesn't span multiple subs.
-* `Ctrl+c` - Copy current subtitle string to the system clipboard. For automatic copying see `advanced menu`.
+* `Ctrl+c` - Copy current subtitle string to the system clipboard. For automatic copying see
+[Modifying cards added with Yomichan](#modifying-cards-added-with-yomichan).
 
 ### Menu options
 
@@ -253,8 +254,8 @@ After the card is created, you can find it by typing ```tag:subs2srs added:1```
 in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolibri/)
 or similar software to add definitions to the card.
 
+### Modifying cards added with Yomichan
 
-### Adding media to existing cards
 You can add a card first using Yomichan,
 and then append an audio clip and a snapshot to it.
 
