@@ -15,6 +15,7 @@ while watching your favorite TV show.
 [Video demonstration](https://youtu.be/vU85ramvyo4).
 
 ## Requirements
+
 <table>
 <tr>
     <th><a href="https://www.gnu.org/gnu/about-gnu.html">GNU/Linux</a></th>
@@ -217,7 +218,7 @@ Ctrl+t script-binding toggle-sub-autocopy
 ### Global bindings
 
 These bindings work everywhere, even if the menu (covered later) is closed.
-* `Shift+h` and `Shift+l` - Seek to the next or the previous subtitle.
+* `Shift+h` and `Shift+l` - Seek to the previous or the next subtitle.
 * `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
 * `Ctrl+e` - Export a card with the currently visible subtitle line on the front.
 Use this when your subs are perfectly timed and the target sentence doesn't span multiple subs.
@@ -251,7 +252,7 @@ If above fails, you have to manually set timings.
 
 Then, as earlier, press `n` to make the card.
 
-### How do I add definitions to the card I just made
+### How to add definitions to new cards
 
 After the card is created, you can find it by typing ```tag:subs2srs added:1```
 in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolibri/)

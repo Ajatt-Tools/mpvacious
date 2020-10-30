@@ -52,7 +52,7 @@ local config = {
     audio_field = "SentAudio",
     image_field = "Image",
     menu_font_size = 25,
-    note_tag = "subs2srs",
+    note_tag = "subs2srs",      -- the tag that is added to new notes. change to "" to disable tagging
     tie_volumes = false,        -- if set to true, the volume of the outputted audio file depends on the volume of the player at the time of export
 }
 
@@ -86,7 +86,7 @@ function table.contains(table, element)
     return false
 end
 
-function table.max(table)
+function table.max_num(table)
     local max = table[1]
     for _, value in ipairs(table) do
         if value > max then
@@ -652,7 +652,7 @@ ankiconnect.get_last_note_id = function()
     local note_ids, _ = ankiconnect.parse_result(ret)
 
     if not is_empty(note_ids) then
-        return table.max(note_ids)
+        return table.max_num(note_ids)
     else
         return -1
     end
