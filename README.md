@@ -268,7 +268,9 @@ You can use it in combination with
 
 1) Open `Yomichan Search` by pressing `Alt+Insert` in your web browser.
 2) Enable `Clipboard autocopy` in mpvacious by pressing `t` in the `advanced menu`.
-3) When you find an unknown word, click ![＋](https://foosoft.net/projects/yomichan/img/btn-add-expression.png) in Yomichan to make a card for it.
+3) When you find an unknown word, click
+[![＋](https://foosoft.net/projects/yomichan/img/btn-add-expression.png)](https://foosoft.net/projects/yomichan/index.html#flashcard-creation)
+in Yomichan to make a card for it.
 4) Go back to mpv and add the snapshot and the audio clip
 to the card you've just made by pressing `m` in the `advanced menu`.
 Pressing `Shift+m` will overwrite any existing data in media fields.
