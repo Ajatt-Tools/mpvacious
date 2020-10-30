@@ -53,6 +53,7 @@ local config = {
     image_field = "Image",
     menu_font_size = 25,
     note_tag = "subs2srs",
+    tie_volumes = false,        -- if set to true, the volume of the outputted audio file depends on the volume of the player at the time of export
 }
 
 local utils = require('mp.utils')
@@ -527,7 +528,7 @@ encoder.create_audio = function(start_timestamp, end_timestamp, filename)
             table.concat { '--start=', start_timestamp },
             table.concat { '--end=', end_timestamp },
             table.concat { '--aid=', mp.get_property("aid") }, -- track number
-            table.concat { '--volume=', mp.get_property('volume') },
+            table.concat { '--volume=', config.tie_volumes and mp.get_property('volume') or '100' },
             table.concat { '--oacopts-add=b=', config.audio_bitrate },
             table.concat { '-o=', fragment_path }
     )

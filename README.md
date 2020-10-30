@@ -145,6 +145,9 @@ autoclip=no
 # Remove all spaces from the subtitle text.
 # Only makes sense for languages without spaces like Japanese.
 nuke_spaces=yes
+# if set to `yes`, the volume of the outputted audio file
+# depends on the volume of the player at the time of export
+tie_volumes=no
 
 # Images
 snapshot_format=webp
