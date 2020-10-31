@@ -209,13 +209,17 @@ local function human_readable_time(seconds)
     return ret
 end
 
-local function subprocess(args)
-    return mp.command_native {
+local function subprocess(args, completion_fn)
+    -- if `completion_fn` is passed, the command is ran asynchronously,
+    -- and upon completion, `completion_fn` is called to process the results.
+    local command_native = type(completion_fn) == 'function' and mp.command_native_async or mp.command_native
+    local command_table = {
         name = "subprocess",
         playback_only = false,
         capture_stdout = true,
         args = args
     }
+    return command_native(command_table, completion_fn)
 end
 
 local anki_compatible_length
@@ -435,9 +439,9 @@ local function init_platform_windows()
         return string.format([[%s\Anki2\%s\collection.media\]], os.getenv('APPDATA'), config.anki_user)
     end
 
-    self.curl_request = function(request_json)
+    self.curl_request = function(request_json, completion_fn)
         io.open(curl_tmpfile_path, "w"):write(request_json):close()
-        return subprocess {
+        local args = {
             'curl',
             '-s',
             'localhost:8765',
@@ -448,6 +452,7 @@ local function init_platform_windows()
             '--data-binary',
             table.concat { '@', curl_tmpfile_path }
         }
+        return subprocess(args, completion_fn)
     end
 
     return self
@@ -471,8 +476,8 @@ local function init_platform_nix()
         return string.format('%s/.local/share/Anki2/%s/collection.media/', os.getenv('HOME'), config.anki_user)
     end
 
-    self.curl_request = function(request_json)
-        return subprocess { 'curl', '-s', 'localhost:8765', '-X', 'POST', '-d', request_json }
+    self.curl_request = function(request_json, completion_fn)
+        return subprocess ({ 'curl', '-s', 'localhost:8765', '-X', 'POST', '-d', request_json }, completion_fn)
     end
 
     return self
@@ -539,17 +544,16 @@ end
 
 ankiconnect = {}
 
-ankiconnect.execute = function(request)
+ankiconnect.execute = function(request, completion_fn)
     -- utils.format_json returns a string
     -- On error, request_json will contain "null", not nil.
     local request_json, error = utils.format_json(request)
 
     if error ~= nil or request_json == "null" then
-        notify("Couldn't parse request.", "error", 2)
-        return nil
+        return completion_fn and completion_fn()
+    else
+        return platform.curl_request(request_json, completion_fn)
     end
-
-    return platform.curl_request(request_json)
 end
 
 ankiconnect.parse_result = function(curl_output)
