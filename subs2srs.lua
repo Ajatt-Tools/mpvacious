@@ -293,14 +293,6 @@ local function minutes_ago(m)
 end
 
 local function export_to_anki(gui)
-    do
-        local error = ankiconnect.ensure_target_deck_exists()
-        if error ~= nil then
-            notify(string.format("Error: %s.", error), "error", 2)
-            return
-        end
-    end
-
     local sub = subs.get()
     subs.clear()
 
@@ -582,7 +574,7 @@ ankiconnect.parse_result = function(curl_output)
 end
 
 ankiconnect.create_deck = function(deck_name)
-    local ret = ankiconnect.execute {
+    local args = {
         action = "changeDeck",
         version = 6,
         params = {
@@ -590,21 +582,15 @@ ankiconnect.create_deck = function(deck_name)
             deck = deck_name
         }
     }
-    return ankiconnect.parse_result(ret)
-end
-
-ankiconnect.ensure_target_deck_exists = function()
-    if ankiconnect.target_deck_exists == true then
-        return nil
+    local result_notify = function(_, result, _)
+        local _, error = ankiconnect.parse_result(result)
+        if not error then
+            msg.info(string.format("Deck %s: check completed.", deck_name))
+        else
+            msg.error(string.format("Deck %s: check failed. Error: %s.", deck_name, error))
+        end
     end
-
-    local _, error = ankiconnect.create_deck(config.deck_name)
-
-    if error == nil then
-        ankiconnect.target_deck_exists = true
-    end
-
-    return error
+    ankiconnect.execute(args, result_notify)
 end
 
 ankiconnect.add_note = function(note_fields, gui)
@@ -1043,6 +1029,8 @@ if config.autoclip == true then
 end
 
 validate_config()
+
+ankiconnect.create_deck(config.deck_name)
 
 -- Key bindings
 mp.add_forced_key_binding("ctrl+e", "anki-export-note", export_to_anki)
