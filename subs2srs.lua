@@ -759,15 +759,17 @@ ankiconnect.append_media = function(note_id, note_fields, overwrite)
         }
     }
 
-    local ret = ankiconnect.execute(args)
-    local _, error = ankiconnect.parse_result(ret)
-
-    if error == nil then
-        notify(string.format("Note #%d updated.", note_id))
-        ankiconnect.gui_browse(string.format("nid:%d", note_id)) -- select the updated note in the card browser
-    else
-        notify(string.format("Error: %s.", error), "error", 2)
+    local result_notify = function(_, result, _)
+        local _, error = ankiconnect.parse_result(result)
+        if not error then
+            notify(string.format("Note #%s updated.", note_id))
+            ankiconnect.gui_browse(string.format("nid:%s", note_id)) -- select the updated note in the card browser
+        else
+            notify(string.format("Error: %s.", error), "error", 2)
+        end
     end
+
+    ankiconnect.execute(args, result_notify)
 end
 
 ------------------------------------------------------------
