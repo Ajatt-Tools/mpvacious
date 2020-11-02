@@ -50,6 +50,9 @@ local config = {
     model_name = "Japanese sentences", -- Tools -> Manage note types
     sentence_field = "SentKanji",
     audio_field = "SentAudio",
+    use_forvo = "yes",                  -- 'yes', 'no', 'always'
+    vocab_field = "VocabKanji",         -- target word field
+    vocab_audio_field = "VocabAudio",   -- target word audio
     image_field = "Image",
     menu_font_size = 25,
     note_tag = "subs2srs",      -- the tag that is added to new notes. change to "" to disable tagging
@@ -407,6 +410,17 @@ local function get_forvo_pronunciation(word)
     return string.format('[sound:%s]', pronunciation_filename)
 end
 
+local function append_forvo_pronunciation(note1, note2)
+    if config.use_forvo ~= 'no' and not is_empty(note2[config.vocab_field]) then
+        if config.use_forvo == 'always' then
+            note1[config.vocab_audio_field] = get_forvo_pronunciation(note2[config.vocab_field])
+        elseif is_empty(note2[config.vocab_audio_field]) then
+            note1[config.vocab_audio_field] = get_forvo_pronunciation(note2[config.vocab_field])
+        end
+    end
+    return note1
+end
+
 local validate_config
 do
     local function set_collection_path()
@@ -729,8 +743,12 @@ ankiconnect.append_media = function(note_id, note_fields, overwrite)
     -- Switch focus from the current note to avoid it.
     ankiconnect.gui_browse("nid:1") -- impossible nid
 
-    if not overwrite then
-        note_fields = join_media_fields(note_fields, ankiconnect.get_note_fields(note_id))
+    local old_fields = ankiconnect.get_note_fields(note_id)
+    if old_fields then
+        note_fields = append_forvo_pronunciation(note_fields, old_fields)
+        if not overwrite then
+            note_fields = join_media_fields(note_fields, old_fields)
+        end
     end
 
     local args = {
