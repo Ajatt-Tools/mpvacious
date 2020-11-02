@@ -203,6 +203,19 @@ do
     end
 end
 
+local function url_encode(url) -- https://gist.github.com/liukun/f9ce7d6d14fa45fe9b924a3eed5c3d99
+    local char_to_hex = function(c)
+        return string.format("%%%02X", string.byte(c))
+    end
+    if url == nil then
+        return
+    end
+    url = url:gsub("\n", "\r\n")
+    url = url:gsub("([^%w _%%%-%.~])", char_to_hex)
+    url = url:gsub(" ", "+")
+    return url
+end
+
 local function copy_sub_to_clipboard()
     platform.copy_to_clipboard("copy-on-demand", mp.get_property("sub-text"))
 end
