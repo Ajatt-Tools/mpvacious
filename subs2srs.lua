@@ -330,19 +330,19 @@ end
 local function export_to_anki(gui)
     local sub = subs.get()
     subs.clear()
-
-    if sub ~= nil then
-        local snapshot_filename, audio_filename = construct_media_filenames(sub)
-        local snapshot_timestamp = (sub['start'] + sub['end']) / 2
-
-        encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
-        encoder.create_audio(sub['start'], sub['end'], audio_filename)
-
-        local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
-        ankiconnect.add_note(note_fields, gui)
-    else
+    if sub == nil then
         notify("Nothing to export.", "warn", 1)
+        return
     end
+
+    local snapshot_filename, audio_filename = construct_media_filenames(sub)
+    local snapshot_timestamp = (sub['start'] + sub['end']) / 2
+
+    encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
+    encoder.create_audio(sub['start'], sub['end'], audio_filename)
+
+    local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
+    ankiconnect.add_note(note_fields, gui)
 end
 
 local function update_last_note(overwrite)
@@ -378,10 +378,6 @@ local function get_empty_timings()
 end
 
 local function join_media_fields(note1, note2)
-    if note2 == nil then
-        return note1
-    end
-
     if note2[config.audio_field] then
         note1[config.audio_field] = note2[config.audio_field] .. note1[config.audio_field]
     end
@@ -399,7 +395,7 @@ local function get_forvo_pronunciation(word)
     local forvo_page = subprocess { 'curl', '-s', string.format('https://forvo.com/search/%s/ja', word) }.stdout
     local play_params = string.match(forvo_page, "Play%((.-)%);")
     if not play_params then
-        return ''
+        return nil
     end
     local iter = string.gmatch(play_params, "'(.-)'")
     local formats = { mp3 = iter(), ogg = iter() }
@@ -652,7 +648,7 @@ ankiconnect.create_deck = function(deck_name)
         if not error then
             msg.info(string.format("Deck %s: check completed.", deck_name))
         else
-            msg.error(string.format("Deck %s: check failed. Error: %s.", deck_name, error))
+            msg.warn(string.format("Deck %s: check failed. Reason: %s.", deck_name, error))
         end
     end
     ankiconnect.execute(args, result_notify)
@@ -689,7 +685,7 @@ ankiconnect.add_note = function(note_fields, gui)
 end
 
 ankiconnect.get_last_note_id = function()
-    local args = {
+    local ret = ankiconnect.execute {
         action = "findNotes",
         version = 6,
         params = {
@@ -697,7 +693,6 @@ ankiconnect.get_last_note_id = function()
         }
     }
 
-    local ret = ankiconnect.execute(args)
     local note_ids, _ = ankiconnect.parse_result(ret)
 
     if not is_empty(note_ids) then
@@ -708,13 +703,15 @@ ankiconnect.get_last_note_id = function()
 end
 
 ankiconnect.get_note_fields = function(note_id)
-    local result, error = ankiconnect.parse_result(ankiconnect.execute {
+    local ret = ankiconnect.execute {
         action = "notesInfo",
         version = 6,
         params = {
             notes = { note_id }
         }
-    })
+    }
+
+    local result, error = ankiconnect.parse_result(ret)
 
     if error == nil then
         result = result[1].fields
