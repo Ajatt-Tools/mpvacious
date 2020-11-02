@@ -194,6 +194,18 @@ menu_font_size=24
 # Leave nothing after `=` to disable tagging completely.
 note_tag=subs2srs
 #note_tag=
+
+# Forvo support (Yomichan users only)
+# yes    - fetch audio from Forvo if Yomichan couldn't find the audio (default)
+# always - always fetch audio from Forvo and replace the audio added by Yomichan
+# no     - never use Forvo
+use_forvo=yes
+#use_forvo=no
+#use_forvo=always
+# Vocab field should be equal to {expression} field in Yomichan
+vocab_field=VocabKanji
+# Vocab Audio field should be equal to {audio} field in Yomichan
+vocab_audio_field=VocabAudio
 ```
 
 Sentence field should be first in the note type settings.
