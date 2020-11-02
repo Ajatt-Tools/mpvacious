@@ -390,6 +390,23 @@ local function join_media_fields(note1, note2)
     return note1
 end
 
+local function get_forvo_pronunciation(word)
+    word = platform.windows and url_encode(word) or word
+    local forvo_format = config.audio_extension:sub(2)
+    local forvo_page = subprocess { 'curl', '-s', string.format('https://forvo.com/search/%s/ja', word) }.stdout
+    local play_params = string.match(forvo_page, "Play%((.-)%);")
+    if not play_params then
+        return ''
+    end
+    local iter = string.gmatch(play_params, "'(.-)'")
+    local formats = { mp3 = iter(), ogg = iter() }
+    local audio_url = string.format('https://audio00.forvo.com/%s/%s', forvo_format, base64d(formats[forvo_format]))
+    local pronunciation_filename = string.format('forvo_%s.%s', platform.windows and os.time() or word, forvo_format)
+    local pronunciation_path = utils.join_path(config.collection_path, pronunciation_filename)
+    mp.commandv('run', 'curl', audio_url, '-s', '-L', '-o', pronunciation_path)
+    return string.format('[sound:%s]', pronunciation_filename)
+end
+
 local validate_config
 do
     local function set_collection_path()
@@ -478,6 +495,8 @@ local function init_platform_windows()
         }
         return subprocess(args, completion_fn)
     end
+
+    self.windows = true
 
     return self
 end
