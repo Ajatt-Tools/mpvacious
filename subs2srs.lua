@@ -513,15 +513,12 @@ end
 
 local function init_platform_nix()
     local self = {}
-    local clipfile_path = os.tmpname()
-    mp.register_event('shutdown', function() os.remove(clipfile_path) end)
 
     self.copy_to_clipboard = function(_, text)
         if not is_empty(text) then
-            local handle = io.open(clipfile_path, "w")
+            local handle = io.popen('xclip -i -selection clipboard', 'w')
             handle:write(text)
             handle:close()
-            mp.commandv("run", "xclip", "-selection", "clipboard", clipfile_path)
         end
     end
 
