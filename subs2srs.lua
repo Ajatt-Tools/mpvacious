@@ -107,6 +107,10 @@ local function is_running_windows()
     return mp.get_property('options/vo-mmcss-profile') ~= nil
 end
 
+local function is_running_macOS()
+    return mp.get_property('options/cocoa-force-dedicated-gpu') ~= nil
+end
+
 local function is_dir(path)
     if is_empty(path) then
         return false
@@ -518,10 +522,11 @@ end
 
 local function init_platform_nix()
     local self = {}
+    local clip = is_running_macOS() and 'LANG=en_US.UTF-8 pbcopy' or 'xclip -i -selection clipboard'
 
     self.copy_to_clipboard = function(_, text)
         if not is_empty(text) then
-            local handle = io.popen('xclip -i -selection clipboard', 'w')
+            local handle = io.popen(clip, 'w')
             handle:write(text)
             handle:close()
         end
