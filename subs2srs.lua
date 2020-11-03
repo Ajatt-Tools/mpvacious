@@ -407,12 +407,17 @@ local function get_forvo_pronunciation(word)
 end
 
 local function append_forvo_pronunciation(note1, note2)
-    if config.use_forvo ~= 'no' and not is_empty(note2[config.vocab_field]) then
-        if config.use_forvo == 'always' then
-            note1[config.vocab_audio_field] = get_forvo_pronunciation(note2[config.vocab_field])
-        elseif is_empty(note2[config.vocab_audio_field]) then
-            note1[config.vocab_audio_field] = get_forvo_pronunciation(note2[config.vocab_field])
-        end
+    if config.use_forvo == 'no' then
+        return note1
+    end
+    if type(note2[config.vocab_audio_field]) ~= 'string' then
+        return note1
+    end
+    if is_empty(note2[config.vocab_field]) then
+        return note1
+    end
+    if config.use_forvo == 'always' or is_empty(note2[config.vocab_audio_field]) then
+        note1[config.vocab_audio_field] = get_forvo_pronunciation(note2[config.vocab_field])
     end
     return note1
 end
