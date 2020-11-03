@@ -670,15 +670,15 @@ ankiconnect.add_note = function(note_fields, gui)
             }
         }
     }
-
-    local ret = ankiconnect.execute(args)
-    local result, error = ankiconnect.parse_result(ret)
-
-    if error == nil then
-        notify(string.format("Note added. ID = %s.", result))
-    else
-        notify(string.format("Error: %s.", error), "error", 2)
+    local result_notify = function(_, result, _)
+        local note_id, error = ankiconnect.parse_result(result)
+        if not error then
+            notify(string.format("Note added. ID = %s.", note_id))
+        else
+            notify(string.format("Error: %s.", error), "error", 2)
+        end
     end
+    ankiconnect.execute(args, result_notify)
 end
 
 ankiconnect.get_last_note_id = function()
