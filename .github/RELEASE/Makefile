@@ -1,5 +1,5 @@
 PROJECT = mpvacious
-VERSION = v0.7
+VERSION = v0.8
 MD2HTML = md2html --github --full-html
 ZIP     = $(PROJECT)_$(VERSION).zip
 SCRIPT  = $(PROJECT)_$(VERSION).lua
