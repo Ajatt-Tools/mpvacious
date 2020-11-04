@@ -275,6 +275,11 @@ do
 
         local bytes_per_char = contains_non_latin_letters(str) and #'車' or #'z'
         local limit_chars = math.floor(limit_bytes / bytes_per_char)
+
+        if limit_chars == limit_bytes then
+            return str:sub(1, limit_bytes)
+        end
+
         local ret = subprocess {
             'awk',
             '-v', string.format('str=%s', str),
