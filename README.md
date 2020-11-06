@@ -268,7 +268,7 @@ We need to combine the lines before making a card.
 * `c` - Set timings to the current sub and remember the corresponding line.
 It does nothing if there's no subs on screen.
 
-Then seek or continue watching until the next line that you want to combine appears on screen.
+Then seek with `shift+h` and `shift+l` to the previous/next line that you want to add.
 Press `n` to make the card.
 
 * `r` - Forget all previously saved timings and associated dialogs.
@@ -345,10 +345,6 @@ k seek 60
 # Cycle between subtitle files
 K cycle sub
 J cycle sub down
-
-# Skip to previous/next subtitle line
-H no-osd sub-seek -1
-L no-osd sub-seek 1
 
 # Add/subtract 50 ms delay from subs
 Z add sub-delay +0.05
