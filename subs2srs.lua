@@ -327,6 +327,12 @@ local function _(fn, param1)
     return function() pcall(fn, param1) end
 end
 
+local function sub_seek(direction)
+    mp.commandv("sub_seek", direction == 'backward' and '-1' or '1')
+    mp.commandv("seek", "0.015", "relative+exact")
+    mp.set_property("pause", "yes")
+end
+
 local function sub_rewind()
     local sub_start_time = subs.get_current()['start']
     mp.commandv('seek', sub_start_time, 'absolute')
@@ -1120,8 +1126,8 @@ mp.add_key_binding("a", "mpvacious-menu-open", menu.open) -- a for advanced
 mp.add_key_binding("ctrl+h", "mpvacious-sub-rewind", _(sub_rewind))
 
 -- Vim-like seeking between subtitle lines
-mp.add_key_binding("H", "mpvacious-sub-seek-back", function() mp.commandv("sub_seek", "-1") end)
-mp.add_key_binding("L", "mpvacious-sub-seek-forward", function() mp.commandv("sub_seek", "1") end)
+mp.add_key_binding("H", "mpvacious-sub-seek-back", _(sub_seek, 'backward'))
+mp.add_key_binding("L", "mpvacious-sub-seek-forward", _(sub_seek, 'forward'))
 
 -- Unset by default
 mp.add_key_binding(nil, "mpvacious-set-starting-line", subs.set_starting_line)
