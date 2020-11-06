@@ -1113,16 +1113,16 @@ validate_config()
 ankiconnect.create_deck(config.deck_name)
 
 -- Key bindings
-mp.add_forced_key_binding("ctrl+e", "anki-export-note", export_to_anki)
-mp.add_forced_key_binding("ctrl+c", "copy-sub-to-clipboard", copy_sub_to_clipboard)
-mp.add_key_binding('a', 'mpvacious-menu-open', menu.open) -- a for advanced
-mp.add_key_binding("ctrl+h", "sub-rewind", sub_rewind)
+mp.add_forced_key_binding("ctrl+e", "mpvacious-export-note", export_to_anki)
+mp.add_forced_key_binding("ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
+mp.add_key_binding("a", "mpvacious-menu-open", menu.open) -- a for advanced
+mp.add_key_binding("ctrl+h", "mpvacious-sub-rewind", sub_rewind)
 
 -- Vim-like seeking between subtitle lines
 mp.add_key_binding("H", "mpvacious-sub-seek-back", function() mp.commandv("sub_seek", "-1") end)
 mp.add_key_binding("L", "mpvacious-sub-seek-forward", function() mp.commandv("sub_seek", "1") end)
 
 -- Unset by default
-mp.add_key_binding(nil, "set-starting-line", subs.set_starting_line)
-mp.add_key_binding(nil, "reset-timings", subs.clear_and_notify)
-mp.add_key_binding(nil, "toggle-sub-autocopy", clip_autocopy.toggle)
+mp.add_key_binding(nil, "mpvacious-set-starting-line", subs.set_starting_line)
+mp.add_key_binding(nil, "mpvacious-reset-timings", subs.clear_and_notify)
+mp.add_key_binding(nil, "mpvacious-toggle-sub-autocopy", clip_autocopy.toggle)

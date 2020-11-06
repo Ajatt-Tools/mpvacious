@@ -230,18 +230,20 @@ The user may change some of the key bindings, though this step is not necessary.
 Default bindings:
 
 ```
-Ctrl+c script-binding copy-sub-to-clipboard
-Ctrl+e script-binding anki-export-note
-Ctrl+h script-binding sub-rewind
+Ctrl+c script-binding mpvacious-copy-sub-to-clipboard
+Ctrl+e script-binding mpvacious-export-note
+Ctrl+h script-binding mpvacious-sub-rewind
 a      script-binding mpvacious-menu-open
+H      script-binding mpvacious-sub-seek-back
+L      script-binding mpvacious-sub-seek-forward
 ```
 
 These additional bindings aren't enabled by default but can be accessed via the menu by pressing `a`.
 
 ```
-Ctrl+s script-binding set-starting-line
-Ctrl+r script-binding reset-timings
-Ctrl+t script-binding toggle-sub-autocopy
+Ctrl+s script-binding mpvacious-set-starting-line
+Ctrl+r script-binding mpvacious-reset-timings
+Ctrl+t script-binding mpvacious-toggle-sub-autocopy
 ```
 
 ## Usage
