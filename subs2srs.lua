@@ -323,13 +323,14 @@ local function construct_note_fields(sub_text, snapshot_filename, audio_filename
     }
 end
 
+local function _(fn, param1)
+    return function() pcall(fn, param1) end
+end
+
 local function sub_rewind()
-    pcall(
-            function()
-                local sub_start_time = subs.get_current()['start']
-                mp.commandv('seek', sub_start_time, 'absolute')
-            end
-    )
+    local sub_start_time = subs.get_current()['start']
+    mp.commandv('seek', sub_start_time, 'absolute')
+    mp.set_property("pause", "yes")
 end
 
 local function minutes_ago(m)
@@ -1116,7 +1117,7 @@ ankiconnect.create_deck(config.deck_name)
 mp.add_forced_key_binding("ctrl+e", "mpvacious-export-note", export_to_anki)
 mp.add_forced_key_binding("ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
 mp.add_key_binding("a", "mpvacious-menu-open", menu.open) -- a for advanced
-mp.add_key_binding("ctrl+h", "mpvacious-sub-rewind", sub_rewind)
+mp.add_key_binding("ctrl+h", "mpvacious-sub-rewind", _(sub_rewind))
 
 -- Vim-like seeking between subtitle lines
 mp.add_key_binding("H", "mpvacious-sub-seek-back", function() mp.commandv("sub_seek", "-1") end)
