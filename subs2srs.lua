@@ -331,13 +331,11 @@ end
 local function sub_seek(direction)
     mp.commandv("sub_seek", direction == 'backward' and '-1' or '1')
     mp.commandv("seek", "0.015", "relative+exact")
-    mp.set_property("pause", "yes")
 end
 
 local function sub_rewind()
-    local sub_start_time = subs.get_current()['start']
+    local sub_start_time = subs.get_current()['start'] + 0.015
     mp.commandv('seek', sub_start_time, 'absolute')
-    mp.set_property("pause", "yes")
 end
 
 local function minutes_ago(m)
