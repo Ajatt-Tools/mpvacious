@@ -46,6 +46,7 @@ local config = {
     snapshot_height = 200,      -- same
     audio_format = "opus",      -- opus or mp3
     audio_bitrate = "18k",      -- from 16k to 32k
+    audio_padding = 0.0,        -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
     deck_name = "Learning",     -- the deck will be created if needed
     model_name = "Japanese sentences", -- Tools -> Manage note types
     sentence_field = "SentKanji",
@@ -562,6 +563,18 @@ platform = is_running_windows() and init_platform_windows() or init_platform_nix
 
 encoder = {}
 
+encoder.pad_timings = function(start_time, end_time)
+    local video_duration = mp.get_property_number('duration')
+    if config.audio_padding == 0.0 or not video_duration then
+        return start_time, end_time
+    end
+    start_time = start_time - config.audio_padding
+    end_time = end_time + config.audio_padding
+    if start_time < 0 then start_time = 0 end
+    if end_time > video_duration then end_time = video_duration end
+    return start_time, end_time
+end
+
 encoder.create_snapshot = function(timestamp, filename)
     local video_path = mp.get_property("path")
     local snapshot_path = utils.join_path(config.collection_path, filename)
@@ -588,6 +601,7 @@ end
 encoder.create_audio = function(start_timestamp, end_timestamp, filename)
     local video_path = mp.get_property("path")
     local fragment_path = utils.join_path(config.collection_path, filename)
+    start_timestamp, end_timestamp = encoder.pad_timings(start_timestamp, end_timestamp)
 
     mp.commandv(
             'run',

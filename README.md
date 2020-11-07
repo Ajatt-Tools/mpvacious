@@ -180,6 +180,9 @@ audio_format=opus
 #audio_format=mp3
 # Sane values are 16k-32k for opus, 64k-128k for mp3.
 audio_bitrate=18k
+# Set a pad to the dialog timings.
+audio_padding=0.0
+#audio_padding=0.5
 
 # Image dimensions
 # If either (but not both) of the width or height parameters is -2,
