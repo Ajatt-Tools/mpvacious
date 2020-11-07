@@ -211,6 +211,13 @@ vocab_field=VocabKanji
 vocab_audio_field=VocabAudio
 ```
 
+If you run Anki in portable mode, the path to your `collection.media` folder
+may differ from the default. In this case, if you run into troubles making Anki cards with the add-on,
+specify full path to the collection in the `config file` as well:
+```
+collection_path=C:\AnkiDataFolder\collection.media
+```
+
 Sentence field should be first in the note type settings.
 Otherwise Anki won't allow mpvacious to add new notes.
 Alternatively, refer to [Modifying cards added with Yomichan](#modifying-cards-added-with-yomichan)
