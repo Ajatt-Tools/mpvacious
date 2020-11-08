@@ -56,7 +56,8 @@ while watching your favorite TV show.
     <td></td>
 </tr>
 <tr>
-    <td colspan="2" align="center"><a href="https://www.archlinux.org/packages/core/x86_64/curl/">curl</a></td>
+    <td><a href="https://www.archlinux.org/packages/core/x86_64/curl/">curl</a></td>
+    <td><a href="https://curl.haxx.se/">curl</a></td>
     <td>Should be installed by default on all platforms</td>
 </tr>
 <tr>
