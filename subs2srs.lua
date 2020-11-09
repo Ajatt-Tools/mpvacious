@@ -1001,6 +1001,7 @@ menu.keybinds = {
     { key = 'c', fn = function() subs.set_starting_line() end },
     { key = 'r', fn = function() subs.clear_and_notify() end },
     { key = 'g', fn = function() export_to_anki(true) end },
+    { key = 'G', fn = function() export_media() end },
     { key = 'n', fn = function() export_to_anki(false) end },
     { key = 'm', fn = function() update_last_note(false) end },
     { key = 'M', fn = function() update_last_note(true) end },
@@ -1028,7 +1029,7 @@ menu.update = function()
         osd:tab():item('e: '):text('Set end time to current position'):newline()
         osd:tab():item('r: '):text('Reset timings'):newline()
         osd:tab():item('n: '):text('Export note'):newline()
-        osd:tab():item('g: '):text('Export note using the `Add Cards` GUI'):newline()
+        osd:tab():item('g: '):text('GUI export '):italics('(+shift to ignore subs)'):newline()
         osd:tab():item('m: '):text('Update the last added note '):italics('(+shift to overwrite)'):newline()
         osd:tab():item('t: '):text('Toggle clipboard autocopy'):newline()
         osd:tab():item('ESC: '):text('Close'):newline()
