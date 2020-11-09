@@ -848,7 +848,7 @@ subs.get_timing = function(position)
         local i = position == 'start' and 1 or #subs.list
         return subs.list[i][position]
     end
-    return nil
+    return -1
 end
 
 subs.get_text = function()
@@ -870,7 +870,7 @@ subs.get = function()
         ['start'] = subs.get_timing('start'),
         ['end'] = subs.get_timing('end'),
     }
-    if not sub['start'] or not sub['end'] then
+    if sub['start'] < 0 or sub['end'] < 0 then
         return nil
     end
     if sub['start'] == sub['end'] then
