@@ -345,43 +345,22 @@ local function minutes_ago(m)
     return (os.time() - 60 * m) * 1000
 end
 
-local function export_media()
-    local timings = {
-        ['start'] = subs.get_timing('start'),
-        ['end'] = subs.get_timing('end'),
-    }
-    if not timings['start'] or not timings['end'] then
-        notify("Timings are not set. Aborting.", "warn", 2)
-        return
-    end
-
-    local snapshot_filename, audio_filename = construct_media_filenames(timings)
-    local snapshot_time = (timings['start'] + timings['end']) / 2
-
-    encoder.create_snapshot(snapshot_time, snapshot_filename)
-    encoder.create_audio(timings['start'], timings['end'], audio_filename)
-
-    local note_fields = construct_note_fields(nil, snapshot_filename, audio_filename)
-    ankiconnect.add_note(note_fields, true)
-    subs.clear()
-end
-
 local function export_to_anki(gui)
-    local sub = subs.get()
-    subs.clear()
+    local sub = subs.get() or subs.get_timings()
     if sub == nil then
         notify("Nothing to export.", "warn", 1)
         return
     end
 
     local snapshot_filename, audio_filename = construct_media_filenames(sub)
-    local snapshot_timestamp = (sub['start'] + sub['end']) / 2
+    local snapshot_time = (sub['start'] + sub['end']) / 2
 
-    encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
+    encoder.create_snapshot(snapshot_time, snapshot_filename)
     encoder.create_audio(sub['start'], sub['end'], audio_filename)
 
     local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
     ankiconnect.add_note(note_fields, gui)
+    subs.clear()
 end
 
 local function update_last_note(overwrite)
@@ -859,6 +838,17 @@ subs.get_timing = function(position)
     return nil
 end
 
+subs.get_timings = function()
+    local timings = {
+        ['start'] = subs.get_timing('start'),
+        ['end'] = subs.get_timing('end'),
+    }
+    if not timings['start'] or not timings['end'] then
+        return nil
+    end
+    return timings
+end
+
 subs.get_text = function()
     local speech = {}
     for _, sub in ipairs(subs.list) do
@@ -1001,7 +991,6 @@ menu.keybinds = {
     { key = 'c', fn = function() subs.set_starting_line() end },
     { key = 'r', fn = function() subs.clear_and_notify() end },
     { key = 'g', fn = function() export_to_anki(true) end },
-    { key = 'G', fn = function() export_media() end },
     { key = 'n', fn = function() export_to_anki(false) end },
     { key = 'm', fn = function() update_last_note(false) end },
     { key = 'M', fn = function() update_last_note(true) end },
@@ -1029,7 +1018,7 @@ menu.update = function()
         osd:tab():item('e: '):text('Set end time to current position'):newline()
         osd:tab():item('r: '):text('Reset timings'):newline()
         osd:tab():item('n: '):text('Export note'):newline()
-        osd:tab():item('g: '):text('GUI export '):italics('(+shift to ignore subs)'):newline()
+        osd:tab():item('g: '):text('GUI export'):newline()
         osd:tab():item('m: '):text('Update the last added note '):italics('(+shift to overwrite)'):newline()
         osd:tab():item('t: '):text('Toggle clipboard autocopy'):newline()
         osd:tab():item('ESC: '):text('Close'):newline()
