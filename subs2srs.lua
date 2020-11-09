@@ -562,6 +562,9 @@ encoder.pad_timings = function(start_time, end_time)
     if config.audio_padding == 0.0 or not video_duration then
         return start_time, end_time
     end
+    if subs.user_timings.is_set('start') or subs.user_timings.is_set('end') then
+        return start_time, end_time
+    end
     start_time = start_time - config.audio_padding
     end_time = end_time + config.audio_padding
     if start_time < 0 then start_time = 0 end
