@@ -298,7 +298,7 @@ do
     end
 end
 
-local function construct_media_filenames(sub)
+local function construct_media_filenames(timings)
     local filename = mp.get_property("filename") -- filename without path
 
     filename = remove_extension(filename)
@@ -309,8 +309,8 @@ local function construct_media_filenames(sub)
     filename = string.format(
             '%s_(%s-%s)',
             filename,
-            human_readable_time(sub['start']),
-            human_readable_time(sub['end'])
+            human_readable_time(timings['start']),
+            human_readable_time(timings['end'])
     )
 
     return filename .. config.snapshot_extension, filename .. config.audio_extension
