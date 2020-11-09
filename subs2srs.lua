@@ -1034,9 +1034,9 @@ menu.update = function()
         osd:tab():item('t: '):text('Toggle clipboard autocopy'):newline()
         osd:tab():item('ESC: '):text('Close'):newline()
         osd:submenu('Global bindings'):newline()
-        osd:tab():item('ctrl+e: '):text('Export note'):newline()
-        osd:tab():item('ctrl+h: '):text('Seek to the start of the line'):newline()
         osd:tab():item('ctrl+c: '):text('Copy current subtitle to clipboard'):newline()
+        osd:tab():item('ctrl+h: '):text('Seek to the start of the line'):newline()
+        osd:tab():item('shift+h/l: '):text('Seek to the previous/next subtitle'):newline()
     else
         osd:italics("Press "):item('i'):italics(" to toggle hints."):newline()
     end
