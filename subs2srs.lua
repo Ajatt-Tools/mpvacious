@@ -317,8 +317,11 @@ local function construct_media_filenames(timings)
 end
 
 local function construct_note_fields(sub_text, snapshot_filename, audio_filename)
+    if not is_empty(sub_text) then
+        sub_text = trim(sub_text)
+    end
     return {
-        [config.sentence_field] = trim(sub_text),
+        [config.sentence_field] = sub_text,
         [config.image_field] = string.format('<img src="%s" alt="snapshot">', snapshot_filename),
         [config.audio_field] = string.format('[sound:%s]', audio_filename),
     }
