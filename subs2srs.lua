@@ -345,6 +345,27 @@ local function minutes_ago(m)
     return (os.time() - 60 * m) * 1000
 end
 
+local function export_media()
+    local timings = {
+        ['start'] = subs.get_timing('start'),
+        ['end'] = subs.get_timing('end'),
+    }
+    if not timings['start'] or not timings['end'] then
+        notify("Timings are not set. Aborting.", "warn", 2)
+        return
+    end
+
+    local snapshot_filename, audio_filename = construct_media_filenames(timings)
+    local snapshot_time = (timings['start'] + timings['end']) / 2
+
+    encoder.create_snapshot(snapshot_time, snapshot_filename)
+    encoder.create_audio(timings['start'], timings['end'], audio_filename)
+
+    local note_fields = construct_note_fields(nil, snapshot_filename, audio_filename)
+    ankiconnect.add_note(note_fields, true)
+    subs.clear()
+end
+
 local function export_to_anki(gui)
     local sub = subs.get()
     subs.clear()
