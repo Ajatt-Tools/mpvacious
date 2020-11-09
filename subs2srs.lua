@@ -346,7 +346,7 @@ local function minutes_ago(m)
 end
 
 local function export_to_anki(gui)
-    local sub = subs.get() or subs.get_timings()
+    local sub = subs.get()
     if sub == nil then
         notify("Nothing to export.", "warn", 1)
         return
@@ -366,7 +366,6 @@ end
 local function update_last_note(overwrite)
     local sub = subs.get()
     local last_note_id = ankiconnect.get_last_note_id()
-    subs.clear()
 
     if sub == nil then
         notify("Nothing to export. Have you set the timings?", "warn", 2)
@@ -386,6 +385,7 @@ local function update_last_note(overwrite)
 
     local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
     ankiconnect.append_media(last_note_id, note_fields, overwrite)
+    subs.clear()
 end
 
 local function join_media_fields(note1, note2)
@@ -848,17 +848,6 @@ subs.get_timing = function(position)
     return nil
 end
 
-subs.get_timings = function()
-    local timings = {
-        ['start'] = subs.get_timing('start'),
-        ['end'] = subs.get_timing('end'),
-    }
-    if not timings['start'] or not timings['end'] then
-        return nil
-    end
-    return timings
-end
-
 subs.get_text = function()
     local speech = {}
     for _, sub in ipairs(subs.list) do
@@ -869,15 +858,25 @@ end
 
 subs.get = function()
     if is_empty(subs.list) then
-        return subs.get_current()
+        table.insert(subs.list, subs.get_current())
     else
         table.sort(subs.list)
-        return Subtitle:new {
-            ['text'] = subs.get_text(),
-            ['start'] = subs.get_timing('start'),
-            ['end'] = subs.get_timing('end'),
-        }
     end
+    local sub = Subtitle:new {
+        ['text'] = subs.get_text(),
+        ['start'] = subs.get_timing('start'),
+        ['end'] = subs.get_timing('end'),
+    }
+    if not sub['start'] or not sub['end'] then
+        return nil
+    end
+    if sub['start'] == sub['end'] then
+        return nil
+    end
+    if sub['start'] > sub['end'] then
+        sub['start'], sub['end'] = sub['end'], sub['start']
+    end
+    return sub
 end
 
 subs.append = function()
