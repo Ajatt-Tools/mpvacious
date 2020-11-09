@@ -388,13 +388,6 @@ local function update_last_note(overwrite)
     ankiconnect.append_media(last_note_id, note_fields, overwrite)
 end
 
-local function get_empty_timings()
-    return {
-        ['start'] = -1,
-        ['end'] = -1,
-    }
-end
-
 local function join_media_fields(note1, note2)
     if note2[config.audio_field] then
         note1[config.audio_field] = note2[config.audio_field] .. note1[config.audio_field]
@@ -809,9 +802,27 @@ end
 ------------------------------------------------------------
 -- subtitles and timings
 
+local function new_timings()
+    local self = { ['start'] = -1, ['end'] = -1, }
+    local is_set = function(position)
+        return self[position] >= 0
+    end
+    local set = function(position)
+        self[position] = mp.get_property_number('time-pos')
+    end
+    local get = function(position)
+        return self[position]
+    end
+    return {
+        is_set = is_set,
+        set = set,
+        get = get,
+    }
+end
+
 subs = {
     list = {},
-    user_timings = get_empty_timings(),
+    user_timings = new_timings(),
 }
 
 subs.get_current = function()
@@ -828,10 +839,9 @@ subs.get_current = function()
 end
 
 subs.get_timing = function(position)
-    if subs.user_timings[position] >= 0 then
-        return subs.user_timings[position]
-    end
-    if not is_empty(subs.list) then
+    if subs.user_timings.is_set(position) then
+        return subs.user_timings.get(position)
+    elseif not is_empty(subs.list) then
         local i = position == 'start' and 1 or #subs.list
         return subs.list[i][position]
     end
@@ -880,10 +890,9 @@ subs.append = function()
 end
 
 subs.set_timing = function(position)
-    subs.user_timings[position] = mp.get_property_number('time-pos')
+    subs.user_timings.set(position)
     menu.update()
     notify(capitalize_first_letter(position) .. " time has been set.")
-
     if is_empty(subs.list) then
         mp.observe_property("sub-text", "string", subs.append)
     end
@@ -904,7 +913,7 @@ end
 subs.clear = function()
     mp.unobserve_property(subs.append)
     subs.list = {}
-    subs.user_timings = get_empty_timings()
+    subs.user_timings = new_timings()
     menu.update()
 end
 
