@@ -5,6 +5,7 @@
 # mpvacious
 
 ![GitHub](https://img.shields.io/github/license/Ajatt-Tools/mpvacious)
+[![Patreon](https://img.shields.io/badge/support-patreon-orange)](https://www.patreon.com/ajatt_tools)
 ![GitHub top language](https://img.shields.io/github/languages/top/Ajatt-Tools/mpvacious)
 ![Lines of code](https://img.shields.io/tokei/lines/github/Ajatt-Tools/mpvacious)
 [![Matrix](https://img.shields.io/badge/Japanese_study_room-join-green.svg)](https://app.element.io/#/room/#djt:g33k.se)
