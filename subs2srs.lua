@@ -177,18 +177,20 @@ local function contains_non_latin_letters(str)
     return str:match("[^%c%p%s%w]")
 end
 
+local function remove_spaces(str)
+    if config.nuke_spaces == true and contains_non_latin_letters(str) then
+        return remove_all_spaces(str)
+    else
+        return remove_leading_trailing_spaces(str)
+    end
+end
+
 local function trim(str)
     str = remove_text_in_parentheses(str)
     str = remove_newlines(str)
     str = escape_apostrophes(str)
     str = escape_quotes(str)
-
-    if config.nuke_spaces == true and contains_non_latin_letters(str) then
-        str = remove_all_spaces(str)
-    else
-        str = remove_leading_trailing_spaces(str)
-    end
-
+    str = remove_spaces(str)
     return str
 end
 
