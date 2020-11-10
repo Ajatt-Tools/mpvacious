@@ -30,6 +30,7 @@ while watching your favorite TV show.
     * [How to add definitions to new cards](#how-to-add-definitions-to-new-cards)
     * [Modifying cards added with Yomichan](#modifying-cards-added-with-yomichan)
     * [Example sentence card](#example-sentence-card)
+    * [Audio cards](#audio-cards)
     * [Other tools](#other-tools)
     * [Additional mpv key bindings](#additional-mpv-key-bindings)
 * [Hacking](#hacking)
@@ -332,6 +333,17 @@ if the sentence is split between multiple subs.
 With the addon you can make cards like this in just a few seconds.
 
 ![card-example](https://user-images.githubusercontent.com/69171671/92900057-e102d480-f40e-11ea-8cfc-b00848ca66ff.png)
+
+### Audio cards
+
+It is possible to make a card with just audio and a picture
+when subtitles for the show you are watching aren't available, for example.
+mpv by default allows you to do a `1` second exact seek by pressing `Shift+LEFT` and `Shift+RIGHT`.
+Open the mpvacious menu by pressing `a`, seek to the position you need, and set the timings.
+Then press `g` to invoke the `Add Cards` dialog.
+
+If the show is hardsubbed, you can use [Tesseract](https://github.com/tesseract-ocr/tesseract)
+or [ShareX](https://getsharex.com/) OCR to add text to the card.
 
 ### Other tools
 
