@@ -134,6 +134,20 @@ local function notify(message, level, duration)
     mp.osd_message(message, duration)
 end
 
+local escape_special_characters
+do
+    local entities = {
+        ['&'] = '&amp;',
+        ['"'] = '&quot;',
+        ["'"] = '&apos;',
+        ['<'] = '&lt;',
+        ['>'] = '&gt;',
+    }
+    escape_special_characters = function(s)
+        return s:gsub('[&"\'<>]', entities)
+    end
+end
+
 local function remove_extension(filename)
     return filename:gsub('%.%w+$', '')
 end
