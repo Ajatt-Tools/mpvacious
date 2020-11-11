@@ -226,8 +226,15 @@ local function url_encode(url) -- https://gist.github.com/liukun/f9ce7d6d14fa45f
     return url
 end
 
+local function copy_to_clipboard(_, text)
+    if not is_empty(text) then
+        text = config.clipboard_trim_enabled and trim(text) or remove_newlines(text)
+        platform.copy_to_clipboard(text)
+    end
+end
+
 local function copy_sub_to_clipboard()
-    platform.copy_to_clipboard("copy-on-demand", mp.get_property("sub-text"))
+    copy_to_clipboard("copy-on-demand", mp.get_property("sub-text"))
 end
 
 local function human_readable_time(seconds)
@@ -500,11 +507,8 @@ local function init_platform_windows()
     local curl_tmpfile_path = utils.join_path(os.getenv('TEMP'), 'curl_tmp.txt')
     mp.register_event('shutdown', function() os.remove(curl_tmpfile_path) end)
 
-    self.copy_to_clipboard = function(_, text)
-        if not is_empty(text) then
-            text = remove_newlines(text)
-            mp.commandv("run", "cmd.exe", "/d", "/c", string.format("@echo off & chcp 65001 & echo %s|clip", text))
-        end
+    self.copy_to_clipboard = function(text)
+        mp.commandv("run", "cmd.exe", "/d", "/c", string.format("@echo off & chcp 65001 & echo %s|clip", text))
     end
 
     self.construct_collection_path = function()
@@ -536,12 +540,10 @@ local function init_platform_nix()
     local self = {}
     local clip = is_running_macOS() and 'LANG=en_US.UTF-8 pbcopy' or 'xclip -i -selection clipboard'
 
-    self.copy_to_clipboard = function(_, text)
-        if not is_empty(text) then
-            local handle = io.popen(clip, 'w')
-            handle:write(text)
-            handle:close()
-        end
+    self.copy_to_clipboard = function(text)
+        local handle = io.popen(clip, 'w')
+        handle:write(text)
+        handle:close()
     end
 
     self.construct_collection_path = function()
@@ -935,12 +937,12 @@ end
 clip_autocopy = {}
 
 clip_autocopy.enable = function()
-    mp.observe_property("sub-text", "string", platform.copy_to_clipboard)
+    mp.observe_property("sub-text", "string", copy_to_clipboard)
     notify("Clipboard autocopy has been enabled.", "info", 1)
 end
 
 clip_autocopy.disable = function()
-    mp.unobserve_property(platform.copy_to_clipboard)
+    mp.unobserve_property(copy_to_clipboard)
     notify("Clipboard autocopy has been disabled.", "info", 1)
 end
 
