@@ -340,9 +340,6 @@ local function construct_media_filenames(timings)
 end
 
 local function construct_note_fields(sub_text, snapshot_filename, audio_filename)
-    if not is_empty(sub_text) then
-        sub_text = trim(sub_text)
-    end
     return {
         [config.sentence_field] = sub_text,
         [config.image_field] = string.format('<img src="%s" alt="snapshot">', snapshot_filename),
@@ -899,6 +896,10 @@ subs.get = function()
     end
     if sub['start'] > sub['end'] then
         sub['start'], sub['end'] = sub['end'], sub['start']
+    end
+    if not is_empty(sub['text']) then
+        sub['text'] = trim(sub['text'])
+        sub['text'] = escape_special_characters(sub['text'])
     end
     return sub
 end
