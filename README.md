@@ -172,6 +172,10 @@ nuke_spaces=yes
 # depends on the volume of the player at the time of export
 tie_volumes=no
 
+# Remove text in parentheses that may interfere with Yomichan
+# before copying subtitles to the clipboard
+clipboard_trim_enabled=yes
+
 # Images
 snapshot_format=webp
 #snapshot_format=jpg

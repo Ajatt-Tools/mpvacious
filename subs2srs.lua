@@ -40,6 +40,7 @@ local config = {
     anki_user = "User 1",       -- your anki username. it is displayed on the title bar of the Anki window.
     autoclip = false,           -- copy subs to the clipboard or not
     nuke_spaces = true,         -- remove all spaces or not
+    clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
     snapshot_format = "webp",   -- webp or jpg
     snapshot_quality = 5,       -- from 0=lowest to 100=highest
     snapshot_width = -2,        -- a positive integer or -2 for auto
