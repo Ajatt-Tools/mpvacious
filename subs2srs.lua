@@ -180,14 +180,6 @@ local function remove_all_spaces(str)
     return str:gsub('%s*', '')
 end
 
-local function escape_apostrophes(str)
-    return str:gsub("'", "&apos;")
-end
-
-local function escape_quotes(str)
-    return str:gsub('"', '&quot;')
-end
-
 local function contains_non_latin_letters(str)
     return str:match("[^%c%p%s%w]")
 end
@@ -203,8 +195,6 @@ end
 local function trim(str)
     str = remove_text_in_parentheses(str)
     str = remove_newlines(str)
-    str = escape_apostrophes(str)
-    str = escape_quotes(str)
     str = remove_spaces(str)
     return str
 end
