@@ -47,7 +47,7 @@ local config = {
     snapshot_height = 200,      -- same
     audio_format = "opus",      -- opus or mp3
     audio_bitrate = "18k",      -- from 16k to 32k
-    audio_padding = 0.0,        -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
+    audio_padding = 0.12,       -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
     deck_name = "Learning",     -- the deck will be created if needed
     model_name = "Japanese sentences", -- Tools -> Manage note types
     sentence_field = "SentKanji",
@@ -124,6 +124,10 @@ local function is_dir(path)
     return file_info.is_dir == true
 end
 
+local function contains_non_latin_letters(str)
+    return str:match("[^%c%p%s%w]")
+end
+
 local function capitalize_first_letter(string)
     return string:gsub("^%l", string.upper)
 end
@@ -178,10 +182,6 @@ end
 
 local function remove_all_spaces(str)
     return str:gsub('%s*', '')
-end
-
-local function contains_non_latin_letters(str)
-    return str:match("[^%c%p%s%w]")
 end
 
 local function remove_spaces(str)
@@ -348,8 +348,7 @@ local function sub_seek(direction)
 end
 
 local function sub_rewind()
-    local sub_start_time = subs.get_current()['start'] + 0.015
-    mp.commandv('seek', sub_start_time, 'absolute')
+    mp.commandv('seek', subs.get_current()['start'] + 0.015, 'absolute')
 end
 
 local function minutes_ago(m)
@@ -406,11 +405,9 @@ local function join_media_fields(note1, note2)
     if note2[config.audio_field] then
         note1[config.audio_field] = note2[config.audio_field] .. note1[config.audio_field]
     end
-
     if note2[config.image_field] then
         note1[config.image_field] = note2[config.image_field] .. note1[config.image_field]
     end
-
     return note1
 end
 
@@ -553,7 +550,8 @@ local function init_platform_nix()
     end
 
     self.curl_request = function(request_json, completion_fn)
-        return subprocess ({ 'curl', '-s', 'localhost:8765', '-X', 'POST', '-d', request_json }, completion_fn)
+        local args = { 'curl', '-s', 'localhost:8765', '-X', 'POST', '-d', request_json }
+        return subprocess(args, completion_fn)
     end
 
     return self
@@ -964,11 +962,7 @@ clip_autocopy.toggle = function()
 end
 
 clip_autocopy.is_enabled = function()
-    if config.autoclip == true then
-        return 'enabled'
-    else
-        return 'disabled'
-    end
+    return config.autoclip == true and 'enabled' or 'disabled'
 end
 
 ------------------------------------------------------------
@@ -1064,7 +1058,7 @@ end
 
 menu.open = function()
     if menu.overlay == nil then
-        notify("OSD overlay is not supported in this version of mpv.", "error", 5)
+        notify("OSD overlay is not supported in " .. mp.get_property("mpv-version"), "error", 5)
         return
     end
 
@@ -1161,23 +1155,21 @@ end
 ------------------------------------------------------------
 -- main
 
+validate_config()
+ankiconnect.create_deck(config.deck_name)
 if config.autoclip == true then
     clip_autocopy.enable()
 end
-
-validate_config()
-
-ankiconnect.create_deck(config.deck_name)
 
 -- Key bindings
 mp.add_forced_key_binding("ctrl+e", "mpvacious-export-note", export_to_anki)
 mp.add_forced_key_binding("ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
 mp.add_key_binding("a", "mpvacious-menu-open", menu.open) -- a for advanced
-mp.add_key_binding("ctrl+h", "mpvacious-sub-rewind", _(sub_rewind))
 
 -- Vim-like seeking between subtitle lines
 mp.add_key_binding("H", "mpvacious-sub-seek-back", _(sub_seek, 'backward'))
 mp.add_key_binding("L", "mpvacious-sub-seek-forward", _(sub_seek, 'forward'))
+mp.add_key_binding("ctrl+h", "mpvacious-sub-rewind", _(sub_rewind))
 
 -- Unset by default
 mp.add_key_binding(nil, "mpvacious-set-starting-line", subs.set_starting_line)
