@@ -146,6 +146,10 @@ mpv doesn't tolerate spaces before and after `=`.
 
 Example configuration file:
 ```
+####################
+# General settings #
+####################
+
 # Your Anki username. It is displayed on the title bar of the Anki window.
 anki_user=User 1
 
@@ -160,14 +164,26 @@ sentence_field=SentKanji
 audio_field=SentAudio
 image_field=Image
 
-# Togglebles. Possble values: `yes` or `no`.
-# When mpv starts, automatically copy subs to the clipboard
-# as they appear on screen.
+# The tag that is added to new notes.
+# Leave nothing after `=` to disable tagging completely.
+note_tag=subs2srs
+#note_tag=
+
+# Size of the font used in the menu
+menu_font_size=24
+
+##############################################
+# Togglebles. Possble values: `yes` or `no`. #
+##############################################
+
+# When mpv starts, automatically copy subs to the clipboard as they appear on screen.
 # This option can be also toggled in the addon's OSD menu.
 autoclip=no
+
 # Remove all spaces from the subtitle text.
 # Only makes sense for languages without spaces like Japanese.
 nuke_spaces=yes
+
 # if set to `yes`, the volume of the outputted audio file
 # depends on the volume of the player at the time of export
 tie_volumes=no
@@ -176,20 +192,16 @@ tie_volumes=no
 # before copying subtitles to the clipboard
 clipboard_trim_enabled=yes
 
-# Images
+##################
+# Image settings #
+##################
+
+# Snapshot format.
 snapshot_format=webp
 #snapshot_format=jpg
-# 0 = lowest, 100=highest
-snapshot_quality=5
 
-# Audio
-audio_format=opus
-#audio_format=mp3
-# Sane values are 16k-32k for opus, 64k-128k for mp3.
-audio_bitrate=18k
-# Set a pad to the dialog timings.
-audio_padding=0.0
-#audio_padding=0.5
+# Quality of produced image files. 0 = lowest, 100=highest.
+snapshot_quality=5
 
 # Image dimensions
 # If either (but not both) of the width or height parameters is -2,
@@ -197,23 +209,33 @@ audio_padding=0.0
 snapshot_width=-2
 snapshot_height=200
 
-# Size of the font used in the menu
-menu_font_size=24
+##################
+# Audio settings #
+##################
 
-# The tag that is added to new notes.
-# Leave nothing after `=` to disable tagging completely.
-note_tag=subs2srs
-#note_tag=
+# Audio format.
+audio_format=opus
+#audio_format=mp3
 
-# Forvo support (Yomichan users only)
+# Sane values are 16k-32k for opus, 64k-128k for mp3.
+audio_bitrate=18k
+
+# Set a pad to the dialog timings. 0.5 = half a second
+audio_padding=0.0
+#audio_padding=0.5
+
+#######################################
+# Forvo support (Yomichan users only) #
+#######################################
+
 # yes    - fetch audio from Forvo if Yomichan couldn't find the audio (default)
 # always - always fetch audio from Forvo and replace the audio added by Yomichan
 # no     - never use Forvo
 use_forvo=yes
-#use_forvo=no
-#use_forvo=always
+
 # Vocab field should be equal to {expression} field in Yomichan
 vocab_field=VocabKanji
+
 # Vocab Audio field should be equal to {audio} field in Yomichan
 vocab_audio_field=VocabAudio
 ```
