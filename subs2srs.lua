@@ -446,6 +446,16 @@ end
 
 local validate_config
 do
+    local function is_webp_supported()
+        local ret = subprocess { 'mpv', '--ovc=help' }
+        return ret.status == 0 and ret.stdout:match('--ovc=libwebp')
+    end
+
+    local function is_opus_supported()
+        local ret = subprocess { 'mpv', '--oac=help' }
+        return ret.status == 0 and ret.stdout:match('--oac=libopus')
+    end
+
     local function set_collection_path()
         if not is_dir(config.collection_path) then
             -- collection path wasn't specified. construct it using config.anki_user
@@ -454,7 +464,7 @@ do
     end
 
     local function set_audio_format()
-        if config.audio_format == 'opus' then
+        if config.audio_format == 'opus' and is_opus_supported() then
             config.audio_codec = 'libopus'
             config.audio_extension = '.ogg'
         else
@@ -464,7 +474,7 @@ do
     end
 
     local function set_video_format()
-        if config.snapshot_format == 'webp' then
+        if config.snapshot_format == 'webp' and is_webp_supported() then
             config.snapshot_extension = '.webp'
             config.snapshot_codec = 'libwebp'
         else
