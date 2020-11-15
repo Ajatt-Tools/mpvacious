@@ -538,6 +538,16 @@ end
 local function init_platform_nix()
     local self = {}
     local clip = is_running_macOS() and 'LANG=en_US.UTF-8 pbcopy' or 'xclip -i -selection clipboard'
+    local collection_path_linux = string.format(
+            '%s/.local/share/Anki2/%s/collection.media/',
+            os.getenv('HOME'),
+            config.anki_user
+    )
+    local collection_path_mac = string.format(
+            '%s/Library/Application Support/Anki2/%s/collection.media',
+            os.getenv('HOME'),
+            config.anki_user
+    )
 
     self.copy_to_clipboard = function(text)
         local handle = io.popen(clip, 'w')
@@ -546,7 +556,7 @@ local function init_platform_nix()
     end
 
     self.construct_collection_path = function()
-        return string.format('%s/.local/share/Anki2/%s/collection.media/', os.getenv('HOME'), config.anki_user)
+        return is_dir(collection_path_mac) and collection_path_mac or collection_path_linux
     end
 
     self.curl_request = function(request_json, completion_fn)
