@@ -403,11 +403,13 @@ end
 
 local function join_media_fields(note1, note2)
     if note2[config.audio_field] then
-        note1[config.audio_field] = note2[config.audio_field] .. note1[config.audio_field]
+        note1[config.audio_field] = note2[config.audio_field] .. (note1[config.audio_field] == nil and "" or note1[config.audio_field])
     end
+
     if note2[config.image_field] then
-        note1[config.image_field] = note2[config.image_field] .. note1[config.image_field]
+        note1[config.image_field] = note2[config.image_field] .. (note1[config.image_field] == nil and "" or note1[config.image_field])
     end
+
     return note1
 end
 
