@@ -525,7 +525,9 @@ local function init_platform_windows()
     end
 
     self.curl_request = function(request_json, completion_fn)
-        io.open(curl_tmpfile_path, "w"):write(request_json):close()
+        local handle = io.open(curl_tmpfile_path, "w")
+        handle:write(request_json)
+        handle:close()
         local args = {
             'curl',
             '-s',
