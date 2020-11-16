@@ -45,8 +45,8 @@ while watching your favorite TV show.
 </tr>
 <tr>
     <td><a href="https://wiki.archlinux.org/index.php/Mpv">mpv</a></td>
-    <td><a href="https://mpv.io/installation/">mpv</a></td>
-    <td>v0.32.0 or newer</td>
+    <td><a href="https://sourceforge.net/projects/mpv-player-windows/files">mpv</a></td>
+    <td>v0.32.0 or newer.</td>
 </tr>
 <tr>
     <td><a href="https://wiki.archlinux.org/index.php/Anki">Anki</a></td>
@@ -75,6 +75,10 @@ Install all dependencies at once (on [Arch-based](https://www.parabola.nu/)
 ```
 $ sudo pacman -Syu mpv anki curl xclip --needed
 ```
+
+If you're on Windows machine, watch [this tutorial](https://youtu.be/bbg6ztWecbU?t=103).
+Make sure you choose a build by `shinchiro`,
+otherwise you may encounter problems when making Anki cards.
 
 ## Installation
 
