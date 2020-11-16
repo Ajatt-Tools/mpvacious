@@ -328,6 +328,9 @@ If above fails, you have to manually set timings.
 
 Then, as earlier, press `n` to make the card.
 
+**Tip**: change playback speed by pressing `[` and `]`
+to precisely mark start and end of the phrase.
+
 ### How to add definitions to new cards
 
 After the card is created, you can find it by typing ```tag:subs2srs added:1```
