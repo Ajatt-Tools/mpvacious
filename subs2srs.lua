@@ -361,10 +361,9 @@ local function export_to_anki(gui)
         notify("Nothing to export.", "warn", 1)
         return
     end
-    if is_empty(sub['text']) and not gui then
-        sub['text'] = "mpv_" .. os.time()
+    if not gui and is_empty(sub['text']) then
+        sub['text'] = string.format([[<span id="mpv%s">mpvacious wasn't able to grab subtitles</span>]], os.time())
     end
-
     local snapshot_filename, audio_filename = construct_media_filenames(sub)
     local snapshot_time = (sub['start'] + sub['end']) / 2
 
