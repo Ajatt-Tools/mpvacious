@@ -440,7 +440,14 @@ local function append_forvo_pronunciation(note1, note2)
         return note1
     end
     if config.use_forvo == 'always' or is_empty(note2[config.vocab_audio_field]) then
-        note1[config.vocab_audio_field] = get_forvo_pronunciation(note2[config.vocab_field])
+        local forvo_pronunciation = get_forvo_pronunciation(note2[config.vocab_field])
+        if not is_empty(forvo_pronunciation) then
+            if config.vocab_audio_field == config.audio_field then
+                note1[config.vocab_audio_field] = forvo_pronunciation .. note1[config.vocab_audio_field]
+            else
+                note1[config.vocab_audio_field] = forvo_pronunciation
+            end
+        end
     end
     return note1
 end
