@@ -1185,23 +1185,31 @@ end
 ------------------------------------------------------------
 -- main
 
-validate_config()
-ankiconnect.create_deck(config.deck_name)
-if config.autoclip == true then
-    clip_autocopy.enable()
+local main
+do
+    local main_executed = false
+    main = function()
+        if main_executed then return end
+        validate_config()
+        ankiconnect.create_deck(config.deck_name)
+        if config.autoclip == true then clip_autocopy.enable() end
+
+        -- Key bindings
+        mp.add_forced_key_binding("ctrl+e", "mpvacious-export-note", export_to_anki)
+        mp.add_forced_key_binding("ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
+        mp.add_key_binding("a", "mpvacious-menu-open", menu.open) -- a for advanced
+
+        -- Vim-like seeking between subtitle lines
+        mp.add_key_binding("H", "mpvacious-sub-seek-back", _(sub_seek, 'backward'))
+        mp.add_key_binding("L", "mpvacious-sub-seek-forward", _(sub_seek, 'forward'))
+        mp.add_key_binding("ctrl+h", "mpvacious-sub-rewind", _(sub_rewind))
+
+        -- Unset by default
+        mp.add_key_binding(nil, "mpvacious-set-starting-line", subs.set_starting_line)
+        mp.add_key_binding(nil, "mpvacious-reset-timings", subs.clear_and_notify)
+        mp.add_key_binding(nil, "mpvacious-toggle-sub-autocopy", clip_autocopy.toggle)
+
+        main_executed = true
+    end
 end
-
--- Key bindings
-mp.add_forced_key_binding("ctrl+e", "mpvacious-export-note", export_to_anki)
-mp.add_forced_key_binding("ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
-mp.add_key_binding("a", "mpvacious-menu-open", menu.open) -- a for advanced
-
--- Vim-like seeking between subtitle lines
-mp.add_key_binding("H", "mpvacious-sub-seek-back", _(sub_seek, 'backward'))
-mp.add_key_binding("L", "mpvacious-sub-seek-forward", _(sub_seek, 'forward'))
-mp.add_key_binding("ctrl+h", "mpvacious-sub-rewind", _(sub_rewind))
-
--- Unset by default
-mp.add_key_binding(nil, "mpvacious-set-starting-line", subs.set_starting_line)
-mp.add_key_binding(nil, "mpvacious-reset-timings", subs.clear_and_notify)
-mp.add_key_binding(nil, "mpvacious-toggle-sub-autocopy", clip_autocopy.toggle)
+mp.register_event("file-loaded", main)
