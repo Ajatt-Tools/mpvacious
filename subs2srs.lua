@@ -860,9 +860,43 @@ local function new_timings()
     }
 end
 
+local function new_sub_list()
+    local subs_list = {}
+    local _is_empty = function()
+        return next(subs_list) == nil
+    end
+    local get_time = function(position)
+        table.sort(subs_list)
+        local i = position == 'start' and 1 or #subs_list
+        return subs_list[i][position]
+    end
+    local get_text = function()
+        table.sort(subs_list)
+        local speech = {}
+        for _, sub in ipairs(subs_list) do
+            table.insert(speech, sub['text'])
+        end
+        return table.concat(speech, ' ')
+    end
+    local insert = function(sub)
+        if sub ~= nil and not table.contains(subs_list, sub) then
+            table.insert(subs_list, sub)
+            return true
+        end
+        return false
+    end
+    return {
+        get_time = get_time,
+        get_text = get_text,
+        is_empty = _is_empty,
+        insert = insert
+    }
+end
+
 subs = {
-    list = {},
+    dialogs = new_sub_list(),
     user_timings = new_timings(),
+    observed = false
 }
 
 subs.get_current = function()
@@ -881,29 +915,18 @@ end
 subs.get_timing = function(position)
     if subs.user_timings.is_set(position) then
         return subs.user_timings.get(position)
-    elseif not is_empty(subs.list) then
-        local i = position == 'start' and 1 or #subs.list
-        return subs.list[i][position]
+    elseif not subs.dialogs.is_empty() then
+        return subs.dialogs.get_time(position)
     end
     return -1
 end
 
-subs.get_text = function()
-    local speech = {}
-    for _, sub in ipairs(subs.list) do
-        table.insert(speech, sub['text'])
-    end
-    return table.concat(speech, ' ')
-end
-
 subs.get = function()
-    if is_empty(subs.list) then
-        table.insert(subs.list, subs.get_current())
-    else
-        table.sort(subs.list)
+    if subs.dialogs.is_empty() then
+        subs.dialogs.insert(subs.get_current())
     end
     local sub = Subtitle:new {
-        ['text'] = subs.get_text(),
+        ['text'] = subs.dialogs.get_text(),
         ['start'] = subs.get_timing('start'),
         ['end'] = subs.get_timing('end'),
     }
@@ -924,29 +947,34 @@ subs.get = function()
 end
 
 subs.append = function()
-    local sub = subs.get_current()
-
-    if sub ~= nil and not table.contains(subs.list, sub) then
-        table.insert(subs.list, sub)
+    if subs.dialogs.insert(subs.get_current()) then
         menu.update()
     end
+end
+
+subs.observe = function()
+    mp.observe_property("sub-text", "string", subs.append)
+    subs.observed = true
+end
+
+subs.unobserve = function()
+    mp.unobserve_property(subs.append)
+    subs.observed = false
 end
 
 subs.set_timing = function(position)
     subs.user_timings.set(position)
     menu.update()
     notify(capitalize_first_letter(position) .. " time has been set.")
-    if is_empty(subs.list) then
-        mp.observe_property("sub-text", "string", subs.append)
+    if not subs.observed then
+        subs.observe()
     end
 end
 
 subs.set_starting_line = function()
     subs.clear()
-    local sub_text = mp.get_property("sub-text")
-
-    if not is_empty(sub_text) then
-        mp.observe_property("sub-text", "string", subs.append)
+    if not is_empty(mp.get_property("sub-text")) then
+        subs.observe()
         notify("Timings have been set to the current sub.", "info", 2)
     else
         notify("There's no visible subtitle.", "info", 2)
@@ -954,8 +982,8 @@ subs.set_starting_line = function()
 end
 
 subs.clear = function()
-    mp.unobserve_property(subs.append)
-    subs.list = {}
+    subs.unobserve()
+    subs.dialogs = new_sub_list()
     subs.user_timings = new_timings()
     menu.update()
 end
@@ -1052,7 +1080,6 @@ menu.update = function()
         return
     end
 
-    table.sort(subs.list)
     local osd = OSD:new():size(config.menu_font_size):align(4)
     osd:submenu('mpvacious options'):newline()
     osd:item('Start time: '):text(human_readable_time(subs.get_timing('start'))):newline()
