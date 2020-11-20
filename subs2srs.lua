@@ -865,13 +865,19 @@ local function new_sub_list()
     local _is_empty = function()
         return next(subs_list) == nil
     end
+    local find_i = function(sub)
+        for i, v in ipairs(subs_list) do
+            if sub < v then
+                return i
+            end
+        end
+        return #subs_list + 1
+    end
     local get_time = function(position)
-        table.sort(subs_list)
         local i = position == 'start' and 1 or #subs_list
         return subs_list[i][position]
     end
     local get_text = function()
-        table.sort(subs_list)
         local speech = {}
         for _, sub in ipairs(subs_list) do
             table.insert(speech, sub['text'])
@@ -880,7 +886,7 @@ local function new_sub_list()
     end
     local insert = function(sub)
         if sub ~= nil and not table.contains(subs_list, sub) then
-            table.insert(subs_list, sub)
+            table.insert(subs_list, find_i(sub), sub)
             return true
         end
         return false
