@@ -590,7 +590,7 @@ end
 platform = is_running_windows() and init_platform_windows() or init_platform_nix()
 
 ------------------------------------------------------------
--- provides interface for creating audioclips and snapshots
+-- provides interface for creating audio clips and snapshots
 
 encoder = {}
 
@@ -1067,7 +1067,7 @@ menu.overlay_draw = function(text)
     menu.overlay:update()
 end
 
-menu.keybinds = {
+menu.keybindings = {
     { key = 's', fn = function() subs.set_timing('start') end },
     { key = 'e', fn = function() subs.set_timing('end') end },
     { key = 'c', fn = function() subs.set_starting_line() end },
@@ -1130,7 +1130,7 @@ menu.open = function()
         return
     end
 
-    for _, val in pairs(menu.keybinds) do
+    for _, val in pairs(menu.keybindings) do
         mp.add_forced_key_binding(val.key, val.key, val.fn)
     end
 
@@ -1143,7 +1143,7 @@ menu.close = function()
         return
     end
 
-    for _, val in pairs(menu.keybinds) do
+    for _, val in pairs(menu.keybindings) do
         mp.remove_key_binding(val.key)
     end
 

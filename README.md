@@ -92,7 +92,7 @@ in  the [mpv scripts](https://github.com/mpv-player/mpv/wiki/User-Scripts) folde
 | GNU/Linux | `~/.config/mpv/scripts/` |
 | Windows | `C:/Users/Username/AppData/Roaming/mpv/scripts/` |
 
-Note: in [Celluloid](https://www.archlinux.org/packages/community/x86_64/celluloid/)
+**Note:** in [Celluloid](https://www.archlinux.org/packages/community/x86_64/celluloid/)
 user scripts are installed by switching to the "Plugins" tab
 in the preferences dialog and dropping the files there.
 
