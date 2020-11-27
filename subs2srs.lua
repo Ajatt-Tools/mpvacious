@@ -1241,6 +1241,7 @@ do
         mp.add_key_binding(nil, "mpvacious-set-starting-line", subs.set_starting_line)
         mp.add_key_binding(nil, "mpvacious-reset-timings", subs.clear_and_notify)
         mp.add_key_binding(nil, "mpvacious-toggle-sub-autocopy", clip_autocopy.toggle)
+        mp.add_key_binding(nil, "mpvacious-update-last-note", update_last_note)
 
         main_executed = true
     end

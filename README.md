@@ -287,6 +287,7 @@ These additional bindings aren't enabled by default but can be accessed via the 
 Ctrl+s script-binding mpvacious-set-starting-line
 Ctrl+r script-binding mpvacious-reset-timings
 Ctrl+t script-binding mpvacious-toggle-sub-autocopy
+Ctrl+u script-binding mpvacious-update-last-note
 ```
 
 ## Usage
