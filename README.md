@@ -126,9 +126,6 @@ local mpv_scripts_dir_path = os.getenv("HOME") ..  "/.config/mpv/scripts/"
 function load(relative_path) dofile(mpv_scripts_dir_path .. relative_path) end
 load("subs2srs/subs2srs.lua")
 ```
-If you're using [voidrice](https://github.com/LukeSmithxyz/voidrice),
-you should [already have it](https://github.com/LukeSmithxyz/voidrice/blob/master/.config/mpv/scripts/modules.lua).
-In this case only add the last line: ```load("subs2srs/subs2srs.lua")```.
 
 ### Updating with git
 
