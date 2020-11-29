@@ -610,13 +610,13 @@ encoder.pad_timings = function(start_time, end_time)
 end
 
 encoder.create_snapshot = function(timestamp, filename)
-    local video_path = mp.get_property("path")
-    local snapshot_path = utils.join_path(config.collection_path, filename)
+    local source_path = mp.get_property("path")
+    local output_path = utils.join_path(config.collection_path, filename)
 
     mp.commandv(
             'run',
             'mpv',
-            video_path,
+            source_path,
             '--loop-file=no',
             '--audio=no',
             '--no-ocopy-metadata',
@@ -628,19 +628,19 @@ encoder.create_snapshot = function(timestamp, filename)
             table.concat { '-start=', timestamp },
             table.concat { '--ovcopts-add=quality=', tostring(config.snapshot_quality) },
             table.concat { '--vf-add=scale=', config.snapshot_width, ':', config.snapshot_height },
-            table.concat { '-o=', snapshot_path }
+            table.concat { '-o=', output_path }
     )
 end
 
 encoder.create_audio = function(start_timestamp, end_timestamp, filename)
-    local video_path = mp.get_property("path")
-    local fragment_path = utils.join_path(config.collection_path, filename)
+    local source_path = mp.get_property("path")
+    local output_path = utils.join_path(config.collection_path, filename)
     start_timestamp, end_timestamp = encoder.pad_timings(start_timestamp, end_timestamp)
 
     mp.commandv(
             'run',
             'mpv',
-            video_path,
+            source_path,
             '--loop-file=no',
             '--video=no',
             '--no-ocopy-metadata',
@@ -655,7 +655,7 @@ encoder.create_audio = function(start_timestamp, end_timestamp, filename)
             table.concat { '--aid=', mp.get_property("aid") }, -- track number
             table.concat { '--volume=', config.tie_volumes and mp.get_property('volume') or '100' },
             table.concat { '--oacopts-add=b=', config.audio_bitrate },
-            table.concat { '-o=', fragment_path }
+            table.concat { '-o=', output_path }
     )
 end
 
