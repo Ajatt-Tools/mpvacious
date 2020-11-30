@@ -609,6 +609,16 @@ encoder.pad_timings = function(start_time, end_time)
     return start_time, end_time
 end
 
+encoder.get_active_track = function(track_type)
+    local track_list = mp.get_property_native('track-list')
+    for _, track in pairs(track_list) do
+        if track.type == track_type and track.selected == true then
+            return track
+        end
+    end
+    return nil
+end
+
 encoder.create_snapshot = function(timestamp, filename)
     local source_path = mp.get_property("path")
     local output_path = utils.join_path(config.collection_path, filename)
@@ -634,7 +644,15 @@ end
 
 encoder.create_audio = function(start_timestamp, end_timestamp, filename)
     local source_path = mp.get_property("path")
+    local audio_track = encoder.get_active_track('audio')
+    local audio_track_id = mp.get_property("aid")
     local output_path = utils.join_path(config.collection_path, filename)
+
+    if audio_track and audio_track.external == true then
+        source_path = audio_track['external-filename']
+        audio_track_id = 'auto'
+    end
+
     start_timestamp, end_timestamp = encoder.pad_timings(start_timestamp, end_timestamp)
 
     mp.commandv(
@@ -652,7 +670,7 @@ encoder.create_audio = function(start_timestamp, end_timestamp, filename)
             table.concat { '--oac=', config.audio_codec },
             table.concat { '--start=', start_timestamp },
             table.concat { '--end=', end_timestamp },
-            table.concat { '--aid=', mp.get_property("aid") }, -- track number
+            table.concat { '--aid=', audio_track_id },
             table.concat { '--volume=', config.tie_volumes and mp.get_property('volume') or '100' },
             table.concat { '--oacopts-add=b=', config.audio_bitrate },
             table.concat { '-o=', output_path }
