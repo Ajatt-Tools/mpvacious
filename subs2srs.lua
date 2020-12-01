@@ -379,7 +379,7 @@ local function update_last_note(overwrite)
     local sub = subs.get()
     local last_note_id = ankiconnect.get_last_note_id()
 
-    if sub == nil then
+    if sub == nil or is_empty(sub['text']) then
         notify("Nothing to export. Have you set the timings?", "warn", 2)
         return
     end
