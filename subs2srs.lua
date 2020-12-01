@@ -280,7 +280,7 @@ local anki_compatible_length
 do
     -- Anki forcibly mutilates all filenames longer than 119 bytes when you run `Tools->Check Media...`.
     local allowed_bytes = 119
-    local timestamp_bytes = #'_(99h99m99s999ms-99h99m99s999ms).webp'
+    local timestamp_bytes = #'_99h99m99s999ms-99h99m99s999ms.webp'
     local limit_bytes = allowed_bytes - timestamp_bytes
 
     anki_compatible_length = function(str)
@@ -321,7 +321,7 @@ local function construct_media_filenames(timings)
     filename = anki_compatible_length(filename)
 
     filename = string.format(
-            '%s_(%s-%s)',
+            '%s_%s-%s',
             filename,
             human_readable_time(timings['start']),
             human_readable_time(timings['end'])
