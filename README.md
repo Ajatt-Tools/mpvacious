@@ -256,6 +256,9 @@ Otherwise Anki won't allow mpvacious to add new notes.
 Alternatively, refer to [Modifying cards added with Yomichan](#modifying-cards-added-with-yomichan)
 or use an addon that [allows empty first field](https://ankiweb.net/shared/info/46741504).
 
+**Tip**: Try [this note type](https://ankiweb.net/shared/info/1557722832)
+if you don't want to configure note fields yourself.
+
 If you are having problems playing media files on older mobile devices,
 set `audio_format` to `mp3` and/or `snapshot_format` to `jpg`.
 Otherwise, I recommend sticking with `opus` and `webp`,
