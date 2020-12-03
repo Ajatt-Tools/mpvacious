@@ -389,7 +389,8 @@ If you don't like the default Yomichan Search tool, try:
 * Clipboard Inserter browser add-on
 ([chrome](https://chrome.google.com/webstore/detail/clipboard-inserter/deahejllghicakhplliloeheabddjajm))
 ([firefox](https://addons.mozilla.org/ja/firefox/addon/clipboard-inserter/))
-* An [html page](https://pastebin.com/zDY6s3NK) to paste the contents of you clipboard to
+* An html page ([1](https://pastebin.com/zDY6s3NK)) ([2](https://pastebin.com/hZ4sawL4))
+to paste the contents of you clipboard to
 
 You can use any html page as long as it has \<body\>\</body\> in it.
 
