@@ -205,7 +205,7 @@ snapshot_format=webp
 #snapshot_format=jpg
 
 # Quality of produced image files. 0 = lowest, 100=highest.
-snapshot_quality=5
+snapshot_quality=15
 
 # Image dimensions
 # If either (but not both) of the width or height parameters is -2,
