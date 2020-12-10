@@ -41,31 +41,34 @@ while watching your favorite TV show.
 <tr>
     <th><a href="https://www.gnu.org/gnu/about-gnu.html">GNU/Linux</a></th>
     <th><a href="https://www.gnu.org/proprietary/malware-microsoft.en.html">Windows 10</a></th>
+    <th><a href="https://www.gnu.org/proprietary/malware-apple.en.html">macOS</a></th>
     <th>Comments</th>
 </tr>
 <tr>
     <td><a href="https://wiki.archlinux.org/index.php/Mpv">mpv</a></td>
     <td><a href="https://sourceforge.net/projects/mpv-player-windows/files">mpv</a></td>
+    <td><a href="https://mpv.io/installation/">mpv</a></td>
     <td>v0.32.0 or newer.</td>
 </tr>
 <tr>
     <td><a href="https://wiki.archlinux.org/index.php/Anki">Anki</a></td>
-    <td><a href="https://apps.ankiweb.net/">Anki</a></td>
+    <td colspan="2" align="center"><a href="https://apps.ankiweb.net/">Anki</a></td>
     <td></td>
 </tr>
 <tr>
-    <td colspan="2" align="center"><a href="https://ankiweb.net/shared/info/2055492159">AnkiConnect</a></td>
-    <td></td>
+    <td colspan="3" align="center"><a href="https://ankiweb.net/shared/info/2055492159">AnkiConnect</a></td>
+    <td>Install from AnkiWeb.</td>
 </tr>
 <tr>
     <td><a href="https://www.archlinux.org/packages/core/x86_64/curl/">curl</a></td>
-    <td><a href="https://curl.haxx.se/">curl</a></td>
-    <td>Should be installed by default on all platforms</td>
+    <td colspan="2" align="center"><a href="https://curl.haxx.se/">curl</a></td>
+    <td>Installed by default on all platforms except Windows 7.</td>
 </tr>
 <tr>
     <td><a href="https://www.archlinux.org/packages/extra/x86_64/xclip/">xclip</a></td>
     <td></td>
-    <td>To copy subtitle text to clipboard</td>
+    <td>pbcopy</td>
+    <td>To copy subtitle text to clipboard.</td>
 </tr>
 </table>
 
@@ -76,9 +79,11 @@ Install all dependencies at once (on [Arch-based](https://www.parabola.nu/)
 $ sudo pacman -Syu mpv anki curl xclip --needed
 ```
 
-If you're on Windows machine, watch [this tutorial](https://youtu.be/bbg6ztWecbU?t=103).
+If you're on **Windows** machine, watch [this tutorial](https://youtu.be/bbg6ztWecbU?t=103).
 Make sure you choose a build by `shinchiro`,
 otherwise you may encounter problems when making Anki cards.
+
+**macOS** users should use [homebrew](https://brew.sh/) or manually add `mpv` to `PATH`.
 
 ## Installation
 
