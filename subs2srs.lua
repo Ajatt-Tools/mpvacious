@@ -719,6 +719,26 @@ ankiconnect.parse_result = function(curl_output)
     return stdout_json.result, nil
 end
 
+ankiconnect.store_file = function(filename, file_path)
+    local args = {
+        action = "storeMediaFile",
+        version = 6,
+        params = {
+            filename = filename,
+            path = file_path
+        }
+    }
+
+    local ret =  ankiconnect.execute(args)
+    local _, error = ankiconnect.parse_result(ret)
+    if not error then
+        msg.info(string.format("File stored: '%s'.", filename))
+    else
+        msg.error(string.format("Couldn't store file '%s': %s", filename, error))
+    end
+    os.remove(file_path)
+end
+
 ankiconnect.create_deck = function(deck_name)
     local args = {
         action = "changeDeck",
