@@ -333,7 +333,7 @@ end
 local function construct_note_fields(sub_text, snapshot_filename, audio_filename)
     return {
         [config.sentence_field] = sub_text,
-        [config.image_field] = string.format('<img src="%s" alt="snapshot">', snapshot_filename),
+        [config.image_field] = string.format('<img alt="snapshot" src="%s">', snapshot_filename),
         [config.audio_field] = string.format('[sound:%s]', audio_filename),
     }
 end
