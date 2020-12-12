@@ -524,6 +524,10 @@ local function init_platform_windows()
     local curl_tmpfile_path = utils.join_path(os.getenv('TEMP'), 'curl_tmp.txt')
     mp.register_event('shutdown', function() os.remove(curl_tmpfile_path) end)
 
+    self.tmp_dir = function()
+        return os.getenv('TEMP')
+    end
+
     self.copy_to_clipboard = function(text)
         mp.commandv("run", "cmd.exe", "/d", "/c", string.format("@echo off & chcp 65001 & echo %s|clip", text))
     end
@@ -568,6 +572,10 @@ local function init_platform_nix()
             os.getenv('HOME'),
             config.anki_user
     )
+
+    self.tmp_dir = function()
+        return '/tmp'
+    end
 
     self.copy_to_clipboard = function(text)
         local handle = io.popen(clip, 'w')
