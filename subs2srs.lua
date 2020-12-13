@@ -629,32 +629,36 @@ end
 
 encoder.create_snapshot = function(timestamp, filename)
     local source_path = mp.get_property("path")
-    local output_path = utils.join_path(config.collection_path, filename)
+    local output_path = utils.join_path(platform.tmp_dir(), filename)
 
-    mp.commandv(
-            'run',
-            'mpv',
-            source_path,
-            '--loop-file=no',
-            '--audio=no',
-            '--no-ocopy-metadata',
-            '--no-sub',
-            '--frames=1',
-            '--ovcopts-add=lossless=0',
-            '--ovcopts-add=compression_level=6',
-            table.concat { '--ovc=', config.snapshot_codec },
-            table.concat { '-start=', timestamp },
-            table.concat { '--ovcopts-add=quality=', tostring(config.snapshot_quality) },
-            table.concat { '--vf-add=scale=', config.snapshot_width, ':', config.snapshot_height },
-            table.concat { '-o=', output_path }
-    )
+    local args = {
+        'mpv',
+        source_path,
+        '--loop-file=no',
+        '--audio=no',
+        '--no-ocopy-metadata',
+        '--no-sub',
+        '--frames=1',
+        '--ovcopts-add=lossless=0',
+        '--ovcopts-add=compression_level=6',
+        table.concat { '--ovc=', config.snapshot_codec },
+        table.concat { '-start=', timestamp },
+        table.concat { '--ovcopts-add=quality=', tostring(config.snapshot_quality) },
+        table.concat { '--vf-add=scale=', config.snapshot_width, ':', config.snapshot_height },
+        table.concat { '-o=', output_path }
+    }
+    local on_finish = function()
+        ankiconnect.store_file(filename, output_path)
+        os.remove(output_path)
+    end
+    subprocess(args, on_finish)
 end
 
 encoder.create_audio = function(start_timestamp, end_timestamp, filename)
     local source_path = mp.get_property("path")
     local audio_track = encoder.get_active_track('audio')
     local audio_track_id = mp.get_property("aid")
-    local output_path = utils.join_path(config.collection_path, filename)
+    local output_path = utils.join_path(platform.tmp_dir(), filename)
 
     if audio_track and audio_track.external == true then
         source_path = audio_track['external-filename']
@@ -663,26 +667,30 @@ encoder.create_audio = function(start_timestamp, end_timestamp, filename)
 
     start_timestamp, end_timestamp = encoder.pad_timings(start_timestamp, end_timestamp)
 
-    mp.commandv(
-            'run',
-            'mpv',
-            source_path,
-            '--loop-file=no',
-            '--video=no',
-            '--no-ocopy-metadata',
-            '--no-sub',
-            '--audio-channels=mono',
-            '--oacopts-add=vbr=on',
-            '--oacopts-add=application=voip',
-            '--oacopts-add=compression_level=10',
-            table.concat { '--oac=', config.audio_codec },
-            table.concat { '--start=', start_timestamp },
-            table.concat { '--end=', end_timestamp },
-            table.concat { '--aid=', audio_track_id },
-            table.concat { '--volume=', config.tie_volumes and mp.get_property('volume') or '100' },
-            table.concat { '--oacopts-add=b=', config.audio_bitrate },
-            table.concat { '-o=', output_path }
-    )
+    local args = {
+        'mpv',
+        source_path,
+        '--loop-file=no',
+        '--video=no',
+        '--no-ocopy-metadata',
+        '--no-sub',
+        '--audio-channels=mono',
+        '--oacopts-add=vbr=on',
+        '--oacopts-add=application=voip',
+        '--oacopts-add=compression_level=10',
+        table.concat { '--oac=', config.audio_codec },
+        table.concat { '--start=', start_timestamp },
+        table.concat { '--end=', end_timestamp },
+        table.concat { '--aid=', audio_track_id },
+        table.concat { '--volume=', config.tie_volumes and mp.get_property('volume') or '100' },
+        table.concat { '--oacopts-add=b=', config.audio_bitrate },
+        table.concat { '-o=', output_path }
+    }
+    local on_finish = function()
+        ankiconnect.store_file(filename, output_path)
+        os.remove(output_path)
+    end
+    subprocess(args, on_finish)
 end
 
 ------------------------------------------------------------
@@ -744,7 +752,6 @@ ankiconnect.store_file = function(filename, file_path)
     else
         msg.error(string.format("Couldn't store file '%s': %s", filename, error))
     end
-    os.remove(file_path)
 end
 
 ankiconnect.create_deck = function(deck_name)
