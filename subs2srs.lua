@@ -412,46 +412,6 @@ local function join_media_fields(note1, note2)
     return note1
 end
 
-local function get_forvo_pronunciation(word)
-    word = platform.windows and url_encode(word) or word
-    local forvo_format = config.audio_extension:sub(2)
-    local forvo_page = subprocess { 'curl', '-s', string.format('https://forvo.com/search/%s/ja', word) }.stdout
-    local play_params = string.match(forvo_page, "Play%((.-)%);")
-    if not play_params then
-        return nil
-    end
-    local iter = string.gmatch(play_params, "'(.-)'")
-    local formats = { mp3 = iter(), ogg = iter() }
-    local audio_url = string.format('https://audio00.forvo.com/%s/%s', forvo_format, base64d(formats[forvo_format]))
-    local pronunciation_filename = string.format('forvo_%s.%s', platform.windows and os.time() or word, forvo_format)
-    local pronunciation_path = utils.join_path(config.collection_path, pronunciation_filename)
-    mp.commandv('run', 'curl', audio_url, '-s', '-L', '-o', pronunciation_path)
-    return string.format('[sound:%s]', pronunciation_filename)
-end
-
-local function append_forvo_pronunciation(note1, note2)
-    if config.use_forvo == 'no' then
-        return note1
-    end
-    if type(note2[config.vocab_audio_field]) ~= 'string' then
-        return note1
-    end
-    if is_empty(note2[config.vocab_field]) then
-        return note1
-    end
-    if config.use_forvo == 'always' or is_empty(note2[config.vocab_audio_field]) then
-        local forvo_pronunciation = get_forvo_pronunciation(note2[config.vocab_field])
-        if not is_empty(forvo_pronunciation) then
-            if config.vocab_audio_field == config.audio_field then
-                note1[config.vocab_audio_field] = forvo_pronunciation .. note1[config.vocab_audio_field]
-            else
-                note1[config.vocab_audio_field] = forvo_pronunciation
-            end
-        end
-    end
-    return note1
-end
-
 local validate_config
 do
     local function is_webp_supported()
@@ -596,6 +556,103 @@ local function init_platform_nix()
 end
 
 platform = is_running_windows() and init_platform_windows() or init_platform_nix()
+
+------------------------------------------------------------
+-- utils for downloading pronunciations from Forvo
+
+local append_forvo_pronunciation
+do
+    local function audio_reencode(source_path, dest_path)
+        local args = {
+            'mpv',
+            source_path,
+            '--loop-file=no',
+            '--video=no',
+            '--no-ocopy-metadata',
+            '--no-sub',
+            '--audio-channels=mono',
+            '--oacopts-add=vbr=on',
+            '--oacopts-add=application=voip',
+            '--oacopts-add=compression_level=10',
+            '--af-append=silenceremove=1:0:-50dB',
+            table.concat { '--oac=', config.audio_codec },
+            table.concat { '--oacopts-add=b=', config.audio_bitrate },
+            table.concat { '-o=', dest_path }
+        }
+        return subprocess(args)
+    end
+
+    local function reencode_and_store(source_path, filename)
+        local reencoded_path = utils.join_path(platform.tmp_dir(), 'reencoded_' .. filename)
+        audio_reencode(source_path, reencoded_path)
+        local result = ankiconnect.store_file(filename, reencoded_path)
+        os.remove(reencoded_path)
+        return result
+    end
+
+    local function curl_save(source_url, save_location)
+        local curl_args = { 'curl', source_url, '-s', '-L', '-o', save_location }
+        return subprocess(curl_args).status == 0
+    end
+
+    local function get_pronunciation_url(word)
+        local file_format = config.audio_extension:sub(2)
+        local forvo_page = subprocess { 'curl', '-s', string.format('https://forvo.com/search/%s/ja', url_encode(word)) }.stdout
+        local play_params = string.match(forvo_page, "Play%((.-)%);")
+
+        if play_params then
+            local iter = string.gmatch(play_params, "'(.-)'")
+            local formats = { mp3 = iter(), ogg = iter() }
+            return string.format('https://audio00.forvo.com/%s/%s', file_format, base64d(formats[file_format]))
+        end
+    end
+
+    local function get_forvo_pronunciation(word)
+        local audio_url = get_pronunciation_url(word)
+
+        if is_empty(audio_url) then
+            msg.warn(string.format("Seems like Forvo doesn't have audio for word %s.", word))
+            return
+        end
+
+        local filename = string.format('forvo_%s%s', platform.windows and os.time() or word, config.audio_extension)
+        local tmp_filepath = utils.join_path(platform.tmp_dir(), filename)
+
+        local result
+        if curl_save(audio_url, tmp_filepath) and reencode_and_store(tmp_filepath, filename) then
+            result = string.format('[sound:%s]', filename)
+        else
+            msg.warn(string.format("Couldn't download audio for word %s from Forvo.", word))
+        end
+
+        os.remove(tmp_filepath)
+        return result
+    end
+
+    append_forvo_pronunciation = function(appended_data, stored_data)
+        if config.use_forvo == 'no' then
+            return appended_data
+        end
+        if type(stored_data[config.vocab_audio_field]) ~= 'string' then
+            return appended_data
+        end
+        if is_empty(stored_data[config.vocab_field]) then
+            return appended_data
+        end
+        if config.use_forvo == 'always' or is_empty(stored_data[config.vocab_audio_field]) then
+            local forvo_pronunciation = get_forvo_pronunciation(stored_data[config.vocab_field])
+            if not is_empty(forvo_pronunciation) then
+                if config.vocab_audio_field == config.audio_field then
+                    -- improperly configured fields. don't lose sentence audio
+                    appended_data[config.vocab_audio_field] = forvo_pronunciation .. appended_data[config.vocab_audio_field]
+                else
+                    appended_data[config.vocab_audio_field] = forvo_pronunciation
+                end
+            end
+        end
+        return appended_data
+    end
+end
 
 ------------------------------------------------------------
 -- provides interface for creating audio clips and snapshots
@@ -749,8 +806,10 @@ ankiconnect.store_file = function(filename, file_path)
     local _, error = ankiconnect.parse_result(ret)
     if not error then
         msg.info(string.format("File stored: '%s'.", filename))
+        return true
     else
         msg.error(string.format("Couldn't store file '%s': %s", filename, error))
+        return false
     end
 end
 
