@@ -36,18 +36,18 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 ]]
 
 local config = {
-    autoclip = false,           -- copy subs to the clipboard or not
-    nuke_spaces = true,         -- remove all spaces or not
+    autoclip = false,              -- enable copying subs to the clipboard when mpv starts
+    nuke_spaces = true,            -- remove all spaces from exported anki cards
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
-    snapshot_format = "webp",   -- webp or jpg
-    snapshot_quality = 15,       -- from 0=lowest to 100=highest
-    snapshot_width = -2,        -- a positive integer or -2 for auto
-    snapshot_height = 200,      -- same
-    audio_format = "opus",      -- opus or mp3
-    audio_bitrate = "18k",      -- from 16k to 32k
-    audio_padding = 0.12,       -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
-    deck_name = "Learning",     -- the deck will be created if needed
-    model_name = "Japanese sentences", -- Tools -> Manage note types
+    snapshot_format = "webp",      -- webp or jpg
+    snapshot_quality = 15,         -- from 0=lowest to 100=highest
+    snapshot_width = -2,           -- a positive integer or -2 for auto
+    snapshot_height = 200,         -- same
+    audio_format = "opus",         -- opus or mp3
+    audio_bitrate = "18k",         -- from 16k to 32k
+    audio_padding = 0.12,          -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
+    deck_name = "Learning",        -- the deck will be created if needed
+    model_name = "Japanese sentences",  -- Tools -> Manage note types
     sentence_field = "SentKanji",
     audio_field = "SentAudio",
     use_forvo = "yes",                  -- 'yes', 'no', 'always'
@@ -180,9 +180,9 @@ local function remove_spaces(str)
 end
 
 local function trim(str)
+    str = remove_spaces(str)
     str = remove_text_in_parentheses(str)
     str = remove_newlines(str)
-    str = remove_spaces(str)
     return str
 end
 
@@ -594,12 +594,15 @@ do
         if config.use_forvo == 'no' then
             return appended_data
         end
+
         if type(stored_data[config.vocab_audio_field]) ~= 'string' then
             return appended_data
         end
+
         if is_empty(stored_data[config.vocab_field]) then
             return appended_data
         end
+
         if config.use_forvo == 'always' or is_empty(stored_data[config.vocab_audio_field]) then
             local forvo_pronunciation = get_forvo_pronunciation(stored_data[config.vocab_field])
             if not is_empty(forvo_pronunciation) then
@@ -611,6 +614,7 @@ do
                 end
             end
         end
+
         return appended_data
     end
 end
@@ -874,17 +878,17 @@ ankiconnect.gui_browse = function(query)
     }
 end
 
-ankiconnect.append_media = function(note_id, note_fields, overwrite)
+ankiconnect.append_media = function(note_id, appended_data, overwrite)
     -- AnkiConnect will fail to update the note if it's selected in the Anki Browser.
     -- https://github.com/FooSoft/anki-connect/issues/82
     -- Switch focus from the current note to avoid it.
     ankiconnect.gui_browse("nid:1") -- impossible nid
 
-    local old_fields = ankiconnect.get_note_fields(note_id)
-    if old_fields then
-        note_fields = append_forvo_pronunciation(note_fields, old_fields)
+    local stored_data = ankiconnect.get_note_fields(note_id)
+    if stored_data then
+        appended_data = append_forvo_pronunciation(appended_data, stored_data)
         if not overwrite then
-            note_fields = join_media_fields(note_fields, old_fields)
+            appended_data = join_media_fields(appended_data, stored_data)
         end
     end
 
@@ -894,7 +898,7 @@ ankiconnect.append_media = function(note_id, note_fields, overwrite)
         params = {
             note = {
                 id = note_id,
-                fields = note_fields,
+                fields = appended_data,
             }
         }
     }
