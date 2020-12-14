@@ -186,38 +186,6 @@ local function trim(str)
     return str
 end
 
-local base64d -- http://lua-users.org/wiki/BaseSixtyFour
-do
-    local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-    base64d = function(data)
-        data = string.gsub(data, '[^'..b..'=]', '')
-        return (data:gsub('.', function(x)
-            if (x == '=') then return '' end
-            local r,f='',(b:find(x)-1)
-            for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end
-            return r;
-        end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
-            if (#x ~= 8) then return '' end
-            local c=0
-            for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
-            return string.char(c)
-        end))
-    end
-end
-
-local function url_encode(url) -- https://gist.github.com/liukun/f9ce7d6d14fa45fe9b924a3eed5c3d99
-    local char_to_hex = function(c)
-        return string.format("%%%02X", string.byte(c))
-    end
-    if url == nil then
-        return
-    end
-    url = url:gsub("\n", "\r\n")
-    url = url:gsub("([^%w _%%%-%.~])", char_to_hex)
-    url = url:gsub(" ", "+")
-    return url
-end
-
 local function copy_to_clipboard(_, text)
     if not is_empty(text) then
         text = config.clipboard_trim_enabled and trim(text) or remove_newlines(text)
@@ -523,6 +491,38 @@ platform = is_running_windows() and init_platform_windows() or init_platform_nix
 
 local append_forvo_pronunciation
 do
+    local base64d -- http://lua-users.org/wiki/BaseSixtyFour
+    do
+        local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+        base64d = function(data)
+            data = string.gsub(data, '[^'..b..'=]', '')
+            return (data:gsub('.', function(x)
+                if (x == '=') then return '' end
+                local r,f='',(b:find(x)-1)
+                for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end
+                return r;
+            end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
+                if (#x ~= 8) then return '' end
+                local c=0
+                for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
+                return string.char(c)
+            end))
+        end
+    end
+
+    local function url_encode(url) -- https://gist.github.com/liukun/f9ce7d6d14fa45fe9b924a3eed5c3d99
+        local char_to_hex = function(c)
+            return string.format("%%%02X", string.byte(c))
+        end
+        if url == nil then
+            return
+        end
+        url = url:gsub("\n", "\r\n")
+        url = url:gsub("([^%w _%%%-%.~])", char_to_hex)
+        url = url:gsub(" ", "+")
+        return url
+    end
+
     local function audio_reencode(source_path, dest_path)
         local args = {
             'mpv',
