@@ -568,6 +568,10 @@ do
         end
     end
 
+    local function make_forvo_filename(word)
+        return string.format('forvo_%s%s', platform.windows and os.time() or word, config.audio_extension)
+    end
+
     local function get_forvo_pronunciation(word)
         local audio_url = get_pronunciation_url(word)
 
@@ -576,7 +580,7 @@ do
             return
         end
 
-        local filename = string.format('forvo_%s%s', platform.windows and os.time() or word, config.audio_extension)
+        local filename = make_forvo_filename(word)
         local tmp_filepath = utils.join_path(platform.tmp_dir(), filename)
 
         local result
