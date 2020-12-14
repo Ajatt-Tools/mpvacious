@@ -159,9 +159,6 @@ Example configuration file:
 # General settings #
 ####################
 
-# Your Anki username. It is displayed on the title bar of the Anki window.
-anki_user=User 1
-
 # The deck will be created if it doesn't exist. Subdecks are supported.
 deck_name=Bank::subs2srs
 
@@ -247,13 +244,6 @@ vocab_field=VocabKanji
 
 # Vocab Audio field should be equal to {audio} field in Yomichan
 vocab_audio_field=VocabAudio
-```
-
-If you run Anki in portable mode, the path to your `collection.media` folder
-may differ from the default. In this case, if you run into troubles making Anki cards with the add-on,
-specify full path to the collection in the `config file` as well:
-```
-collection_path=C:\AnkiDataFolder\collection.media
 ```
 
 Sentence field should be first in the note type settings.

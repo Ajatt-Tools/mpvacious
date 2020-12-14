@@ -36,8 +36,6 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 ]]
 
 local config = {
-    collection_path = "",       -- full path to the collection. most users should leave it empty.
-    anki_user = "User 1",       -- your anki username. it is displayed on the title bar of the Anki window.
     autoclip = false,           -- copy subs to the clipboard or not
     nuke_spaces = true,         -- remove all spaces or not
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
@@ -111,17 +109,6 @@ end
 
 local function is_running_macOS()
     return mp.get_property('options/cocoa-force-dedicated-gpu') ~= nil
-end
-
-local function is_dir(path)
-    if is_empty(path) then
-        return false
-    end
-    local file_info = utils.file_info(path)
-    if file_info == nil then
-        return false
-    end
-    return file_info.is_dir == true
 end
 
 local function contains_non_latin_letters(str)
@@ -424,13 +411,6 @@ do
         return ret.status == 0 and ret.stdout:match('--oac=libopus')
     end
 
-    local function set_collection_path()
-        if not is_dir(config.collection_path) then
-            -- collection path wasn't specified. construct it using config.anki_user
-            config.collection_path = platform.construct_collection_path()
-        end
-    end
-
     local function set_audio_format()
         if config.audio_format == 'opus' and is_opus_supported() then
             config.audio_codec = 'libopus'
@@ -469,7 +449,6 @@ do
     end
 
     validate_config = function()
-        set_collection_path()
         set_audio_format()
         set_video_format()
         check_snapshot_settings()
@@ -490,10 +469,6 @@ local function init_platform_windows()
 
     self.copy_to_clipboard = function(text)
         mp.commandv("run", "cmd.exe", "/d", "/c", string.format("@echo off & chcp 65001 & echo %s|clip", text))
-    end
-
-    self.construct_collection_path = function()
-        return string.format([[%s\Anki2\%s\collection.media\]], os.getenv('APPDATA'), config.anki_user)
     end
 
     self.curl_request = function(request_json, completion_fn)
@@ -522,16 +497,6 @@ end
 local function init_platform_nix()
     local self = {}
     local clip = is_running_macOS() and 'LANG=en_US.UTF-8 pbcopy' or 'xclip -i -selection clipboard'
-    local collection_path_linux = string.format(
-            '%s/.local/share/Anki2/%s/collection.media/',
-            os.getenv('HOME'),
-            config.anki_user
-    )
-    local collection_path_mac = string.format(
-            '%s/Library/Application Support/Anki2/%s/collection.media',
-            os.getenv('HOME'),
-            config.anki_user
-    )
 
     self.tmp_dir = function()
         return '/tmp'
@@ -541,10 +506,6 @@ local function init_platform_nix()
         local handle = io.popen(clip, 'w')
         handle:write(text)
         handle:close()
-    end
-
-    self.construct_collection_path = function()
-        return is_dir(collection_path_mac) and collection_path_mac or collection_path_linux
     end
 
     self.curl_request = function(request_json, completion_fn)
