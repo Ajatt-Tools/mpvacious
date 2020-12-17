@@ -347,11 +347,13 @@ local function update_last_note(overwrite)
     local snapshot_filename, audio_filename = construct_media_filenames(sub)
     local snapshot_timestamp = (sub['start'] + sub['end']) / 2
 
-    encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
-    encoder.create_audio(sub['start'], sub['end'], audio_filename)
+    local create_media = function()
+        encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
+        encoder.create_audio(sub['start'], sub['end'], audio_filename)
+    end
 
     local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
-    ankiconnect.append_media(last_note_id, note_fields, overwrite)
+    ankiconnect.append_media(last_note_id, note_fields, overwrite, create_media)
     subs.clear()
 end
 
@@ -882,7 +884,7 @@ ankiconnect.gui_browse = function(query)
     }
 end
 
-ankiconnect.append_media = function(note_id, appended_data, overwrite)
+ankiconnect.append_media = function(note_id, appended_data, overwrite, create_media_fn)
     -- AnkiConnect will fail to update the note if it's selected in the Anki Browser.
     -- https://github.com/FooSoft/anki-connect/issues/82
     -- Switch focus from the current note to avoid it.
@@ -910,8 +912,9 @@ ankiconnect.append_media = function(note_id, appended_data, overwrite)
     local result_notify = function(_, result, _)
         local _, error = ankiconnect.parse_result(result)
         if not error then
-            notify(string.format("Note #%s updated.", note_id))
+            create_media_fn()
             ankiconnect.gui_browse(string.format("nid:%s", note_id)) -- select the updated note in the card browser
+            notify(string.format("Note #%s updated.", note_id))
         else
             notify(string.format("Error: %s.", error), "error", 2)
         end
