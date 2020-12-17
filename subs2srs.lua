@@ -310,6 +310,10 @@ local function minutes_ago(m)
     return (os.time() - 60 * m) * 1000
 end
 
+local function get_time_pos()
+    return string.format('%.3f', mp.get_property_number("time-pos", 0))
+end
+
 local function export_to_anki(gui)
     local sub = subs.get()
     if sub == nil then
@@ -320,9 +324,8 @@ local function export_to_anki(gui)
         sub['text'] = string.format([[<span id="mpv%s">mpvacious wasn't able to grab subtitles</span>]], os.time())
     end
     local snapshot_filename, audio_filename = construct_media_filenames(sub)
-    local snapshot_time = (sub['start'] + sub['end']) / 2
 
-    encoder.create_snapshot(snapshot_time, snapshot_filename)
+    encoder.create_snapshot(get_time_pos(), snapshot_filename)
     encoder.create_audio(sub['start'], sub['end'], audio_filename)
 
     local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
@@ -345,10 +348,9 @@ local function update_last_note(overwrite)
     end
 
     local snapshot_filename, audio_filename = construct_media_filenames(sub)
-    local snapshot_timestamp = (sub['start'] + sub['end']) / 2
 
     local create_media = function()
-        encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
+        encoder.create_snapshot(get_time_pos(), snapshot_filename)
         encoder.create_audio(sub['start'], sub['end'], audio_filename)
     end
 
