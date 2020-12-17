@@ -99,6 +99,19 @@ function table.max_num(table)
     return max
 end
 
+---Returns a value for the given key. If key is not available then returns default value 'nil'.
+---@param table table
+---@param key string
+---@param default any
+---@return any
+function table.get(table, key, default)
+    if table[key] == nil then
+        return default or 'nil'
+    else
+        return table[key]
+    end
+end
+
 local function is_empty(var)
     return var == nil or var == '' or (type(var) == 'table' and next(var) == nil)
 end
@@ -333,6 +346,13 @@ local function export_to_anki(gui)
     subs.clear()
 end
 
+local function join_media_fields(new_data, stored_data)
+    for _, field in pairs { config.audio_field, config.image_field } do
+        new_data[field] = table.get(stored_data, field, "") .. table.get(new_data, field, "")
+    end
+    return new_data
+end
+
 local function update_last_note(overwrite)
     local sub = subs.get()
     local last_note_id = ankiconnect.get_last_note_id()
@@ -357,18 +377,6 @@ local function update_last_note(overwrite)
     local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
     ankiconnect.append_media(last_note_id, note_fields, overwrite, create_media)
     subs.clear()
-end
-
-local function join_media_fields(note1, note2)
-    if note2[config.audio_field] then
-        note1[config.audio_field] = note2[config.audio_field] .. (note1[config.audio_field] == nil and "" or note1[config.audio_field])
-    end
-
-    if note2[config.image_field] then
-        note1[config.image_field] = note2[config.image_field] .. (note1[config.image_field] == nil and "" or note1[config.image_field])
-    end
-
-    return note1
 end
 
 local validate_config
