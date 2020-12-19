@@ -432,6 +432,66 @@ do
 end
 
 ------------------------------------------------------------
+-- utility classes
+
+local function new_timings()
+    local self = { ['start'] = -1, ['end'] = -1, }
+    local is_set = function(position)
+        return self[position] >= 0
+    end
+    local set = function(position)
+        self[position] = mp.get_property_number('time-pos')
+    end
+    local get = function(position)
+        return self[position]
+    end
+    return {
+        is_set = is_set,
+        set = set,
+        get = get,
+    }
+end
+
+local function new_sub_list()
+    local subs_list = {}
+    local _is_empty = function()
+        return next(subs_list) == nil
+    end
+    local find_i = function(sub)
+        for i, v in ipairs(subs_list) do
+            if sub < v then
+                return i
+            end
+        end
+        return #subs_list + 1
+    end
+    local get_time = function(position)
+        local i = position == 'start' and 1 or #subs_list
+        return subs_list[i][position]
+    end
+    local get_text = function()
+        local speech = {}
+        for _, sub in ipairs(subs_list) do
+            table.insert(speech, sub['text'])
+        end
+        return table.concat(speech, ' ')
+    end
+    local insert = function(sub)
+        if sub ~= nil and not table.contains(subs_list, sub) then
+            table.insert(subs_list, find_i(sub), sub)
+            return true
+        end
+        return false
+    end
+    return {
+        get_time = get_time,
+        get_text = get_text,
+        is_empty = _is_empty,
+        insert = insert
+    }
+end
+
+------------------------------------------------------------
 -- seeking: sub seek, sub rewind
 
 local function _(params)
@@ -941,63 +1001,6 @@ end
 
 ------------------------------------------------------------
 -- subtitles and timings
-
-local function new_timings()
-    local self = { ['start'] = -1, ['end'] = -1, }
-    local is_set = function(position)
-        return self[position] >= 0
-    end
-    local set = function(position)
-        self[position] = mp.get_property_number('time-pos')
-    end
-    local get = function(position)
-        return self[position]
-    end
-    return {
-        is_set = is_set,
-        set = set,
-        get = get,
-    }
-end
-
-local function new_sub_list()
-    local subs_list = {}
-    local _is_empty = function()
-        return next(subs_list) == nil
-    end
-    local find_i = function(sub)
-        for i, v in ipairs(subs_list) do
-            if sub < v then
-                return i
-            end
-        end
-        return #subs_list + 1
-    end
-    local get_time = function(position)
-        local i = position == 'start' and 1 or #subs_list
-        return subs_list[i][position]
-    end
-    local get_text = function()
-        local speech = {}
-        for _, sub in ipairs(subs_list) do
-            table.insert(speech, sub['text'])
-        end
-        return table.concat(speech, ' ')
-    end
-    local insert = function(sub)
-        if sub ~= nil and not table.contains(subs_list, sub) then
-            table.insert(subs_list, find_i(sub), sub)
-            return true
-        end
-        return false
-    end
-    return {
-        get_time = get_time,
-        get_text = get_text,
-        is_empty = _is_empty,
-        insert = insert
-    }
-end
 
 subs = {
     dialogs = new_sub_list(),
