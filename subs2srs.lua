@@ -491,6 +491,26 @@ local function new_sub_list()
     }
 end
 
+local function make_switch(states)
+    local self = {
+        states = states,
+        current_state = 1
+    }
+    local bump = function()
+        self.current_state = self.current_state + 1
+        if self.current_state > #self.states then
+            self.current_state = 1
+        end
+    end
+    local get = function()
+        return self.states[self.current_state]
+    end
+    return {
+        bump = bump,
+        get = get
+    }
+end
+
 ------------------------------------------------------------
 -- seeking: sub seek, sub rewind
 
@@ -1161,7 +1181,7 @@ end
 
 menu = {
     active = false,
-    show_hints = false,
+    hints_state = make_switch { 'hidden', 'menu', 'global', },
     overlay = mp.create_osd_overlay and mp.create_osd_overlay('ass-events'),
 }
 
@@ -1195,7 +1215,14 @@ menu.update = function()
     osd:item('End time: '):text(human_readable_time(subs.get_timing('end'))):newline()
     osd:item('Clipboard autocopy: '):text(clip_autocopy.is_enabled()):newline()
 
-    if menu.show_hints then
+    if menu.hints_state.get() == 'global' then
+        osd:submenu('Global bindings'):newline()
+        osd:tab():item('ctrl+c: '):text('Copy current subtitle to clipboard'):newline()
+        osd:tab():item('ctrl+h: '):text('Seek to the start of the line'):newline()
+        osd:tab():item('shift+h/l: '):text('Seek to the previous/next subtitle'):newline()
+        osd:tab():item('alt+h/l: '):text('Seek to the previous/next subtitle and pause'):newline()
+        osd:italics("Press "):item('i'):italics(" to hide bindings."):newline()
+    elseif menu.hints_state.get() == 'menu' then
         osd:submenu('Menu bindings'):newline()
         osd:tab():item('c: '):text('Set timings to the current sub'):newline()
         osd:tab():item('s: '):text('Set start time to current position'):newline()
@@ -1206,19 +1233,16 @@ menu.update = function()
         osd:tab():item('m: '):text('Update the last added note '):italics('(+shift to overwrite)'):newline()
         osd:tab():item('t: '):text('Toggle clipboard autocopy'):newline()
         osd:tab():item('ESC: '):text('Close'):newline()
-        osd:submenu('Global bindings'):newline()
-        osd:tab():item('ctrl+c: '):text('Copy current subtitle to clipboard'):newline()
-        osd:tab():item('ctrl+h: '):text('Seek to the start of the line'):newline()
-        osd:tab():item('shift+h/l: '):text('Seek to the previous/next subtitle'):newline()
+        osd:italics("Press "):item('i'):italics(" to show global bindings."):newline()
     else
-        osd:italics("Press "):item('i'):italics(" to toggle hints."):newline()
+        osd:italics("Press "):item('i'):italics(" to show menu bindings."):newline()
     end
 
     menu.overlay_draw(osd:get_text())
 end
 
 menu.hints_toggle = function()
-    menu.show_hints = not menu.show_hints
+    menu.hints_state.bump()
     menu.update()
 end
 
