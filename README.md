@@ -271,12 +271,14 @@ The user may change some of the key bindings, though this step is not necessary.
 Default bindings:
 
 ```
-Ctrl+c script-binding mpvacious-copy-sub-to-clipboard
-Ctrl+e script-binding mpvacious-export-note
-Ctrl+h script-binding mpvacious-sub-rewind
-a      script-binding mpvacious-menu-open
-H      script-binding mpvacious-sub-seek-back
-L      script-binding mpvacious-sub-seek-forward
+Ctrl+c       script-binding mpvacious-copy-sub-to-clipboard
+Ctrl+e       script-binding mpvacious-export-note
+Ctrl+h       script-binding mpvacious-sub-rewind
+a            script-binding mpvacious-menu-open
+H            script-binding mpvacious-sub-seek-back
+L            script-binding mpvacious-sub-seek-forward
+Alt+h        script-binding mpvacious-sub-seek-back-pause
+Alt+l        script-binding mpvacious-sub-seek-forward-pause
 ```
 
 These additional bindings aren't enabled by default but can be accessed via the menu by pressing `a`.
@@ -294,6 +296,7 @@ Ctrl+u script-binding mpvacious-update-last-note
 
 These bindings work everywhere, even if the menu (covered later) is closed.
 * `Shift+h` and `Shift+l` - Seek to the previous or the next subtitle.
+* `Alt+h` and `Alt+l` - Seek to the previous or the next subtitle, and pause.
 * `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
 * `Ctrl+e` - Export a card with the currently visible subtitle line on the front.
 Use this when your subs are perfectly timed and the target sentence doesn't span multiple subs.

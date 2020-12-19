@@ -307,19 +307,6 @@ local function construct_note_fields(sub_text, snapshot_filename, audio_filename
     }
 end
 
-local function _(fn, param1)
-    return function() pcall(fn, param1) end
-end
-
-local function sub_seek(direction)
-    mp.commandv("sub_seek", direction == 'backward' and '-1' or '1')
-    mp.commandv("seek", "0.015", "relative+exact")
-end
-
-local function sub_rewind()
-    mp.commandv('seek', subs.get_current()['start'] + 0.015, 'absolute')
-end
-
 local function minutes_ago(m)
     return (os.time() - 60 * m) * 1000
 end
@@ -442,6 +429,25 @@ do
         set_video_format()
         check_snapshot_settings()
     end
+end
+
+------------------------------------------------------------
+-- seeking: sub seek, sub rewind
+
+local function _(params)
+    return function() return pcall(table.unpack(params)) end
+end
+
+local function sub_seek(direction, pause)
+    mp.commandv("sub_seek", direction == 'backward' and '-1' or '1')
+    mp.commandv("seek", "0.015", "relative+exact")
+    if pause then
+        mp.set_property("pause", "yes")
+    end
+end
+
+local function sub_rewind()
+    mp.commandv('seek', subs.get_current()['start'] + 0.015, 'absolute')
 end
 
 ------------------------------------------------------------
@@ -1327,9 +1333,11 @@ do
         mp.add_key_binding("a", "mpvacious-menu-open", menu.open) -- a for advanced
 
         -- Vim-like seeking between subtitle lines
-        mp.add_key_binding("H", "mpvacious-sub-seek-back", _(sub_seek, 'backward'))
-        mp.add_key_binding("L", "mpvacious-sub-seek-forward", _(sub_seek, 'forward'))
-        mp.add_key_binding("ctrl+h", "mpvacious-sub-rewind", _(sub_rewind))
+        mp.add_key_binding("H", "mpvacious-sub-seek-back", _ { sub_seek, 'backward' })
+        mp.add_key_binding("L", "mpvacious-sub-seek-forward", _ { sub_seek, 'forward' })
+        mp.add_key_binding("Alt+h", "mpvacious-sub-seek-back-pause", _ { sub_seek, 'backward', true })
+        mp.add_key_binding("Alt+l", "mpvacious-sub-seek-forward-pause", _ { sub_seek, 'forward', true })
+        mp.add_key_binding("ctrl+h", "mpvacious-sub-rewind", _ { sub_rewind })
 
         -- Unset by default
         mp.add_key_binding(nil, "mpvacious-set-starting-line", subs.set_starting_line)
