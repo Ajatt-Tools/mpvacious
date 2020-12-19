@@ -72,6 +72,7 @@ local encoder
 local ankiconnect
 local menu
 local platform
+local append_forvo_pronunciation
 
 -- classes
 local Subtitle
@@ -374,8 +375,16 @@ local function update_last_note(overwrite)
         encoder.create_audio(sub['start'], sub['end'], audio_filename)
     end
 
-    local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
-    ankiconnect.append_media(last_note_id, note_fields, overwrite, create_media)
+    local new_data = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
+    local stored_data = ankiconnect.get_note_fields(last_note_id)
+    if stored_data then
+        new_data = append_forvo_pronunciation(new_data, stored_data)
+        if not overwrite then
+            new_data = join_media_fields(new_data, stored_data)
+        end
+    end
+
+    ankiconnect.append_media(last_note_id, new_data, create_media)
     subs.clear()
 end
 
@@ -501,7 +510,6 @@ platform = is_running_windows() and init_platform_windows() or init_platform_nix
 ------------------------------------------------------------
 -- utils for downloading pronunciations from Forvo
 
-local append_forvo_pronunciation
 do
     local base64d -- http://lua-users.org/wiki/BaseSixtyFour
     do
@@ -894,19 +902,11 @@ ankiconnect.gui_browse = function(query)
     }
 end
 
-ankiconnect.append_media = function(note_id, appended_data, overwrite, create_media_fn)
+ankiconnect.append_media = function(note_id, fields, create_media_fn)
     -- AnkiConnect will fail to update the note if it's selected in the Anki Browser.
     -- https://github.com/FooSoft/anki-connect/issues/82
     -- Switch focus from the current note to avoid it.
     ankiconnect.gui_browse("nid:1") -- impossible nid
-
-    local stored_data = ankiconnect.get_note_fields(note_id)
-    if stored_data then
-        appended_data = append_forvo_pronunciation(appended_data, stored_data)
-        if not overwrite then
-            appended_data = join_media_fields(appended_data, stored_data)
-        end
-    end
 
     local args = {
         action = "updateNoteFields",
@@ -914,12 +914,12 @@ ankiconnect.append_media = function(note_id, appended_data, overwrite, create_me
         params = {
             note = {
                 id = note_id,
-                fields = appended_data,
+                fields = fields,
             }
         }
     }
 
-    local result_notify = function(_, result, _)
+    local on_finish = function(_, result, _)
         local _, error = ankiconnect.parse_result(result)
         if not error then
             create_media_fn()
@@ -930,7 +930,7 @@ ankiconnect.append_media = function(note_id, appended_data, overwrite, create_me
         end
     end
 
-    ankiconnect.execute(args, result_notify)
+    ankiconnect.execute(args, on_finish)
 end
 
 ------------------------------------------------------------
