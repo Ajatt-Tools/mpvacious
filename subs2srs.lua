@@ -518,6 +518,44 @@ local function make_switch(states)
     }
 end
 
+local filename_factory = (function()
+    local filename
+
+    local make_media_filename = function()
+        filename = mp.get_property("filename") -- filename without path
+        filename = remove_extension(filename)
+        filename = remove_text_in_brackets(filename)
+        filename = remove_special_characters(filename)
+        filename = anki_compatible_length(filename)
+    end
+
+    local make_audio_filename = function(speech_start, speech_end)
+        return string.format(
+                '%s_%s-%s%s',
+                filename,
+                human_readable_time(speech_start),
+                human_readable_time(speech_end),
+                config.audio_extension
+        )
+    end
+
+    local make_snapshot_filename = function(timestamp)
+        return string.format(
+                '%s_%s%s',
+                filename,
+                human_readable_time(timestamp),
+                config.snapshot_extension
+        )
+    end
+
+    mp.register_event("file-loaded", make_media_filename)
+
+    return {
+        make_audio_filename = make_audio_filename,
+        make_snapshot_filename = make_snapshot_filename,
+    }
+end)()
+
 ------------------------------------------------------------
 -- seeking: sub seek, sub rewind
 
