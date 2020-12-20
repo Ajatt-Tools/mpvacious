@@ -252,60 +252,6 @@ local function subprocess(args, completion_fn)
     return command_native(command_table, completion_fn)
 end
 
-local anki_compatible_length
-do
-    -- Anki forcibly mutilates all filenames longer than 119 bytes when you run `Tools->Check Media...`.
-    local allowed_bytes = 119
-    local timestamp_bytes = #'_99h99m99s999ms-99h99m99s999ms.webp'
-    local limit_bytes = allowed_bytes - timestamp_bytes
-
-    anki_compatible_length = function(str)
-        if #str <= limit_bytes then
-            return str
-        end
-
-        local bytes_per_char = contains_non_latin_letters(str) and #'車' or #'z'
-        local limit_chars = math.floor(limit_bytes / bytes_per_char)
-
-        if limit_chars == limit_bytes then
-            return str:sub(1, limit_bytes)
-        end
-
-        local ret = subprocess {
-            'awk',
-            '-v', string.format('str=%s', str),
-            '-v', string.format('limit=%d', limit_chars),
-            'BEGIN{print substr(str, 1, limit); exit}'
-        }
-
-        if ret.status == 0 then
-            ret.stdout = remove_newlines(ret.stdout)
-            ret.stdout = remove_leading_trailing_spaces(ret.stdout)
-            return ret.stdout
-        else
-            return 'subs2srs_' .. os.time()
-        end
-    end
-end
-
-local function construct_media_filenames(timings)
-    local filename = mp.get_property("filename") -- filename without path
-
-    filename = remove_extension(filename)
-    filename = remove_text_in_brackets(filename)
-    filename = remove_special_characters(filename)
-    filename = anki_compatible_length(filename)
-
-    filename = string.format(
-            '%s_%s-%s',
-            filename,
-            human_readable_time(timings['start']),
-            human_readable_time(timings['end'])
-    )
-
-    return filename .. config.snapshot_extension, filename .. config.audio_extension
-end
-
 local function construct_note_fields(sub_text, snapshot_filename, audio_filename)
     return {
         [config.sentence_field] = sub_text,
@@ -316,10 +262,6 @@ end
 
 local function minutes_ago(m)
     return (os.time() - 60 * m) * 1000
-end
-
-local function get_time_pos()
-    return string.format('%.3f', mp.get_property_number("time-pos", 0))
 end
 
 local function join_media_fields(new_data, stored_data)
@@ -468,31 +410,67 @@ end
 local filename_factory = (function()
     local filename
 
+    local anki_compatible_length = (function()
+        -- Anki forcibly mutilates all filenames longer than 119 bytes when you run `Tools->Check Media...`.
+        local allowed_bytes = 119
+        local timestamp_bytes = #'_99h99m99s999ms-99h99m99s999ms.webp'
+
+        return function(str, timestamp)
+            -- if timestamp provided, recalculate limit_bytes
+            local limit_bytes = allowed_bytes - (timestamp and #timestamp or timestamp_bytes)
+
+            if #str <= limit_bytes then
+                return str
+            end
+
+            local bytes_per_char = contains_non_latin_letters(str) and #'車' or #'z'
+            local limit_chars = math.floor(limit_bytes / bytes_per_char)
+
+            if limit_chars == limit_bytes then
+                return str:sub(1, limit_bytes)
+            end
+
+            local ret = subprocess {
+                'awk',
+                '-v', string.format('str=%s', str),
+                '-v', string.format('limit=%d', limit_chars),
+                'BEGIN{print substr(str, 1, limit); exit}'
+            }
+
+            if ret.status == 0 then
+                ret.stdout = remove_newlines(ret.stdout)
+                ret.stdout = remove_leading_trailing_spaces(ret.stdout)
+                return ret.stdout
+            else
+                return 'subs2srs_' .. os.time()
+            end
+        end
+    end)()
+
     local make_media_filename = function()
         filename = mp.get_property("filename") -- filename without path
         filename = remove_extension(filename)
         filename = remove_text_in_brackets(filename)
         filename = remove_special_characters(filename)
-        filename = anki_compatible_length(filename)
     end
 
     local make_audio_filename = function(speech_start, speech_end)
-        return string.format(
-                '%s_%s-%s%s',
-                filename,
+        local filename_timestamp = string.format(
+                '_%s-%s%s',
                 human_readable_time(speech_start),
                 human_readable_time(speech_end),
                 config.audio_extension
         )
+        return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
     end
 
     local make_snapshot_filename = function(timestamp)
-        return string.format(
-                '%s_%s%s',
-                filename,
+        local filename_timestamp = string.format(
+                '_%s%s',
                 human_readable_time(timestamp),
                 config.snapshot_extension
         )
+        return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
     end
 
     mp.register_event("file-loaded", make_media_filename)
@@ -517,10 +495,11 @@ local function export_to_anki(gui)
         sub['text'] = string.format([[<span id="mpv%s">mpvacious wasn't able to grab subtitles</span>]], os.time())
     end
 
-    local snapshot_filename = filename_factory.make_snapshot_filename(get_time_pos())
+    local snapshot_timestamp = mp.get_property_number("time-pos", 0)
+    local snapshot_filename = filename_factory.make_snapshot_filename(snapshot_timestamp)
     local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'])
 
-    encoder.create_snapshot(get_time_pos(), snapshot_filename)
+    encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
     encoder.create_audio(sub['start'], sub['end'], audio_filename)
 
     local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
@@ -542,11 +521,12 @@ local function update_last_note(overwrite)
         return
     end
 
-    local snapshot_filename = filename_factory.make_snapshot_filename(get_time_pos())
+    local snapshot_timestamp = mp.get_property_number("time-pos", 0)
+    local snapshot_filename = filename_factory.make_snapshot_filename(snapshot_timestamp)
     local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'])
 
     local create_media = function()
-        encoder.create_snapshot(get_time_pos(), snapshot_filename)
+        encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
         encoder.create_audio(sub['start'], sub['end'], audio_filename)
     end
 
