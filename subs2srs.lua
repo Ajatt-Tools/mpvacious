@@ -81,6 +81,10 @@ local OSD
 ------------------------------------------------------------
 -- utility functions
 
+---Returns true if table contains element. Returns false otherwise.
+---@param table table
+---@param element any
+---@return boolean
 function table.contains(table, element)
     for _, value in pairs(table) do
         if value == element then
@@ -90,6 +94,9 @@ function table.contains(table, element)
     return false
 end
 
+---Returns the largest numeric index.
+---@param table table
+---@return number
 function table.max_num(table)
     local max = table[1]
     for _, value in ipairs(table) do
@@ -629,7 +636,7 @@ do
         return url
     end
 
-    local function audio_reencode(source_path, dest_path)
+    local function reencode(source_path, dest_path)
         local args = {
             'mpv',
             source_path,
@@ -651,7 +658,7 @@ do
 
     local function reencode_and_store(source_path, filename)
         local reencoded_path = utils.join_path(platform.tmp_dir(), 'reencoded_' .. filename)
-        audio_reencode(source_path, reencoded_path)
+        reencode(source_path, reencoded_path)
         local result = ankiconnect.store_file(filename, reencoded_path)
         os.remove(reencoded_path)
         return result
@@ -700,17 +707,20 @@ do
         return result
     end
 
-    append_forvo_pronunciation = function(appended_data, stored_data)
+    append_forvo_pronunciation = function(new_data, stored_data)
         if config.use_forvo == 'no' then
-            return appended_data
+            -- forvo functionality was disabled in the config file
+            return new_data
         end
 
         if type(stored_data[config.vocab_audio_field]) ~= 'string' then
-            return appended_data
+            -- there is no field configured to store forvo pronunciation
+            return new_data
         end
 
         if is_empty(stored_data[config.vocab_field]) then
-            return appended_data
+            -- target word field is empty. can't continue.
+            return new_data
         end
 
         if config.use_forvo == 'always' or is_empty(stored_data[config.vocab_audio_field]) then
@@ -718,14 +728,14 @@ do
             if not is_empty(forvo_pronunciation) then
                 if config.vocab_audio_field == config.audio_field then
                     -- improperly configured fields. don't lose sentence audio
-                    appended_data[config.vocab_audio_field] = forvo_pronunciation .. appended_data[config.vocab_audio_field]
+                    new_data[config.audio_field] = forvo_pronunciation .. new_data[config.audio_field]
                 else
-                    appended_data[config.vocab_audio_field] = forvo_pronunciation
+                    new_data[config.vocab_audio_field] = forvo_pronunciation
                 end
             end
         end
 
-        return appended_data
+        return new_data
     end
 end
 

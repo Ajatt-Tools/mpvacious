@@ -262,6 +262,7 @@ as they greatly reduce the size of the generated files.
 ### Key bindings
 
 The user may change some of the key bindings, though this step is not necessary.
+See [Usage](#usage) for the explanation of what they do.
 
 | OS | Config location |
 | --- | --- |
