@@ -322,64 +322,11 @@ local function get_time_pos()
     return string.format('%.3f', mp.get_property_number("time-pos", 0))
 end
 
-local function export_to_anki(gui)
-    local sub = subs.get()
-    if sub == nil then
-        notify("Nothing to export.", "warn", 1)
-        return
-    end
-    if not gui and is_empty(sub['text']) then
-        sub['text'] = string.format([[<span id="mpv%s">mpvacious wasn't able to grab subtitles</span>]], os.time())
-    end
-    local snapshot_filename, audio_filename = construct_media_filenames(sub)
-
-    encoder.create_snapshot(get_time_pos(), snapshot_filename)
-    encoder.create_audio(sub['start'], sub['end'], audio_filename)
-
-    local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
-    ankiconnect.add_note(note_fields, gui)
-    subs.clear()
-end
-
 local function join_media_fields(new_data, stored_data)
     for _, field in pairs { config.audio_field, config.image_field } do
         new_data[field] = table.get(stored_data, field, "") .. table.get(new_data, field, "")
     end
     return new_data
-end
-
-local function update_last_note(overwrite)
-    local sub = subs.get()
-    local last_note_id = ankiconnect.get_last_note_id()
-
-    if sub == nil or is_empty(sub['text']) then
-        notify("Nothing to export. Have you set the timings?", "warn", 2)
-        return
-    end
-
-    if last_note_id < minutes_ago(10) then
-        notify("Couldn't find the target note.", "warn", 2)
-        return
-    end
-
-    local snapshot_filename, audio_filename = construct_media_filenames(sub)
-
-    local create_media = function()
-        encoder.create_snapshot(get_time_pos(), snapshot_filename)
-        encoder.create_audio(sub['start'], sub['end'], audio_filename)
-    end
-
-    local new_data = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
-    local stored_data = ankiconnect.get_note_fields(last_note_id)
-    if stored_data then
-        new_data = append_forvo_pronunciation(new_data, stored_data)
-        if not overwrite then
-            new_data = join_media_fields(new_data, stored_data)
-        end
-    end
-
-    ankiconnect.append_media(last_note_id, new_data, create_media)
-    subs.clear()
 end
 
 local validate_config
@@ -555,6 +502,66 @@ local filename_factory = (function()
         make_snapshot_filename = make_snapshot_filename,
     }
 end)()
+
+------------------------------------------------------------
+-- front for adding and updating notes
+
+local function export_to_anki(gui)
+    local sub = subs.get()
+    if sub == nil then
+        notify("Nothing to export.", "warn", 1)
+        return
+    end
+
+    if not gui and is_empty(sub['text']) then
+        sub['text'] = string.format([[<span id="mpv%s">mpvacious wasn't able to grab subtitles</span>]], os.time())
+    end
+
+    local snapshot_filename = filename_factory.make_snapshot_filename(get_time_pos())
+    local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'])
+
+    encoder.create_snapshot(get_time_pos(), snapshot_filename)
+    encoder.create_audio(sub['start'], sub['end'], audio_filename)
+
+    local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
+    ankiconnect.add_note(note_fields, gui)
+    subs.clear()
+end
+
+local function update_last_note(overwrite)
+    local sub = subs.get()
+    local last_note_id = ankiconnect.get_last_note_id()
+
+    if sub == nil or is_empty(sub['text']) then
+        notify("Nothing to export. Have you set the timings?", "warn", 2)
+        return
+    end
+
+    if last_note_id < minutes_ago(10) then
+        notify("Couldn't find the target note.", "warn", 2)
+        return
+    end
+
+    local snapshot_filename = filename_factory.make_snapshot_filename(get_time_pos())
+    local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'])
+
+    local create_media = function()
+        encoder.create_snapshot(get_time_pos(), snapshot_filename)
+        encoder.create_audio(sub['start'], sub['end'], audio_filename)
+    end
+
+    local new_data = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
+    local stored_data = ankiconnect.get_note_fields(last_note_id)
+    if stored_data then
+        new_data = append_forvo_pronunciation(new_data, stored_data)
+        if not overwrite then
+            new_data = join_media_fields(new_data, stored_data)
+        end
+    end
+
+    ankiconnect.append_media(last_note_id, new_data, create_media)
+    subs.clear()
+end
 
 ------------------------------------------------------------
 -- seeking: sub seek, sub rewind
