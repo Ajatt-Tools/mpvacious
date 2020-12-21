@@ -544,11 +544,44 @@ local function update_last_note(overwrite)
 end
 
 ------------------------------------------------------------
--- seeking: sub seek, sub rewind
+-- seeking: sub replay, sub seek, sub rewind
 
 local function _(params)
     local unpack = unpack and unpack or table.unpack
     return function() return pcall(unpack(params)) end
+end
+
+local pause_timer = (function()
+    local stop_time = -1
+    local check_stop
+    local set_stop_time = function(time)
+        stop_time = time
+    end
+    local stop = function()
+        mp.unobserve_property(check_stop)
+        stop_time = -1
+    end
+    check_stop = function(_, time)
+        if time > stop_time then
+            stop()
+            mp.set_property("pause", "yes")
+        else
+            notify('Timer: ' .. human_readable_time(stop_time - time))
+        end
+    end
+    return {
+        set_stop_time = set_stop_time,
+        check_stop = check_stop,
+        stop = stop,
+    }
+end)()
+
+local function sub_replay()
+    local sub = subs.get_current()
+    pause_timer.set_stop_time(sub['end'] - 0.050)
+    mp.commandv('seek', sub['start'], 'absolute')
+    mp.set_property("pause", "no")
+    mp.observe_property("time-pos", "number", pause_timer.check_stop)
 end
 
 local function sub_seek(direction, pause)
@@ -557,10 +590,12 @@ local function sub_seek(direction, pause)
     if pause then
         mp.set_property("pause", "yes")
     end
+    pause_timer.stop()
 end
 
 local function sub_rewind()
     mp.commandv('seek', subs.get_current()['start'] + 0.015, 'absolute')
+    pause_timer.stop()
 end
 
 ------------------------------------------------------------
@@ -1255,6 +1290,7 @@ menu.update = function()
         osd:submenu('Global bindings'):newline()
         osd:tab():item('ctrl+c: '):text('Copy current subtitle to clipboard'):newline()
         osd:tab():item('ctrl+h: '):text('Seek to the start of the line'):newline()
+        osd:tab():item('ctrl+shift+h: '):text('Replay current subtitle'):newline()
         osd:tab():item('shift+h/l: '):text('Seek to the previous/next subtitle'):newline()
         osd:tab():item('alt+h/l: '):text('Seek to the previous/next subtitle and pause'):newline()
         osd:italics("Press "):item('i'):italics(" to hide bindings."):newline()
@@ -1398,9 +1434,12 @@ do
         -- Vim-like seeking between subtitle lines
         mp.add_key_binding("H", "mpvacious-sub-seek-back", _ { sub_seek, 'backward' })
         mp.add_key_binding("L", "mpvacious-sub-seek-forward", _ { sub_seek, 'forward' })
+
         mp.add_key_binding("Alt+h", "mpvacious-sub-seek-back-pause", _ { sub_seek, 'backward', true })
         mp.add_key_binding("Alt+l", "mpvacious-sub-seek-forward-pause", _ { sub_seek, 'forward', true })
+
         mp.add_key_binding("ctrl+h", "mpvacious-sub-rewind", _ { sub_rewind })
+        mp.add_key_binding("ctrl+H", "mpvacious-sub-replay", _ { sub_replay })
 
         -- Unset by default
         mp.add_key_binding(nil, "mpvacious-set-starting-line", subs.set_starting_line)
