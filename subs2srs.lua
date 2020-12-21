@@ -547,7 +547,8 @@ end
 -- seeking: sub seek, sub rewind
 
 local function _(params)
-    return function() return pcall(table.unpack(params)) end
+    local unpack = unpack and unpack or table.unpack
+    return function() return pcall(unpack(params)) end
 end
 
 local function sub_seek(direction, pause)
