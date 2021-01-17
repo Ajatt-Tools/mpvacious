@@ -7,6 +7,8 @@ assignees: ''
 
 ---
 
+>Before making a new issue please seek help in the [matrix chat](https://app.element.io/#/room/#djt:g33k.se). Thank you.
+
 **Environment:**
  - OS: [e.g. Parabola, Debian]
  - OS version
