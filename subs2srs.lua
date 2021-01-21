@@ -612,6 +612,7 @@ local function init_platform_windows()
     end
 
     self.copy_to_clipboard = function(text)
+        text = text:gsub("&", "^^^&")
         mp.commandv("run", "cmd.exe", "/d", "/c", string.format("@echo off & chcp 65001 & echo %s|clip", text))
     end
 
