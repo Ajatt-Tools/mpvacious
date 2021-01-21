@@ -175,9 +175,10 @@ end
 
 local function remove_text_in_parentheses(str)
     -- Remove text like （泣き声） or （ドアの開く音）
+    -- No deletion is performed if there's no text after the parentheses.
     -- Note: the modifier `-´ matches zero or more occurrences.
     -- However, instead of matching the longest sequence, it matches the shortest one.
-    return str:gsub('%b()', ''):gsub('（.-）', '')
+    return str:gsub('(%b())(.)', '%2'):gsub('(（.-）)(.)', '%2')
 end
 
 local function remove_newlines(str)
