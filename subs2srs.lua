@@ -328,6 +328,20 @@ do
     end
 end
 
+local function update_sentence(new_data, stored_data)
+    -- adds support for TSCs
+    -- https://tatsumoto-ren.github.io/blog/discussing-various-card-templates.html#targeted-sentence-cards-or-mpvacious-cards
+    -- if the target word was marked by yomichan, this function makes sure that the highlighting doesn't get erased.
+    local _, target, _ = stored_data[config.sentence_field]:match('^(.-)<b>(.-)</b>(.-)$')
+    if target then
+        local prefix, _, suffix = new_data[config.sentence_field]:match(table.concat { '^(.-)(', target, ')(.-)$' })
+        if prefix and suffix then
+            new_data[config.sentence_field] = table.concat { prefix, '<b>', target, '</b>', suffix }
+        end
+    end
+    return new_data
+end
+
 ------------------------------------------------------------
 -- utility classes
 
@@ -535,6 +549,7 @@ local function update_last_note(overwrite)
     local stored_data = ankiconnect.get_note_fields(last_note_id)
     if stored_data then
         new_data = append_forvo_pronunciation(new_data, stored_data)
+        new_data = update_sentence(new_data, stored_data)
         if not overwrite then
             new_data = join_media_fields(new_data, stored_data)
         end
