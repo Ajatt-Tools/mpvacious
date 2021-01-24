@@ -314,22 +314,26 @@ do
         config[dimension] = config[dimension] > 640 and 640 or config[dimension]
     end
 
-    local function check_snapshot_settings()
+    local function conditionally_set_defaults(width, height, quality)
+        if config[width] < 1 and config[height] < 1 then
+            config[width] = -2
+            config[height] = 200
+        end
+        if config[quality] < 0 or config[quality] > 100 then
+            config[quality] = 15
+        end
+    end
+
+    local function check_image_settings()
         ensure_in_range('snapshot_width')
         ensure_in_range('snapshot_height')
-        if config.snapshot_width < 1 and config.snapshot_height < 1 then
-            config.snapshot_width = -2
-            config.snapshot_height = 200
-        end
-        if config.snapshot_quality < 0 or config.snapshot_quality > 100 then
-            config.snapshot_quality = 15
-        end
+        conditionally_set_defaults('snapshot_width', 'snapshot_height', 'snapshot_quality')
     end
 
     validate_config = function()
         set_audio_format()
         set_video_format()
-        check_snapshot_settings()
+        check_image_settings()
     end
 end
 
