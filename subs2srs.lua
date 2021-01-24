@@ -36,6 +36,7 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 ]]
 
 local config = {
+    -- Common
     autoclip = false,              -- enable copying subs to the clipboard when mpv starts
     nuke_spaces = true,            -- remove all spaces from exported anki cards
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
@@ -46,17 +47,21 @@ local config = {
     audio_format = "opus",         -- opus or mp3
     audio_bitrate = "18k",         -- from 16k to 32k
     audio_padding = 0.12,          -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
+    tie_volumes = false,           -- if set to true, the volume of the outputted audio file depends on the volume of the player at the time of export
+    menu_font_size = 25,
+
+    -- Anki
     deck_name = "Learning",        -- the deck will be created if needed
     model_name = "Japanese sentences",  -- Tools -> Manage note types
     sentence_field = "SentKanji",
     audio_field = "SentAudio",
+    image_field = "Image",
+    note_tag = "subs2srs",      -- the tag that is added to new notes. change to "" to disable tagging
+
+    -- Forvo support
     use_forvo = "yes",                  -- 'yes', 'no', 'always'
     vocab_field = "VocabKanji",         -- target word field
     vocab_audio_field = "VocabAudio",   -- target word audio
-    image_field = "Image",
-    menu_font_size = 25,
-    note_tag = "subs2srs",      -- the tag that is added to new notes. change to "" to disable tagging
-    tie_volumes = false,        -- if set to true, the volume of the outputted audio file depends on the volume of the player at the time of export
 }
 
 local utils = require('mp.utils')
