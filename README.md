@@ -20,6 +20,7 @@ while watching your favorite TV show.
 * [Requirements](#requirements)
 * [Installation](#installation)
     * [Manually](#manually)
+    * [From the AUR](#from-the-aur)
     * [Using curl](#using-curl)
     * [Using git](#using-git)
     * [Updating with git](#updating-with-git)
@@ -101,6 +102,10 @@ in  the [mpv scripts](https://github.com/mpv-player/mpv/wiki/User-Scripts) folde
 user scripts are installed by switching to the "Plugins" tab
 in the preferences dialog and dropping the files there.
 
+### From the AUR
+
+mpvacious can be installed with the [mpv-mpvacious](https://aur.archlinux.org/packages/mpv-mpvacious/) package.
+
 ### Using curl
 
 ```
@@ -108,7 +113,6 @@ $ curl -o ~/.config/mpv/scripts/subs2srs.lua 'https://raw.githubusercontent.com/
 ```
 
 ### Using git
-However, if you want to keep up with the updates, it's better to install the script using `git`.
 
 If you already have your dotfiles set up according to
 [Arch Wiki recommendations](https://wiki.archlinux.org/index.php/Dotfiles#Tracking_dotfiles_directly_with_Git), execute:
