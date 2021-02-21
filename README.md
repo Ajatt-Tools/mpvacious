@@ -109,7 +109,7 @@ mpvacious can be installed with the [mpv-mpvacious](https://aur.archlinux.org/pa
 ### Using curl
 
 ```
-$ curl -o ~/.config/mpv/scripts/subs2srs.lua 'https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua'
+$ curl -o ~/.config/mpv/scripts/subs2srs.lua --create-dirs 'https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua'
 ```
 
 ### Using git
