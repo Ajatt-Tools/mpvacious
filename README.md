@@ -4,11 +4,12 @@
 
 # mpvacious
 
-[![Chat](https://img.shields.io/badge/matrix_chat-join-green.svg)](https://nerdsin.space/#/room/#djt:g33k.se)
+[![Chat](https://img.shields.io/badge/chat-join-green.svg)](https://tatsumoto-ren.github.io/blog/join-our-community.html)
 ![GitHub](https://img.shields.io/github/license/Ajatt-Tools/mpvacious)
-[![Patreon](https://img.shields.io/badge/support-patreon-orange)](https://www.patreon.com/tatsumoto_ren)
+[![Patreon](https://img.shields.io/badge/support-patreon-orange)](https://www.patreon.com/bePatron?u=43555128)
 ![GitHub top language](https://img.shields.io/github/languages/top/Ajatt-Tools/mpvacious)
 ![Lines of code](https://img.shields.io/tokei/lines/github/Ajatt-Tools/mpvacious)
+[![AUR](https://img.shields.io/badge/AUR-install-blue.svg)](https://aur.archlinux.org/packages/mpv-mpvacious/)
 
 mpvacious is your semi-automatic subs2srs for mpv.
 It supports multiple workflows and allows you to quickly create Anki cards
