@@ -1222,32 +1222,48 @@ end
 ------------------------------------------------------------
 -- send subs to clipboard as they appear
 
-clip_autocopy = {}
-
-clip_autocopy.enable = function()
-    mp.observe_property("sub-text", "string", copy_to_clipboard)
-    notify("Clipboard autocopy has been enabled.", "info", 1)
-end
-
-clip_autocopy.disable = function()
-    mp.unobserve_property(copy_to_clipboard)
-    notify("Clipboard autocopy has been disabled.", "info", 1)
-end
-
-clip_autocopy.toggle = function()
-    if config.autoclip == true then
-        clip_autocopy.disable()
-        config.autoclip = false
-    else
-        clip_autocopy.enable()
-        config.autoclip = true
+clip_autocopy = (function()
+    local enable = function()
+        mp.observe_property("sub-text", "string", copy_to_clipboard)
     end
-    menu.update()
-end
 
-clip_autocopy.is_enabled = function()
-    return config.autoclip == true and 'enabled' or 'disabled'
-end
+    local disable = function()
+        mp.unobserve_property(copy_to_clipboard)
+    end
+
+    local state_notify = function()
+        notify(string.format("Clipboard autocopy has been %s.", config.autoclip and 'enabled' or 'disabled'))
+    end
+
+    local toggle = function()
+        config.autoclip = not config.autoclip
+        if config.autoclip == true then
+            clip_autocopy.enable()
+        else
+            clip_autocopy.disable()
+        end
+        state_notify()
+        menu.update()
+    end
+
+    local is_enabled = function()
+        return config.autoclip == true and 'enabled' or 'disabled'
+    end
+
+    local init = function()
+        if config.autoclip == true then
+            clip_autocopy.enable()
+        end
+    end
+
+    return {
+        enable = enable,
+        disable = disable,
+        init = init,
+        toggle = toggle,
+        is_enabled = is_enabled,
+    }
+end)()
 
 ------------------------------------------------------------
 -- Subtitle class provides methods for comparing subtitle lines
@@ -1450,7 +1466,7 @@ do
         if main_executed then return end
         validate_config()
         ankiconnect.create_deck(config.deck_name)
-        if config.autoclip == true then clip_autocopy.enable() end
+        clip_autocopy.init()
 
         -- Key bindings
         mp.add_forced_key_binding("ctrl+e", "mpvacious-export-note", export_to_anki)
