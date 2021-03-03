@@ -1085,6 +1085,19 @@ ankiconnect.gui_browse = function(query)
     }
 end
 
+ankiconnect.add_tag = function(note_id, tag)
+    if not is_empty(tag) then
+        ankiconnect.execute {
+            action = 'addTags',
+            version = 6,
+            params = {
+                notes = { note_id },
+                tags = tag
+            }
+        }
+    end
+end
+
 ankiconnect.append_media = function(note_id, fields, create_media_fn)
     -- AnkiConnect will fail to update the note if it's selected in the Anki Browser.
     -- https://github.com/FooSoft/anki-connect/issues/82
@@ -1106,6 +1119,7 @@ ankiconnect.append_media = function(note_id, fields, create_media_fn)
         local _, error = ankiconnect.parse_result(result)
         if not error then
             create_media_fn()
+            ankiconnect.add_tag(note_id, config.note_tag)
             ankiconnect.gui_browse(string.format("nid:%s", note_id)) -- select the updated note in the card browser
             notify(string.format("Note #%s updated.", note_id))
         else
