@@ -1238,9 +1238,9 @@ clip_autocopy = (function()
     local toggle = function()
         config.autoclip = not config.autoclip
         if config.autoclip == true then
-            clip_autocopy.enable()
+            enable()
         else
-            clip_autocopy.disable()
+            disable()
         end
         state_notify()
         menu.update()
@@ -1252,7 +1252,7 @@ clip_autocopy = (function()
 
     local init = function()
         if config.autoclip == true then
-            clip_autocopy.enable()
+            enable()
         end
     end
 
