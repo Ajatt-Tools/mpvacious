@@ -81,11 +81,19 @@ Install all dependencies at once (on [Arch-based](https://www.parabola.nu/)
 $ sudo pacman -Syu mpv anki curl xclip --needed
 ```
 
-If you're on **Windows** machine, watch [this tutorial](https://youtu.be/bbg6ztWecbU?t=103).
+## Prerequisites
+
+* If you're on a **Windows** machine, watch [this tutorial](https://youtu.be/bbg6ztWecbU?t=103).
 Make sure you choose a build by `shinchiro`,
 otherwise you may encounter problems when making Anki cards.
-
-**macOS** users should use [homebrew](https://brew.sh/) or manually add `mpv` to `PATH`.
+* **macOS** users should use [homebrew](https://brew.sh/) or manually add `mpv` to `PATH`.
+* If you're using a GNU/Linux distro different from Arch Linux,
+make sure that your build of mpv supports encoding of audio and images.
+To test that, this shell command can be used:
+  ```
+  $ mpv 'test_video.mkv' --loop-file=no --frames=1 -o='test_image.jpg'
+  ```
+  If the command fails, find a compatible build on the [mpv website](https://mpv.io/installation/).
 
 ## Installation
 
