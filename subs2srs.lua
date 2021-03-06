@@ -56,7 +56,8 @@ local config = {
     sentence_field = "SentKanji",
     audio_field = "SentAudio",
     image_field = "Image",
-    note_tag = "subs2srs",      -- the tag that is added to new notes. change to "" to disable tagging
+    note_tag = "subs2srs",         -- the tag that is added to new notes. change to "" to disable tagging
+    append_media = true,           -- True to append video media after existing data, false to insert media before
 
     -- Forvo support
     use_forvo = "yes",                  -- 'yes', 'no', 'always'
@@ -560,7 +561,11 @@ local function update_last_note(overwrite)
         new_data = append_forvo_pronunciation(new_data, stored_data)
         new_data = update_sentence(new_data, stored_data)
         if not overwrite then
-            new_data = join_media_fields(new_data, stored_data)
+            if config.append_media then
+                new_data = join_media_fields(new_data, stored_data)
+            else
+                new_data = join_media_fields(stored_data, new_data)
+            end
         end
     end
 
