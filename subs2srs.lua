@@ -51,7 +51,8 @@ local config = {
     menu_font_size = 25,
 
     -- Anki
-    deck_name = "Learning",        -- the deck will be created if needed
+    create_deck = false,                -- automatically create a deck for new cards
+    deck_name = "Learning",             -- name of the deck for new cards
     model_name = "Japanese sentences",  -- Tools -> Manage note types
     sentence_field = "SentKanji",
     audio_field = "SentAudio",
@@ -1484,8 +1485,10 @@ do
     main = function()
         if main_executed then return end
         validate_config()
-        ankiconnect.create_deck(config.deck_name)
         clip_autocopy.init()
+        if config.create_deck == true then
+                ankiconnect.create_deck(config.deck_name)
+        end
 
         -- Key bindings
         mp.add_forced_key_binding("ctrl+e", "mpvacious-export-note", export_to_anki)
