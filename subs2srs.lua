@@ -343,6 +343,12 @@ local function update_sentence(new_data, stored_data)
     -- adds support for TSCs
     -- https://tatsumoto-ren.github.io/blog/discussing-various-card-templates.html#targeted-sentence-cards-or-mpvacious-cards
     -- if the target word was marked by yomichan, this function makes sure that the highlighting doesn't get erased.
+
+    if is_empty(stored_data[config.sentence_field]) then
+        -- sentence field is empty. can't continue.
+        return new_data
+    end
+
     local _, opentag, target, closetag, _ = stored_data[config.sentence_field]:match('^(.-)(<[^>]+>)(.-)(</[^>]+>)(.-)$')
     if target then
         local prefix, _, suffix = new_data[config.sentence_field]:match(table.concat { '^(.-)(', target, ')(.-)$' })
