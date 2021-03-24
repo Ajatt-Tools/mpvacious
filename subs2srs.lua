@@ -1110,6 +1110,7 @@ end
 
 ankiconnect.add_tag = function(note_id, tag)
     if not is_empty(tag) then
+        tag = substitute_tag(tag)
         ankiconnect.execute {
             action = 'addTags',
             version = 6,
