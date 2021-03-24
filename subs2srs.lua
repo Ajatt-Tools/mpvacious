@@ -57,8 +57,9 @@ local config = {
     sentence_field = "SentKanji",
     audio_field = "SentAudio",
     image_field = "Image",
-    note_tag = "subs2srs",         -- the tag that is added to new notes. change to "" to disable tagging
-    append_media = true,           -- True to append video media after existing data, false to insert media before
+    note_tag = "subs2srs",         -- the tag that is added to new notes. change to "" to disable tagging. %n for video title, %t for timestamp. Spaces separate tags.
+    tag_nuke_brackets = true,      -- delete all text inside brackets before subsituting filename into tag
+    append_media=true,             -- True to append video media after existing data, false to insert media before
 
     -- Forvo support
     use_forvo = "yes",                  -- 'yes', 'no', 'always'
@@ -357,6 +358,17 @@ local function update_sentence(new_data, stored_data)
         end
     end
     return new_data
+end
+
+local function substitute_tag(tag)
+    tag = tag:gsub("%%t", human_readable_time(mp.get_property_number('time-pos')))
+    filename = remove_extension(mp.get_property("filename"))
+    if (config.tag_nuke_brackets) then
+        filename = remove_text_in_brackets(filename)
+    end
+    filename = remove_leading_trailing_spaces(filename):gsub(" ","_")
+    tag = tag:gsub("%%n", filename)
+    return tag
 end
 
 ------------------------------------------------------------
@@ -1019,7 +1031,7 @@ end
 
 ankiconnect.add_note = function(note_fields, gui)
     local action = gui and 'guiAddCards' or 'addNote'
-    local tags = is_empty(config.note_tag) and {} or { config.note_tag }
+    local tags = is_empty(config.note_tag) and {} or { substitute_tag(config.note_tag) }
     local args = {
         action = action,
         version = 6,
@@ -1099,6 +1111,7 @@ end
 
 ankiconnect.add_tag = function(note_id, tag)
     if not is_empty(tag) then
+        tag = substitute_tag(tag)
         ankiconnect.execute {
             action = 'addTags',
             version = 6,
