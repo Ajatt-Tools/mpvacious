@@ -59,6 +59,7 @@ local config = {
     image_field = "Image",
     note_tag = "subs2srs",         -- the tag that is added to new notes. change to "" to disable tagging. %n for video title, %t for timestamp. Spaces separate tags.
     tag_nuke_brackets = true,      -- delete all text inside brackets before subsituting filename into tag
+    append_media=true,             -- True to append video media after existing data, false to insert media before
 
     -- Forvo support
     use_forvo = "yes",                  -- 'yes', 'no', 'always'
