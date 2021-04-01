@@ -57,10 +57,17 @@ local config = {
     sentence_field = "SentKanji",
     audio_field = "SentAudio",
     image_field = "Image",
-    note_tag = "subs2srs",         -- the tag that is added to new notes. change to "" to disable tagging. %n for video title, %t for timestamp. Spaces separate tags.
-    tag_envvar = "SUBS2SRS_TAGS",
     tag_nuke_brackets = true,      -- delete all text inside brackets before subsituting filename into tag
     append_media=true,             -- True to append video media after existing data, false to insert media before
+
+    -- Note tagging
+    -- The tag(s) added to new notes. Spaces separate multiple tags.
+    -- Change to "" to disable tagging completely.
+    -- The following substitutions are supported:
+    --   %n - the name of the video
+    --   %t - timestamp
+    --   %e - SUBS2SRS_TAGS environment variable
+    note_tag = "subs2srs",
 
     -- Forvo support
     use_forvo = "yes",                  -- 'yes', 'no', 'always'
@@ -127,13 +134,6 @@ function table.get(table, key, default)
     else
         return table[key]
     end
-end
-
-function table.join(a, b)
-    res = {}
-    if a then for _, v in ipairs(a) do res[#res + 1] = v end end
-    if b then for _, v in ipairs(b) do res[#res + 1] = v end end
-    return res
 end
 
 local function is_empty(var)
@@ -368,24 +368,38 @@ local function update_sentence(new_data, stored_data)
     return new_data
 end
 
-local function substitute_tag(tag)
-    tag = tag:gsub("%%t", human_readable_time(mp.get_property_number('time-pos')))
-    filename = remove_extension(mp.get_property("filename"))
-    if (config.tag_nuke_brackets) then
-        filename = remove_text_in_brackets(filename)
+local function tag_format(str)
+    if config.tag_nuke_brackets == true then
+        str = remove_text_in_brackets(str)
     end
-    filename = remove_leading_trailing_spaces(filename):gsub(" ","_")
-    tag = tag:gsub("%%n", filename)
-    return tag
+    str = remove_extension(str)
+    str = remove_leading_trailing_spaces(str)
+    str = str:gsub(" ", "_")
+    return str
 end
 
-function split (inputstr)
-        local t={}
-        if not inputstr then return t end
-        for str in string.gmatch(inputstr, "%S+") do
-                table.insert(t, str)
-        end
-        return t
+local function substitute_tag(tag)
+    local function substitute_filename(_tag)
+        local filename = tag_format(mp.get_property("filename"))
+        return _tag:gsub("%%n", filename)
+    end
+
+    local function substitute_time_pos(_tag)
+        local time_pos = human_readable_time(mp.get_property_number('time-pos'))
+        return _tag:gsub("%%t", time_pos)
+    end
+
+    local function substitute_envvar(_tag)
+        local env_tags = os.getenv('SUBS2SRS_TAGS') or ''
+        return _tag:gsub("%%e", env_tags)
+    end
+
+    tag = substitute_time_pos(tag)
+    tag = substitute_filename(tag)
+    tag = substitute_envvar(tag)
+    tag = remove_leading_trailing_spaces(tag)
+
+    return tag
 end
 
 ------------------------------------------------------------
@@ -1049,7 +1063,6 @@ end
 ankiconnect.add_note = function(note_fields, gui)
     local action = gui and 'guiAddCards' or 'addNote'
     local tags = is_empty(config.note_tag) and {} or { substitute_tag(config.note_tag) }
-    tags = table.join(tags, split(os.getenv(config.tag_envvar)))
     local args = {
         action = action,
         version = 6,
