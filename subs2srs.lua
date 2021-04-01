@@ -58,6 +58,7 @@ local config = {
     audio_field = "SentAudio",
     image_field = "Image",
     note_tag = "subs2srs",         -- the tag that is added to new notes. change to "" to disable tagging. %n for video title, %t for timestamp. Spaces separate tags.
+    tag_envvar = "SUBS2SRS_TAGS",
     tag_nuke_brackets = true,      -- delete all text inside brackets before subsituting filename into tag
     append_media=true,             -- True to append video media after existing data, false to insert media before
 
@@ -126,6 +127,13 @@ function table.get(table, key, default)
     else
         return table[key]
     end
+end
+
+function table.join(a, b)
+    res = {}
+    if a then for _, v in ipairs(a) do res[#res + 1] = v end end
+    if b then for _, v in ipairs(b) do res[#res + 1] = v end end
+    return res
 end
 
 local function is_empty(var)
@@ -369,6 +377,15 @@ local function substitute_tag(tag)
     filename = remove_leading_trailing_spaces(filename):gsub(" ","_")
     tag = tag:gsub("%%n", filename)
     return tag
+end
+
+function split (inputstr)
+        local t={}
+        if not inputstr then return t end
+        for str in string.gmatch(inputstr, "%S+") do
+                table.insert(t, str)
+        end
+        return t
 end
 
 ------------------------------------------------------------
@@ -1032,6 +1049,7 @@ end
 ankiconnect.add_note = function(note_fields, gui)
     local action = gui and 'guiAddCards' or 'addNote'
     local tags = is_empty(config.note_tag) and {} or { substitute_tag(config.note_tag) }
+    tags = table.join(tags, split(os.getenv(config.tag_envvar)))
     local args = {
         action = action,
         version = 6,
