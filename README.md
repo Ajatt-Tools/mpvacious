@@ -171,7 +171,7 @@ mpv doesn't tolerate spaces before and after `=`.
 </p>
 
 Sentence field should be first in the note type settings.
-Otherwise Anki won't allow mpvacious to add new notes.
+Otherwise, Anki won't allow mpvacious to add new notes.
 Alternatively, refer to [Modifying cards added with Yomichan](#modifying-cards-added-with-yomichan)
 or use an addon that [allows empty first field](https://ankiweb.net/shared/info/46741504).
 
@@ -185,7 +185,7 @@ as they greatly reduce the size of the generated files.
 
 ### Key bindings
 
-The user may change some of the key bindings, though this step is not necessary.
+The user may change some key bindings, though this step is not necessary.
 See [Usage](#usage) for the explanation of what they do.
 
 | OS | Config location |
@@ -222,11 +222,11 @@ Ctrl+u script-binding mpvacious-update-last-note
 
 These bindings work everywhere, even if the menu (covered later) is closed.
 * `Shift+h` and `Shift+l` - Seek to the previous or the next subtitle.
-* `Alt+h` and `Alt+l` - Seek to the previous or the next subtitle, and pause.
+* `Alt+h` and `Alt+l` - Seek to the previous, or the next subtitle, and pause.
 * `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
 * `Ctrl+Shift+h` - Replay current subtitle line, and pause.
 * `Ctrl+e` - Export a card with the currently visible subtitle line on the front.
-Use this when your subs are perfectly timed and the target sentence doesn't span multiple subs.
+Use this when your subs are perfectly timed, and the target sentence doesn't span multiple subs.
 * `Ctrl+c` - Copy current subtitle string to the system clipboard. For automatic copying see
 [Modifying cards added with Yomichan](#modifying-cards-added-with-yomichan).
 
@@ -238,7 +238,7 @@ Let's say your subs are still perfectly timed,
 but the sentence you want to add is split between multiple subs.
 We need to combine the lines before making a card.
 * `c` - Set timings to the current sub and remember the corresponding line.
-It does nothing if there's no subs on screen.
+It does nothing if there are no subs on screen.
 
 Then seek with `shift+h` and `shift+l` to the previous/next line that you want to add.
 Press `n` to make the card.
@@ -298,7 +298,7 @@ With the addon you can make cards like this in just a few seconds.
 
 ### Audio cards
 
-It is possible to make a card with just audio and a picture
+It is possible to make a card with just audio, and a picture
 when subtitles for the show you are watching aren't available, for example.
 mpv by default allows you to do a `1` second exact seek by pressing `Shift+LEFT` and `Shift+RIGHT`.
 Open the mpvacious menu by pressing `a`, seek to the position you need, and set the timings.
