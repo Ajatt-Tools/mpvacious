@@ -22,7 +22,6 @@ while watching your favorite TV show.
 * [Installation](#installation)
     * [Manually](#manually)
     * [From the AUR](#from-the-aur)
-    * [Using curl](#using-curl)
     * [Using git](#using-git)
     * [Updating with git](#updating-with-git)
 * [Configuration](#configuration)
@@ -117,12 +116,6 @@ in the preferences dialog and dropping the files there.
 ### From the AUR
 
 mpvacious can be installed with the [mpv-mpvacious](https://aur.archlinux.org/packages/mpv-mpvacious/) package.
-
-### Using curl
-
-```
-$ curl -o ~/.config/mpv/scripts/subs2srs.lua --create-dirs 'https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua'
-```
 
 ### Using git
 
