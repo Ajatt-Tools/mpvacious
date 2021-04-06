@@ -99,8 +99,11 @@ To test that, this shell command can be used:
 
 ### Manually
 
-Save [subs2srs.lua](https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua)
-in  the [mpv scripts](https://github.com/mpv-player/mpv/wiki/User-Scripts) folder:
+Download the repository or
+[the latest release](https://github.com/Ajatt-Tools/mpvacious/releases)
+and extract the folder containing
+[subs2srs.lua](https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua)
+to your [mpv scripts](https://github.com/mpv-player/mpv/wiki/User-Scripts) directory:
 
 | OS | Location |
 | --- | --- |

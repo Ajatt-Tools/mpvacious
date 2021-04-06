@@ -1,22 +1,27 @@
-PROJECT = mpvacious
-VERSION = v0.14
-MD2HTML = md2html --github --full-html
-ZIP     = $(PROJECT)_$(VERSION).zip
-SCRIPT  = $(PROJECT)_$(VERSION).lua
-BRANCH  = remotes/origin/master
+PROJECT     = mpvacious
+VERSION     = v0.14
+MD2HTML     = md2html --github --full-html
+ZIP         = $(PROJECT)_$(VERSION).zip
+BRANCH      = remotes/origin/master
+DOCS        = README_$(VERSION).html
+RELEASE_DIR = .github/RELEASE
 
-.PHONY: all clean
+.PHONY: all clean docs
 
 all: $(ZIP)
+docs: $(DOCS)
 
-$(ZIP): $(PROJECT)
-	zip -r $@ -- $^
+$(ZIP): $(DOCS)
+	cd -- "$$(git rev-parse --show-toplevel)" && \
+	git archive \
+	--prefix=$(PROJECT)_$(VERSION)/ \
+	--format=zip \
+	-o $(RELEASE_DIR)/$@ \
+	--add-file=$(RELEASE_DIR)/$(DOCS) \
+	$(BRANCH) \
 
-$(PROJECT):
-	mkdir -p -- ./$@
-	git show "$(BRANCH):subs2srs.lua" > ./$@/$(SCRIPT)
-	git show "$(BRANCH):README.md" | $(MD2HTML) -o ./$@/README_$(VERSION).html
-	git show "$(BRANCH):LICENSE" > ./$@/LICENSE
+$(DOCS):
+	git show "$(BRANCH):README.md" | $(MD2HTML) -o $@
 
 clean:
-	rm -rf -- ./$(PROJECT)*
+	rm -- $(ZIP) $(DOCS)
