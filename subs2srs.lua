@@ -1529,11 +1529,14 @@ end
 ------------------------------------------------------------
 -- main
 
-local main
-do
+local main = (function()
     local main_executed = false
-    main = function()
-        if main_executed then return end
+    return function()
+        if main_executed then
+            return
+        else
+            main_executed = true
+        end
         validate_config()
         clip_autocopy.init()
         if config.create_deck == true then
@@ -1561,7 +1564,7 @@ do
         mp.add_key_binding(nil, "mpvacious-toggle-sub-autocopy", clip_autocopy.toggle)
         mp.add_key_binding(nil, "mpvacious-update-last-note", update_last_note)
 
-        main_executed = true
     end
-end
+end)()
+
 mp.register_event("file-loaded", main)
