@@ -118,12 +118,6 @@ in the preferences dialog and dropping the files there.
 
 mpvacious can be installed with the [mpv-mpvacious](https://aur.archlinux.org/packages/mpv-mpvacious/) package.
 
-### Using curl
-
-```
-$ curl -o ~/.config/mpv/scripts/subs2srs.lua --create-dirs 'https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua'
-```
-
 ### Using git
 
 If you already have your dotfiles set up according to
