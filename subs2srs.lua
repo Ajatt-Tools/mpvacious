@@ -75,9 +75,11 @@ local config = {
     vocab_audio_field = "VocabAudio",   -- target word audio
 }
 
+local mp = require('mp')
 local utils = require('mp.utils')
 local msg = require('mp.msg')
 local mpopt = require('mp.options')
+local OSD = require('osd_styler')
 
 mpopt.read_options(config, "subs2srs")
 
@@ -92,7 +94,6 @@ local append_forvo_pronunciation
 
 -- classes
 local Subtitle
-local OSD
 
 ------------------------------------------------------------
 -- utility functions
@@ -1460,70 +1461,6 @@ menu.close = function()
 
     menu.overlay:remove()
     menu.active = false
-end
-
-------------------------------------------------------------
--- Helper class for styling OSD messages
--- http://docs.aegisub.org/3.2/ASS_Tags/
-
-OSD = {}
-OSD.__index = OSD
-
-function OSD:new()
-    return setmetatable({ messages = { } }, self)
-end
-
-function OSD:append(s)
-    table.insert(self.messages, s)
-    return self
-end
-
-function OSD:bold(s)
-    return self:append('{\\b1}'):append(s):append('{\\b0}')
-end
-
-function OSD:italics(s)
-    return self:color('ffffff'):append('{\\i1}'):append(s):append('{\\i0}')
-end
-
-function OSD:color(code)
-    return self:append('{\\1c&H')
-               :append(code:sub(5, 6))
-               :append(code:sub(3, 4))
-               :append(code:sub(1, 2))
-               :append('&}')
-end
-
-function OSD:text(text)
-    return self:color('ffffff'):append(text)
-end
-
-function OSD:submenu(text)
-    return self:color('ffe1d0'):bold(text)
-end
-
-function OSD:item(text)
-    return self:color('fef6dd'):bold(text)
-end
-
-function OSD:newline()
-    return self:append('\\N')
-end
-
-function OSD:tab()
-    return self:append('\\h\\h\\h\\h')
-end
-
-function OSD:size(size)
-    return self:append('{\\fs'):append(size):append('}')
-end
-
-function OSD:align(number)
-    return self:append('{\\an'):append(number):append('}')
-end
-
-function OSD:get_text()
-    return table.concat(self.messages)
 end
 
 ------------------------------------------------------------
