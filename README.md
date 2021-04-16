@@ -98,7 +98,9 @@ To test that, this shell command can be used:
 
 ### Manually
 
-Download the repository or
+Download
+[the repository](https://github.com/Ajatt-Tools/mpvacious/archive/refs/heads/master.zip)
+or
 [the latest release](https://github.com/Ajatt-Tools/mpvacious/releases)
 and extract the folder containing
 [subs2srs.lua](https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua)
@@ -112,6 +114,22 @@ to your [mpv scripts](https://github.com/mpv-player/mpv/wiki/User-Scripts) direc
 **Note:** in [Celluloid](https://www.archlinux.org/packages/community/x86_64/celluloid/)
 user scripts are installed by switching to the "Plugins" tab
 in the preferences dialog and dropping the files there.
+
+<details>
+
+<summary>Expected directory tree</summary>
+
+```
+~/.config/mpv/scripts
+|-- other_addon_1
+|-- other_addon_2
+`-- mpvacious
+    |-- main.lua
+    |-- ...
+    `-- subs2srs.lua
+```
+
+</details>
 
 ### From the AUR
 
