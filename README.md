@@ -186,11 +186,11 @@ mpv doesn't tolerate spaces before and after `=`.
 
 Sentence field should be first in the note type settings.
 Otherwise, Anki won't allow mpvacious to add new notes.
-Alternatively, refer to [Modifying cards added with Yomichan](#modifying-cards-added-with-yomichan)
-or use an addon that [allows empty first field](https://ankiweb.net/shared/info/46741504).
 
-**Tip**: Try [this note type](https://ankiweb.net/shared/info/1557722832)
+**Tip**: Try [our official note type](https://ankiweb.net/shared/info/1557722832)
 if you don't want to configure note fields yourself.
+Alternatively, we have a collection of user-created note types, which you can browse
+[here](https://github.com/Ajatt-Tools/AnkiNoteTypes).
 
 If you are having problems playing media files on older mobile devices,
 set `audio_format` to `mp3` and/or `snapshot_format` to `jpg`.
