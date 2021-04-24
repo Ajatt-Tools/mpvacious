@@ -147,17 +147,6 @@ If not, either proceed to Arch Wiki and come back when you're done, or simply cl
 ```
 $ git clone 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
 ```
-Since you've just cloned the script to its own subfolder,
-you need to tell mpv where to look for it.
-
-**Note:** the step below is not necessary if you're running mpv `v0.33` or newer.
-
-Open or create  `~/.config/mpv/scripts/modules.lua` and add these lines:
-```
-local mpv_scripts_dir_path = os.getenv("HOME") ..  "/.config/mpv/scripts/"
-function load(relative_path) dofile(mpv_scripts_dir_path .. relative_path) end
-load("subs2srs/subs2srs.lua")
-```
 
 ### Updating with git
 
