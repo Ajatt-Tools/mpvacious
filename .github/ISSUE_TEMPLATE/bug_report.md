@@ -7,7 +7,8 @@ assignees: ''
 
 ---
 
->Before making a new issue please seek help in the [matrix chat](https://app.element.io/#/room/#djt:g33k.se). Thank you.
+Before creating a new issue please seek help in our chat. Thank you!
+https://tatsumoto-ren.github.io/blog/join-our-community
 
 **Environment:**
  - OS: [e.g. Parabola, Debian]
