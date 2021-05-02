@@ -57,8 +57,10 @@ local config = {
     sentence_field = "SentKanji",
     audio_field = "SentAudio",
     image_field = "Image",
-    tag_nuke_brackets = true,      -- delete all text inside brackets before subsituting filename into tag
-    append_media=true,             -- True to append video media after existing data, false to insert media before
+    miscinfo_field = "Notes",           -- misc notes and source information field
+    miscinfo_format = "%n (%t)",        -- format string to use for the miscinfo_field, accepts note_tag-style format strings
+    tag_nuke_brackets = true,           -- delete all text inside brackets before subsituting filename into tag
+    append_media = true,                -- True to append video media after existing data, false to insert media before
 
     -- Note tagging
     -- The tag(s) added to new notes. Spaces separate multiple tags.
@@ -270,11 +272,46 @@ local function subprocess(args, completion_fn)
     return command_native(command_table, completion_fn)
 end
 
+local function tag_format(str)
+    if config.tag_nuke_brackets == true then
+        str = remove_text_in_brackets(str)
+    end
+    str = remove_extension(str)
+    str = remove_leading_trailing_spaces(str)
+    str = str:gsub(" ", "_")
+    return str
+end
+
+local function substitute_fmt(tag)
+    local function substitute_filename(_tag)
+        local filename = tag_format(mp.get_property("filename"))
+        return _tag:gsub("%%n", filename)
+    end
+
+    local function substitute_time_pos(_tag)
+        local time_pos = human_readable_time(mp.get_property_number('time-pos'))
+        return _tag:gsub("%%t", time_pos)
+    end
+
+    local function substitute_envvar(_tag)
+        local env_tags = os.getenv('SUBS2SRS_TAGS') or ''
+        return _tag:gsub("%%e", env_tags)
+    end
+
+    tag = substitute_time_pos(tag)
+    tag = substitute_filename(tag)
+    tag = substitute_envvar(tag)
+    tag = remove_leading_trailing_spaces(tag)
+
+    return tag
+end
+
 local function construct_note_fields(sub_text, snapshot_filename, audio_filename)
     return {
         [config.sentence_field] = sub_text,
         [config.image_field] = string.format('<img alt="snapshot" src="%s">', snapshot_filename),
         [config.audio_field] = string.format('[sound:%s]', audio_filename),
+        [config.miscinfo_field] = substitute_fmt(config.miscinfo_format),
     }
 end
 
@@ -283,7 +320,7 @@ local function minutes_ago(m)
 end
 
 local function join_media_fields(new_data, stored_data)
-    for _, field in pairs { config.audio_field, config.image_field } do
+    for _, field in pairs { config.audio_field, config.image_field, config.miscinfo_field } do
         new_data[field] = table.get(stored_data, field, "") .. table.get(new_data, field, "")
     end
     return new_data
@@ -367,40 +404,6 @@ local function update_sentence(new_data, stored_data)
         end
     end
     return new_data
-end
-
-local function tag_format(str)
-    if config.tag_nuke_brackets == true then
-        str = remove_text_in_brackets(str)
-    end
-    str = remove_extension(str)
-    str = remove_leading_trailing_spaces(str)
-    str = str:gsub(" ", "_")
-    return str
-end
-
-local function substitute_tag(tag)
-    local function substitute_filename(_tag)
-        local filename = tag_format(mp.get_property("filename"))
-        return _tag:gsub("%%n", filename)
-    end
-
-    local function substitute_time_pos(_tag)
-        local time_pos = human_readable_time(mp.get_property_number('time-pos'))
-        return _tag:gsub("%%t", time_pos)
-    end
-
-    local function substitute_envvar(_tag)
-        local env_tags = os.getenv('SUBS2SRS_TAGS') or ''
-        return _tag:gsub("%%e", env_tags)
-    end
-
-    tag = substitute_time_pos(tag)
-    tag = substitute_filename(tag)
-    tag = substitute_envvar(tag)
-    tag = remove_leading_trailing_spaces(tag)
-
-    return tag
 end
 
 ------------------------------------------------------------
@@ -1063,7 +1066,7 @@ end
 
 ankiconnect.add_note = function(note_fields, gui)
     local action = gui and 'guiAddCards' or 'addNote'
-    local tags = is_empty(config.note_tag) and {} or { substitute_tag(config.note_tag) }
+    local tags = is_empty(config.note_tag) and {} or { substitute_fmt(config.note_tag) }
     local args = {
         action = action,
         version = 6,
@@ -1143,7 +1146,7 @@ end
 
 ankiconnect.add_tag = function(note_id, tag)
     if not is_empty(tag) then
-        tag = substitute_tag(tag)
+        tag = substitute_fmt(tag)
         ankiconnect.execute {
             action = 'addTags',
             version = 6,
