@@ -1,5 +1,5 @@
 <p align="center">
-<img src="https://user-images.githubusercontent.com/69171671/94564113-1dc82b80-0257-11eb-8cc9-1c7d7b6973a0.png"/>
+<img src="https://user-images.githubusercontent.com/69171671/117440218-4ae26800-af23-11eb-87b4-1d9026fc953f.png"/>
 </p>
 
 # mpvacious
