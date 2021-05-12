@@ -60,6 +60,8 @@ local config = {
     miscinfo_field = "Notes",           -- misc notes and source information field
     miscinfo_format = "%n (%t)",        -- format string to use for the miscinfo_field, accepts note_tag-style format strings
     tag_nuke_brackets = true,           -- delete all text inside brackets before subsituting filename into tag
+    tag_nuke_parentheses = false,       -- delete all text inside parentheses before subsituting filename into tag
+    tag_del_episode_num = false,        -- delete the episode number if found
     append_media = true,                -- True to append video media after existing data, false to insert media before
 
     -- Note tagging
@@ -68,6 +70,7 @@ local config = {
     -- The following substitutions are supported:
     --   %n - the name of the video
     --   %t - timestamp
+    --   %d - episode number (if none found, returns nothing)
     --   %e - SUBS2SRS_TAGS environment variable
     note_tag = "subs2srs",
 
@@ -192,6 +195,15 @@ local function remove_text_in_brackets(str)
     return str:gsub('%b[]', ''):gsub('【.-】', '')
 end
 
+local function remove_filename_text_in_parentheses(str)
+    return str:gsub('%b()', ''):gsub('（.-）', '')
+end
+
+local function remove_common_resolutions(str)
+    -- Also removes empty leftover parentheses and brackets.
+    return str:gsub("2160p", ""):gsub("1080p", ""):gsub("720p", ""):gsub("576p", ""):gsub("480p", ""):gsub("%(%)", ""):gsub("%[%]", "")
+end
+
 local function remove_text_in_parentheses(str)
     -- Remove text like （泣き声） or （ドアの開く音）
     -- No deletion is performed if there's no text after the parentheses.
@@ -206,6 +218,10 @@ end
 
 local function remove_leading_trailing_spaces(str)
     return str:gsub('^%s*(.-)%s*$', '%1')
+end
+
+local function remove_leading_trailing_dashes(str)
+    return str:gsub('^[%-_]*(.-)[%-_]*$', '%1')
 end
 
 local function remove_all_spaces(str)
@@ -226,6 +242,51 @@ local function trim(str)
     str = remove_newlines(str)
     return str
 end
+
+local function cut_episode_number(filename)
+    -- Reverses the filename to start the search from the end as the media title might contain similar numbers.
+    local tmp_name = filename:reverse()
+    -- Trying different patterns. 
+    -- Starting with E or EP (case-insensitive). "Example Series S01E01"
+    local s, e, episode = string.find(tmp_name, "%s?(%d?%d?%d)[pP]?[eE]")      
+    if episode == nil then
+        -- Surrounded by parentheses. "Example Series (12)"
+        s, e, episode = string.find(tmp_name, "%)(%d?%d?%d)%(")
+    end
+    if episode == nil then
+        -- Surrounded by brackets. "Example Series [01]"
+        s, e, episode = string.find(tmp_name, "%](%d?%d?%d)%[")
+    end
+    if episode == nil then
+        -- Surrounded by whitespace. "Example Series 124 [1080p 10-bit]"
+        s, e, episode = string.find(tmp_name, "%s(%d?%d?%d)%s")
+    end
+    if episode == nil then
+        -- Surrounded by underscores. "Example_Series_04_1080p"
+        s, e, episode = string.find(tmp_name, "_(%d?%d?%d)_")
+    end
+    if episode == nil then
+        -- Ending to the episode number. "Example Series 124"
+        s, e, episode = string.find(tmp_name, "^(%d?%d?%d)[%s_]")
+    end
+
+    -- Returns the original filename and no episode number if nothing found.
+    if episode == nil then
+        return filename, ""
+    end
+
+    filename = remove_leading_trailing_spaces(filename)
+
+    if config.tag_del_episode_num == true then
+        -- Removing everything after the episode number including itself.
+        filename = tmp_name:sub(e+1, -1):reverse()
+        -- If ever needed, with this it's possible to delete only the episode number.
+        -- filename = tmp_name:gsub(tmp_name:sub(s, e), ""):reverse()
+    end
+
+    return filename, episode:reverse()
+end
+
 
 local function copy_to_clipboard(_, text)
     if not is_empty(text) then
@@ -273,19 +334,35 @@ local function subprocess(args, completion_fn)
 end
 
 local function tag_format(str)
+    str = remove_extension(str)
+    str = remove_common_resolutions(str)
+
+    -- Find the episode number before removing any brackets or parentheses.
+    str, episode = cut_episode_number(str)
+
     if config.tag_nuke_brackets == true then
         str = remove_text_in_brackets(str)
     end
-    str = remove_extension(str)
+    if config.tag_nuke_parentheses == true then
+        str = remove_filename_text_in_parentheses(str)
+    end
+
     str = remove_leading_trailing_spaces(str)
     str = str:gsub(" ", "_")
-    return str
+    str = str:gsub("_%-_", "_") -- Replaces garbage _-_ substrings with a underscore
+    str = remove_leading_trailing_dashes(str)
+    return str, episode
 end
 
 local function substitute_fmt(tag)
+    local filename, episode = tag_format(mp.get_property("filename"))
+
     local function substitute_filename(_tag)
-        local filename = tag_format(mp.get_property("filename"))
         return _tag:gsub("%%n", filename)
+    end
+
+    local function episode_number(_tag)
+        return _tag:gsub("%%d", episode)
     end
 
     local function substitute_time_pos(_tag)
@@ -298,8 +375,9 @@ local function substitute_fmt(tag)
         return _tag:gsub("%%e", env_tags)
     end
 
-    tag = substitute_time_pos(tag)
     tag = substitute_filename(tag)
+    tag = episode_number(tag)
+    tag = substitute_time_pos(tag)
     tag = substitute_envvar(tag)
     tag = remove_leading_trailing_spaces(tag)
 
