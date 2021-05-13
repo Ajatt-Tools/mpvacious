@@ -354,7 +354,7 @@ local function substitute_fmt(tag)
         return _tag:gsub("%%n", filename)
     end
 
-    local function episode_number(_tag)
+    local function substitute_episode_number(_tag)
         return _tag:gsub("%%d", episode)
     end
 
@@ -369,7 +369,7 @@ local function substitute_fmt(tag)
     end
 
     tag = substitute_filename(tag)
-    tag = episode_number(tag)
+    tag = substitute_episode_number(tag)
     tag = substitute_time_pos(tag)
     tag = substitute_envvar(tag)
     tag = remove_leading_trailing_spaces(tag)
