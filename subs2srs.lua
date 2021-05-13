@@ -326,25 +326,25 @@ local function subprocess(args, completion_fn)
     return command_native(command_table, completion_fn)
 end
 
-local function tag_format(str)
-    str = remove_extension(str)
-    str = remove_common_resolutions(str)
+local function tag_format(filename)
+    filename = remove_extension(filename)
+    filename = remove_common_resolutions(filename)
 
     -- Find the episode number before removing any brackets or parentheses.
-    str, episode = cut_episode_number(str)
+    filename, episode = cut_episode_number(filename)
 
     if config.tag_nuke_brackets == true then
-        str = remove_text_in_brackets(str)
+        filename = remove_text_in_brackets(filename)
     end
     if config.tag_nuke_parentheses == true then
-        str = remove_filename_text_in_parentheses(str)
+        filename = remove_filename_text_in_parentheses(filename)
     end
 
-    str = remove_leading_trailing_spaces(str)
-    str = str:gsub(" ", "_")
-    str = str:gsub("_%-_", "_") -- Replaces garbage _-_ substrings with a underscore
-    str = remove_leading_trailing_dashes(str)
-    return str, episode
+    filename = remove_leading_trailing_spaces(filename)
+    filename = filename:gsub(" ", "_")
+    filename = filename:gsub("_%-_", "_") -- Replaces garbage _-_ substrings with a underscore
+    filename = remove_leading_trailing_dashes(filename)
+    return filename, episode
 end
 
 local function substitute_fmt(tag)
