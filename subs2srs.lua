@@ -259,9 +259,10 @@ local function cut_episode_number(filename)
     }
 
     local s, e, episode = nil, nil, nil
-    for i= 1, #ep_num_patterns do
+
+    for _, pattern in pairs(ep_num_patterns) do
         if episode ~= nil then break end
-        s, e, episode = string.find(tmp_name, ep_num_patterns[i])
+        s, e, episode = string.find(tmp_name, pattern)
     end
 
     -- Returns the original filename and no episode number if nothing found.
