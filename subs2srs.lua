@@ -67,14 +67,14 @@ local config = {
     --   %t - timestamp
     --   %d - episode number (if none found, returns nothing)
     --   %e - SUBS2SRS_TAGS environment variable
-    note_tag = "subs2srs",
+    note_tag = "subs2srs %n",
     tag_nuke_brackets = true,           -- delete all text inside brackets before subsituting filename into tag
     tag_nuke_parentheses = false,       -- delete all text inside parentheses before subsituting filename into tag
-    tag_del_episode_num = false,        -- delete the episode number if found
+    tag_del_episode_num = true,         -- delete the episode number if found
 
     -- Misc info
     miscinfo_field = "Notes",           -- misc notes and source information field
-    miscinfo_format = "%n (%t)",        -- format string to use for the miscinfo_field, accepts note_tag-style format strings
+    miscinfo_format = "%n EP%d (%t)",   -- format string to use for the miscinfo_field, accepts note_tag-style format strings
 
     -- Forvo support
     use_forvo = "yes",                  -- 'yes', 'no', 'always'
