@@ -57,11 +57,6 @@ local config = {
     sentence_field = "SentKanji",
     audio_field = "SentAudio",
     image_field = "Image",
-    miscinfo_field = "Notes",           -- misc notes and source information field
-    miscinfo_format = "%n (%t)",        -- format string to use for the miscinfo_field, accepts note_tag-style format strings
-    tag_nuke_brackets = true,           -- delete all text inside brackets before subsituting filename into tag
-    tag_nuke_parentheses = false,       -- delete all text inside parentheses before subsituting filename into tag
-    tag_del_episode_num = false,        -- delete the episode number if found
     append_media = true,                -- True to append video media after existing data, false to insert media before
 
     -- Note tagging
@@ -73,6 +68,13 @@ local config = {
     --   %d - episode number (if none found, returns nothing)
     --   %e - SUBS2SRS_TAGS environment variable
     note_tag = "subs2srs",
+    tag_nuke_brackets = true,           -- delete all text inside brackets before subsituting filename into tag
+    tag_nuke_parentheses = false,       -- delete all text inside parentheses before subsituting filename into tag
+    tag_del_episode_num = false,        -- delete the episode number if found
+
+    -- Misc info
+    miscinfo_field = "Notes",           -- misc notes and source information field
+    miscinfo_format = "%n (%t)",        -- format string to use for the miscinfo_field, accepts note_tag-style format strings
 
     -- Forvo support
     use_forvo = "yes",                  -- 'yes', 'no', 'always'
