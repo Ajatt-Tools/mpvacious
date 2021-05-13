@@ -246,34 +246,24 @@ end
 local function cut_episode_number(filename)
     -- Reverses the filename to start the search from the end as the media title might contain similar numbers.
     local tmp_name = filename:reverse()
-    -- Trying different patterns. 
-    -- Starting with E or EP (case-insensitive). "Example Series S01E01"
-    local s, e, episode = string.find(tmp_name, "%s?(%d?%d?%d)[pP]?[eE]")      
-    if episode == nil then
-        -- Surrounded by parentheses. "Example Series (12)"
-        s, e, episode = string.find(tmp_name, "%)(%d?%d?%d)%(")
-    end
-    if episode == nil then
-        -- Surrounded by brackets. "Example Series [01]"
-        s, e, episode = string.find(tmp_name, "%](%d?%d?%d)%[")
-    end
-    if episode == nil then
-        -- Surrounded by whitespace. "Example Series 124 [1080p 10-bit]"
-        s, e, episode = string.find(tmp_name, "%s(%d?%d?%d)%s")
-    end
-    if episode == nil then
-        -- Surrounded by underscores. "Example_Series_04_1080p"
-        s, e, episode = string.find(tmp_name, "_(%d?%d?%d)_")
-    end
-    if episode == nil then
-        -- Ending to the episode number. "Example Series 124"
-        s, e, episode = string.find(tmp_name, "^(%d?%d?%d)[%s_]")
+
+    ep_num_patterns = {
+        "%s?(%d?%d?%d)[pP]?[eE]", -- Starting with E or EP (case-insensitive). "Example Series S01E01"
+        "%)(%d?%d?%d)%(",         -- Surrounded by parentheses. "Example Series (12)"
+        "%](%d?%d?%d)%[",         -- Surrounded by brackets. "Example Series [01]"
+        "%s(%d?%d?%d)%s",         -- Surrounded by whitespace. "Example Series 124 [1080p 10-bit]"
+        "_(%d?%d?%d)_",           -- Surrounded by underscores. "Example_Series_04_1080p"
+        "^(%d?%d?%d)[%s_]"        -- Ending to the episode number. "Example Series 124"
+    }
+
+    local s, e, episode = nil, nil, nil
+    for i= 1, #ep_num_patterns do
+        if episode ~= nil then break end
+        s, e, episode = string.find(tmp_name, ep_num_patterns[i])
     end
 
     -- Returns the original filename and no episode number if nothing found.
-    if episode == nil then
-        return filename, ""
-    end
+    if episode == nil then return filename, "" end
 
     filename = remove_leading_trailing_spaces(filename)
 
