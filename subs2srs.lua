@@ -249,7 +249,7 @@ local function cut_episode_number(filename)
     -- Reverses the filename to start the search from the end as the media title might contain similar numbers.
     local tmp_name = filename:reverse()
 
-    ep_num_patterns = {
+    local ep_num_patterns = {
         "%s?(%d?%d?%d)[pP]?[eE]", -- Starting with E or EP (case-insensitive). "Example Series S01E01"
         "%)(%d?%d?%d)%(",         -- Surrounded by parentheses. "Example Series (12)"
         "%](%d?%d?%d)%[",         -- Surrounded by brackets. "Example Series [01]"
