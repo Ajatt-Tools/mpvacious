@@ -71,6 +71,7 @@ local config = {
     tag_nuke_brackets = true,           -- delete all text inside brackets before subsituting filename into tag
     tag_nuke_parentheses = false,       -- delete all text inside parentheses before subsituting filename into tag
     tag_del_episode_num = true,         -- delete the episode number if found
+    tag_filename_lowercase = false,     -- convert filename to lowercase for tagging.
 
     -- Misc info
     miscinfo_field = "Notes",           -- misc notes and source information field
@@ -331,6 +332,10 @@ local function tag_format(filename)
     end
     if config.tag_nuke_parentheses == true then
         filename = remove_filename_text_in_parentheses(filename)
+    end
+
+    if config.tag_filename_lowercase == true then
+        filename = filename:lower()
     end
 
     filename = remove_leading_trailing_spaces(filename)
