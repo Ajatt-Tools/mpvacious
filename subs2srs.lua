@@ -245,42 +245,6 @@ local function trim(str)
     return str
 end
 
-local function cut_episode_number(filename)
-    -- Reverses the filename to start the search from the end as the media title might contain similar numbers.
-    local tmp_name = filename:reverse()
-
-    local ep_num_patterns = {
-        "%s?(%d?%d?%d)[pP]?[eE]", -- Starting with E or EP (case-insensitive). "Example Series S01E01"
-        "%)(%d?%d?%d)%(",         -- Surrounded by parentheses. "Example Series (12)"
-        "%](%d?%d?%d)%[",         -- Surrounded by brackets. "Example Series [01]"
-        "%s(%d?%d?%d)%s",         -- Surrounded by whitespace. "Example Series 124 [1080p 10-bit]"
-        "_(%d?%d?%d)_",           -- Surrounded by underscores. "Example_Series_04_1080p"
-        "^(%d?%d?%d)[%s_]"        -- Ending to the episode number. "Example Series 124"
-    }
-
-    local s, e, episode = nil, nil, nil
-
-    for _, pattern in pairs(ep_num_patterns) do
-        if episode ~= nil then break end
-        s, e, episode = string.find(tmp_name, pattern)
-    end
-
-    -- Returns the original filename and no episode number if nothing found.
-    if episode == nil then return filename, "" end
-
-    filename = remove_leading_trailing_spaces(filename)
-
-    if config.tag_del_episode_num == true then
-        -- Removing everything after the episode number including itself.
-        filename = tmp_name:sub(e+1, -1):reverse()
-        -- If ever needed, with this it's possible to delete only the episode number.
-        -- filename = tmp_name:gsub(tmp_name:sub(s, e), ""):reverse()
-    end
-
-    return filename, episode:reverse()
-end
-
-
 local function copy_to_clipboard(_, text)
     if not is_empty(text) then
         text = config.clipboard_trim_enabled and trim(text) or remove_newlines(text)
@@ -326,12 +290,41 @@ local function subprocess(args, completion_fn)
     return command_native(command_table, completion_fn)
 end
 
+local function get_episode_number(filename)
+    -- Reverses the filename to start the search from the end as the media title might contain similar numbers.
+    local filename_reversed = filename:reverse()
+
+    local ep_num_patterns = {
+        "%s?(%d?%d?%d)[pP]?[eE]", -- Starting with E or EP (case-insensitive). "Example Series S01E01"
+        "%)(%d?%d?%d)%(",         -- Surrounded by parentheses. "Example Series (12)"
+        "%](%d?%d?%d)%[",         -- Surrounded by brackets. "Example Series [01]"
+        "%s(%d?%d?%d)%s",         -- Surrounded by whitespace. "Example Series 124 [1080p 10-bit]"
+        "_(%d?%d?%d)_",           -- Surrounded by underscores. "Example_Series_04_1080p"
+        "^(%d?%d?%d)[%s_]"        -- Ending to the episode number. "Example Series 124"
+    }
+
+    local episode
+    for _, pattern in pairs(ep_num_patterns) do
+        if episode ~= nil then break end
+        _, _, episode = string.find(filename_reversed, pattern)
+    end
+
+    if not is_empty(episode) then
+         return episode:reverse()
+    else
+        return ''
+    end
+end
+
 local function tag_format(filename)
+    local episode = get_episode_number(filename)
+
+    if config.tag_del_episode_num == true then
+        filename = filename:gsub(episode, '')
+    end
+
     filename = remove_extension(filename)
     filename = remove_common_resolutions(filename)
-
-    -- Find the episode number before removing any brackets or parentheses.
-    filename, episode = cut_episode_number(filename)
 
     if config.tag_nuke_brackets == true then
         filename = remove_text_in_brackets(filename)
