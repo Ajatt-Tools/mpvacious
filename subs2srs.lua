@@ -297,26 +297,21 @@ local function get_episode_number(filename)
     local filename_reversed = filename:reverse()
 
     local ep_num_patterns = {
-        "%s?(%d?%d?%d)[pP]?[eE]", -- Starting with E or EP (case-insensitive). "Example Series S01E01"
-        "%)(%d?%d?%d)%(",         -- Surrounded by parentheses. "Example Series (12)"
-        "%](%d?%d?%d)%[",         -- Surrounded by brackets. "Example Series [01]"
-        "%s(%d?%d?%d)%s",         -- Surrounded by whitespace. "Example Series 124 [1080p 10-bit]"
-        "_(%d?%d?%d)_",           -- Surrounded by underscores. "Example_Series_04_1080p"
-        "^(%d?%d?%d)[%s_]"        -- Ending to the episode number. "Example Series 124"
+        "%s?(%d?%d?%d)[pP]?[eE]",  -- Starting with E or EP (case-insensitive). "Example Series S01E01"
+        "%)(%d?%d?%d)%(",          -- Surrounded by parentheses. "Example Series (12)"
+        "%](%d?%d?%d)%[",          -- Surrounded by brackets. "Example Series [01]"
+        "%s(%d?%d?%d)%s",          -- Surrounded by whitespace. "Example Series 124 [1080p 10-bit]"
+        "_(%d?%d?%d)_",            -- Surrounded by underscores. "Example_Series_04_1080p"
+        "^(%d?%d?%d)[%s_]",        -- Ending to the episode number. "Example Series 124"
     }
 
-    local episode
+    local s, e, episode_num
     for _, pattern in pairs(ep_num_patterns) do
-        if episode ~= nil then break end
-        _, ep_end_position, episode = string.find(filename_reversed, pattern)
-    end
-
-    if not is_empty(episode) then
-        -- As the string (from where the end position is) was reversed,
-        -- subtracting the end_position from the length of the filename will get us the start position
-        return episode:reverse(), string.len(filename) - ep_end_position
-    else
-        return '', nil
+        if not is_empty(episode_num) then
+            return #filename - e, #filename - s, episode_num:reverse()
+        else
+            s, e, episode_num = string.find(filename_reversed, pattern)
+        end
     end
 end
 
@@ -324,15 +319,15 @@ local function tag_format(filename)
     filename = remove_extension(filename)
     filename = remove_common_resolutions(filename)
 
-    local episode, ep_start_position = get_episode_number(filename)
+    local s, e, episode_num = get_episode_number(filename)
 
-    if config.tag_del_episode_num == true and ep_start_position ~= nil then
+    if config.tag_del_episode_num == true and not is_empty(s) then
         if config.tag_del_after_episode_num == true then
             -- Removing everything (e.g. episode name) after the episode number including itself.
-            filename = filename:sub(0, ep_start_position)
+            filename = filename:sub(1, s)
         else
             -- Removing the first found instance of the episode number.
-            filename = filename:reverse():gsub(episode:reverse(), '', 1):reverse()
+            filename = filename:sub(1, s) .. filename:sub(e + 1, -1)
         end
     end
 
@@ -351,7 +346,7 @@ local function tag_format(filename)
     filename = filename:gsub(" ", "_")
     filename = filename:gsub("_%-_", "_") -- Replaces garbage _-_ substrings with a underscore
     filename = remove_leading_trailing_dashes(filename)
-    return filename, episode
+    return filename, episode_num
 end
 
 local function substitute_fmt(tag)
