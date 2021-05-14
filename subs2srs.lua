@@ -318,14 +318,14 @@ local function get_episode_number(filename)
 end
 
 local function tag_format(filename)
+    filename = remove_extension(filename)
+    filename = remove_common_resolutions(filename)
+
     local episode = get_episode_number(filename)
 
     if config.tag_del_episode_num == true then
         filename = filename:gsub(episode, '')
     end
-
-    filename = remove_extension(filename)
-    filename = remove_common_resolutions(filename)
 
     if config.tag_nuke_brackets == true then
         filename = remove_text_in_brackets(filename)
