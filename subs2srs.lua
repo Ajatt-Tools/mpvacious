@@ -51,13 +51,13 @@ local config = {
     menu_font_size = 25,
 
     -- Anki
-    create_deck = false,                -- automatically create a deck for new cards
-    deck_name = "Learning",             -- name of the deck for new cards
-    model_name = "Japanese sentences",  -- Tools -> Manage note types
+    create_deck = false,               -- automatically create a deck for new cards
+    deck_name = "Learning",            -- name of the deck for new cards
+    model_name = "Japanese sentences", -- Tools -> Manage note types
     sentence_field = "SentKanji",
     audio_field = "SentAudio",
     image_field = "Image",
-    append_media = true,                -- True to append video media after existing data, false to insert media before
+    append_media = true,               -- True to append video media after existing data, false to insert media before
 
     -- Note tagging
     -- The tag(s) added to new notes. Spaces separate multiple tags.
@@ -68,20 +68,20 @@ local config = {
     --   %d - episode number (if none found, returns nothing)
     --   %e - SUBS2SRS_TAGS environment variable
     note_tag = "subs2srs %n",
-    tag_nuke_brackets = true,           -- delete all text inside brackets before subsituting filename into tag
-    tag_nuke_parentheses = false,       -- delete all text inside parentheses before subsituting filename into tag
-    tag_del_episode_num = true,         -- delete the episode number if found
-    tag_del_after_episode_num = true,   -- delete everything after the found episode number (does nothing if tag_del_episode_num is disabled)
-    tag_filename_lowercase = false,     -- convert filename to lowercase for tagging.
+    tag_nuke_brackets = true,         -- delete all text inside brackets before subsituting filename into tag
+    tag_nuke_parentheses = false,     -- delete all text inside parentheses before subsituting filename into tag
+    tag_del_episode_num = true,       -- delete the episode number if found
+    tag_del_after_episode_num = true, -- delete everything after the found episode number (does nothing if tag_del_episode_num is disabled)
+    tag_filename_lowercase = false,   -- convert filename to lowercase for tagging.
 
     -- Misc info
-    miscinfo_field = "Notes",           -- misc notes and source information field
-    miscinfo_format = "%n EP%d (%t)",   -- format string to use for the miscinfo_field, accepts note_tag-style format strings
+    miscinfo_field = "Notes",         -- misc notes and source information field
+    miscinfo_format = "%n EP%d (%t)", -- format string to use for the miscinfo_field, accepts note_tag-style format strings
 
     -- Forvo support
-    use_forvo = "yes",                  -- 'yes', 'no', 'always'
-    vocab_field = "VocabKanji",         -- target word field
-    vocab_audio_field = "VocabAudio",   -- target word audio
+    use_forvo = "yes",                -- 'yes', 'no', 'always'
+    vocab_field = "VocabKanji",       -- target word field
+    vocab_audio_field = "VocabAudio", -- target word audio
 }
 
 local mp = require('mp')
@@ -842,7 +842,8 @@ do
         end
     end
 
-    local function url_encode(url) -- https://gist.github.com/liukun/f9ce7d6d14fa45fe9b924a3eed5c3d99
+    local function url_encode(url)
+        -- https://gist.github.com/liukun/f9ce7d6d14fa45fe9b924a3eed5c3d99
         local char_to_hex = function(c)
             return string.format("%%%02X", string.byte(c))
         end
@@ -973,8 +974,12 @@ encoder.pad_timings = function(start_time, end_time)
     end
     start_time = start_time - config.audio_padding
     end_time = end_time + config.audio_padding
-    if start_time < 0 then start_time = 0 end
-    if end_time > video_duration then end_time = video_duration end
+    if start_time < 0 then
+        start_time = 0
+    end
+    if end_time > video_duration then
+        end_time = video_duration
+    end
     return start_time, end_time
 end
 
@@ -1106,7 +1111,7 @@ ankiconnect.store_file = function(filename, file_path)
         }
     }
 
-    local ret =  ankiconnect.execute(args)
+    local ret = ankiconnect.execute(args)
     local _, error = ankiconnect.parse_result(ret)
     if not error then
         msg.info(string.format("File stored: '%s'.", filename))
@@ -1553,7 +1558,7 @@ local main = (function()
         validate_config()
         clip_autocopy.init()
         if config.create_deck == true then
-                ankiconnect.create_deck(config.deck_name)
+            ankiconnect.create_deck(config.deck_name)
         end
 
         -- Key bindings
