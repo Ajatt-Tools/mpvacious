@@ -71,6 +71,7 @@ local config = {
     tag_nuke_brackets = true,           -- delete all text inside brackets before subsituting filename into tag
     tag_nuke_parentheses = false,       -- delete all text inside parentheses before subsituting filename into tag
     tag_del_episode_num = true,         -- delete the episode number if found
+    tag_del_after_episode_num = true,   -- delete everything after the found episode number (does nothing if tag_del_episode_num is disabled)
     tag_filename_lowercase = false,     -- convert filename to lowercase for tagging.
 
     -- Misc info
@@ -307,13 +308,15 @@ local function get_episode_number(filename)
     local episode
     for _, pattern in pairs(ep_num_patterns) do
         if episode ~= nil then break end
-        _, _, episode = string.find(filename_reversed, pattern)
+        _, ep_end_position, episode = string.find(filename_reversed, pattern)
     end
 
     if not is_empty(episode) then
-         return episode:reverse()
+        -- As the string (from where the end position is) was reversed,
+        -- subtracting the end_position from the length of the filename will get us the start position
+        return episode:reverse(), string.len(filename) - ep_end_position
     else
-        return ''
+        return '', nil
     end
 end
 
@@ -321,10 +324,16 @@ local function tag_format(filename)
     filename = remove_extension(filename)
     filename = remove_common_resolutions(filename)
 
-    local episode = get_episode_number(filename)
+    local episode, ep_start_position = get_episode_number(filename)
 
-    if config.tag_del_episode_num == true then
-        filename = filename:gsub(episode, '')
+    if config.tag_del_episode_num == true and ep_start_position ~= nil then
+        if config.tag_del_after_episode_num == true then
+            -- Removing everything (e.g. episode name) after the episode number including itself.
+            filename = filename:sub(0, ep_start_position)
+        else
+            -- Removing the first found instance of the episode number.
+            filename = filename:reverse():gsub(episode:reverse(), '', 1):reverse()
+        end
     end
 
     if config.tag_nuke_brackets == true then
