@@ -303,14 +303,14 @@ local function get_episode_number(filename)
         "%s(%d?%d?%d)%s",          -- Surrounded by whitespace. "Example Series 124 [1080p 10-bit]"
         "_(%d?%d?%d)_",            -- Surrounded by underscores. "Example_Series_04_1080p"
         "^(%d?%d?%d)[%s_]",        -- Ending to the episode number. "Example Series 124"
+        "(%d?%d?%d)%-edosipE",     -- Prepended by "Episode-". "Example Episode-165"
     }
 
     local s, e, episode_num
     for _, pattern in pairs(ep_num_patterns) do
+        s, e, episode_num = string.find(filename_reversed, pattern)
         if not is_empty(episode_num) then
             return #filename - e, #filename - s, episode_num:reverse()
-        else
-            s, e, episode_num = string.find(filename_reversed, pattern)
         end
     end
 end
@@ -346,7 +346,7 @@ local function tag_format(filename)
     filename = filename:gsub(" ", "_")
     filename = filename:gsub("_%-_", "_") -- Replaces garbage _-_ substrings with a underscore
     filename = remove_leading_trailing_dashes(filename)
-    return filename, episode_num
+    return filename, episode_num or ''
 end
 
 local function substitute_fmt(tag)
