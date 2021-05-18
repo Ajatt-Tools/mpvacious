@@ -216,47 +216,60 @@ See [Usage](#usage) for the explanation of what they do.
 Default bindings:
 
 ```
-Ctrl+c       script-binding mpvacious-copy-sub-to-clipboard
-Ctrl+e       script-binding mpvacious-export-note
-Ctrl+h       script-binding mpvacious-sub-rewind
-Ctrl+Shift+h script-binding mpvacious-sub-replay
 a            script-binding mpvacious-menu-open
+
+Ctrl+e       script-binding mpvacious-export-note
+
+Ctrl+m       script-binding mpvacious-update-last-note
+Ctrl+M       script-binding mpvacious-overwrite-last-note
+
+Ctrl+c       script-binding mpvacious-copy-sub-to-clipboard
+Ctrl+t       script-binding mpvacious-autocopy-toggle
+
 H            script-binding mpvacious-sub-seek-back
 L            script-binding mpvacious-sub-seek-forward
+
 Alt+h        script-binding mpvacious-sub-seek-back-pause
 Alt+l        script-binding mpvacious-sub-seek-forward-pause
-```
 
-These additional bindings aren't enabled by default but can be accessed via the menu by pressing `a`.
-
-```
-Ctrl+s script-binding mpvacious-set-starting-line
-Ctrl+r script-binding mpvacious-reset-timings
-Ctrl+t script-binding mpvacious-toggle-sub-autocopy
-Ctrl+u script-binding mpvacious-update-last-note
+Ctrl+h       script-binding mpvacious-sub-rewind
+Ctrl+Shift+h script-binding mpvacious-sub-replay
 ```
 
 ## Usage
 
 ### Global bindings
 
-These bindings work everywhere, even if the menu (covered later) is closed.
+Menu:
+* `a` - Open `advanced menu`.
+
+Make a card:
+* `Ctrl+e` - Export a card with the currently visible subtitle line on the front.
+Use this when your subs are well timed,
+and the target sentence doesn't span multiple subs.
+
+Update the last card:
+* `Ctrl+m` - Append to the media fields of the newly added Anki card.
+* `Ctrl+Shift+m` - Overwrite media fields of the newly added Anki card.
+
+Clipboard:
+* `Ctrl+c` - Copy current subtitle string to the system clipboard.
+* `Ctrl+t` - Toggle automatic copying of subtitles to the clipboard.
+
+Seeking:
 * `Shift+h` and `Shift+l` - Seek to the previous or the next subtitle.
 * `Alt+h` and `Alt+l` - Seek to the previous, or the next subtitle, and pause.
 * `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
 * `Ctrl+Shift+h` - Replay current subtitle line, and pause.
-* `Ctrl+e` - Export a card with the currently visible subtitle line on the front.
-Use this when your subs are perfectly timed, and the target sentence doesn't span multiple subs.
-* `Ctrl+c` - Copy current subtitle string to the system clipboard. For automatic copying see
-[Modifying cards added with Yomichan](#modifying-cards-added-with-yomichan).
 
 ### Menu options
 
-* `a` - Open `advanced menu` with a list of all available keybindings.
-
-Let's say your subs are still perfectly timed,
+Let's say your subs are well timed,
 but the sentence you want to add is split between multiple subs.
 We need to combine the lines before making a card.
+
+Advanced menu has the following options:
+
 * `c` - Set timings to the current sub and remember the corresponding line.
 It does nothing if there are no subs on screen.
 
@@ -296,7 +309,7 @@ Now as subtitles appear on the screen, they will be immediately copied to the cl
 You can use it in combination with
 [Yomichan](https://foosoft.net/projects/yomichan/) clipboard monitor.
 
-#### The process:
+**The process:**
 
 1) Open `Yomichan Search` by pressing `Alt+Insert` in your web browser.
 2) Enable `Clipboard autocopy` in mpvacious by pressing `t` in the `advanced menu`.

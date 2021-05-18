@@ -1562,9 +1562,16 @@ local main = (function()
         end
 
         -- Key bindings
-        mp.add_forced_key_binding("ctrl+e", "mpvacious-export-note", export_to_anki)
-        mp.add_forced_key_binding("ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
-        mp.add_key_binding("a", "mpvacious-menu-open", menu.open) -- a for advanced
+        mp.add_forced_key_binding("Ctrl+e", "mpvacious-export-note", export_to_anki)
+        mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
+        mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", clip_autocopy.toggle)
+
+        -- Open advanced menu
+        mp.add_key_binding("a", "mpvacious-menu-open", menu.open)
+
+        -- Note updating
+        mp.add_key_binding("Ctrl+m", "mpvacious-update-last-note", _ { update_last_note, false })
+        mp.add_key_binding("Ctrl+M", "mpvacious-overwrite-last-note", _ { update_last_note, true })
 
         -- Vim-like seeking between subtitle lines
         mp.add_key_binding("H", "mpvacious-sub-seek-back", _ { sub_seek, 'backward' })
@@ -1573,14 +1580,9 @@ local main = (function()
         mp.add_key_binding("Alt+h", "mpvacious-sub-seek-back-pause", _ { sub_seek, 'backward', true })
         mp.add_key_binding("Alt+l", "mpvacious-sub-seek-forward-pause", _ { sub_seek, 'forward', true })
 
-        mp.add_key_binding("ctrl+h", "mpvacious-sub-rewind", _ { sub_rewind })
-        mp.add_key_binding("ctrl+H", "mpvacious-sub-replay", _ { sub_replay })
+        mp.add_key_binding("Ctrl+h", "mpvacious-sub-rewind", _ { sub_rewind })
+        mp.add_key_binding("Ctrl+H", "mpvacious-sub-replay", _ { sub_replay })
 
-        -- Unset by default
-        mp.add_key_binding(nil, "mpvacious-set-starting-line", subs.set_starting_line)
-        mp.add_key_binding(nil, "mpvacious-reset-timings", subs.clear_and_notify)
-        mp.add_key_binding("ctrl+m", "mpvacious-update-last-note", _ {update_last_note, false})
-        mp.add_key_binding("ctrl+M", "mpvacious-overwrite-last-note", _ {update_last_note, true})
     end
 end)()
 
