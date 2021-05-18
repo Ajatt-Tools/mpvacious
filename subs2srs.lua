@@ -1579,9 +1579,8 @@ local main = (function()
         -- Unset by default
         mp.add_key_binding(nil, "mpvacious-set-starting-line", subs.set_starting_line)
         mp.add_key_binding(nil, "mpvacious-reset-timings", subs.clear_and_notify)
-        mp.add_key_binding(nil, "mpvacious-toggle-sub-autocopy", clip_autocopy.toggle)
-        mp.add_key_binding(nil, "mpvacious-update-last-note", update_last_note)
-
+        mp.add_key_binding("ctrl+m", "mpvacious-update-last-note", _ {update_last_note, false})
+        mp.add_key_binding("ctrl+M", "mpvacious-overwrite-last-note", _ {update_last_note, true})
     end
 end)()
 
