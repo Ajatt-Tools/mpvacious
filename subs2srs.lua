@@ -75,6 +75,7 @@ local config = {
     tag_filename_lowercase = false,   -- convert filename to lowercase for tagging.
 
     -- Misc info
+    miscinfo_enable = true,
     miscinfo_field = "Notes",         -- misc notes and source information field
     miscinfo_format = "%n EP%d (%t)", -- format string to use for the miscinfo_field, accepts note_tag-style format strings
 
@@ -380,12 +381,15 @@ local function substitute_fmt(tag)
 end
 
 local function construct_note_fields(sub_text, snapshot_filename, audio_filename)
-    return {
+    local ret = {
         [config.sentence_field] = sub_text,
         [config.image_field] = string.format('<img alt="snapshot" src="%s">', snapshot_filename),
         [config.audio_field] = string.format('[sound:%s]', audio_filename),
-        [config.miscinfo_field] = substitute_fmt(config.miscinfo_format),
     }
+    if config.miscinfo_enable == true then
+        ret[config.miscinfo_field] = substitute_fmt(config.miscinfo_format)
+    end
+    return ret
 end
 
 local function minutes_ago(m)
