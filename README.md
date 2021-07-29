@@ -236,6 +236,10 @@ Ctrl+h       script-binding mpvacious-sub-rewind
 Ctrl+H       script-binding mpvacious-sub-replay
 ```
 
+**Note:** A capital letter means that you need to press Shift in order to activate the corresponding binding.
+For example, `Ctrl+M` actually means `Ctrl+Shift+m`.
+mpv accepts both variants in `input.conf`.
+
 ## Usage
 
 ### Global bindings
