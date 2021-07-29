@@ -233,7 +233,7 @@ Alt+h        script-binding mpvacious-sub-seek-back-pause
 Alt+l        script-binding mpvacious-sub-seek-forward-pause
 
 Ctrl+h       script-binding mpvacious-sub-rewind
-Ctrl+Shift+h script-binding mpvacious-sub-replay
+Ctrl+H       script-binding mpvacious-sub-replay
 ```
 
 ## Usage
@@ -273,7 +273,7 @@ Advanced menu has the following options:
 * `c` - Set timings to the current sub and remember the corresponding line.
 It does nothing if there are no subs on screen.
 
-Then seek with `shift+h` and `shift+l` to the previous/next line that you want to add.
+Then seek with `Shift+h` and `Shift+l` to the previous/next line that you want to add.
 Press `n` to make the card.
 
 * `r` - Forget all previously saved timings and associated dialogs.
