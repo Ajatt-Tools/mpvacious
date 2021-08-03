@@ -1522,10 +1522,11 @@ menu.update = function()
 
     local osd = OSD:new():size(config.menu_font_size):align(4)
     osd:submenu('mpvacious options'):newline()
-    osd:item('Start time: '):text(human_readable_time(subs.get_timing('start'))):newline()
-    osd:item('End time: '):text(human_readable_time(subs.get_timing('end'))):newline()
+    osd:item('Timings: '):text(human_readable_time(subs.get_timing('start')))
+    osd:item(' to '):text(human_readable_time(subs.get_timing('end'))):newline()
     osd:item('Clipboard autocopy: '):text(clip_autocopy.is_enabled()):newline()
     osd:item('Active profile: '):text(profiles.active):newline()
+    osd:item('Deck: '):text(config.deck_name):newline()
 
     if menu.hints_state.get() == 'global' then
         osd:submenu('Global bindings'):newline()
