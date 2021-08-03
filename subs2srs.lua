@@ -466,7 +466,14 @@ do
         conditionally_set_defaults('snapshot_width', 'snapshot_height', 'snapshot_quality')
     end
 
+    local function ensure_deck()
+        if config.create_deck == true then
+            ankiconnect.create_deck(config.deck_name)
+        end
+    end
+
     validate_config = function()
+        ensure_deck()
         set_audio_format()
         set_video_format()
         check_image_settings()
@@ -1603,17 +1610,16 @@ local main = (function()
         else
             main_executed = true
         end
+
         -- 'subs2srs' is the main profile, it is always loaded.
         -- 'active profile' overrides it afterwards.
         load_profile('subs2srs')
         if profiles.active ~= 'subs2srs' then
             load_profile(profiles.active)
         end
+
         validate_config()
         clip_autocopy.init()
-        if config.create_deck == true then
-            ankiconnect.create_deck(config.deck_name)
-        end
 
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+e", "mpvacious-export-note", export_to_anki)
