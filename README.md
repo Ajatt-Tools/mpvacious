@@ -409,7 +409,7 @@ image_field=Extra
 ```
 
 You don't have to redefine all settings in the new profile.
-Specify only the ones you want be different from the default.
+Specify only the ones you want to be different from the default.
 
 To cycle profiles, open the advanced menu by pressing `a` and then press `p`.
 At any time you can see what profile is active in the menu's status bar.
