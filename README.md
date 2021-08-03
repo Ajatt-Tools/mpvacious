@@ -34,6 +34,7 @@ while watching your favorite TV show.
     * [Audio cards](#audio-cards)
     * [Other tools](#other-tools)
     * [Additional mpv key bindings](#additional-mpv-key-bindings)
+* [Profiles](#profiles)
 * [Hacking](#hacking)
 
 ## Requirements
