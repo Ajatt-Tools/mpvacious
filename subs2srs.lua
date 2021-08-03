@@ -116,6 +116,8 @@ local Subtitle
 ------------------------------------------------------------
 -- utility functions
 
+local unpack = unpack and unpack or table.unpack
+
 ---Returns true if table contains element. Returns false otherwise.
 ---@param table table
 ---@param element any
@@ -520,7 +522,6 @@ local function next_profile()
     profiles.active = new
     load_profile(profiles.active)
     validate_config()
-    menu.update()
     notify("Loaded profile " .. profiles.active)
 end
 
@@ -749,7 +750,6 @@ end
 -- seeking: sub replay, sub seek, sub rewind
 
 local function _(params)
-    local unpack = unpack and unpack or table.unpack
     return function() return pcall(unpack(params)) end
 end
 
@@ -1387,7 +1387,6 @@ end
 
 subs.set_timing = function(position)
     subs.user_timings.set(position)
-    menu.update()
     notify(capitalize_first_letter(position) .. " time has been set.")
     if not subs.observed then
         subs.observe()
@@ -1408,7 +1407,6 @@ subs.clear = function()
     subs.unobserve()
     subs.dialogs = new_sub_list()
     subs.user_timings = new_timings()
-    menu.update()
 end
 
 subs.clear_and_notify = function()
@@ -1440,7 +1438,6 @@ clip_autocopy = (function()
             disable()
         end
         state_notify()
-        menu.update()
     end
 
     local is_enabled = function()
@@ -1500,18 +1497,25 @@ menu.overlay_draw = function(text)
     menu.overlay:update()
 end
 
+menu.with_update = function(params)
+    return function()
+        pcall(unpack(params))
+        menu.update()
+    end
+end
+
 menu.keybindings = {
-    { key = 's', fn = function() subs.set_timing('start') end },
-    { key = 'e', fn = function() subs.set_timing('end') end },
-    { key = 'c', fn = function() subs.set_starting_line() end },
-    { key = 'r', fn = function() subs.clear_and_notify() end },
-    { key = 'g', fn = function() export_to_anki(true) end },
-    { key = 'n', fn = function() export_to_anki(false) end },
-    { key = 'm', fn = function() update_last_note(false) end },
-    { key = 'M', fn = function() update_last_note(true) end },
-    { key = 't', fn = function() clip_autocopy.toggle() end },
-    { key = 'i', fn = function() menu.hints_toggle() end },
-    { key = 'p', fn = function() next_profile() end },
+    { key = 's', fn = menu.with_update{subs.set_timing, 'start'} },
+    { key = 'e', fn = menu.with_update{subs.set_timing, 'end'} },
+    { key = 'c', fn = menu.with_update{subs.set_starting_line} },
+    { key = 'r', fn = menu.with_update{subs.clear_and_notify} },
+    { key = 'g', fn = menu.with_update{export_to_anki, true} },
+    { key = 'n', fn = menu.with_update{export_to_anki, false} },
+    { key = 'm', fn = menu.with_update{update_last_note, false} },
+    { key = 'M', fn = menu.with_update{update_last_note, true} },
+    { key = 't', fn = menu.with_update{clip_autocopy.toggle} },
+    { key = 'i', fn = menu.with_update{menu.hints_state.bump} },
+    { key = 'p', fn = menu.with_update{next_profile} },
     { key = 'ESC', fn = function() menu.close() end },
 }
 
@@ -1554,11 +1558,6 @@ menu.update = function()
     end
 
     menu.overlay_draw(osd:get_text())
-end
-
-menu.hints_toggle = function()
-    menu.hints_state.bump()
-    menu.update()
 end
 
 menu.open = function()
