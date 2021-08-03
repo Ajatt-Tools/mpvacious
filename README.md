@@ -379,6 +379,40 @@ X sub-step 1
 x sub-step -1
 ```
 
+## Profiles
+
+Mpvacious supports config profiles.
+To make use of them, create a new config file called `subs2srs_profiles.conf`
+in the same folder as your [subs2srs.conf](#Configuration).
+Inside the file, define available profile names (without `.conf`) and the name of the active profile:
+
+```
+profiles=subs2srs,english,german
+active=subs2srs
+```
+
+In the example above, I have three profiles.
+The first one is the default,
+the second one is for learning English,
+the third one is for learning German.
+
+Then in the same folder create config files for each of the defined profiles.
+For example, below is the contents of my `english.conf` file:
+
+```
+deck_name=English sentence mining
+model_name=General
+sentence_field=Question
+audio_field=Audio
+image_field=Extra
+```
+
+You don't have to redefine all settings in the new profile.
+Specify only the ones you want be different from the default.
+
+To cycle profiles, open the advanced menu by pressing `a` and then press `p`.
+At any time you can see what profile is active in the menu's status bar.
+
 ## Hacking
 
 If you want to modify this script
