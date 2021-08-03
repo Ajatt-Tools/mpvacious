@@ -500,38 +500,6 @@ local function update_sentence(new_data, stored_data)
     return new_data
 end
 
-local function load_profile(profile_name)
-    if is_empty(profile_name) then
-        profile_name = profiles.active
-        if is_empty(profile_name) then
-            profile_name = 'subs2srs'
-        end
-    end
-    mpopt.read_options(config, profile_name)
-end
-
-local function next_profile()
-    local first, next, new
-    for profile in string.gmatch(profiles.profiles, '[^,]+') do
-        if not first then
-            first = profile
-        end
-        if profile == profiles.active then
-            next = true
-        elseif next then
-            next = false
-            new = profile
-        end
-    end
-    if next == true or not new then
-        new = first
-    end
-    profiles.active = new
-    load_profile(profiles.active)
-    validate_config()
-    notify("Loaded profile " .. profiles.active)
-end
-
 ------------------------------------------------------------
 -- utility classes
 
@@ -685,6 +653,41 @@ local filename_factory = (function()
         make_snapshot_filename = make_snapshot_filename,
     }
 end)()
+
+------------------------------------------------------------
+-- profiles management
+
+local function load_profile(profile_name)
+    if is_empty(profile_name) then
+        profile_name = profiles.active
+        if is_empty(profile_name) then
+            profile_name = 'subs2srs'
+        end
+    end
+    mpopt.read_options(config, profile_name)
+end
+
+local function next_profile()
+    local first, next, new
+    for profile in string.gmatch(profiles.profiles, '[^,]+') do
+        if not first then
+            first = profile
+        end
+        if profile == profiles.active then
+            next = true
+        elseif next then
+            next = false
+            new = profile
+        end
+    end
+    if next == true or not new then
+        new = first
+    end
+    profiles.active = new
+    load_profile(profiles.active)
+    validate_config()
+    notify("Loaded profile " .. profiles.active)
+end
 
 ------------------------------------------------------------
 -- front for adding and updating notes
