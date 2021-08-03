@@ -85,13 +85,21 @@ local config = {
     vocab_audio_field = "VocabAudio", -- target word audio
 }
 
+-- Defines config profiles
+-- Each name references a file in ~/.config/mpv/script-opts/*.conf
+-- Profiles themselves are defined in ~/.config/mpv/script-opts/subs2srs_profiles.conf
+local profiles = {
+    profiles = "subs2srs,subs2srs_english",
+    active = "subs2srs",
+}
+
 local mp = require('mp')
 local utils = require('mp.utils')
 local msg = require('mp.msg')
 local mpopt = require('mp.options')
 local OSD = require('osd_styler')
 
-mpopt.read_options(config, "subs2srs")
+mpopt.read_options(profiles, "subs2srs_profiles")
 
 -- namespaces
 local subs
@@ -481,6 +489,39 @@ local function update_sentence(new_data, stored_data)
         end
     end
     return new_data
+end
+
+local function load_profile(profile_name)
+    if is_empty(profile_name) then
+        profile_name = profiles.active
+        if is_empty(profile_name) then
+            profile_name = 'subs2srs'
+        end
+    end
+    mpopt.read_options(config, profile_name)
+end
+
+local function next_profile()
+    local first, next, new
+    for profile in string.gmatch(profiles.profiles, '[^,]+') do
+        if not first then
+            first = profile
+        end
+        if profile == profiles.active then
+            next = true
+        elseif next then
+            next = false
+            new = profile
+        end
+    end
+    if next == true or not new then
+        new = first
+    end
+    profiles.active = new
+    load_profile(profiles.active)
+    validate_config()
+    menu.update()
+    notify("Loaded profile " .. profiles.active)
 end
 
 ------------------------------------------------------------
@@ -1470,6 +1511,7 @@ menu.keybindings = {
     { key = 'M', fn = function() update_last_note(true) end },
     { key = 't', fn = function() clip_autocopy.toggle() end },
     { key = 'i', fn = function() menu.hints_toggle() end },
+    { key = 'p', fn = function() next_profile() end },
     { key = 'ESC', fn = function() menu.close() end },
 }
 
@@ -1483,6 +1525,7 @@ menu.update = function()
     osd:item('Start time: '):text(human_readable_time(subs.get_timing('start'))):newline()
     osd:item('End time: '):text(human_readable_time(subs.get_timing('end'))):newline()
     osd:item('Clipboard autocopy: '):text(clip_autocopy.is_enabled()):newline()
+    osd:item('Active profile: '):text(profiles.active):newline()
 
     if menu.hints_state.get() == 'global' then
         osd:submenu('Global bindings'):newline()
@@ -1502,6 +1545,7 @@ menu.update = function()
         osd:tab():item('g: '):text('GUI export'):newline()
         osd:tab():item('m: '):text('Update the last added note '):italics('(+shift to overwrite)'):newline()
         osd:tab():item('t: '):text('Toggle clipboard autocopy'):newline()
+        osd:tab():item('p: '):text('Switch to next profile'):newline()
         osd:tab():item('ESC: '):text('Close'):newline()
         osd:italics("Press "):item('i'):italics(" to show global bindings."):newline()
     else
@@ -1558,6 +1602,12 @@ local main = (function()
             return
         else
             main_executed = true
+        end
+        -- 'subs2srs' is the main profile, it is always loaded.
+        -- 'active profile' overrides it afterwards.
+        load_profile('subs2srs')
+        if profiles.active ~= 'subs2srs' then
+            load_profile(profiles.active)
         end
         validate_config()
         clip_autocopy.init()
