@@ -22,7 +22,6 @@ Requirements:
 
 Usage:
 1. Change `config` according to your needs
-* Options can be changed right in this file or in a separate config file.
 * Config path: ~/.config/mpv/script-opts/subs2srs.conf
 * Config file isn't created automatically.
 
@@ -98,8 +97,6 @@ local utils = require('mp.utils')
 local msg = require('mp.msg')
 local mpopt = require('mp.options')
 local OSD = require('osd_styler')
-
-mpopt.read_options(profiles, "subs2srs_profiles")
 
 -- namespaces
 local subs
@@ -657,37 +654,73 @@ end)()
 ------------------------------------------------------------
 -- profiles management
 
-local function load_profile(profile_name)
-    if is_empty(profile_name) then
-        profile_name = profiles.active
-        if is_empty(profile_name) then
-            profile_name = 'subs2srs'
-        end
-    end
-    mpopt.read_options(config, profile_name)
-end
+local config_manager = (function()
+    local initial_config = {}
+    local default_profile = 'subs2srs'
+    local profiles_config = 'subs2srs_profiles'
 
-local function next_profile()
-    local first, next, new
-    for profile in string.gmatch(profiles.profiles, '[^,]+') do
-        if not first then
-            first = profile
+    local function load_profile(profile_name)
+        if is_empty(profile_name) then
+            profile_name = profiles.active
+            if is_empty(profile_name) then
+                profile_name = default_profile
+            end
         end
-        if profile == profiles.active then
-            next = true
-        elseif next then
-            next = false
-            new = profile
+        mpopt.read_options(config, profile_name)
+    end
+
+    local function save_initial_config()
+        for key, value in pairs(config) do
+            initial_config[key] = value
         end
     end
-    if next == true or not new then
-        new = first
+
+    local function restore_initial_config()
+        for key, value in pairs(initial_config) do
+            config[key] = value
+        end
     end
-    profiles.active = new
-    load_profile(profiles.active)
-    validate_config()
-    notify("Loaded profile " .. profiles.active)
-end
+
+    local function next_profile()
+        local first, next, new
+        for profile in string.gmatch(profiles.profiles, '[^,]+') do
+            if not first then
+                first = profile
+            end
+            if profile == profiles.active then
+                next = true
+            elseif next then
+                next = false
+                new = profile
+            end
+        end
+        if next == true or not new then
+            new = first
+        end
+        profiles.active = new
+        restore_initial_config()
+        load_profile(profiles.active)
+        validate_config()
+        notify("Loaded profile " .. profiles.active)
+    end
+
+    local function init()
+        -- 'subs2srs' is the main profile, it is always loaded.
+        -- 'active profile' overrides it afterwards.
+        mpopt.read_options(profiles, profiles_config)
+        load_profile(default_profile)
+        save_initial_config()
+        if profiles.active ~= default_profile then
+            load_profile(profiles.active)
+        end
+        validate_config()
+    end
+
+    return {
+        init = init,
+        next_profile = next_profile,
+    }
+end)()
 
 ------------------------------------------------------------
 -- front for adding and updating notes
@@ -1525,7 +1558,7 @@ menu.keybindings = {
     { key = 'M', fn = menu.with_update{update_last_note, true} },
     { key = 't', fn = menu.with_update{clip_autocopy.toggle} },
     { key = 'i', fn = menu.with_update{menu.hints_state.bump} },
-    { key = 'p', fn = menu.with_update{next_profile} },
+    { key = 'p', fn = menu.with_update{config_manager.next_profile} },
     { key = 'ESC', fn = function() menu.close() end },
 }
 
@@ -1614,14 +1647,8 @@ local main = (function()
             main_executed = true
         end
 
-        -- 'subs2srs' is the main profile, it is always loaded.
-        -- 'active profile' overrides it afterwards.
-        load_profile('subs2srs')
-        if profiles.active ~= 'subs2srs' then
-            load_profile(profiles.active)
-        end
+        config_manager.init()
 
-        validate_config()
         clip_autocopy.init()
 
         -- Key bindings
