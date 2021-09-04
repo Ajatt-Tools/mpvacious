@@ -823,7 +823,7 @@ end)()
 
 local function sub_replay()
     local sub = subs.get_current()
-    pause_timer.set_stop_time(sub['end'] - 0.050)
+    pause_timer.set_stop_time(sub['end'] - 0.050 + mp.get_property_native("sub-delay"))
     mp.commandv('seek', sub['start'], 'absolute')
     mp.set_property("pause", "no")
     mp.observe_property("time-pos", "number", pause_timer.check_stop)
