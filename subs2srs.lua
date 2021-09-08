@@ -18,7 +18,8 @@ Requirements:
 * mpv >= 0.32.0
 * AnkiConnect
 * curl
-* xclip
+* xclip (when running X11)
+* wl-copy (when running Wayland)
 
 Usage:
 1. Change `config` according to your needs
@@ -164,6 +165,10 @@ end
 
 local function is_running_macOS()
     return mp.get_property('options/cocoa-force-dedicated-gpu') ~= nil
+end
+
+local function is_running_wayland()
+    return os.getenv('WAYLAND_DISPLAY') ~= nil
 end
 
 local function contains_non_latin_letters(str)
@@ -885,7 +890,7 @@ end
 
 local function init_platform_nix()
     local self = {}
-    local clip = is_running_macOS() and 'LANG=en_US.UTF-8 pbcopy' or 'xclip -i -selection clipboard'
+    local clip = is_running_macOS() and 'LANG=en_US.UTF-8 pbcopy' or is_running_wayland() and 'wl-copy' or 'xclip -i -selection clipboard'
 
     self.tmp_dir = function()
         return '/tmp'
