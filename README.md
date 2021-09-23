@@ -235,6 +235,8 @@ Alt+l        script-binding mpvacious-sub-seek-forward-pause
 
 Ctrl+h       script-binding mpvacious-sub-rewind
 Ctrl+H       script-binding mpvacious-sub-replay
+
+P            script-binding mpvacious-sub-play-up-to-next
 ```
 
 **Note:** A capital letter means that you need to press Shift in order to activate the corresponding binding.
@@ -266,6 +268,8 @@ Seeking:
 * `Alt+h` and `Alt+l` - Seek to the previous, or the next subtitle, and pause.
 * `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
 * `Ctrl+Shift+h` - Replay current subtitle line, and pause.
+* `Shift-p` - Play until the end of the next subtitle, and pause. Useful for beginners who need
+to look up words in each and every dialogue line.
 
 ### Menu options
 

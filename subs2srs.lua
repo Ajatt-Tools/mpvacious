@@ -826,12 +826,16 @@ local pause_timer = (function()
     }
 end)()
 
+local function sub_stop_at_the_end(sub)
+    pause_timer.set_stop_time(sub['end'] - 0.050)
+    mp.observe_property("time-pos", "number", pause_timer.check_stop)
+end
+
 local function sub_replay()
     local sub = subs.get_current()
-    pause_timer.set_stop_time(sub['end'] - 0.050 + mp.get_property_native("sub-delay"))
     mp.commandv('seek', sub['start'], 'absolute')
     mp.set_property("pause", "no")
-    mp.observe_property("time-pos", "number", pause_timer.check_stop)
+    sub_stop_at_the_end(sub)
 end
 
 local function sub_seek(direction, pause)
@@ -846,6 +850,40 @@ end
 local function sub_rewind()
     mp.commandv('seek', subs.get_current()['start'] + 0.015, 'absolute')
     pause_timer.stop()
+end
+
+local sub_play_up_to_next = {
+    deadzone_end_time,
+}
+
+sub_play_up_to_next.check_sub = function()
+    local sub = subs.get_current()
+    if sub then
+        mp.unobserve_property(sub_play_up_to_next.check_sub)
+        sub_stop_at_the_end(sub)
+    end
+end
+
+sub_play_up_to_next.check_deadzone_timer = function(_, time)
+    if time > sub_play_up_to_next.deadzone_end_time then
+        mp.unobserve_property(sub_play_up_to_next.check_deadzone_timer)
+        local sub = subs.get_current()
+        if sub then
+            sub_stop_at_the_end(sub)
+        else
+            mp.observe_property("sub-text", "string", sub_play_up_to_next.check_sub)
+        end
+    end
+end
+
+sub_play_up_to_next.arm = function()
+    -- When this feature is used, the player is usually stopped few tens of milliseconds before the end time of a sub,
+    -- so "sub-text" change event will occur almost immediately after unpausing.  Often this would make the player
+    -- to pause again in just few frames after keypress.  To avoid this, a small delay ("deadzone") is applied before
+    -- subscribing to "sub-text" change event.
+    sub_play_up_to_next.deadzone_end_time = mp.get_property_number('time-pos') + 0.300
+    mp.observe_property("time-pos", "number", sub_play_up_to_next.check_deadzone_timer)
+    mp.set_property("pause", "no")
 end
 
 ------------------------------------------------------------
@@ -1678,6 +1716,7 @@ local main = (function()
         mp.add_key_binding("Ctrl+h", "mpvacious-sub-rewind", _ { sub_rewind })
         mp.add_key_binding("Ctrl+H", "mpvacious-sub-replay", _ { sub_replay })
 
+        mp.add_key_binding("P", "mpvacious-sub-play-up-to-next", _ { sub_play_up_to_next.arm })
     end
 end)()
 
