@@ -78,4 +78,8 @@ function OSD:item(text)
     return self:color('fef6dd'):bold(text):color('ffffff')
 end
 
+function OSD:red(text)
+    return self:color('ff0000'):bold(text):color('ffffff')
+end
+
 return OSD
