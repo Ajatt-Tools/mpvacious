@@ -806,6 +806,7 @@ local pause_timer = (function()
     local check_stop
     local set_stop_time = function(time)
         stop_time = time
+        mp.observe_property("time-pos", "number", check_stop)
     end
     local stop = function()
         mp.unobserve_property(check_stop)
@@ -828,7 +829,6 @@ end)()
 
 local function sub_stop_at_the_end(sub)
     pause_timer.set_stop_time(sub['end'] - 0.050)
-    mp.observe_property("time-pos", "number", pause_timer.check_stop)
 end
 
 local function sub_replay()
