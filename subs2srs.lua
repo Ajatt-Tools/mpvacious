@@ -305,6 +305,54 @@ local function subprocess(args, completion_fn)
     return command_native(command_table, completion_fn)
 end
 
+local codec_support = (function()
+    local ovc_help = subprocess { 'mpv', '--ovc=help' }
+    local oac_help = subprocess { 'mpv', '--oac=help' }
+
+    local function is_audio_supported(codec)
+        return oac_help.status == 0 and oac_help.stdout:match('--oac=' .. codec) ~= nil
+    end
+
+    local function is_image_supported(codec)
+        return ovc_help.status == 0 and ovc_help.stdout:match('--ovc=' .. codec) ~= nil
+    end
+
+    return {
+        snapshot = {
+            libwebp = is_image_supported('libwebp'),
+            mjpeg = is_image_supported('mjpeg'),
+        },
+        audio = {
+            libmp3lame = is_audio_supported('libmp3lame'),
+            libopus = is_audio_supported('libopus'),
+        },
+    }
+end)()
+
+local function warn_formats(osd)
+    for type, codecs in pairs(codec_support) do
+        for codec, supported in pairs(codecs) do
+            if not supported and config[type .. '_codec'] == codec then
+                osd:red('warning: '):newline()
+                osd:tab():text(string.format("your version of mpv does not support %s.", codec)):newline()
+                osd:tab():text(string.format("mpvacious won't be able to create %s files.", type)):newline()
+            end
+        end
+    end
+end
+
+local function ensure_deck()
+    if config.create_deck == true then
+        ankiconnect.create_deck(config.deck_name)
+    end
+end
+
+local function load_next_profile()
+    config_manager.next_profile()
+    ensure_deck()
+    notify("Loaded profile " .. profiles.active)
+end
+
 local function get_episode_number(filename)
     -- Reverses the filename to start the search from the end as the media title might contain similar numbers.
     local filename_reversed = filename:reverse()
@@ -1507,6 +1555,8 @@ menu.update = function()
         osd:italics("Press "):item('i'):italics(" to show menu bindings."):newline()
     end
 
+    warn_formats(osd)
+
     menu.overlay_draw(osd:get_text())
 end
 
@@ -1556,6 +1606,7 @@ local main = (function()
 
         config_manager.init(config, profiles)
         clip_autocopy.init()
+        ensure_deck()
 
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+e", "mpvacious-export-note", export_to_anki)
