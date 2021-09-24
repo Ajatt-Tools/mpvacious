@@ -37,27 +37,27 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 
 local config = {
     -- Common
-    autoclip = false,              -- enable copying subs to the clipboard when mpv starts
-    nuke_spaces = true,            -- remove all spaces from exported anki cards
+    autoclip = false, -- enable copying subs to the clipboard when mpv starts
+    nuke_spaces = true, -- remove all spaces from exported anki cards
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
-    snapshot_format = "webp",      -- webp or jpg
-    snapshot_quality = 15,         -- from 0=lowest to 100=highest
-    snapshot_width = -2,           -- a positive integer or -2 for auto
-    snapshot_height = 200,         -- same
-    audio_format = "opus",         -- opus or mp3
-    audio_bitrate = "18k",         -- from 16k to 32k
-    audio_padding = 0.12,          -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
-    tie_volumes = false,           -- if set to true, the volume of the outputted audio file depends on the volume of the player at the time of export
+    snapshot_format = "webp", -- webp or jpg
+    snapshot_quality = 15, -- from 0=lowest to 100=highest
+    snapshot_width = -2, -- a positive integer or -2 for auto
+    snapshot_height = 200, -- same
+    audio_format = "opus", -- opus or mp3
+    audio_bitrate = "18k", -- from 16k to 32k
+    audio_padding = 0.12, -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
+    tie_volumes = false, -- if set to true, the volume of the outputted audio file depends on the volume of the player at the time of export
     menu_font_size = 25,
 
     -- Anki
-    create_deck = false,               -- automatically create a deck for new cards
-    deck_name = "Learning",            -- name of the deck for new cards
+    create_deck = false, -- automatically create a deck for new cards
+    deck_name = "Learning", -- name of the deck for new cards
     model_name = "Japanese sentences", -- Tools -> Manage note types
     sentence_field = "SentKanji",
     audio_field = "SentAudio",
     image_field = "Image",
-    append_media = true,               -- True to append video media after existing data, false to insert media before
+    append_media = true, -- True to append video media after existing data, false to insert media before
 
     -- Note tagging
     -- The tag(s) added to new notes. Spaces separate multiple tags.
@@ -68,20 +68,20 @@ local config = {
     --   %d - episode number (if none found, returns nothing)
     --   %e - SUBS2SRS_TAGS environment variable
     note_tag = "subs2srs %n",
-    tag_nuke_brackets = true,         -- delete all text inside brackets before subsituting filename into tag
-    tag_nuke_parentheses = false,     -- delete all text inside parentheses before subsituting filename into tag
-    tag_del_episode_num = true,       -- delete the episode number if found
+    tag_nuke_brackets = true, -- delete all text inside brackets before substituting filename into tag
+    tag_nuke_parentheses = false, -- delete all text inside parentheses before substituting filename into tag
+    tag_del_episode_num = true, -- delete the episode number if found
     tag_del_after_episode_num = true, -- delete everything after the found episode number (does nothing if tag_del_episode_num is disabled)
-    tag_filename_lowercase = false,   -- convert filename to lowercase for tagging.
+    tag_filename_lowercase = false, -- convert filename to lowercase for tagging.
 
     -- Misc info
     miscinfo_enable = true,
-    miscinfo_field = "Notes",         -- misc notes and source information field
+    miscinfo_field = "Notes", -- misc notes and source information field
     miscinfo_format = "%n EP%d (%t)", -- format string to use for the miscinfo_field, accepts note_tag-style format strings
 
     -- Forvo support
-    use_forvo = "yes",                -- 'yes', 'no', 'always'
-    vocab_field = "VocabKanji",       -- target word field
+    use_forvo = "yes", -- 'yes', 'no', 'always'
+    vocab_field = "VocabKanji", -- target word field
     vocab_audio_field = "VocabAudio", -- target word audio
 }
 
@@ -310,13 +310,13 @@ local function get_episode_number(filename)
     local filename_reversed = filename:reverse()
 
     local ep_num_patterns = {
-        "%s?(%d?%d?%d)[pP]?[eE]",  -- Starting with E or EP (case-insensitive). "Example Series S01E01"
-        "%)(%d?%d?%d)%(",          -- Surrounded by parentheses. "Example Series (12)"
-        "%](%d?%d?%d)%[",          -- Surrounded by brackets. "Example Series [01]"
-        "%s(%d?%d?%d)%s",          -- Surrounded by whitespace. "Example Series 124 [1080p 10-bit]"
-        "_(%d?%d?%d)_",            -- Surrounded by underscores. "Example_Series_04_1080p"
-        "^(%d?%d?%d)[%s_]",        -- Ending to the episode number. "Example Series 124"
-        "(%d?%d?%d)%-edosipE",     -- Prepended by "Episode-". "Example Episode-165"
+        "%s?(%d?%d?%d)[pP]?[eE]", -- Starting with E or EP (case-insensitive). "Example Series S01E01"
+        "%)(%d?%d?%d)%(", -- Surrounded by parentheses. "Example Series (12)"
+        "%](%d?%d?%d)%[", -- Surrounded by brackets. "Example Series [01]"
+        "%s(%d?%d?%d)%s", -- Surrounded by whitespace. "Example Series 124 [1080p 10-bit]"
+        "_(%d?%d?%d)_", -- Surrounded by underscores. "Example_Series_04_1080p"
+        "^(%d?%d?%d)[%s_]", -- Ending to the episode number. "Example Series 124"
+        "(%d?%d?%d)%-edosipE", -- Prepended by "Episode-". "Example Episode-165"
     }
 
     local s, e, episode_num
@@ -413,73 +413,6 @@ local function join_media_fields(new_data, stored_data)
         new_data[field] = table.get(stored_data, field, "") .. table.get(new_data, field, "")
     end
     return new_data
-end
-
-local validate_config
-do
-    local function is_webp_supported()
-        local ret = subprocess { 'mpv', '--ovc=help' }
-        return ret.status == 0 and ret.stdout:match('--ovc=libwebp')
-    end
-
-    local function is_opus_supported()
-        local ret = subprocess { 'mpv', '--oac=help' }
-        return ret.status == 0 and ret.stdout:match('--oac=libopus')
-    end
-
-    local function set_audio_format()
-        if config.audio_format == 'opus' and is_opus_supported() then
-            config.audio_codec = 'libopus'
-            config.audio_extension = '.ogg'
-        else
-            config.audio_codec = 'libmp3lame'
-            config.audio_extension = '.mp3'
-        end
-    end
-
-    local function set_video_format()
-        if config.snapshot_format == 'webp' and is_webp_supported() then
-            config.snapshot_extension = '.webp'
-            config.snapshot_codec = 'libwebp'
-        else
-            config.snapshot_extension = '.jpg'
-            config.snapshot_codec = 'mjpeg'
-        end
-    end
-
-    local function ensure_in_range(dimension)
-        config[dimension] = config[dimension] < 42 and -2 or config[dimension]
-        config[dimension] = config[dimension] > 640 and 640 or config[dimension]
-    end
-
-    local function conditionally_set_defaults(width, height, quality)
-        if config[width] < 1 and config[height] < 1 then
-            config[width] = -2
-            config[height] = 200
-        end
-        if config[quality] < 0 or config[quality] > 100 then
-            config[quality] = 15
-        end
-    end
-
-    local function check_image_settings()
-        ensure_in_range('snapshot_width')
-        ensure_in_range('snapshot_height')
-        conditionally_set_defaults('snapshot_width', 'snapshot_height', 'snapshot_quality')
-    end
-
-    local function ensure_deck()
-        if config.create_deck == true then
-            ankiconnect.create_deck(config.deck_name)
-        end
-    end
-
-    validate_config = function()
-        ensure_deck()
-        set_audio_format()
-        set_video_format()
-        check_image_settings()
-    end
 end
 
 local function update_sentence(new_data, stored_data)
@@ -657,77 +590,6 @@ local filename_factory = (function()
 end)()
 
 ------------------------------------------------------------
--- profiles management
-
-local config_manager = (function()
-    local initial_config = {}
-    local default_profile = 'subs2srs'
-    local profiles_config = 'subs2srs_profiles'
-
-    local function load_profile(profile_name)
-        if is_empty(profile_name) then
-            profile_name = profiles.active
-            if is_empty(profile_name) then
-                profile_name = default_profile
-            end
-        end
-        mpopt.read_options(config, profile_name)
-    end
-
-    local function save_initial_config()
-        for key, value in pairs(config) do
-            initial_config[key] = value
-        end
-    end
-
-    local function restore_initial_config()
-        for key, value in pairs(initial_config) do
-            config[key] = value
-        end
-    end
-
-    local function next_profile()
-        local first, next, new
-        for profile in string.gmatch(profiles.profiles, '[^,]+') do
-            if not first then
-                first = profile
-            end
-            if profile == profiles.active then
-                next = true
-            elseif next then
-                next = false
-                new = profile
-            end
-        end
-        if next == true or not new then
-            new = first
-        end
-        profiles.active = new
-        restore_initial_config()
-        load_profile(profiles.active)
-        validate_config()
-        notify("Loaded profile " .. profiles.active)
-    end
-
-    local function init()
-        -- 'subs2srs' is the main profile, it is always loaded.
-        -- 'active profile' overrides it afterwards.
-        mpopt.read_options(profiles, profiles_config)
-        load_profile(default_profile)
-        save_initial_config()
-        if profiles.active ~= default_profile then
-            load_profile(profiles.active)
-        end
-        validate_config()
-    end
-
-    return {
-        init = init,
-        next_profile = next_profile,
-    }
-end)()
-
-------------------------------------------------------------
 -- front for adding and updating notes
 
 local function export_to_anki(gui)
@@ -798,7 +660,9 @@ end
 -- seeking: sub replay, sub seek, sub rewind
 
 local function _(params)
-    return function() return pcall(unpack(params)) end
+    return function()
+        return pcall(unpack(params))
+    end
 end
 
 local pause_timer = (function()
@@ -890,7 +754,9 @@ end)()
 local function init_platform_windows()
     local self = {}
     local curl_tmpfile_path = utils.join_path(os.getenv('TEMP'), 'curl_tmp.txt')
-    mp.register_event('shutdown', function() os.remove(curl_tmpfile_path) end)
+    mp.register_event('shutdown', function()
+        os.remove(curl_tmpfile_path)
+    end)
 
     self.tmp_dir = function()
         return os.getenv('TEMP')
@@ -1589,18 +1455,18 @@ menu.with_update = function(params)
 end
 
 menu.keybindings = {
-    { key = 's', fn = menu.with_update{subs.set_timing, 'start'} },
-    { key = 'e', fn = menu.with_update{subs.set_timing, 'end'} },
-    { key = 'c', fn = menu.with_update{subs.set_starting_line} },
-    { key = 'r', fn = menu.with_update{subs.clear_and_notify} },
-    { key = 'g', fn = menu.with_update{export_to_anki, true} },
-    { key = 'n', fn = menu.with_update{export_to_anki, false} },
-    { key = 'm', fn = menu.with_update{update_last_note, false} },
-    { key = 'M', fn = menu.with_update{update_last_note, true} },
-    { key = 't', fn = menu.with_update{clip_autocopy.toggle} },
-    { key = 'i', fn = menu.with_update{menu.hints_state.bump} },
-    { key = 'p', fn = menu.with_update{config_manager.next_profile} },
-    { key = 'ESC', fn = function() menu.close() end },
+    { key = 's', fn = menu.with_update { subs.set_timing, 'start' } },
+    { key = 'e', fn = menu.with_update { subs.set_timing, 'end' } },
+    { key = 'c', fn = menu.with_update { subs.set_starting_line } },
+    { key = 'r', fn = menu.with_update { subs.clear_and_notify } },
+    { key = 'g', fn = menu.with_update { export_to_anki, true } },
+    { key = 'n', fn = menu.with_update { export_to_anki, false } },
+    { key = 'm', fn = menu.with_update { update_last_note, false } },
+    { key = 'M', fn = menu.with_update { update_last_note, true } },
+    { key = 't', fn = menu.with_update { clip_autocopy.toggle } },
+    { key = 'i', fn = menu.with_update { menu.hints_state.bump } },
+    { key = 'p', fn = menu.with_update { load_next_profile } },
+    { key = 'ESC', fn = menu.close },
 }
 
 menu.update = function()
