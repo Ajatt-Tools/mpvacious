@@ -96,8 +96,8 @@ local profiles = {
 local mp = require('mp')
 local utils = require('mp.utils')
 local msg = require('mp.msg')
-local mpopt = require('mp.options')
 local OSD = require('osd_styler')
+local config_manager = require('config')
 
 -- namespaces
 local subs
@@ -1554,8 +1554,7 @@ local main = (function()
             main_executed = true
         end
 
-        config_manager.init()
-
+        config_manager.init(config, profiles)
         clip_autocopy.init()
 
         -- Key bindings
