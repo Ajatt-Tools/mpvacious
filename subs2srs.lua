@@ -827,64 +827,62 @@ local pause_timer = (function()
     }
 end)()
 
-local function sub_stop_at_the_end(sub)
-    pause_timer.set_stop_time(sub['end'] - 0.050)
-end
+local play_control = (function()
+    local sub_lapses = 1
 
-local function sub_replay()
-    local sub = subs.get_current()
-    mp.commandv('seek', sub['start'], 'absolute')
-    mp.set_property("pause", "no")
-    sub_stop_at_the_end(sub)
-end
-
-local function sub_seek(direction, pause)
-    mp.commandv("sub_seek", direction == 'backward' and '-1' or '1')
-    mp.commandv("seek", "0.015", "relative+exact")
-    if pause then
-        mp.set_property("pause", "yes")
+    local function stop_at_the_end(sub)
+        pause_timer.set_stop_time(sub['end'] - 0.050)
     end
-    pause_timer.stop()
-end
 
-local function sub_rewind()
-    mp.commandv('seek', subs.get_current()['start'] + 0.015, 'absolute')
-    pause_timer.stop()
-end
-
-local sub_play_up_to_next = {
-    deadzone_end_time,
-}
-
-sub_play_up_to_next.check_sub = function()
-    local sub = subs.get_current()
-    if sub then
-        mp.unobserve_property(sub_play_up_to_next.check_sub)
-        sub_stop_at_the_end(sub)
+    local function play_till_sub_end()
+        local sub = subs.get_current()
+        mp.commandv('seek', sub['start'], 'absolute')
+        mp.set_property("pause", "no")
+        stop_at_the_end(sub)
     end
-end
 
-sub_play_up_to_next.check_deadzone_timer = function(_, time)
-    if time > sub_play_up_to_next.deadzone_end_time then
-        mp.unobserve_property(sub_play_up_to_next.check_deadzone_timer)
+    local function sub_seek(direction, pause)
+        mp.commandv("sub_seek", direction == 'backward' and '-1' or '1')
+        mp.commandv("seek", "0.015", "relative+exact")
+        if pause then
+            mp.set_property("pause", "yes")
+        end
+        pause_timer.stop()
+    end
+
+    local function sub_rewind()
+        mp.commandv('seek', subs.get_current()['start'] + 0.015, 'absolute')
+        pause_timer.stop()
+    end
+
+    local function check_sub()
         local sub = subs.get_current()
         if sub then
-            sub_stop_at_the_end(sub)
-        else
-            mp.observe_property("sub-text", "string", sub_play_up_to_next.check_sub)
+            sub_lapses = sub_lapses - 1
+            if sub_lapses <= 0 then
+                mp.unobserve_property(check_sub)
+                stop_at_the_end(sub)
+            end
         end
     end
-end
 
-sub_play_up_to_next.arm = function()
-    -- When this feature is used, the player is usually stopped few tens of milliseconds before the end time of a sub,
-    -- so "sub-text" change event will occur almost immediately after unpausing.  Often this would make the player
-    -- to pause again in just few frames after keypress.  To avoid this, a small delay ("deadzone") is applied before
-    -- subscribing to "sub-text" change event.
-    sub_play_up_to_next.deadzone_end_time = mp.get_property_number('time-pos') + 0.300
-    mp.observe_property("time-pos", "number", sub_play_up_to_next.check_deadzone_timer)
-    mp.set_property("pause", "no")
-end
+    local function play_till_next_sub_end()
+        -- At first sub_lapses is set to 2.
+        -- As soon as it starts observing, it notices the current subtitle and decreases sub_lapses to 1.
+        -- When the next subtitle appears, it decreases sub_lapses to 0 and calls stop_at_the_end()
+        sub_lapses = 2
+        mp.observe_property("sub-text", "string", check_sub)
+        mp.set_property("pause", "no")
+        notify("Waiting till next sub...", "info", 10)
+    end
+
+    return {
+        play_till_sub_end = play_till_sub_end,
+        play_till_next_sub_end = play_till_next_sub_end,
+        sub_seek = sub_seek,
+        sub_rewind = sub_rewind,
+    }
+end)()
 
 ------------------------------------------------------------
 -- platform specific
@@ -1707,16 +1705,15 @@ local main = (function()
         mp.add_key_binding("Ctrl+M", "mpvacious-overwrite-last-note", _ { update_last_note, true })
 
         -- Vim-like seeking between subtitle lines
-        mp.add_key_binding("H", "mpvacious-sub-seek-back", _ { sub_seek, 'backward' })
-        mp.add_key_binding("L", "mpvacious-sub-seek-forward", _ { sub_seek, 'forward' })
+        mp.add_key_binding("H", "mpvacious-sub-seek-back", _ { play_control.sub_seek, 'backward' })
+        mp.add_key_binding("L", "mpvacious-sub-seek-forward", _ { play_control.sub_seek, 'forward' })
 
-        mp.add_key_binding("Alt+h", "mpvacious-sub-seek-back-pause", _ { sub_seek, 'backward', true })
-        mp.add_key_binding("Alt+l", "mpvacious-sub-seek-forward-pause", _ { sub_seek, 'forward', true })
+        mp.add_key_binding("Alt+h", "mpvacious-sub-seek-back-pause", _ { play_control.sub_seek, 'backward', true })
+        mp.add_key_binding("Alt+l", "mpvacious-sub-seek-forward-pause", _ { play_control.sub_seek, 'forward', true })
 
-        mp.add_key_binding("Ctrl+h", "mpvacious-sub-rewind", _ { sub_rewind })
-        mp.add_key_binding("Ctrl+H", "mpvacious-sub-replay", _ { sub_replay })
-
-        mp.add_key_binding("Ctrl+L", "mpvacious-sub-play-up-to-next", _ { sub_play_up_to_next.arm })
+        mp.add_key_binding("Ctrl+h", "mpvacious-sub-rewind", _ { play_control.sub_rewind })
+        mp.add_key_binding("Ctrl+H", "mpvacious-sub-replay", _ { play_control.play_till_sub_end })
+        mp.add_key_binding("Ctrl+L", "mpvacious-sub-play-up-to-next", _ { play_control.play_till_next_sub_end })
     end
 end)()
 
