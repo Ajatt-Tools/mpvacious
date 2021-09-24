@@ -1716,7 +1716,7 @@ local main = (function()
         mp.add_key_binding("Ctrl+h", "mpvacious-sub-rewind", _ { sub_rewind })
         mp.add_key_binding("Ctrl+H", "mpvacious-sub-replay", _ { sub_replay })
 
-        mp.add_key_binding("P", "mpvacious-sub-play-up-to-next", _ { sub_play_up_to_next.arm })
+        mp.add_key_binding("Ctrl+L", "mpvacious-sub-play-up-to-next", _ { sub_play_up_to_next.arm })
     end
 end)()
 

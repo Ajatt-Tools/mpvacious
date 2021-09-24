@@ -268,7 +268,7 @@ Seeking:
 * `Alt+h` and `Alt+l` - Seek to the previous, or the next subtitle, and pause.
 * `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
 * `Ctrl+Shift+h` - Replay current subtitle line, and pause.
-* `Shift-p` - Play until the end of the next subtitle, and pause. Useful for beginners who need
+* `Ctrl+Shift+l` - Play until the end of the next subtitle, and pause. Useful for beginners who need
 to look up words in each and every dialogue line.
 
 ### Menu options
