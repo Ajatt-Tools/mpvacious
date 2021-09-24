@@ -1513,7 +1513,7 @@ menu.keybindings = {
     { key = 't', fn = menu.with_update { clip_autocopy.toggle } },
     { key = 'i', fn = menu.with_update { menu.hints_state.bump } },
     { key = 'p', fn = menu.with_update { load_next_profile } },
-    { key = 'ESC', fn = menu.close },
+    { key = 'ESC', fn = function() menu.close() end },
 }
 
 menu.update = function()
