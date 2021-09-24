@@ -728,8 +728,6 @@ local pause_timer = (function()
         if time > stop_time then
             stop()
             mp.set_property("pause", "yes")
-        else
-            notify('Timer: ' .. human_readable_time(stop_time - time))
         end
     end
     return {
@@ -744,6 +742,7 @@ local play_control = (function()
 
     local function stop_at_the_end(sub)
         pause_timer.set_stop_time(sub['end'] - 0.050)
+        notify("Playing till the end of the sub...", "info", 3)
     end
 
     local function play_till_sub_end()
