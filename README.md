@@ -235,8 +235,7 @@ Alt+l        script-binding mpvacious-sub-seek-forward-pause
 
 Ctrl+h       script-binding mpvacious-sub-rewind
 Ctrl+H       script-binding mpvacious-sub-replay
-
-P            script-binding mpvacious-sub-play-up-to-next
+Ctrl+L       script-binding mpvacious-sub-play-up-to-next
 ```
 
 **Note:** A capital letter means that you need to press Shift in order to activate the corresponding binding.
