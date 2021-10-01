@@ -738,7 +738,7 @@ local pause_timer = (function()
 end)()
 
 local play_control = (function()
-    local sub_lapses = 1
+    local current_sub
 
     local function stop_at_the_end(sub)
         pause_timer.set_stop_time(sub['end'] - 0.050)
@@ -768,20 +768,14 @@ local play_control = (function()
 
     local function check_sub()
         local sub = subs.get_current()
-        if sub then
-            sub_lapses = sub_lapses - 1
-            if sub_lapses <= 0 then
-                mp.unobserve_property(check_sub)
-                stop_at_the_end(sub)
-            end
+        if sub and sub ~= current_sub then
+            mp.unobserve_property(check_sub)
+            stop_at_the_end(sub)
         end
     end
 
     local function play_till_next_sub_end()
-        -- At first sub_lapses is set to 2.
-        -- As soon as it starts observing, it notices the current subtitle and decreases sub_lapses to 1.
-        -- When the next subtitle appears, it decreases sub_lapses to 0 and calls stop_at_the_end()
-        sub_lapses = 2
+        current_sub = subs.get_current()
         mp.observe_property("sub-text", "string", check_sub)
         mp.set_property("pause", "no")
         notify("Waiting till next sub...", "info", 10)
