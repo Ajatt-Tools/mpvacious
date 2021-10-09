@@ -113,8 +113,7 @@ to your [mpv scripts](https://github.com/mpv-player/mpv/wiki/User-Scripts) direc
 | Windows | `C:/Users/Username/AppData/Roaming/mpv/scripts/` |
 
 **Note:** in [Celluloid](https://www.archlinux.org/packages/community/x86_64/celluloid/)
-user scripts are installed by switching to the "Plugins" tab
-in the preferences dialog and dropping the files there.
+user scripts are installed in `/.config/celluloid/scripts/`.
 
 <details>
 
@@ -163,6 +162,10 @@ package.path = package.path .. ';' .. home .. '/.config/mpv/scripts/subs2srs/?.l
 function load(relative_path) dofile(mpv_scripts_dir_path .. relative_path) end
 load("subs2srs/subs2srs.lua")
 ```
+
+**Note:** in [Celluloid](https://www.archlinux.org/packages/community/x86_64/celluloid/)
+replace  in `.config/mpv` with `.config/celluloid`
+and optionally `subs2srs` with the name of the folder mpvacious is cloned into.
 
 </details>
 
