@@ -40,6 +40,7 @@ local config = {
     autoclip = false, -- enable copying subs to the clipboard when mpv starts
     nuke_spaces = true, -- remove all spaces from exported anki cards
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
+    use_ffmpeg = false, -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
     snapshot_format = "webp", -- webp or jpg
     snapshot_quality = 15, -- from 0=lowest to 100=highest
     snapshot_width = -2, -- a positive integer or -2 for auto
