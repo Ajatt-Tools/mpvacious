@@ -67,7 +67,7 @@ while watching your favorite TV show.
     <td>Installed by default on all platforms except Windows 7.</td>
 </tr>
 <tr>
-    <td><a href="https://www.archlinux.org/packages/extra/x86_64/xclip/">xclip</a></td>
+    <td><a href="https://www.archlinux.org/packages/extra/x86_64/xclip/">xclip</a> or <a href="https://archlinux.org/packages/community/x86_64/wl-clipboard/">wl-copy</a></td>
     <td></td>
     <td>pbcopy</td>
     <td>To copy subtitle text to clipboard.</td>
