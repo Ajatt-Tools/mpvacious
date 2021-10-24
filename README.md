@@ -207,6 +207,11 @@ set `audio_format` to `mp3` and/or `snapshot_format` to `jpg`.
 Otherwise, I recommend sticking with `opus` and `webp`,
 as they greatly reduce the size of the generated files.
 
+If no matter what mpvacious fails to create audio clips and/or snapshots,
+change `use_ffmpeg` to `yes`.
+By using ffmpeg instead of the encoder built in mpv you can work around most encoder issues.
+You need to have ffmpeg installed for this to work.
+
 ### Key bindings
 
 The user may change some key bindings, though this step is not necessary.
@@ -254,7 +259,7 @@ Menu:
 
 Make a card:
 * `Ctrl+e` - Export a card with the currently visible subtitle line on the front.
-Use this when your subs are well timed,
+Use this when your subs are well-timed,
 and the target sentence doesn't span multiple subs.
 
 Update the last card:
@@ -275,7 +280,7 @@ to look up words in each and every dialogue line.
 
 ### Menu options
 
-Let's say your subs are well timed,
+Let's say your subs are well-timed,
 but the sentence you want to add is split between multiple subs.
 We need to combine the lines before making a card.
 
@@ -289,7 +294,7 @@ Press `n` to make the card.
 
 * `r` - Forget all previously saved timings and associated dialogs.
 
-If subs are badly timed, first of all, you could try to re-time them.
+If subs are badly timed, first, you could try to re-time them.
 [ffsubsync](https://github.com/smacke/ffsubsync) is a program that will do it for you.
 Another option would be to shift timings using key bindings provided by mpv.
 
@@ -348,7 +353,7 @@ mpv by default allows you to do a `1` second exact seek by pressing `Shift+LEFT`
 Open the mpvacious menu by pressing `a`, seek to the position you need, and set the timings.
 Then press `g` to invoke the `Add Cards` dialog.
 
-If the show is hardsubbed, you can use [Tesseract](https://github.com/tesseract-ocr/tesseract)
+If the show is hard-subbed, you can use [Tesseract](https://github.com/tesseract-ocr/tesseract)
 or [ShareX](https://getsharex.com/) OCR to add text to the card.
 
 ### Other tools
@@ -358,8 +363,8 @@ If you don't like the default Yomichan Search tool, try:
 * Clipboard Inserter browser add-on
 ([chrome](https://chrome.google.com/webstore/detail/clipboard-inserter/deahejllghicakhplliloeheabddjajm))
 ([firefox](https://addons.mozilla.org/ja/firefox/addon/clipboard-inserter/))
-* An html page ([1](https://pastebin.com/zDY6s3NK)) ([2](https://pastebin.com/hZ4sawL4))
-to paste the contents of you clipboard to
+* A html page ([1](https://pastebin.com/zDY6s3NK)) ([2](https://pastebin.com/hZ4sawL4))
+to paste the contents of your clipboard to
 
 You can use any html page as long as it has \<body\>\</body\> in it.
 
