@@ -98,11 +98,11 @@ local utils = require('mp.utils')
 local msg = require('mp.msg')
 local OSD = require('osd_styler')
 local config_manager = require('config')
+local encoder = require('encoder')
 
 -- namespaces
 local subs
 local clip_autocopy
-local encoder
 local ankiconnect
 local menu
 local platform
@@ -483,6 +483,17 @@ local function update_sentence(new_data, stored_data)
     return new_data
 end
 
+local function audio_padding()
+    local video_duration = mp.get_property_number('duration')
+    if config.audio_padding == 0.0 or not video_duration then
+        return 0.0
+    end
+    if subs.user_timings.is_set('start') or subs.user_timings.is_set('end') then
+        return 0.0
+    end
+    return config.audio_padding
+end
+
 ------------------------------------------------------------
 -- utility classes
 
@@ -656,7 +667,7 @@ local function export_to_anki(gui)
     local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'])
 
     encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
-    encoder.create_audio(sub['start'], sub['end'], audio_filename)
+    encoder.create_audio(sub['start'], sub['end'], audio_filename, audio_padding())
 
     local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
     ankiconnect.add_note(note_fields, gui)
@@ -683,7 +694,7 @@ local function update_last_note(overwrite)
 
     local create_media = function()
         encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
-        encoder.create_audio(sub['start'], sub['end'], audio_filename)
+        encoder.create_audio(sub['start'], sub['end'], audio_filename, audio_padding())
     end
 
     local new_data = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
@@ -993,106 +1004,6 @@ do
 
         return new_data
     end
-end
-
-------------------------------------------------------------
--- provides interface for creating audio clips and snapshots
-
-encoder = {}
-
-encoder.pad_timings = function(start_time, end_time)
-    local video_duration = mp.get_property_number('duration')
-    if config.audio_padding == 0.0 or not video_duration then
-        return start_time, end_time
-    end
-    if subs.user_timings.is_set('start') or subs.user_timings.is_set('end') then
-        return start_time, end_time
-    end
-    start_time = start_time - config.audio_padding
-    end_time = end_time + config.audio_padding
-    if start_time < 0 then
-        start_time = 0
-    end
-    if end_time > video_duration then
-        end_time = video_duration
-    end
-    return start_time, end_time
-end
-
-encoder.get_active_track = function(track_type)
-    local track_list = mp.get_property_native('track-list')
-    for _, track in pairs(track_list) do
-        if track.type == track_type and track.selected == true then
-            return track
-        end
-    end
-    return nil
-end
-
-encoder.create_snapshot = function(timestamp, filename)
-    local source_path = mp.get_property("path")
-    local output_path = utils.join_path(platform.tmp_dir(), filename)
-
-    local args = {
-        'mpv',
-        source_path,
-        '--loop-file=no',
-        '--audio=no',
-        '--no-ocopy-metadata',
-        '--no-sub',
-        '--frames=1',
-        '--ovcopts-add=lossless=0',
-        '--ovcopts-add=compression_level=6',
-        table.concat { '--ovc=', config.snapshot_codec },
-        table.concat { '-start=', timestamp },
-        table.concat { '--ovcopts-add=quality=', tostring(config.snapshot_quality) },
-        table.concat { '--vf-add=scale=', config.snapshot_width, ':', config.snapshot_height },
-        table.concat { '-o=', output_path }
-    }
-    local on_finish = function()
-        ankiconnect.store_file(filename, output_path)
-        os.remove(output_path)
-    end
-    subprocess(args, on_finish)
-end
-
-encoder.create_audio = function(start_timestamp, end_timestamp, filename)
-    local source_path = mp.get_property("path")
-    local audio_track = encoder.get_active_track('audio')
-    local audio_track_id = mp.get_property("aid")
-    local output_path = utils.join_path(platform.tmp_dir(), filename)
-
-    if audio_track and audio_track.external == true then
-        source_path = audio_track['external-filename']
-        audio_track_id = 'auto'
-    end
-
-    start_timestamp, end_timestamp = encoder.pad_timings(start_timestamp, end_timestamp)
-
-    local args = {
-        'mpv',
-        source_path,
-        '--loop-file=no',
-        '--video=no',
-        '--no-ocopy-metadata',
-        '--no-sub',
-        '--audio-channels=mono',
-        '--oacopts-add=vbr=on',
-        '--oacopts-add=application=voip',
-        '--oacopts-add=compression_level=10',
-        table.concat { '--oac=', config.audio_codec },
-        table.concat { '--start=', start_timestamp },
-        table.concat { '--end=', end_timestamp },
-        table.concat { '--aid=', audio_track_id },
-        table.concat { '--volume=', config.tie_volumes and mp.get_property('volume') or '100' },
-        table.concat { '--oacopts-add=b=', config.audio_bitrate },
-        table.concat { '-o=', output_path }
-    }
-    local on_finish = function()
-        ankiconnect.store_file(filename, output_path)
-        os.remove(output_path)
-    end
-    subprocess(args, on_finish)
 end
 
 ------------------------------------------------------------
@@ -1598,6 +1509,7 @@ local main = (function()
         end
 
         config_manager.init(config, profiles)
+        encoder.init(config, ankiconnect.store_file, platform.tmp_dir, subprocess)
         clip_autocopy.init()
         ensure_deck()
 
