@@ -90,9 +90,8 @@ by installing FFmpeg and enabling FFmpeg support in `mpvacious`'s config.
 For details see the [configuration](#configuration) section.
 * If you're on a **Windows** machine, a mpv build by `shinchiro` is recommended.
 * **macOS** users are advised to use [homebrew](https://brew.sh/) or manually add `mpv` to `PATH`.
-* If you're using a GNU/Linux distro,
-make sure that your build of mpv supports encoding of audio and images.
-To test that, this shell command can be used:
+* Make sure that your build of mpv supports encoding of audio and images.
+This shell command can be used to test it.
   ```
   $ mpv 'test_video.mkv' --loop-file=no --frames=1 -o='test_image.jpg'
   ```
