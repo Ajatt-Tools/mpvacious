@@ -83,17 +83,20 @@ $ sudo pacman -Syu mpv anki curl xclip --needed
 
 ## Prerequisites
 
-* If you're on a **Windows** machine, watch [this tutorial](https://youtu.be/bbg6ztWecbU?t=103).
-Make sure you choose a build by `shinchiro`,
-otherwise you may encounter problems when making Anki cards.
-* **macOS** users should use [homebrew](https://brew.sh/) or manually add `mpv` to `PATH`.
-* If you're using a GNU/Linux distro different from Arch Linux,
+* A guide on how to set up Anki can be found [on our site](https://tatsumoto.neocities.org/blog/setting-up-anki.html).
+Note that it is not recommended to use FlatPak or similar containers.
+* Most problems with adding audio or images to Anki cards can be fixed
+by installing FFmpeg and enabling FFmpeg support in `mpvacious`'s config.
+For details see the [configuration](#configuration) section.
+* If you're on a **Windows** machine, a mpv build by `shinchiro` is recommended.
+* **macOS** users are advised to use [homebrew](https://brew.sh/) or manually add `mpv` to `PATH`.
+* If you're using a GNU/Linux distro,
 make sure that your build of mpv supports encoding of audio and images.
 To test that, this shell command can be used:
   ```
   $ mpv 'test_video.mkv' --loop-file=no --frames=1 -o='test_image.jpg'
   ```
-  If the command fails, find a compatible build on the [mpv website](https://mpv.io/installation/).
+  If the command fails, switch to FFmpeg or find a compatible build on the [mpv website](https://mpv.io/installation/).
 
 ## Installation
 
