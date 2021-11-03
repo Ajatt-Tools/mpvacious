@@ -472,6 +472,10 @@ local function update_sentence(new_data, stored_data)
     if is_empty(stored_data[config.sentence_field]) then
         -- sentence field is empty. can't continue.
         return new_data
+    elseif is_empty(new_data[config.sentence_field]) then
+        -- *new* sentence field is empty, but old one contains data. don't delete the existing sentence.
+        new_data[config.sentence_field] = stored_data[config.sentence_field]
+        return new_data
     end
 
     local _, opentag, target, closetag, _ = stored_data[config.sentence_field]:match('^(.-)(<[^>]+>)(.-)(</[^>]+>)(.-)$')
@@ -679,9 +683,14 @@ local function update_last_note(overwrite)
     local sub = subs.get()
     local last_note_id = ankiconnect.get_last_note_id()
 
-    if sub == nil or is_empty(sub['text']) then
+    if sub == nil then
         notify("Nothing to export. Have you set the timings?", "warn", 2)
         return
+    elseif is_empty(sub['text']) then
+        -- In this case, don't modify whatever existing text there is and just
+        -- modify the other fields we can. The user might be trying to add
+        -- audio to a card which they've manually transcribed.
+        sub['text'] = nil
     end
 
     if last_note_id < minutes_ago(10) then
