@@ -1237,11 +1237,16 @@ subs = {
 subs.get_current = function()
     local sub_text = mp.get_property("sub-text")
     if not is_empty(sub_text) then
+        local sub_start = mp.get_property_number("sub-start")
+        local sub_end = mp.get_property_number("sub-end")
+        if sub_start == nil or sub_end == nil then
+            return nil
+        end
         local delay = mp.get_property_native("sub-delay") - mp.get_property_native("audio-delay")
         return Subtitle:new {
             ['text'] = sub_text,
-            ['start'] = mp.get_property_number("sub-start") + delay,
-            ['end'] = mp.get_property_number("sub-end") + delay
+            ['start'] = sub_start + delay,
+            ['end'] = sub_end + delay
         }
     end
     return nil
