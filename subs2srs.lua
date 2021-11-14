@@ -38,7 +38,7 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 local config = {
     -- Common
     autoclip = false, -- enable copying subs to the clipboard when mpv starts
-    nuke_spaces = true, -- remove all spaces from exported anki cards
+    nuke_spaces = false, -- remove all spaces from exported anki cards
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
     use_ffmpeg = false, -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
     snapshot_format = "webp", -- webp or jpg
