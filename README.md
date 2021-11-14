@@ -229,7 +229,7 @@ Default bindings:
 ```
 a            script-binding mpvacious-menu-open
 
-Ctrl+e       script-binding mpvacious-export-note
+Ctrl+n       script-binding mpvacious-export-note
 
 Ctrl+m       script-binding mpvacious-update-last-note
 Ctrl+M       script-binding mpvacious-overwrite-last-note
@@ -260,7 +260,7 @@ Menu:
 * `a` - Open `advanced menu`.
 
 Make a card:
-* `Ctrl+e` - Export a card with the currently visible subtitle line on the front.
+* `Ctrl+n` - Export a card with the currently visible subtitle line on the front.
 Use this when your subs are well-timed,
 and the target sentence doesn't span multiple subs.
 

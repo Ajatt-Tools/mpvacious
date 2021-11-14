@@ -1529,7 +1529,7 @@ local main = (function()
         ensure_deck()
 
         -- Key bindings
-        mp.add_forced_key_binding("Ctrl+e", "mpvacious-export-note", export_to_anki)
+        mp.add_forced_key_binding("Ctrl+n", "mpvacious-export-note", export_to_anki)
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
         mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", clip_autocopy.toggle)
 
