@@ -1235,21 +1235,7 @@ subs = {
 }
 
 subs.get_current = function()
-    local sub_text = mp.get_property("sub-text")
-    if not is_empty(sub_text) then
-        local sub_start = mp.get_property_number("sub-start")
-        local sub_end = mp.get_property_number("sub-end")
-        if sub_start == nil or sub_end == nil then
-            return nil
-        end
-        local delay = mp.get_property_native("sub-delay") - mp.get_property_native("audio-delay")
-        return Subtitle:new {
-            ['text'] = sub_text,
-            ['start'] = sub_start + delay,
-            ['end'] = sub_end + delay
-        }
-    end
-    return nil
+    return Subtitle:now()
 end
 
 subs.get_timing = function(position)
@@ -1390,6 +1376,26 @@ function Subtitle:new(o)
     setmetatable(o, self)
     self.__index = self
     return o
+end
+
+function Subtitle:now()
+    local delay = mp.get_property_native("sub-delay") - mp.get_property_native("audio-delay")
+    local this = self:new {
+        ['text'] = mp.get_property("sub-text"),
+        ['start'] = mp.get_property_number("sub-start"),
+        ['end'] = mp.get_property_number("sub-end"),
+    }
+    return this:valid() and this:delay(delay) or nil
+end
+
+function Subtitle:delay(delay)
+    self['start'] = self['start'] + delay
+    self['end'] = self['end'] + delay
+    return self
+end
+
+function Subtitle:valid()
+    return not is_empty(self['text']) and self['start'] and self['end'] and self['start'] >= 0 and self['end'] > 0
 end
 
 Subtitle.__eq = function(lhs, rhs)
