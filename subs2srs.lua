@@ -1298,7 +1298,7 @@ end
 
 subs.set_starting_line = function()
     subs.clear()
-    if not is_empty(mp.get_property("sub-text")) then
+    if subs.get_current() then
         subs.observe()
         notify("Timings have been set to the current sub.", "info", 2)
     else
@@ -1380,8 +1380,9 @@ end
 
 function Subtitle:now()
     local delay = mp.get_property_native("sub-delay") - mp.get_property_native("audio-delay")
+    local text = mp.get_property("sub-text")
     local this = self:new {
-        ['text'] = mp.get_property("sub-text"),
+        ['text'] = not is_empty(text) and text or "<PGS subtitles>",
         ['start'] = mp.get_property_number("sub-start"),
         ['end'] = mp.get_property_number("sub-end"),
     }
