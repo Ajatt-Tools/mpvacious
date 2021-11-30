@@ -87,7 +87,6 @@ ffmpeg.make_audio_args = function(source_path, output_path, start_timestamp, end
         '-application', 'voip',
         '-b:a', tostring(_config.audio_bitrate),
         '-filter:a', string.format("volume=%.1f", _config.tie_volumes and mp.get_property_native('volume') / 100 or 1),
-        '-af', 'silenceremove=1:0:-50dB',
         output_path
     }
 end
@@ -136,7 +135,6 @@ mpv.make_audio_args = function(source_path, output_path, start_timestamp, end_ti
         '--oacopts-add=vbr=on',
         '--oacopts-add=application=voip',
         '--oacopts-add=compression_level=10',
-        '--af-append=silenceremove=1:0:-50dB',
         table.concat { '--oac=', _config.audio_codec },
         table.concat { '--start=', start_timestamp },
         table.concat { '--end=', end_timestamp },
@@ -170,6 +168,10 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding)
     end
 
     local args = encoder.make_audio_args(source_path, output_path, start_timestamp, end_timestamp)
+    for arg in string.gmatch(_config.use_ffmpeg and _config.ffmpeg_audio_args or _config.mpv_audio_args, "%S+") do
+        -- Prepend before output path
+        table.insert(args, #args, arg)
+    end
     local on_finish = function()
         _store_fn(filename, output_path)
         os.remove(output_path)

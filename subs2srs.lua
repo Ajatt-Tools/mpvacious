@@ -51,6 +51,10 @@ local config = {
     tie_volumes = false, -- if set to true, the volume of the outputted audio file depends on the volume of the player at the time of export
     menu_font_size = 25,
 
+    -- Custom encoding args
+    ffmpeg_audio_args = '-af silenceremove=1:0:-50dB',
+    mpv_audio_args = '--af-append=silenceremove=1:0:-50dB',
+
     -- Anki
     create_deck = false, -- automatically create a deck for new cards
     deck_name = "Learning", -- name of the deck for new cards
