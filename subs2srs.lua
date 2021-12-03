@@ -335,6 +335,9 @@ local codec_support = (function()
 end)()
 
 local function warn_formats(osd)
+    if config.use_ffmpeg then
+        return
+    end
     for type, codecs in pairs(codec_support) do
         for codec, supported in pairs(codecs) do
             if not supported and config[type .. '_codec'] == codec then
