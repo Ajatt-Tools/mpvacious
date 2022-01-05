@@ -57,6 +57,7 @@ local config = {
 
     -- Anki
     create_deck = false, -- automatically create a deck for new cards
+    allow_duplicates = false, -- allow making notes with the same sentence field
     deck_name = "Learning", -- name of the deck for new cards
     model_name = "Japanese sentences", -- Tools -> Manage note types
     sentence_field = "SentKanji",
@@ -671,7 +672,7 @@ local function export_to_anki(gui)
     end
 
     if not gui and is_empty(sub['text']) then
-        sub['text'] = string.format([[<span id="mpv%s">mpvacious wasn't able to grab subtitles</span>]], os.time())
+        sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
     end
 
     local snapshot_timestamp = mp.get_property_number("time-pos", 0)
@@ -1118,7 +1119,7 @@ ankiconnect.add_note = function(note_fields, gui)
                 modelName = config.model_name,
                 fields = note_fields,
                 options = {
-                    allowDuplicate = false,
+                    allowDuplicate = config.allow_duplicates,
                     duplicateScope = "deck",
                 },
                 tags = tags,
