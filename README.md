@@ -354,6 +354,7 @@ when subtitles for the show you are watching aren't available, for example.
 mpv by default allows you to do a `1` second exact seek by pressing `Shift+LEFT` and `Shift+RIGHT`.
 Open the mpvacious menu by pressing `a`, seek to the position you need, and set the timings.
 Then press `g` to invoke the `Add Cards` dialog.
+Here's a [video demonstration](https://www.youtube.com/watch?v=BXhyckdHPGE).
 
 If the show is hard-subbed, you can use [Tesseract](https://github.com/tesseract-ocr/tesseract)
 or [ShareX](https://getsharex.com/) OCR to add text to the card.
