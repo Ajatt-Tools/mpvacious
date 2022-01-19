@@ -64,6 +64,7 @@ local config = {
     audio_field = "SentAudio",
     image_field = "Image",
     append_media = true, -- True to append video media after existing data, false to insert media before
+    disable_gui_browse = false, -- Lets you disable anki browser manipulation by mpvacious.
 
     -- Note tagging
     -- The tag(s) added to new notes. Spaces separate multiple tags.
@@ -1178,6 +1179,9 @@ ankiconnect.get_note_fields = function(note_id)
 end
 
 ankiconnect.gui_browse = function(query)
+    if config.disable_gui_browse then
+	    return
+    end
     ankiconnect.execute {
         action = 'guiBrowse',
         version = 6,
