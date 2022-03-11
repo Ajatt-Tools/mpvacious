@@ -698,7 +698,8 @@ local function update_last_note(overwrite)
     elseif is_empty(sub['text']) then
         -- In this case, don't modify whatever existing text there is and just
         -- modify the other fields we can. The user might be trying to add
-        -- audio to a card which they've manually transcribed.
+        -- audio to a card which they've manually transcribed (either the video
+        -- has no subtitles or it has image subtitles).
         sub['text'] = nil
     end
 
@@ -728,6 +729,12 @@ local function update_last_note(overwrite)
                 new_data = join_media_fields(stored_data, new_data)
             end
         end
+    end
+
+    -- If the text is still empty, put some dummy text to let the user know why
+    -- there's no text in the sentence field.
+    if is_empty(new_data[config.sentence_field]) then
+        new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
     end
 
     ankiconnect.append_media(last_note_id, new_data, create_media)
@@ -1394,7 +1401,7 @@ function Subtitle:now()
     local delay = mp.get_property_native("sub-delay") - mp.get_property_native("audio-delay")
     local text = mp.get_property("sub-text")
     local this = self:new {
-        ['text'] = not is_empty(text) and text or "<PGS subtitles>",
+        ['text'] = text, -- if is_empty then it's dealt with later
         ['start'] = mp.get_property_number("sub-start"),
         ['end'] = mp.get_property_number("sub-end"),
     }
@@ -1408,7 +1415,7 @@ function Subtitle:delay(delay)
 end
 
 function Subtitle:valid()
-    return not is_empty(self['text']) and self['start'] and self['end'] and self['start'] >= 0 and self['end'] > 0
+    return self['start'] and self['end'] and self['start'] >= 0 and self['end'] > 0
 end
 
 Subtitle.__eq = function(lhs, rhs)
