@@ -160,7 +160,7 @@ mpv v0.33 does this automatically by loading the `main.lua` file in the add-on's
 Open or create  `~/.config/mpv/scripts/modules.lua` and add these lines:
 ```
 local mpv_scripts_dir_path = os.getenv("HOME") ..  "/.config/mpv/scripts/"
-package.path = package.path .. ';' .. home .. '/.config/mpv/scripts/subs2srs/?.lua'
+package.path = package.path .. ';' .. os.getenv("HOME") .. '/.config/mpv/scripts/subs2srs/?.lua'
 function load(relative_path) dofile(mpv_scripts_dir_path .. relative_path) end
 load("subs2srs/subs2srs.lua")
 ```
