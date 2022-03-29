@@ -1,6 +1,5 @@
-require('helpers')
-
 local mpopt = require('mp.options')
+local helpers = require('helpers')
 local initial_config = {}
 local default_profile_filename = 'subs2srs'
 local profiles_filename = 'subs2srs_profiles'
@@ -55,9 +54,9 @@ local function validate_config()
 end
 
 local function load_profile(profile_name)
-    if Helpers:is_empty(profile_name) then
+    if helpers.is_empty(profile_name) then
         profile_name = profiles.active
-        if Helpers:is_empty(profile_name) then
+        if helpers.is_empty(profile_name) then
             profile_name = default_profile_filename
         end
     end

@@ -1,4 +1,4 @@
-require('helpers')
+local helpers = require('helpers')
 
 local lu = require('luaunit')
 
@@ -17,7 +17,7 @@ function test_get_episode_number()
     }
 
     for _, case in pairs(test_cases) do
-      local _, _, episode_num = Helpers:get_episode_number(case[2])
+      local _, _, episode_num = helpers.get_episode_number(case[2])
       lu.assertEquals(episode_num, case[1])
     end
 end

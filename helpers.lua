@@ -1,10 +1,8 @@
-Helpers = {}
-
-function Helpers:is_empty(var)
+local function is_empty(var)
   return var == nil or var == '' or (type(var) == 'table' and next(var) == nil)
 end
 
-function Helpers:get_episode_number(filename)
+local function get_episode_number(filename)
   -- Reverses the filename to start the search from the end as the media title might contain similar numbers.
   local filename_reversed = filename:reverse()
 
@@ -22,8 +20,13 @@ function Helpers:get_episode_number(filename)
   local s, e, episode_num
   for _, pattern in pairs(ep_num_patterns) do
       s, e, episode_num = string.find(filename_reversed, pattern)
-      if not Helpers:is_empty(episode_num) then
+      if not is_empty(episode_num) then
           return #filename - e, #filename - s, episode_num:reverse()
       end
   end
 end
+
+return {
+  is_empty = is_empty,
+  get_episode_number = get_episode_number,
+}
