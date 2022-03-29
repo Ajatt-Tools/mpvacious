@@ -1,12 +1,12 @@
 local helpers = require('helpers')
 
-function assert_equals(expected, actual)
+local function assert_equals(expected, actual)
     if expected ~= actual then
         error(string.format("TEST FAILED: Expected '%s', got '%s'", expected, actual))
     end
 end
 
-function test_get_episode_number()
+local function test_get_episode_number()
     local test_cases = {
       { nil, "A Whisker Away.mkv" },
       { nil, "[Placeholder] Gekijouban SHIROBAKO [Ma10p_1080p][x265_flac]" },
@@ -26,6 +26,7 @@ function test_get_episode_number()
     end
 end
 
+-- Runs tests
 test_get_episode_number()
 
 os.exit(print("Tests passed"))
