@@ -1,6 +1,10 @@
 local helpers = require('helpers')
 
-local lu = require('luaunit')
+function assert_equals(expected, actual)
+    if expected ~= actual then
+        error(string.format("TEST FAILED: Expected '%s', got '%s'", expected, actual))
+    end
+end
 
 function test_get_episode_number()
     local test_cases = {
@@ -18,8 +22,10 @@ function test_get_episode_number()
 
     for _, case in pairs(test_cases) do
       local _, _, episode_num = helpers.get_episode_number(case[2])
-      lu.assertEquals(episode_num, case[1])
+      assert_equals(case[1], episode_num)
     end
 end
 
-os.exit(lu.LuaUnit.run())
+test_get_episode_number()
+
+os.exit(print("Tests passed"))
