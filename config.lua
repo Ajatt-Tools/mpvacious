@@ -1,13 +1,11 @@
+require('helpers')
+
 local mpopt = require('mp.options')
 local initial_config = {}
 local default_profile_filename = 'subs2srs'
 local profiles_filename = 'subs2srs_profiles'
 
 local config, profiles
-
-local function is_empty(var)
-    return var == nil or var == '' or (type(var) == 'table' and next(var) == nil)
-end
 
 local function set_audio_format()
     if config.audio_format == 'opus' then
@@ -57,9 +55,9 @@ local function validate_config()
 end
 
 local function load_profile(profile_name)
-    if is_empty(profile_name) then
+    if Helpers:is_empty(profile_name) then
         profile_name = profiles.active
-        if is_empty(profile_name) then
+        if Helpers:is_empty(profile_name) then
             profile_name = default_profile_filename
         end
     end

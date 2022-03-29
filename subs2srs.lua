@@ -100,6 +100,8 @@ local profiles = {
     active = "subs2srs",
 }
 
+require('helpers')
+
 local mp = require('mp')
 local utils = require('mp.utils')
 local msg = require('mp.msg')
@@ -160,10 +162,6 @@ function table.get(table, key, default)
     else
         return table[key]
     end
-end
-
-local function is_empty(var)
-    return var == nil or var == '' or (type(var) == 'table' and next(var) == nil)
 end
 
 local function is_running_windows()
@@ -268,7 +266,7 @@ local function trim(str)
 end
 
 local function copy_to_clipboard(_, text)
-    if not is_empty(text) then
+    if not Helpers:is_empty(text) then
         text = config.clipboard_trim_enabled and trim(text) or remove_newlines(text)
         platform.copy_to_clipboard(text)
     end
@@ -363,37 +361,13 @@ local function load_next_profile()
     notify("Loaded profile " .. profiles.active)
 end
 
-local function get_episode_number(filename)
-    -- Reverses the filename to start the search from the end as the media title might contain similar numbers.
-    local filename_reversed = filename:reverse()
-
-    local ep_num_patterns = {
-        "[%s_](%d?%d?%d)[pP]?[eE]", -- Starting with E or EP (case-insensitive). "Example Series S01E01 [94Z295D1]"
-        "^(%d?%d?%d)[pP]?[eE]", -- Starting with E or EP (case-insensitive) at the end of filename. "Example Series S01E01"
-        "%)(%d?%d?%d)%(", -- Surrounded by parentheses. "Example Series (12)"
-        "%](%d?%d?%d)%[", -- Surrounded by brackets. "Example Series [01]"
-        "%s(%d?%d?%d)%s", -- Surrounded by whitespace. "Example Series 124 [1080p 10-bit]"
-        "_(%d?%d?%d)_", -- Surrounded by underscores. "Example_Series_04_1080p"
-        "^(%d?%d?%d)[%s_]", -- Ending to the episode number. "Example Series 124"
-        "(%d?%d?%d)%-edosipE", -- Prepended by "Episode-". "Example Episode-165"
-    }
-
-    local s, e, episode_num
-    for _, pattern in pairs(ep_num_patterns) do
-        s, e, episode_num = string.find(filename_reversed, pattern)
-        if not is_empty(episode_num) then
-            return #filename - e, #filename - s, episode_num:reverse()
-        end
-    end
-end
-
 local function tag_format(filename)
     filename = remove_extension(filename)
     filename = remove_common_resolutions(filename)
 
-    local s, e, episode_num = get_episode_number(filename)
+    local s, e, episode_num = Helpers:get_episode_number(filename)
 
-    if config.tag_del_episode_num == true and not is_empty(s) then
+    if config.tag_del_episode_num == true and not Helpers:is_empty(s) then
         if config.tag_del_after_episode_num == true then
             -- Removing everything (e.g. episode name) after the episode number including itself.
             filename = filename:sub(1, s)
@@ -479,10 +453,10 @@ local function update_sentence(new_data, stored_data)
     -- https://tatsumoto-ren.github.io/blog/discussing-various-card-templates.html#targeted-sentence-cards-or-mpvacious-cards
     -- if the target word was marked by yomichan, this function makes sure that the highlighting doesn't get erased.
 
-    if is_empty(stored_data[config.sentence_field]) then
+    if Helpers:is_empty(stored_data[config.sentence_field]) then
         -- sentence field is empty. can't continue.
         return new_data
-    elseif is_empty(new_data[config.sentence_field]) then
+    elseif Helpers:is_empty(new_data[config.sentence_field]) then
         -- *new* sentence field is empty, but old one contains data. don't delete the existing sentence.
         new_data[config.sentence_field] = stored_data[config.sentence_field]
         return new_data
@@ -673,7 +647,7 @@ local function export_to_anki(gui)
         return
     end
 
-    if not gui and is_empty(sub['text']) then
+    if not gui and Helpers:is_empty(sub['text']) then
         sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
     end
 
@@ -696,7 +670,7 @@ local function update_last_note(overwrite)
     if sub == nil then
         notify("Nothing to export. Have you set the timings?", "warn", 2)
         return
-    elseif is_empty(sub['text']) then
+    elseif Helpers:is_empty(sub['text']) then
         -- In this case, don't modify whatever existing text there is and just
         -- modify the other fields we can. The user might be trying to add
         -- audio to a card which they've manually transcribed (either the video
@@ -734,7 +708,7 @@ local function update_last_note(overwrite)
 
     -- If the text is still empty, put some dummy text to let the user know why
     -- there's no text in the sentence field.
-    if is_empty(new_data[config.sentence_field]) then
+    if Helpers:is_empty(new_data[config.sentence_field]) then
         new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
     end
 
@@ -982,7 +956,7 @@ do
     local function get_forvo_pronunciation(word)
         local audio_url = get_pronunciation_url(word)
 
-        if is_empty(audio_url) then
+        if Helpers:is_empty(audio_url) then
             msg.warn(string.format("Seems like Forvo doesn't have audio for word %s.", word))
             return
         end
@@ -1012,14 +986,14 @@ do
             return new_data
         end
 
-        if is_empty(stored_data[config.vocab_field]) then
+        if Helpers:is_empty(stored_data[config.vocab_field]) then
             -- target word field is empty. can't continue.
             return new_data
         end
 
-        if config.use_forvo == 'always' or is_empty(stored_data[config.vocab_audio_field]) then
+        if config.use_forvo == 'always' or Helpers:is_empty(stored_data[config.vocab_audio_field]) then
             local forvo_pronunciation = get_forvo_pronunciation(stored_data[config.vocab_field])
-            if not is_empty(forvo_pronunciation) then
+            if not Helpers:is_empty(forvo_pronunciation) then
                 if config.vocab_audio_field == config.audio_field then
                     -- improperly configured fields. don't lose sentence audio
                     new_data[config.audio_field] = forvo_pronunciation .. new_data[config.audio_field]
@@ -1118,7 +1092,7 @@ end
 
 ankiconnect.add_note = function(note_fields, gui)
     local action = gui and 'guiAddCards' or 'addNote'
-    local tags = is_empty(config.note_tag) and {} or { substitute_fmt(config.note_tag) }
+    local tags = Helpers:is_empty(config.note_tag) and {} or { substitute_fmt(config.note_tag) }
     local args = {
         action = action,
         version = 6,
@@ -1157,7 +1131,7 @@ ankiconnect.get_last_note_id = function()
 
     local note_ids, _ = ankiconnect.parse_result(ret)
 
-    if not is_empty(note_ids) then
+    if not Helpers:is_empty(note_ids) then
         return table.max_num(note_ids)
     else
         return -1
@@ -1200,7 +1174,7 @@ ankiconnect.gui_browse = function(query)
 end
 
 ankiconnect.add_tag = function(note_id, tag)
-    if not is_empty(tag) then
+    if not Helpers:is_empty(tag) then
         tag = substitute_fmt(tag)
         ankiconnect.execute {
             action = 'addTags',
@@ -1285,7 +1259,7 @@ subs.get = function()
     if sub['start'] > sub['end'] then
         sub['start'], sub['end'] = sub['end'], sub['start']
     end
-    if not is_empty(sub['text']) then
+    if not Helpers:is_empty(sub['text']) then
         sub['text'] = trim(sub['text'])
         sub['text'] = escape_special_characters(sub['text'])
     end
