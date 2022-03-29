@@ -368,7 +368,8 @@ local function get_episode_number(filename)
     local filename_reversed = filename:reverse()
 
     local ep_num_patterns = {
-        "%s?(%d?%d?%d)[pP]?[eE]", -- Starting with E or EP (case-insensitive). "Example Series S01E01"
+        "[%s_](%d?%d?%d)[pP]?[eE]", -- Starting with E or EP (case-insensitive). "Example Series S01E01 [94Z295D1]"
+        "^(%d?%d?%d)[pP]?[eE]", -- Starting with E or EP (case-insensitive) at the end of filename. "Example Series S01E01"
         "%)(%d?%d?%d)%(", -- Surrounded by parentheses. "Example Series (12)"
         "%](%d?%d?%d)%[", -- Surrounded by brackets. "Example Series [01]"
         "%s(%d?%d?%d)%s", -- Surrounded by whitespace. "Example Series 124 [1080p 10-bit]"
