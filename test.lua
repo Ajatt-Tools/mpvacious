@@ -13,6 +13,7 @@ function test_get_episode_number()
       { "01", "[Placeholder] 86 - Eighty Six - 01 (1080p) [1B13598F]" },
       { "00", "[Placeholder] Fate Stay Night - Unlimited Blade Works - 00 (BD 1080p Hi10 FLAC) [95590B7F]" },
       { "01", "House, M.D. S01E01 Pilot - Everybody Lies (1080p x265 Placeholder)" },
+      { "165", "A Generic Episode-165" }
     }
 
     for _, case in pairs(test_cases) do
