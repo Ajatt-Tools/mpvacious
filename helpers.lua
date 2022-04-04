@@ -1,3 +1,8 @@
+local mp = require('mp')
+local msg = require('mp.msg')
+
+local unpack = unpack and unpack or table.unpack
+
 local function is_empty(var)
   return var == nil or var == '' or (type(var) == 'table' and next(var) == nil)
 end
@@ -26,7 +31,16 @@ local function get_episode_number(filename)
   end
 end
 
+local function notify(message, level, duration)
+    level = level or 'info'
+    duration = duration or 1
+    msg[level](message)
+    mp.osd_message(message, duration)
+end
+
 return {
   is_empty = is_empty,
   get_episode_number = get_episode_number,
+  notify = notify,
+  unpack = unpack,
 }

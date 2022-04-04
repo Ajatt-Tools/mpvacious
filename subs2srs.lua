@@ -1,5 +1,5 @@
 --[[
-Copyright (C) 2020 Ren Tatsumoto
+Copyright (C) 2020-2022 Ren Tatsumoto
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -107,6 +107,7 @@ local OSD = require('osd_styler')
 local config_manager = require('config')
 local encoder = require('encoder')
 local helpers = require('helpers')
+local Menu = require('menu')
 
 -- namespaces
 local subs
@@ -121,8 +122,6 @@ local Subtitle
 
 ------------------------------------------------------------
 -- utility functions
-
-local unpack = unpack and unpack or table.unpack
 
 ---Returns true if table contains element. Returns false otherwise.
 ---@param table table
@@ -181,13 +180,6 @@ end
 
 local function capitalize_first_letter(string)
     return string:gsub("^%l", string.upper)
-end
-
-local function notify(message, level, duration)
-    level = level or 'info'
-    duration = duration or 1
-    msg[level](message)
-    mp.osd_message(message, duration)
 end
 
 local escape_special_characters
@@ -357,7 +349,7 @@ end
 local function load_next_profile()
     config_manager.next_profile()
     ensure_deck()
-    notify("Loaded profile " .. profiles.active)
+    helpers.notify("Loaded profile " .. profiles.active)
 end
 
 local function tag_format(filename)
@@ -642,7 +634,7 @@ end)()
 local function export_to_anki(gui)
     local sub = subs.get()
     if sub == nil then
-        notify("Nothing to export.", "warn", 1)
+        helpers.notify("Nothing to export.", "warn", 1)
         return
     end
 
@@ -667,7 +659,7 @@ local function update_last_note(overwrite)
     local last_note_id = ankiconnect.get_last_note_id()
 
     if sub == nil then
-        notify("Nothing to export. Have you set the timings?", "warn", 2)
+        helpers.notify("Nothing to export. Have you set the timings?", "warn", 2)
         return
     elseif helpers.is_empty(sub['text']) then
         -- In this case, don't modify whatever existing text there is and just
@@ -678,7 +670,7 @@ local function update_last_note(overwrite)
     end
 
     if last_note_id < minutes_ago(10) then
-        notify("Couldn't find the target note.", "warn", 2)
+        helpers.notify("Couldn't find the target note.", "warn", 2)
         return
     end
 
@@ -720,7 +712,7 @@ end
 
 local function _(params)
     return function()
-        return pcall(unpack(params))
+        return pcall(helpers.unpack(params))
     end
 end
 
@@ -753,7 +745,7 @@ local play_control = (function()
 
     local function stop_at_the_end(sub)
         pause_timer.set_stop_time(sub['end'] - 0.050)
-        notify("Playing till the end of the sub...", "info", 3)
+        helpers.notify("Playing till the end of the sub...", "info", 3)
     end
 
     local function play_till_sub_end()
@@ -789,7 +781,7 @@ local play_control = (function()
         current_sub = subs.get_current()
         mp.observe_property("sub-text", "string", check_sub)
         mp.set_property("pause", "no")
-        notify("Waiting till next sub...", "info", 10)
+        helpers.notify("Waiting till next sub...", "info", 10)
     end
 
     return {
@@ -874,16 +866,16 @@ do
     do
         local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
         base64d = function(data)
-            data = string.gsub(data, '[^'..b..'=]', '')
+            data = string.gsub(data, '[^' .. b .. '=]', '')
             return (data:gsub('.', function(x)
                 if (x == '=') then return '' end
-                local r,f='',(b:find(x)-1)
-                for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end
+                local r, f = '', (b:find(x) - 1)
+                for i = 6, 1, -1 do r = r .. (f % 2 ^ i - f % 2 ^ (i - 1) > 0 and '1' or '0') end
                 return r;
-            end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
+            end)        :gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
                 if (#x ~= 8) then return '' end
-                local c=0
-                for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
+                local c = 0
+                for i = 1, 8 do c = c + (x:sub(i, i) == '1' and 2 ^ (8 - i) or 0) end
                 return string.char(c)
             end))
         end
@@ -1111,9 +1103,9 @@ ankiconnect.add_note = function(note_fields, gui)
     local result_notify = function(_, result, _)
         local note_id, error = ankiconnect.parse_result(result)
         if not error then
-            notify(string.format("Note added. ID = %s.", note_id))
+            helpers.notify(string.format("Note added. ID = %s.", note_id))
         else
-            notify(string.format("Error: %s.", error), "error", 2)
+            helpers.notify(string.format("Error: %s.", error), "error", 2)
         end
     end
     ankiconnect.execute(args, result_notify)
@@ -1161,7 +1153,7 @@ end
 
 ankiconnect.gui_browse = function(query)
     if config.disable_gui_browse then
-	    return
+        return
     end
     ankiconnect.execute {
         action = 'guiBrowse',
@@ -1209,9 +1201,9 @@ ankiconnect.append_media = function(note_id, fields, create_media_fn)
             create_media_fn()
             ankiconnect.add_tag(note_id, config.note_tag)
             ankiconnect.gui_browse(string.format("nid:%s", note_id)) -- select the updated note in the card browser
-            notify(string.format("Note #%s updated.", note_id))
+            helpers.notify(string.format("Note #%s updated.", note_id))
         else
-            notify(string.format("Error: %s.", error), "error", 2)
+            helpers.notify(string.format("Error: %s.", error), "error", 2)
         end
     end
 
@@ -1267,7 +1259,7 @@ end
 
 subs.append = function()
     if subs.dialogs.insert(subs.get_current()) then
-        menu.update()
+        menu:update()
     end
 end
 
@@ -1283,7 +1275,7 @@ end
 
 subs.set_timing = function(position)
     subs.user_timings.set(position)
-    notify(capitalize_first_letter(position) .. " time has been set.")
+    helpers.notify(capitalize_first_letter(position) .. " time has been set.")
     if not subs.observed then
         subs.observe()
     end
@@ -1293,9 +1285,9 @@ subs.set_starting_line = function()
     subs.clear()
     if subs.get_current() then
         subs.observe()
-        notify("Timings have been set to the current sub.", "info", 2)
+        helpers.notify("Timings have been set to the current sub.", "info", 2)
     else
-        notify("There's no visible subtitle.", "info", 2)
+        helpers.notify("There's no visible subtitle.", "info", 2)
     end
 end
 
@@ -1307,7 +1299,7 @@ end
 
 subs.clear_and_notify = function()
     subs.clear()
-    notify("Timings have been reset.", "info", 2)
+    helpers.notify("Timings have been reset.", "info", 2)
 end
 
 ------------------------------------------------------------
@@ -1323,7 +1315,7 @@ clip_autocopy = (function()
     end
 
     local state_notify = function()
-        notify(string.format("Clipboard autocopy has been %s.", config.autoclip and 'enabled' or 'disabled'))
+        helpers.notify(string.format("Clipboard autocopy has been %s.", config.autoclip and 'enabled' or 'disabled'))
     end
 
     local toggle = function()
@@ -1403,45 +1395,28 @@ end
 ------------------------------------------------------------
 -- main menu
 
-menu = {
-    active = false,
+menu = Menu:new {
     hints_state = make_switch { 'hidden', 'menu', 'global', },
-    overlay = mp.create_osd_overlay and mp.create_osd_overlay('ass-events'),
 }
-
-menu.overlay_draw = function(text)
-    menu.overlay.data = text
-    menu.overlay:update()
-end
-
-menu.with_update = function(params)
-    return function()
-        pcall(unpack(params))
-        menu.update()
-    end
-end
 
 menu.keybindings = {
-    { key = 's', fn = menu.with_update { subs.set_timing, 'start' } },
-    { key = 'e', fn = menu.with_update { subs.set_timing, 'end' } },
-    { key = 'c', fn = menu.with_update { subs.set_starting_line } },
-    { key = 'r', fn = menu.with_update { subs.clear_and_notify } },
-    { key = 'g', fn = menu.with_update { export_to_anki, true } },
-    { key = 'n', fn = menu.with_update { export_to_anki, false } },
-    { key = 'm', fn = menu.with_update { update_last_note, false } },
-    { key = 'M', fn = menu.with_update { update_last_note, true } },
-    { key = 't', fn = menu.with_update { clip_autocopy.toggle } },
-    { key = 'i', fn = menu.with_update { menu.hints_state.bump } },
-    { key = 'p', fn = menu.with_update { load_next_profile } },
-    { key = 'ESC', fn = function() menu.close() end },
+    { key = 's', fn = menu:with_update { subs.set_timing, 'start' } },
+    { key = 'e', fn = menu:with_update { subs.set_timing, 'end' } },
+    { key = 'c', fn = menu:with_update { subs.set_starting_line } },
+    { key = 'r', fn = menu:with_update { subs.clear_and_notify } },
+    { key = 'g', fn = menu:with_update { export_to_anki, true } },
+    { key = 'n', fn = menu:with_update { export_to_anki, false } },
+    { key = 'm', fn = menu:with_update { update_last_note, false } },
+    { key = 'M', fn = menu:with_update { update_last_note, true } },
+    { key = 't', fn = menu:with_update { clip_autocopy.toggle } },
+    { key = 'i', fn = menu:with_update { menu.hints_state.bump } },
+    { key = 'p', fn = menu:with_update { load_next_profile } },
+    { key = 'ESC', fn = function() menu:close() end },
 }
 
-menu.update = function()
-    if menu.active == false then
-        return
-    end
-
+function menu:make_osd()
     local osd = OSD:new():size(config.menu_font_size):align(4)
+
     osd:submenu('mpvacious options'):newline()
     osd:item('Timings: '):text(human_readable_time(subs.get_timing('start')))
     osd:item(' to '):text(human_readable_time(subs.get_timing('end'))):newline()
@@ -1449,7 +1424,7 @@ menu.update = function()
     osd:item('Active profile: '):text(profiles.active):newline()
     osd:item('Deck: '):text(config.deck_name):newline()
 
-    if menu.hints_state.get() == 'global' then
+    if self.hints_state.get() == 'global' then
         osd:submenu('Global bindings'):newline()
         osd:tab():item('ctrl+c: '):text('Copy current subtitle to clipboard'):newline()
         osd:tab():item('ctrl+h: '):text('Seek to the start of the line'):newline()
@@ -1457,7 +1432,7 @@ menu.update = function()
         osd:tab():item('shift+h/l: '):text('Seek to the previous/next subtitle'):newline()
         osd:tab():item('alt+h/l: '):text('Seek to the previous/next subtitle and pause'):newline()
         osd:italics("Press "):item('i'):italics(" to hide bindings."):newline()
-    elseif menu.hints_state.get() == 'menu' then
+    elseif self.hints_state.get() == 'menu' then
         osd:submenu('Menu bindings'):newline()
         osd:tab():item('c: '):text('Set timings to the current sub'):newline()
         osd:tab():item('s: '):text('Set start time to current position'):newline()
@@ -1476,39 +1451,7 @@ menu.update = function()
 
     warn_formats(osd)
 
-    menu.overlay_draw(osd:get_text())
-end
-
-menu.open = function()
-    if menu.overlay == nil then
-        notify("OSD overlay is not supported in " .. mp.get_property("mpv-version"), "error", 5)
-        return
-    end
-
-    if menu.active == true then
-        menu.close()
-        return
-    end
-
-    for _, val in pairs(menu.keybindings) do
-        mp.add_forced_key_binding(val.key, val.key, val.fn)
-    end
-
-    menu.active = true
-    menu.update()
-end
-
-menu.close = function()
-    if menu.active == false then
-        return
-    end
-
-    for _, val in pairs(menu.keybindings) do
-        mp.remove_key_binding(val.key)
-    end
-
-    menu.overlay:remove()
-    menu.active = false
+    return osd
 end
 
 ------------------------------------------------------------
@@ -1534,7 +1477,7 @@ local main = (function()
         mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", clip_autocopy.toggle)
 
         -- Open advanced menu
-        mp.add_key_binding("a", "mpvacious-menu-open", menu.open)
+        mp.add_key_binding("a", "mpvacious-menu-open", function() menu:open() end)
 
         -- Note updating
         mp.add_key_binding("Ctrl+m", "mpvacious-update-last-note", _ { update_last_note, false })
