@@ -1412,6 +1412,7 @@ menu.keybindings = {
     { key = 'i', fn = menu:with_update { menu.hints_state.bump } },
     { key = 'p', fn = menu:with_update { load_next_profile } },
     { key = 'ESC', fn = function() menu:close() end },
+    { key = 'q', fn = function() menu:close() end },
 }
 
 function menu:make_osd()
