@@ -1,5 +1,6 @@
 local mp = require('mp')
 local utils = require('mp.utils')
+local helpers = require('helpers')
 local _config, _store_fn, _os_temp_dir, _subprocess
 local encoder
 
@@ -149,34 +150,42 @@ end
 -- main interface
 
 local create_snapshot = function(timestamp, filename)
-    local source_path = mp.get_property("path")
-    local output_path = utils.join_path(_os_temp_dir(), filename)
-    local args = encoder.make_snapshot_args(source_path, output_path, timestamp)
-    local on_finish = function()
-        _store_fn(filename, output_path)
-        os.remove(output_path)
+    if not helpers.is_empty(_config.image_field) then
+        local source_path = mp.get_property("path")
+        local output_path = utils.join_path(_os_temp_dir(), filename)
+        local args = encoder.make_snapshot_args(source_path, output_path, timestamp)
+        local on_finish = function()
+            _store_fn(filename, output_path)
+            os.remove(output_path)
+        end
+        _subprocess(args, on_finish)
+    else
+        print("Snapshot will not be created.")
     end
-    _subprocess(args, on_finish)
 end
 
 local create_audio = function(start_timestamp, end_timestamp, filename, padding)
-    local source_path = mp.get_property("path")
-    local output_path = utils.join_path(_os_temp_dir(), filename)
+    if not helpers.is_empty(_config.audio_field) then
+        local source_path = mp.get_property("path")
+        local output_path = utils.join_path(_os_temp_dir(), filename)
 
-    if padding > 0 then
-        start_timestamp, end_timestamp = pad_timings(padding, start_timestamp, end_timestamp)
-    end
+        if padding > 0 then
+            start_timestamp, end_timestamp = pad_timings(padding, start_timestamp, end_timestamp)
+        end
 
-    local args = encoder.make_audio_args(source_path, output_path, start_timestamp, end_timestamp)
-    for arg in string.gmatch(_config.use_ffmpeg and _config.ffmpeg_audio_args or _config.mpv_audio_args, "%S+") do
-        -- Prepend before output path
-        table.insert(args, #args, arg)
+        local args = encoder.make_audio_args(source_path, output_path, start_timestamp, end_timestamp)
+        for arg in string.gmatch(_config.use_ffmpeg and _config.ffmpeg_audio_args or _config.mpv_audio_args, "%S+") do
+            -- Prepend before output path
+            table.insert(args, #args, arg)
+        end
+        local on_finish = function()
+            _store_fn(filename, output_path)
+            os.remove(output_path)
+        end
+        _subprocess(args, on_finish)
+    else
+        print("Audio will not be created.")
     end
-    local on_finish = function()
-        _store_fn(filename, output_path)
-        os.remove(output_path)
-    end
-    _subprocess(args, on_finish)
 end
 
 local init = function(config, store_fn, os_temp_dir, subprocess)

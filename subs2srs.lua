@@ -1,5 +1,5 @@
 --[[
-Copyright (C) 2020-2022 Ren Tatsumoto
+Copyright (C) 2020-2022 Ren Tatsumoto and contributors
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -419,9 +419,13 @@ end
 local function construct_note_fields(sub_text, snapshot_filename, audio_filename)
     local ret = {
         [config.sentence_field] = sub_text,
-        [config.image_field] = string.format('<img alt="snapshot" src="%s">', snapshot_filename),
-        [config.audio_field] = string.format('[sound:%s]', audio_filename),
     }
+    if not helpers.is_empty(config.image_field) then
+        ret[config.image_field] = string.format('<img alt="snapshot" src="%s">', snapshot_filename)
+    end
+    if not helpers.is_empty(config.audio_field) then
+        ret[config.audio_field] = string.format('[sound:%s]', audio_filename)
+    end
     if config.miscinfo_enable == true then
         ret[config.miscinfo_field] = substitute_fmt(config.miscinfo_format)
     end
@@ -434,7 +438,9 @@ end
 
 local function join_media_fields(new_data, stored_data)
     for _, field in pairs { config.audio_field, config.image_field, config.miscinfo_field } do
-        new_data[field] = table.get(stored_data, field, "") .. table.get(new_data, field, "")
+        if not helpers.is_empty(field) then
+            new_data[field] = table.get(stored_data, field, "") .. table.get(new_data, field, "")
+        end
     end
     return new_data
 end
