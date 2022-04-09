@@ -26,7 +26,7 @@ function OSD:new()
 end
 
 function OSD:append(s)
-    table.insert(self.messages, s)
+    table.insert(self.messages, tostring(s))
     return self
 end
 
@@ -76,6 +76,10 @@ end
 
 function OSD:item(text)
     return self:color('fef6dd'):bold(text):color('ffffff')
+end
+
+function OSD:selected(text)
+    return self:color('48a868'):bold(text):color('ffffff')
 end
 
 function OSD:red(text)
