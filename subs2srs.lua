@@ -522,17 +522,10 @@ local function new_sub_list()
         local i = position == 'start' and 1 or #subs_list
         return subs_list[i][position]
     end
-    local get_text = function()
+    local get_text = function(is_secondary)
         local speech = {}
         for _, sub in ipairs(subs_list) do
-            table.insert(speech, sub['text'])
-        end
-        return table.concat(speech, ' ')
-    end
-    local get_secondary = function()
-        local speech = {}
-        for _, sub in ipairs(subs_list) do
-            table.insert(speech, sub['secondary'])
+            table.insert(speech, sub[is_secondary and 'secondary' or 'text'])
         end
         return table.concat(speech, ' ')
     end
@@ -1254,8 +1247,8 @@ subs.get = function()
         subs.dialogs.insert(subs.get_current())
     end
     local sub = Subtitle:new {
-        ['text'] = subs.dialogs.get_text(),
-        ['secondary'] = subs.dialogs.get_secondary(),
+        ['text'] = subs.dialogs.get_text(false),
+        ['secondary'] = subs.dialogs.get_text(true),
         ['start'] = subs.get_timing('start'),
         ['end'] = subs.get_timing('end'),
     }
