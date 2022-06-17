@@ -359,6 +359,12 @@ Here's a [video demonstration](https://www.youtube.com/watch?v=BXhyckdHPGE).
 If the show is hard-subbed, you can use [Tesseract](https://github.com/tesseract-ocr/tesseract)
 or [ShareX](https://getsharex.com/) OCR to add text to the card.
 
+### Secondary subtitles
+
+If you want to add a translation to your cards and you have the subtitles in that language, 
+you can add them as secondary subtitles using `--secondary-sid=<sid>`. 
+`sid` being the track identifier for the subtitle.
+
 ### Other tools
 
 If you don't like the default Yomichan Search tool, try:
