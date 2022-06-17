@@ -61,6 +61,7 @@ local config = {
     deck_name = "Learning", -- name of the deck for new cards
     model_name = "Japanese sentences", -- Tools -> Manage note types
     sentence_field = "SentKanji",
+    secondary_field = "SentEng",
     audio_field = "SentAudio",
     image_field = "Image",
     append_media = true, -- True to append video media after existing data, false to insert media before
@@ -416,10 +417,13 @@ local function substitute_fmt(tag)
     return tag
 end
 
-local function construct_note_fields(sub_text, snapshot_filename, audio_filename)
+local function construct_note_fields(sub_text, secondary_text, snapshot_filename, audio_filename)
     local ret = {
         [config.sentence_field] = sub_text,
     }
+    if not helpers.is_empty(config.secondary_field) then
+        ret[config.secondary_field] = secondary_text
+    end
     if not helpers.is_empty(config.image_field) then
         ret[config.image_field] = string.format('<img alt="snapshot" src="%s">', snapshot_filename)
     end
@@ -518,10 +522,10 @@ local function new_sub_list()
         local i = position == 'start' and 1 or #subs_list
         return subs_list[i][position]
     end
-    local get_text = function()
+    local get_text = function(is_secondary)
         local speech = {}
         for _, sub in ipairs(subs_list) do
-            table.insert(speech, sub['text'])
+            table.insert(speech, sub[is_secondary and 'secondary' or 'text'])
         end
         return table.concat(speech, ' ')
     end
@@ -535,6 +539,7 @@ local function new_sub_list()
     return {
         get_time = get_time,
         get_text = get_text,
+        get_secondary = get_secondary,
         is_empty = _is_empty,
         insert = insert
     }
@@ -647,7 +652,6 @@ local function export_to_anki(gui)
     if not gui and helpers.is_empty(sub['text']) then
         sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
     end
-
     local snapshot_timestamp = mp.get_property_number("time-pos", 0)
     local snapshot_filename = filename_factory.make_snapshot_filename(snapshot_timestamp)
     local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'])
@@ -655,7 +659,7 @@ local function export_to_anki(gui)
     encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
     encoder.create_audio(sub['start'], sub['end'], audio_filename, audio_padding())
 
-    local note_fields = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
+    local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot_filename, audio_filename)
     ankiconnect.add_note(note_fields, gui)
     subs.clear()
 end
@@ -689,7 +693,7 @@ local function update_last_note(overwrite)
         encoder.create_audio(sub['start'], sub['end'], audio_filename, audio_padding())
     end
 
-    local new_data = construct_note_fields(sub['text'], snapshot_filename, audio_filename)
+    local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot_filename, audio_filename)
     local stored_data = ankiconnect.get_note_fields(last_note_id)
     if stored_data then
         new_data = append_forvo_pronunciation(new_data, stored_data)
@@ -1243,7 +1247,8 @@ subs.get = function()
         subs.dialogs.insert(subs.get_current())
     end
     local sub = Subtitle:new {
-        ['text'] = subs.dialogs.get_text(),
+        ['text'] = subs.dialogs.get_text(false),
+        ['secondary'] = subs.dialogs.get_text(true),
         ['start'] = subs.get_timing('start'),
         ['end'] = subs.get_timing('end'),
     }
@@ -1358,6 +1363,7 @@ end)()
 
 Subtitle = {
     ['text'] = '',
+    ['secondary'] = '',
     ['start'] = -1,
     ['end'] = -1,
 }
@@ -1372,8 +1378,10 @@ end
 function Subtitle:now()
     local delay = mp.get_property_native("sub-delay") - mp.get_property_native("audio-delay")
     local text = mp.get_property("sub-text")
+    local secondary = mp.get_property("secondary-sub-text")
     local this = self:new {
         ['text'] = text, -- if is_empty then it's dealt with later
+        ['secondary'] = secondary,
         ['start'] = mp.get_property_number("sub-start"),
         ['end'] = mp.get_property_number("sub-end"),
     }
