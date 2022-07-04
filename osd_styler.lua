@@ -42,6 +42,10 @@ function OSD:size(size)
     return self:append('{\\fs'):append(size):append('}')
 end
 
+function OSD:font(name)
+    return self:append('{\\fn'):append(name):append('}')
+end
+
 function OSD:align(number)
     return self:append('{\\an'):append(number):append('}')
 end

@@ -49,6 +49,8 @@ local config = {
     audio_bitrate = "18k", -- from 16k to 32k
     audio_padding = 0.12, -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
     tie_volumes = false, -- if set to true, the volume of the outputted audio file depends on the volume of the player at the time of export
+
+    menu_font_name = "Noto Serif CJK JP",
     menu_font_size = 25,
 
     -- Custom encoding args
@@ -539,7 +541,6 @@ local function new_sub_list()
     return {
         get_time = get_time,
         get_text = get_text,
-        get_secondary = get_secondary,
         is_empty = _is_empty,
         insert = insert
     }
@@ -1430,7 +1431,7 @@ menu.keybindings = {
 }
 
 function menu:make_osd()
-    local osd = OSD:new():size(config.menu_font_size):align(4)
+    local osd = OSD:new():size(config.menu_font_size):font(config.menu_font_name):align(4)
 
     osd:submenu('mpvacious options'):newline()
     osd:item('Timings: '):text(human_readable_time(subs.get_timing('start')))
