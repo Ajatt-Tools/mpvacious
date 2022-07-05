@@ -494,8 +494,8 @@ local function new_timings()
     local is_set = function(position)
         return self[position] >= 0
     end
-    local set = function(position)
-        self[position] = mp.get_property_number('time-pos')
+    local set = function(position, time)
+        self[position] = time or mp.get_property_number('time-pos')
     end
     local get = function(position)
         return self[position]
@@ -1286,7 +1286,7 @@ subs.unobserve = function()
 end
 
 subs.set_timing = function(position)
-    subs.user_timings.set(position)
+    subs.user_timings.set(position, mp.get_property_number('time-pos'))
     helpers.notify(capitalize_first_letter(position) .. " time has been set.")
     if not subs.observed then
         subs.observe()
