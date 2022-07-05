@@ -1285,6 +1285,19 @@ subs.unobserve = function()
     subs.observed = false
 end
 
+subs.set_timing_to_sub = function(position)
+    local sub = subs.get_current()
+    if sub then
+        subs.user_timings.set(position, sub[position])
+        helpers.notify(capitalize_first_letter(position) .. " time has been set.")
+        if not subs.observed then
+            subs.observe()
+        end
+    else
+        helpers.notify("There's no visible subtitle.", "info", 2)
+    end
+end
+
 subs.set_timing = function(position)
     subs.user_timings.set(position, mp.get_property_number('time-pos'))
     helpers.notify(capitalize_first_letter(position) .. " time has been set.")
@@ -1415,6 +1428,8 @@ menu = Menu:new {
 }
 
 menu.keybindings = {
+    { key = 'S', fn = menu:with_update { subs.set_timing_to_sub, 'start' } },
+    { key = 'E', fn = menu:with_update { subs.set_timing_to_sub, 'end'} },
     { key = 's', fn = menu:with_update { subs.set_timing, 'start' } },
     { key = 'e', fn = menu:with_update { subs.set_timing, 'end' } },
     { key = 'c', fn = menu:with_update { subs.set_starting_line } },

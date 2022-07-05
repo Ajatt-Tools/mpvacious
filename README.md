@@ -291,6 +291,9 @@ Advanced menu has the following options:
 * `c` - Set timings to the current sub and remember the corresponding line.
 It does nothing if there are no subs on screen.
 
+* `shift+s` - Set the start time to the current sub.
+* `shift+e` - Set the end time to the current sub.
+
 Then seek with `Shift+h` and `Shift+l` to the previous/next line that you want to add.
 Press `n` to make the card.
 
