@@ -2,7 +2,7 @@ PROJECT     = mpvacious
 VERSION     = v0.18
 MD2HTML     = md2html --github --full-html
 ZIP         = $(PROJECT)_$(VERSION).zip
-BRANCH      = remotes/origin/master
+BRANCH      ?= remotes/origin/master
 DOCS        = README_$(VERSION).html
 RELEASE_DIR = .github/RELEASE
 
