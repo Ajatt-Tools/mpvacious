@@ -164,6 +164,13 @@ local create_snapshot = function(timestamp, filename)
     end
 end
 
+local background_play = function(file_path, on_finish)
+    return _subprocess(
+            { 'mpv', '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
+            on_finish
+    )
+end
+
 local create_audio = function(start_timestamp, end_timestamp, filename, padding)
     if not helpers.is_empty(_config.audio_field) then
         local source_path = mp.get_property("path")
@@ -180,7 +187,11 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding)
         end
         local on_finish = function()
             _store_fn(filename, output_path)
-            os.remove(output_path)
+            if _config.preview_audio then
+                background_play(output_path, function() os.remove(output_path) end)
+            else
+                os.remove(output_path)
+            end
         end
         _subprocess(args, on_finish)
     else
