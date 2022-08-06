@@ -368,9 +368,12 @@ or [ShareX](https://getsharex.com/) OCR to add text to the card.
 
 ### Secondary subtitles
 
-If you want to add a translation to your cards and you have the subtitles in that language, 
-you can add them as secondary subtitles using `--secondary-sid=<sid>`. 
+If you want to add a translation to your cards and you have the subtitles in that language,
+you can add them as secondary subtitles using `--secondary-sid=<sid>`.
 `sid` being the track identifier for the subtitle.
+
+You also need to specify `secondary_field` in the [config file](#Configuration)
+if it is different from the default.
 
 ### Other tools
 
