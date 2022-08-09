@@ -156,8 +156,13 @@ local create_snapshot = function(timestamp, filename)
             self.store_fn(filename, output_path)
             os.remove(output_path)
         end
-        local args = self.encoder.make_snapshot_args(source_path, output_path, timestamp)
-        self.subprocess(args, on_finish)
+        if not self.config.screenshot then
+            local args = self.encoder.make_snapshot_args(source_path, output_path, timestamp)
+            self.subprocess(args, on_finish)
+        else
+            local args = {'screenshot-to-file', output_path,}
+            mp.command_native_async(args, on_finish)
+        end
     else
         print("Snapshot will not be created.")
     end

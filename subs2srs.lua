@@ -45,6 +45,7 @@ local config = {
     snapshot_quality = 15, -- from 0=lowest to 100=highest
     snapshot_width = -2, -- a positive integer or -2 for auto
     snapshot_height = 200, -- same
+    screenshot = false, -- create a screenshot instead of a snapshot; see example config.
     audio_format = "opus", -- opus or mp3
     audio_bitrate = "18k", -- from 16k to 32k
     audio_padding = 0.12, -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
