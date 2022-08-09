@@ -1,8 +1,7 @@
 local mp = require('mp')
 local utils = require('mp.utils')
 local helpers = require('helpers')
-local _config, _store_fn, _os_temp_dir, _subprocess
-local encoder
+local self = {}
 
 ------------------------------------------------------------
 -- utility functions
@@ -55,11 +54,11 @@ ffmpeg.make_snapshot_args = function(source_path, output_path, timestamp)
         '-ss', tostring(timestamp),
         '-i', source_path,
         '-map_metadata', '-1',
-        '-vcodec', _config.snapshot_codec,
+        '-vcodec', self.config.snapshot_codec,
         '-lossless', '0',
         '-compression_level', '6',
-        '-qscale:v', tostring(_config.snapshot_quality),
-        '-vf', string.format('scale=%d:%d', _config.snapshot_width, _config.snapshot_height),
+        '-qscale:v', tostring(self.config.snapshot_quality),
+        '-vf', string.format('scale=%d:%d', self.config.snapshot_width, self.config.snapshot_height),
         '-vframes', '1',
         output_path
     }
@@ -82,12 +81,12 @@ ffmpeg.make_audio_args = function(source_path, output_path, start_timestamp, end
         '-map_metadata', '-1',
         '-map', string.format("0:%d", audio_track_id),
         '-ac', '1',
-        '-codec:a', _config.audio_codec,
+        '-codec:a', self.config.audio_codec,
         '-vbr', 'on',
         '-compression_level', '10',
         '-application', 'voip',
-        '-b:a', tostring(_config.audio_bitrate),
-        '-filter:a', string.format("volume=%.1f", _config.tie_volumes and mp.get_property_native('volume') / 100 or 1),
+        '-b:a', tostring(self.config.audio_bitrate),
+        '-filter:a', string.format("volume=%.1f", self.config.tie_volumes and mp.get_property_native('volume') / 100 or 1),
         output_path
     }
 end
@@ -108,10 +107,10 @@ mpv.make_snapshot_args = function(source_path, output_path, timestamp)
         '--frames=1',
         '--ovcopts-add=lossless=0',
         '--ovcopts-add=compression_level=6',
-        table.concat { '--ovc=', _config.snapshot_codec },
+        table.concat { '--ovc=', self.config.snapshot_codec },
         table.concat { '-start=', timestamp },
-        table.concat { '--ovcopts-add=quality=', tostring(_config.snapshot_quality) },
-        table.concat { '--vf-add=scale=', _config.snapshot_width, ':', _config.snapshot_height },
+        table.concat { '--ovcopts-add=quality=', tostring(self.config.snapshot_quality) },
+        table.concat { '--vf-add=scale=', self.config.snapshot_width, ':', self.config.snapshot_height },
         table.concat { '-o=', output_path }
     }
 end
@@ -136,12 +135,12 @@ mpv.make_audio_args = function(source_path, output_path, start_timestamp, end_ti
         '--oacopts-add=vbr=on',
         '--oacopts-add=application=voip',
         '--oacopts-add=compression_level=10',
-        table.concat { '--oac=', _config.audio_codec },
+        table.concat { '--oac=', self.config.audio_codec },
         table.concat { '--start=', start_timestamp },
         table.concat { '--end=', end_timestamp },
         table.concat { '--aid=', audio_track_id },
-        table.concat { '--volume=', _config.tie_volumes and mp.get_property('volume') or '100' },
-        table.concat { '--oacopts-add=b=', _config.audio_bitrate },
+        table.concat { '--volume=', self.config.tie_volumes and mp.get_property('volume') or '100' },
+        table.concat { '--oacopts-add=b=', self.config.audio_bitrate },
         table.concat { '-o=', output_path }
     }
 end
@@ -150,61 +149,61 @@ end
 -- main interface
 
 local create_snapshot = function(timestamp, filename)
-    if not helpers.is_empty(_config.image_field) then
+    if not helpers.is_empty(self.config.image_field) then
         local source_path = mp.get_property("path")
-        local output_path = utils.join_path(_os_temp_dir(), filename)
-        local args = encoder.make_snapshot_args(source_path, output_path, timestamp)
+        local output_path = utils.join_path(self.os_temp_dir(), filename)
         local on_finish = function()
-            _store_fn(filename, output_path)
+            self.store_fn(filename, output_path)
             os.remove(output_path)
         end
-        _subprocess(args, on_finish)
+        local args = self.encoder.make_snapshot_args(source_path, output_path, timestamp)
+        self.subprocess(args, on_finish)
     else
         print("Snapshot will not be created.")
     end
 end
 
 local background_play = function(file_path, on_finish)
-    return _subprocess(
+    return self.subprocess(
             { 'mpv', '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
             on_finish
     )
 end
 
 local create_audio = function(start_timestamp, end_timestamp, filename, padding)
-    if not helpers.is_empty(_config.audio_field) then
+    if not helpers.is_empty(self.config.audio_field) then
         local source_path = mp.get_property("path")
-        local output_path = utils.join_path(_os_temp_dir(), filename)
+        local output_path = utils.join_path(self.os_temp_dir(), filename)
 
         if padding > 0 then
             start_timestamp, end_timestamp = pad_timings(padding, start_timestamp, end_timestamp)
         end
 
-        local args = encoder.make_audio_args(source_path, output_path, start_timestamp, end_timestamp)
-        for arg in string.gmatch(_config.use_ffmpeg and _config.ffmpeg_audio_args or _config.mpv_audio_args, "%S+") do
+        local args = self.encoder.make_audio_args(source_path, output_path, start_timestamp, end_timestamp)
+        for arg in string.gmatch(self.config.use_ffmpeg and self.config.ffmpeg_audio_args or self.config.mpv_audio_args, "%S+") do
             -- Prepend before output path
             table.insert(args, #args, arg)
         end
         local on_finish = function()
-            _store_fn(filename, output_path)
-            if _config.preview_audio then
+            self.store_fn(filename, output_path)
+            if self.config.preview_audio then
                 background_play(output_path, function() os.remove(output_path) end)
             else
                 os.remove(output_path)
             end
         end
-        _subprocess(args, on_finish)
+        self.subprocess(args, on_finish)
     else
         print("Audio will not be created.")
     end
 end
 
 local init = function(config, store_fn, os_temp_dir, subprocess)
-    _config = config
-    _store_fn = store_fn
-    _os_temp_dir = os_temp_dir
-    _subprocess = subprocess
-    encoder = config.use_ffmpeg and ffmpeg or mpv
+    self.config = config
+    self.store_fn = store_fn
+    self.os_temp_dir = os_temp_dir
+    self.subprocess = subprocess
+    self.encoder = config.use_ffmpeg and ffmpeg or mpv
 end
 
 return {
