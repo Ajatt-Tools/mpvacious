@@ -66,6 +66,10 @@ function OSD:text(text)
     return self:append(text)
 end
 
+function OSD:new_layer()
+    return self:append('\n')
+end
+
 function OSD:bold(s)
     return self:append('{\\b1}'):append(s):append('{\\b0}')
 end

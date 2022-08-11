@@ -54,6 +54,7 @@ local config = {
 
     menu_font_name = "Noto Serif CJK JP",
     menu_font_size = 25,
+    show_selected_text = true,
 
     -- Custom encoding args
     ffmpeg_audio_args = '-af silenceremove=1:0:-50dB',
@@ -258,6 +259,12 @@ local function trim(str)
     str = remove_spaces(str)
     str = remove_text_in_parentheses(str)
     str = remove_newlines(str)
+    return str
+end
+
+local function escape_for_osd(str)
+    str = trim(str)
+    str = str:gsub('[%[%]{}]', '')
     return str
 end
 
@@ -540,7 +547,15 @@ local function new_sub_list()
         end
         return false
     end
+    local get_subs_list = function()
+        local copy = {}
+        for key, value in pairs(subs_list) do
+            copy[key] = value
+        end
+        return copy
+    end
     return {
+        get_subs_list = get_subs_list,
         get_time = get_time,
         get_text = get_text,
         is_empty = _is_empty,
@@ -1485,6 +1500,14 @@ function menu:make_osd()
     end
 
     warn_formats(osd)
+
+    if subs.observed and config.show_selected_text then
+        osd:new_layer():size(config.menu_font_size):font(config.menu_font_name):align(6)
+        osd:submenu("Selected text"):newline()
+        for _, s in ipairs(subs.dialogs.get_subs_list()) do
+            osd:text(escape_for_osd(s['text'])):newline()
+        end
+    end
 
     return osd
 end
