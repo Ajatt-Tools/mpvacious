@@ -4,12 +4,10 @@
 
 # mpvacious
 
+[![AUR](https://img.shields.io/badge/AUR-install-blue.svg)](https://aur.archlinux.org/packages/mpv-mpvacious/)
 [![Chat](https://img.shields.io/badge/chat-join-green.svg)](https://tatsumoto-ren.github.io/blog/join-our-community.html)
 ![GitHub](https://img.shields.io/github/license/Ajatt-Tools/mpvacious)
 [![Patreon](https://img.shields.io/badge/support-patreon-orange)](https://www.patreon.com/bePatron?u=43555128)
-![GitHub top language](https://img.shields.io/github/languages/top/Ajatt-Tools/mpvacious)
-![Lines of code](https://img.shields.io/tokei/lines/github/Ajatt-Tools/mpvacious)
-[![AUR](https://img.shields.io/badge/AUR-install-blue.svg)](https://aur.archlinux.org/packages/mpv-mpvacious/)
 
 mpvacious is your semi-automatic subs2srs for mpv.
 It supports multiple workflows and allows you to quickly create Anki cards
@@ -63,20 +61,52 @@ $ sudo pacman -Syu mpv anki curl xclip --needed
 ## Prerequisites
 
 * A guide on how to set up Anki can be found [on our site](https://tatsumoto.neocities.org/blog/setting-up-anki.html).
-Note that it is not recommended to use FlatPak or similar containers.
+  Note that it is not recommended to use FlatPak or similar containers.
 * Most problems with adding audio or images to Anki cards can be fixed
-by installing FFmpeg and enabling FFmpeg support in `mpvacious`'s config.
-For details see the [configuration](#configuration) section.
+  by installing FFmpeg and enabling FFmpeg support in `mpvacious`'s config.
+  For details see [Configuration](#configuration).
 * If you're on a **Windows** machine, a mpv build by `shinchiro` is recommended.
 * **macOS** users are advised to use [homebrew](https://brew.sh/) or manually add `mpv` to `PATH`.
 * Make sure that your build of mpv supports encoding of audio and images.
-This shell command can be used to test it.
+  This shell command can be used to test it.
   ```
   $ mpv 'test_video.mkv' --loop-file=no --frames=1 -o='test_image.jpg'
   ```
   If the command fails, switch to FFmpeg or find a compatible build on the [mpv website](https://mpv.io/installation/).
 
 ## Installation
+
+There are multiple ways you can install `mpvacious`.
+I recommend installing with `git` so that you can easily update on demand.
+
+`mpvacious` is a user-script for mpv,
+so it has to be installed in the directory `mpv` reads its user-scripts from.
+
+| OS        | Location                                         |
+|-----------|--------------------------------------------------|
+| GNU/Linux | `~/.config/mpv/scripts/`                         |
+| Windows   | `C:/Users/Username/AppData/Roaming/mpv/scripts/` |
+
+Windows is not recommended,
+but we acknowledge that some people haven't switched to GNU/Linux yet.
+
+### Using git
+
+Clone the repo to the `scripts` directory.
+
+```
+$ git clone 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
+```
+
+To update, run the following command.
+
+```
+cd ~/.config/mpv/scripts/subs2srs && git pull
+```
+
+### From the AUR
+
+`mpvacious` can be installed with the [mpv-mpvacious](https://aur.archlinux.org/packages/mpv-mpvacious/) package.
 
 ### Manually
 
@@ -86,15 +116,7 @@ or
 [the latest release](https://github.com/Ajatt-Tools/mpvacious/releases)
 and extract the folder containing
 [subs2srs.lua](https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua)
-to your [mpv scripts](https://github.com/mpv-player/mpv/wiki/User-Scripts) directory:
-
-| OS | Location |
-| --- | --- |
-| GNU/Linux | `~/.config/mpv/scripts/` |
-| Windows | `C:/Users/Username/AppData/Roaming/mpv/scripts/` |
-
-**Note:** in [Celluloid](https://www.archlinux.org/packages/community/x86_64/celluloid/)
-user scripts are installed in `/.config/celluloid/scripts/`.
+to your [mpv scripts](https://github.com/mpv-player/mpv/wiki/User-Scripts) directory.
 
 <details>
 
@@ -102,39 +124,23 @@ user scripts are installed in `/.config/celluloid/scripts/`.
 
 ```
 ~/.config/mpv/scripts
-|-- other_addon_1
-|-- other_addon_2
-`-- mpvacious
-    |-- main.lua
-    |-- ...
-    `-- subs2srs.lua
+|-- other script 1
+|-- other script 2
+|-- subs2srs
+|   |-- main.lua
+|   |-- subs2srs.lua
+|   `-- other files
+`-- other script 3
 ```
 
 </details>
 
-### From the AUR
-
-mpvacious can be installed with the [mpv-mpvacious](https://aur.archlinux.org/packages/mpv-mpvacious/) package.
-
-### Using git
-
-If you already have your dotfiles set up according to
-[Arch Wiki recommendations](https://wiki.archlinux.org/index.php/Dotfiles#Tracking_dotfiles_directly_with_Git), execute:
-```
-$ config submodule add 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
-```
-If not, either proceed to Arch Wiki and come back when you're done, or simply clone the repo:
-
-```
-$ git clone 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
-```
-
 <details>
+
 <summary>A note for mpv v0.32 and older</summary>
 
-Since you've just cloned the script to its own subfolder,
-you need to tell mpv where to look for it.
-mpv v0.33 does this automatically by loading the `main.lua` file in the add-on's folder.
+Older versions of `mpv` don't know how to handle user-scripts in subdirectories.
+You need to tell mpv where to look for `mpvacious`.
 
 Open or create  `~/.config/mpv/scripts/modules.lua` and add these lines:
 ```
@@ -144,28 +150,22 @@ function load(relative_path) dofile(mpv_scripts_dir_path .. relative_path) end
 load("subs2srs/subs2srs.lua")
 ```
 
-**Note:** in [Celluloid](https://www.archlinux.org/packages/community/x86_64/celluloid/)
-replace  in `.config/mpv` with `.config/celluloid`
-and optionally `subs2srs` with the name of the folder mpvacious is cloned into.
-
 </details>
 
-### Updating with git
-
-| Install method | Command |
-| --- | --- |
-| Submodules | `$ config submodule update --remote --merge` |
-| Plain git | `$ cd ~/.config/mpv/scripts/subs2srs && git pull` |
+**Note:** in [Celluloid](https://www.archlinux.org/packages/community/x86_64/celluloid/)
+user scripts are installed in `/.config/celluloid/scripts/`.
+When following the instructions above, replace `.config/mpv` with `.config/celluloid`
+and optionally `subs2srs` with the name of the folder mpvacious is cloned into.
 
 ## Configuration
 
 The config file should be created by the user, if needed.
 
-| OS | Config location |
-| --- | --- |
-| GNU/Linux | `~/.config/mpv/script-opts/subs2srs.conf` |
-| Windows | `C:/Users/Username/AppData/Roaming/mpv/script-opts/subs2srs.conf` |
-| Windows (portable) | `mpv.exeフォルダ/portable_config/script-opts/subs2srs.conf` |
+| OS                 | Config location                                                   |
+|--------------------|-------------------------------------------------------------------|
+| GNU/Linux          | `~/.config/mpv/script-opts/subs2srs.conf`                         |
+| Windows            | `C:/Users/Username/AppData/Roaming/mpv/script-opts/subs2srs.conf` |
+| Windows (portable) | `mpv.exeフォルダ/portable_config/script-opts/subs2srs.conf`           |
 
 If a parameter is not specified
 in the config file, the default value will be used.
@@ -198,10 +198,10 @@ You need to have ffmpeg installed for this to work.
 The user may change some key bindings, though this step is not necessary.
 See [Usage](#usage) for the explanation of what they do.
 
-| OS | Config location |
-| --- | --- |
-| GNU/Linux | `~/.config/mpv/input.conf` |
-| Windows | `C:/Users/Username/AppData/Roaming/mpv/input.conf` |
+| OS        | Config location                                    |
+|-----------|----------------------------------------------------|
+| GNU/Linux | `~/.config/mpv/input.conf`                         |
+| Windows   | `C:/Users/Username/AppData/Roaming/mpv/input.conf` |
 
 Default bindings:
 
@@ -428,6 +428,7 @@ At any time you can see what profile is active in the menu's status bar.
 If you want to modify this script
 or make an entirely new one from scratch,
 these links may help.
+
 * https://mpv.io/manual/master/#lua-scripting
 * https://github.com/mpv-player/mpv/blob/master/player/lua/defaults.lua
 * https://github.com/SenneH/mpv2anki
