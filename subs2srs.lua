@@ -113,10 +113,15 @@ local msg = require('mp.msg')
 local OSD = require('osd_styler')
 local config_manager = require('config')
 local encoder = require('encoder')
-local helpers = require('helpers')
+local h = require('helpers')
 local Menu = require('menu')
-local Subtitle = require('subtitle')
-local clip_autocopy = require('clip_autocopy')
+local clip_autocopy = require('utils.clip_autocopy')
+local timings = require('utils.timings')
+local filename_factory = require('utils.filename_factory')
+local switch = require('utils.switch')
+local play_control = require('utils.play_control')
+local Subtitle = require('subtitles.subtitle')
+local sub_list = require('subtitles.sub_list')
 
 -- namespaces
 local subs
@@ -128,148 +133,23 @@ local append_forvo_pronunciation
 ------------------------------------------------------------
 -- utility functions
 
----Returns true if table contains element. Returns false otherwise.
----@param table table
----@param element any
----@return boolean
-function table.contains(table, element)
-    for _, value in pairs(table) do
-        if value == element then
-            return true
-        end
-    end
-    return false
-end
-
----Returns the largest numeric index.
----@param table table
----@return number
-function table.max_num(table)
-    local max = table[1]
-    for _, value in ipairs(table) do
-        if value > max then
-            max = value
-        end
-    end
-    return max
-end
-
----Returns a value for the given key. If key is not available then returns default value 'nil'.
----@param table table
----@param key string
----@param default any
----@return any
-function table.get(table, key, default)
-    if table[key] == nil then
-        return default or 'nil'
+local function maybe_remove_all_spaces(str)
+    if config.nuke_spaces == true and h.contains_non_latin_letters(str) then
+        return str:gsub('%s*', '')
     else
-        return table[key]
+        return str
     end
-end
-
-local function is_running_windows()
-    return mp.get_property('options/vo-mmcss-profile') ~= nil
-end
-
-local function is_running_macOS()
-    return mp.get_property('options/cocoa-force-dedicated-gpu') ~= nil
-end
-
-local function is_running_wayland()
-    return os.getenv('WAYLAND_DISPLAY') ~= nil
-end
-
-local function contains_non_latin_letters(str)
-    return str:match("[^%c%p%s%w]")
-end
-
-local function capitalize_first_letter(string)
-    return string:gsub("^%l", string.upper)
-end
-
-local escape_special_characters
-do
-    local entities = {
-        ['&'] = '&amp;',
-        ['"'] = '&quot;',
-        ["'"] = '&apos;',
-        ['<'] = '&lt;',
-        ['>'] = '&gt;',
-    }
-    escape_special_characters = function(s)
-        return s:gsub('[&"\'<>]', entities)
-    end
-end
-
-local function remove_extension(filename)
-    return filename:gsub('%.%w+$', '')
-end
-
-local function remove_special_characters(str)
-    return str:gsub('[%c%p%s]', ''):gsub('　', '')
-end
-
-local function remove_text_in_brackets(str)
-    return str:gsub('%b[]', ''):gsub('【.-】', '')
-end
-
-local function remove_filename_text_in_parentheses(str)
-    return str:gsub('%b()', ''):gsub('（.-）', '')
-end
-
-local function remove_common_resolutions(str)
-    -- Also removes empty leftover parentheses and brackets.
-    return str:gsub("2160p", ""):gsub("1080p", ""):gsub("720p", ""):gsub("576p", ""):gsub("480p", ""):gsub("%(%)", ""):gsub("%[%]", "")
-end
-
-local function remove_text_in_parentheses(str)
-    -- Remove text like （泣き声） or （ドアの開く音）
-    -- No deletion is performed if there's no text after the parentheses.
-    -- Note: the modifier `-´ matches zero or more occurrences.
-    -- However, instead of matching the longest sequence, it matches the shortest one.
-    return str:gsub('(%b())(.)', '%2'):gsub('(（.-）)(.)', '%2')
-end
-
-local function remove_newlines(str)
-    return str:gsub('[\n\r]+', ' ')
-end
-
-local function remove_leading_trailing_spaces(str)
-    return str:gsub('^%s*(.-)%s*$', '%1')
-end
-
-local function remove_leading_trailing_dashes(str)
-    return str:gsub('^[%-_]*(.-)[%-_]*$', '%1')
-end
-
-local function remove_all_spaces(str)
-    return str:gsub('%s*', '')
-end
-
-local function remove_spaces(str)
-    if config.nuke_spaces == true and contains_non_latin_letters(str) then
-        return remove_all_spaces(str)
-    else
-        return remove_leading_trailing_spaces(str)
-    end
-end
-
-local function trim(str)
-    str = remove_spaces(str)
-    str = remove_text_in_parentheses(str)
-    str = remove_newlines(str)
-    return str
 end
 
 local function escape_for_osd(str)
-    str = trim(str)
+    str = h.trim(str)
     str = str:gsub('[%[%]{}]', '')
     return str
 end
 
 local function copy_to_clipboard(_, text)
-    if not helpers.is_empty(text) then
-        text = config.clipboard_trim_enabled and trim(text) or remove_newlines(text)
+    if not h.is_empty(text) then
+        text = config.clipboard_trim_enabled and h.trim(text) or h.remove_newlines(text)
         platform.copy_to_clipboard(text)
     end
 end
@@ -278,43 +158,9 @@ local function copy_sub_to_clipboard()
     copy_to_clipboard("copy-on-demand", mp.get_property("sub-text"))
 end
 
-local function human_readable_time(seconds)
-    if type(seconds) ~= 'number' or seconds < 0 then
-        return 'empty'
-    end
-
-    local parts = {
-        h = math.floor(seconds / 3600),
-        m = math.floor(seconds / 60) % 60,
-        s = math.floor(seconds % 60),
-        ms = math.floor((seconds * 1000) % 1000),
-    }
-
-    local ret = string.format("%02dm%02ds%03dms", parts.m, parts.s, parts.ms)
-
-    if parts.h > 0 then
-        ret = string.format('%dh%s', parts.h, ret)
-    end
-
-    return ret
-end
-
-local function subprocess(args, completion_fn)
-    -- if `completion_fn` is passed, the command is ran asynchronously,
-    -- and upon completion, `completion_fn` is called to process the results.
-    local command_native = type(completion_fn) == 'function' and mp.command_native_async or mp.command_native
-    local command_table = {
-        name = "subprocess",
-        playback_only = false,
-        capture_stdout = true,
-        args = args
-    }
-    return command_native(command_table, completion_fn)
-end
-
 local codec_support = (function()
-    local ovc_help = subprocess { 'mpv', '--ovc=help' }
-    local oac_help = subprocess { 'mpv', '--oac=help' }
+    local ovc_help = h.subprocess { 'mpv', '--ovc=help' }
+    local oac_help = h.subprocess { 'mpv', '--oac=help' }
 
     local function is_audio_supported(codec)
         return oac_help.status == 0 and oac_help.stdout:match('--oac=' .. codec) ~= nil
@@ -336,21 +182,6 @@ local codec_support = (function()
     }
 end)()
 
-local function warn_formats(osd)
-    if config.use_ffmpeg then
-        return
-    end
-    for type, codecs in pairs(codec_support) do
-        for codec, supported in pairs(codecs) do
-            if not supported and config[type .. '_codec'] == codec then
-                osd:red('warning: '):newline()
-                osd:tab():text(string.format("your version of mpv does not support %s.", codec)):newline()
-                osd:tab():text(string.format("mpvacious won't be able to create %s files.", type)):newline()
-            end
-        end
-    end
-end
-
 local function ensure_deck()
     if config.create_deck == true then
         ankiconnect.create_deck(config.deck_name)
@@ -360,16 +191,16 @@ end
 local function load_next_profile()
     config_manager.next_profile()
     ensure_deck()
-    helpers.notify("Loaded profile " .. profiles.active)
+    h.notify("Loaded profile " .. profiles.active)
 end
 
 local function tag_format(filename)
-    filename = remove_extension(filename)
-    filename = remove_common_resolutions(filename)
+    filename = h.remove_extension(filename)
+    filename = h.remove_common_resolutions(filename)
 
-    local s, e, episode_num = helpers.get_episode_number(filename)
+    local s, e, episode_num = h.get_episode_number(filename)
 
-    if config.tag_del_episode_num == true and not helpers.is_empty(s) then
+    if config.tag_del_episode_num == true and not h.is_empty(s) then
         if config.tag_del_after_episode_num == true then
             -- Removing everything (e.g. episode name) after the episode number including itself.
             filename = filename:sub(1, s)
@@ -380,20 +211,20 @@ local function tag_format(filename)
     end
 
     if config.tag_nuke_brackets == true then
-        filename = remove_text_in_brackets(filename)
+        filename = h.remove_text_in_brackets(filename)
     end
     if config.tag_nuke_parentheses == true then
-        filename = remove_filename_text_in_parentheses(filename)
+        filename = h.remove_filename_text_in_parentheses(filename)
     end
 
     if config.tag_filename_lowercase == true then
         filename = filename:lower()
     end
 
-    filename = remove_leading_trailing_spaces(filename)
+    filename = h.remove_leading_trailing_spaces(filename)
     filename = filename:gsub(" ", "_")
     filename = filename:gsub("_%-_", "_") -- Replaces garbage _-_ substrings with a underscore
-    filename = remove_leading_trailing_dashes(filename)
+    filename = h.remove_leading_trailing_dashes(filename)
     return filename, episode_num or ''
 end
 
@@ -409,7 +240,7 @@ local function substitute_fmt(tag)
     end
 
     local function substitute_time_pos(_tag)
-        local time_pos = human_readable_time(mp.get_property_number('time-pos'))
+        local time_pos = h.human_readable_time(mp.get_property_number('time-pos'))
         return _tag:gsub("%%t", time_pos)
     end
 
@@ -422,7 +253,7 @@ local function substitute_fmt(tag)
     tag = substitute_episode_number(tag)
     tag = substitute_time_pos(tag)
     tag = substitute_envvar(tag)
-    tag = remove_leading_trailing_spaces(tag)
+    tag = h.remove_leading_trailing_spaces(tag)
 
     return tag
 end
@@ -431,13 +262,13 @@ local function construct_note_fields(sub_text, secondary_text, snapshot_filename
     local ret = {
         [config.sentence_field] = sub_text,
     }
-    if not helpers.is_empty(config.secondary_field) then
+    if not h.is_empty(config.secondary_field) then
         ret[config.secondary_field] = secondary_text
     end
-    if not helpers.is_empty(config.image_field) then
+    if not h.is_empty(config.image_field) then
         ret[config.image_field] = string.format('<img alt="snapshot" src="%s">', snapshot_filename)
     end
-    if not helpers.is_empty(config.audio_field) then
+    if not h.is_empty(config.audio_field) then
         ret[config.audio_field] = string.format('[sound:%s]', audio_filename)
     end
     if config.miscinfo_enable == true then
@@ -446,14 +277,10 @@ local function construct_note_fields(sub_text, secondary_text, snapshot_filename
     return ret
 end
 
-local function minutes_ago(m)
-    return (os.time() - 60 * m) * 1000
-end
-
 local function join_media_fields(new_data, stored_data)
     for _, field in pairs { config.audio_field, config.image_field, config.miscinfo_field } do
-        if not helpers.is_empty(field) then
-            new_data[field] = table.get(stored_data, field, "") .. table.get(new_data, field, "")
+        if not h.is_empty(field) then
+            new_data[field] = h.table_get(stored_data, field, "") .. h.table_get(new_data, field, "")
         end
     end
     return new_data
@@ -464,10 +291,10 @@ local function update_sentence(new_data, stored_data)
     -- https://tatsumoto-ren.github.io/blog/discussing-various-card-templates.html#targeted-sentence-cards-or-mpvacious-cards
     -- if the target word was marked by yomichan, this function makes sure that the highlighting doesn't get erased.
 
-    if helpers.is_empty(stored_data[config.sentence_field]) then
+    if h.is_empty(stored_data[config.sentence_field]) then
         -- sentence field is empty. can't continue.
         return new_data
-    elseif helpers.is_empty(new_data[config.sentence_field]) then
+    elseif h.is_empty(new_data[config.sentence_field]) then
         -- *new* sentence field is empty, but old one contains data. don't delete the existing sentence.
         new_data[config.sentence_field] = stored_data[config.sentence_field]
         return new_data
@@ -495,183 +322,21 @@ local function audio_padding()
 end
 
 ------------------------------------------------------------
--- utility classes
-
-local function new_timings()
-    local self = { ['start'] = -1, ['end'] = -1, }
-    local is_set = function(position)
-        return self[position] >= 0
-    end
-    local set = function(position, time)
-        self[position] = time or mp.get_property_number('time-pos')
-    end
-    local get = function(position)
-        return self[position]
-    end
-    return {
-        is_set = is_set,
-        set = set,
-        get = get,
-    }
-end
-
-local function new_sub_list()
-    local subs_list = {}
-    local _is_empty = function()
-        return next(subs_list) == nil
-    end
-    local find_i = function(sub)
-        for i, v in ipairs(subs_list) do
-            if sub < v then
-                return i
-            end
-        end
-        return #subs_list + 1
-    end
-    local get_time = function(position)
-        local i = position == 'start' and 1 or #subs_list
-        return subs_list[i][position]
-    end
-    local get_text = function(is_secondary)
-        local speech = {}
-        for _, sub in ipairs(subs_list) do
-            table.insert(speech, sub[is_secondary and 'secondary' or 'text'])
-        end
-        return table.concat(speech, ' ')
-    end
-    local insert = function(sub)
-        if sub ~= nil and not table.contains(subs_list, sub) then
-            table.insert(subs_list, find_i(sub), sub)
-            return true
-        end
-        return false
-    end
-    local get_subs_list = function()
-        local copy = {}
-        for key, value in pairs(subs_list) do
-            copy[key] = value
-        end
-        return copy
-    end
-    return {
-        get_subs_list = get_subs_list,
-        get_time = get_time,
-        get_text = get_text,
-        is_empty = _is_empty,
-        insert = insert
-    }
-end
-
-local function make_switch(states)
-    local self = {
-        states = states,
-        current_state = 1
-    }
-    local bump = function()
-        self.current_state = self.current_state + 1
-        if self.current_state > #self.states then
-            self.current_state = 1
-        end
-    end
-    local get = function()
-        return self.states[self.current_state]
-    end
-    return {
-        bump = bump,
-        get = get
-    }
-end
-
-local filename_factory = (function()
-    local filename
-
-    local anki_compatible_length = (function()
-        -- Anki forcibly mutilates all filenames longer than 119 bytes when you run `Tools->Check Media...`.
-        local allowed_bytes = 119
-        local timestamp_bytes = #'_99h99m99s999ms-99h99m99s999ms.webp'
-
-        return function(str, timestamp)
-            -- if timestamp provided, recalculate limit_bytes
-            local limit_bytes = allowed_bytes - (timestamp and #timestamp or timestamp_bytes)
-
-            if #str <= limit_bytes then
-                return str
-            end
-
-            local bytes_per_char = contains_non_latin_letters(str) and #'車' or #'z'
-            local limit_chars = math.floor(limit_bytes / bytes_per_char)
-
-            if limit_chars == limit_bytes then
-                return str:sub(1, limit_bytes)
-            end
-
-            local ret = subprocess {
-                'awk',
-                '-v', string.format('str=%s', str),
-                '-v', string.format('limit=%d', limit_chars),
-                'BEGIN{print substr(str, 1, limit); exit}'
-            }
-
-            if ret.status == 0 then
-                ret.stdout = remove_newlines(ret.stdout)
-                ret.stdout = remove_leading_trailing_spaces(ret.stdout)
-                return ret.stdout
-            else
-                return 'subs2srs_' .. os.time()
-            end
-        end
-    end)()
-
-    local make_media_filename = function()
-        filename = mp.get_property("filename") -- filename without path
-        filename = remove_extension(filename)
-        filename = remove_text_in_brackets(filename)
-        filename = remove_special_characters(filename)
-    end
-
-    local make_audio_filename = function(speech_start, speech_end)
-        local filename_timestamp = string.format(
-                '_%s-%s%s',
-                human_readable_time(speech_start),
-                human_readable_time(speech_end),
-                config.audio_extension
-        )
-        return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
-    end
-
-    local make_snapshot_filename = function(timestamp)
-        local filename_timestamp = string.format(
-                '_%s%s',
-                human_readable_time(timestamp),
-                config.snapshot_extension
-        )
-        return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
-    end
-
-    mp.register_event("file-loaded", make_media_filename)
-
-    return {
-        make_audio_filename = make_audio_filename,
-        make_snapshot_filename = make_snapshot_filename,
-    }
-end)()
-
-------------------------------------------------------------
 -- front for adding and updating notes
 
 local function export_to_anki(gui)
     local sub = subs.get()
     if sub == nil then
-        helpers.notify("Nothing to export.", "warn", 1)
+        h.notify("Nothing to export.", "warn", 1)
         return
     end
 
-    if not gui and helpers.is_empty(sub['text']) then
+    if not gui and h.is_empty(sub['text']) then
         sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
     end
     local snapshot_timestamp = mp.get_property_number("time-pos", 0)
-    local snapshot_filename = filename_factory.make_snapshot_filename(snapshot_timestamp)
-    local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'])
+    local snapshot_filename = filename_factory.make_snapshot_filename(snapshot_timestamp, config.snapshot_extension)
+    local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'], config.audio_extension)
 
     encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
     encoder.create_audio(sub['start'], sub['end'], audio_filename, audio_padding())
@@ -686,9 +351,9 @@ local function update_last_note(overwrite)
     local last_note_id = ankiconnect.get_last_note_id()
 
     if sub == nil then
-        helpers.notify("Nothing to export. Have you set the timings?", "warn", 2)
+        h.notify("Nothing to export. Have you set the timings?", "warn", 2)
         return
-    elseif helpers.is_empty(sub['text']) then
+    elseif h.is_empty(sub['text']) then
         -- In this case, don't modify whatever existing text there is and just
         -- modify the other fields we can. The user might be trying to add
         -- audio to a card which they've manually transcribed (either the video
@@ -696,14 +361,14 @@ local function update_last_note(overwrite)
         sub['text'] = nil
     end
 
-    if last_note_id < minutes_ago(10) then
-        helpers.notify("Couldn't find the target note.", "warn", 2)
+    if last_note_id < h.minutes_ago(10) then
+        h.notify("Couldn't find the target note.", "warn", 2)
         return
     end
 
     local snapshot_timestamp = mp.get_property_number("time-pos", 0)
-    local snapshot_filename = filename_factory.make_snapshot_filename(snapshot_timestamp)
-    local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'])
+    local snapshot_filename = filename_factory.make_snapshot_filename(snapshot_timestamp, config.snapshot_extension)
+    local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'], config.audio_extension)
 
     local create_media = function()
         encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
@@ -726,7 +391,7 @@ local function update_last_note(overwrite)
 
     -- If the text is still empty, put some dummy text to let the user know why
     -- there's no text in the sentence field.
-    if helpers.is_empty(new_data[config.sentence_field]) then
+    if h.is_empty(new_data[config.sentence_field]) then
         new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
     end
 
@@ -739,85 +404,9 @@ end
 
 local function _(params)
     return function()
-        return pcall(helpers.unpack(params))
+        return pcall(h.unpack(params))
     end
 end
-
-local pause_timer = (function()
-    local stop_time = -1
-    local check_stop
-    local set_stop_time = function(time)
-        stop_time = time
-        mp.observe_property("time-pos", "number", check_stop)
-    end
-    local stop = function()
-        mp.unobserve_property(check_stop)
-        stop_time = -1
-    end
-    check_stop = function(_, time)
-        if time > stop_time then
-            stop()
-            mp.set_property("pause", "yes")
-        end
-    end
-    return {
-        set_stop_time = set_stop_time,
-        check_stop = check_stop,
-        stop = stop,
-    }
-end)()
-
-local play_control = (function()
-    local current_sub
-
-    local function stop_at_the_end(sub)
-        pause_timer.set_stop_time(sub['end'] - 0.050)
-        helpers.notify("Playing till the end of the sub...", "info", 3)
-    end
-
-    local function play_till_sub_end()
-        local sub = subs.get_current()
-        mp.commandv('seek', sub['start'], 'absolute')
-        mp.set_property("pause", "no")
-        stop_at_the_end(sub)
-    end
-
-    local function sub_seek(direction, pause)
-        mp.commandv("sub_seek", direction == 'backward' and '-1' or '1')
-        mp.commandv("seek", "0.015", "relative+exact")
-        if pause then
-            mp.set_property("pause", "yes")
-        end
-        pause_timer.stop()
-    end
-
-    local function sub_rewind()
-        mp.commandv('seek', subs.get_current()['start'] + 0.015, 'absolute')
-        pause_timer.stop()
-    end
-
-    local function check_sub()
-        local sub = subs.get_current()
-        if sub and sub ~= current_sub then
-            mp.unobserve_property(check_sub)
-            stop_at_the_end(sub)
-        end
-    end
-
-    local function play_till_next_sub_end()
-        current_sub = subs.get_current()
-        mp.observe_property("sub-text", "string", check_sub)
-        mp.set_property("pause", "no")
-        helpers.notify("Waiting till next sub...", "info", 10)
-    end
-
-    return {
-        play_till_sub_end = play_till_sub_end,
-        play_till_next_sub_end = play_till_next_sub_end,
-        sub_seek = sub_seek,
-        sub_rewind = sub_rewind,
-    }
-end)()
 
 ------------------------------------------------------------
 -- platform specific
@@ -853,7 +442,7 @@ local function init_platform_windows()
             '--data-binary',
             table.concat { '@', curl_tmpfile_path }
         }
-        return subprocess(args, completion_fn)
+        return h.subprocess(args, completion_fn)
     end
 
     self.windows = true
@@ -863,7 +452,15 @@ end
 
 local function init_platform_nix()
     local self = {}
-    local clip = is_running_macOS() and 'LANG=en_US.UTF-8 pbcopy' or is_running_wayland() and 'wl-copy' or 'xclip -i -selection clipboard'
+    local clip = (function()
+        if h.is_mac() then
+            return 'LANG=en_US.UTF-8 pbcopy'
+        elseif h.is_wayland() then
+            return 'wl-copy'
+        else
+            return 'xclip -i -selection clipboard'
+        end
+    end)()
 
     self.tmp_dir = function()
         return '/tmp'
@@ -877,13 +474,13 @@ local function init_platform_nix()
 
     self.curl_request = function(request_json, completion_fn)
         local args = { 'curl', '-s', 'localhost:8765', '-X', 'POST', '-d', request_json }
-        return subprocess(args, completion_fn)
+        return h.subprocess(args, completion_fn)
     end
 
     return self
 end
 
-platform = is_running_windows() and init_platform_windows() or init_platform_nix()
+platform = h.is_win() and init_platform_windows() or init_platform_nix()
 
 ------------------------------------------------------------
 -- utils for downloading pronunciations from Forvo
@@ -939,7 +536,7 @@ do
             table.concat { '--oacopts-add=b=', config.audio_bitrate },
             table.concat { '-o=', dest_path }
         }
-        return subprocess(args)
+        return h.subprocess(args)
     end
 
     local function reencode_and_store(source_path, filename)
@@ -952,12 +549,12 @@ do
 
     local function curl_save(source_url, save_location)
         local curl_args = { 'curl', source_url, '-s', '-L', '-o', save_location }
-        return subprocess(curl_args).status == 0
+        return h.subprocess(curl_args).status == 0
     end
 
     local function get_pronunciation_url(word)
         local file_format = config.audio_extension:sub(2)
-        local forvo_page = subprocess { 'curl', '-s', string.format('https://forvo.com/search/%s/ja', url_encode(word)) }.stdout
+        local forvo_page = h.subprocess { 'curl', '-s', string.format('https://forvo.com/search/%s/ja', url_encode(word)) }.stdout
         local play_params = string.match(forvo_page, "Play%((.-)%);")
 
         if play_params then
@@ -974,7 +571,7 @@ do
     local function get_forvo_pronunciation(word)
         local audio_url = get_pronunciation_url(word)
 
-        if helpers.is_empty(audio_url) then
+        if h.is_empty(audio_url) then
             msg.warn(string.format("Seems like Forvo doesn't have audio for word %s.", word))
             return
         end
@@ -1004,14 +601,14 @@ do
             return new_data
         end
 
-        if helpers.is_empty(stored_data[config.vocab_field]) then
+        if h.is_empty(stored_data[config.vocab_field]) then
             -- target word field is empty. can't continue.
             return new_data
         end
 
-        if config.use_forvo == 'always' or helpers.is_empty(stored_data[config.vocab_audio_field]) then
+        if config.use_forvo == 'always' or h.is_empty(stored_data[config.vocab_audio_field]) then
             local forvo_pronunciation = get_forvo_pronunciation(stored_data[config.vocab_field])
-            if not helpers.is_empty(forvo_pronunciation) then
+            if not h.is_empty(forvo_pronunciation) then
                 if config.vocab_audio_field == config.audio_field then
                     -- improperly configured fields. don't lose sentence audio
                     new_data[config.audio_field] = forvo_pronunciation .. new_data[config.audio_field]
@@ -1110,7 +707,7 @@ end
 
 ankiconnect.add_note = function(note_fields, gui)
     local action = gui and 'guiAddCards' or 'addNote'
-    local tags = helpers.is_empty(config.note_tag) and {} or { substitute_fmt(config.note_tag) }
+    local tags = h.is_empty(config.note_tag) and {} or { substitute_fmt(config.note_tag) }
     local args = {
         action = action,
         version = 6,
@@ -1130,9 +727,9 @@ ankiconnect.add_note = function(note_fields, gui)
     local result_notify = function(_, result, _)
         local note_id, error = ankiconnect.parse_result(result)
         if not error then
-            helpers.notify(string.format("Note added. ID = %s.", note_id))
+            h.notify(string.format("Note added. ID = %s.", note_id))
         else
-            helpers.notify(string.format("Error: %s.", error), "error", 2)
+            h.notify(string.format("Error: %s.", error), "error", 2)
         end
     end
     ankiconnect.execute(args, result_notify)
@@ -1149,8 +746,8 @@ ankiconnect.get_last_note_id = function()
 
     local note_ids, _ = ankiconnect.parse_result(ret)
 
-    if not helpers.is_empty(note_ids) then
-        return table.max_num(note_ids)
+    if not h.is_empty(note_ids) then
+        return h.max_num(note_ids)
     else
         return -1
     end
@@ -1192,7 +789,7 @@ ankiconnect.gui_browse = function(query)
 end
 
 ankiconnect.add_tag = function(note_id, tag)
-    if not helpers.is_empty(tag) then
+    if not h.is_empty(tag) then
         tag = substitute_fmt(tag)
         ankiconnect.execute {
             action = 'addTags',
@@ -1228,9 +825,9 @@ ankiconnect.append_media = function(note_id, fields, create_media_fn)
             create_media_fn()
             ankiconnect.add_tag(note_id, config.note_tag)
             ankiconnect.gui_browse(string.format("nid:%s", note_id)) -- select the updated note in the card browser
-            helpers.notify(string.format("Note #%s updated.", note_id))
+            h.notify(string.format("Note #%s updated.", note_id))
         else
-            helpers.notify(string.format("Error: %s.", error), "error", 2)
+            h.notify(string.format("Error: %s.", error), "error", 2)
         end
     end
 
@@ -1241,14 +838,10 @@ end
 -- subtitles and timings
 
 subs = {
-    dialogs = new_sub_list(),
-    user_timings = new_timings(),
+    dialogs = sub_list.new(),
+    user_timings = timings.new(),
     observed = false
 }
-
-subs.get_current = function()
-    return Subtitle:now()
-end
 
 subs.get_timing = function(position)
     if subs.user_timings.is_set(position) then
@@ -1261,7 +854,7 @@ end
 
 subs.get = function()
     if subs.dialogs.is_empty() then
-        subs.dialogs.insert(subs.get_current())
+        subs.dialogs.insert(Subtitle:now())
     end
     local sub = Subtitle:new {
         ['text'] = subs.dialogs.get_text(false),
@@ -1278,15 +871,16 @@ subs.get = function()
     if sub['start'] > sub['end'] then
         sub['start'], sub['end'] = sub['end'], sub['start']
     end
-    if not helpers.is_empty(sub['text']) then
-        sub['text'] = trim(sub['text'])
-        sub['text'] = escape_special_characters(sub['text'])
+    if not h.is_empty(sub['text']) then
+        sub['text'] = h.trim(sub['text'])
+        sub['text'] = h.escape_special_characters(sub['text'])
+        sub['text'] = maybe_remove_all_spaces(sub['text'])
     end
     return sub
 end
 
 subs.append = function()
-    if subs.dialogs.insert(subs.get_current()) then
+    if subs.dialogs.insert(Subtitle:now()) then
         menu:update()
     end
 end
@@ -1302,21 +896,21 @@ subs.unobserve = function()
 end
 
 subs.set_timing_to_sub = function(position)
-    local sub = subs.get_current()
+    local sub = Subtitle:now()
     if sub then
         subs.user_timings.set(position, sub[position])
-        helpers.notify(capitalize_first_letter(position) .. " time has been set.")
+        h.notify(h.capitalize_first_letter(position) .. " time has been set.")
         if not subs.observed then
             subs.observe()
         end
     else
-        helpers.notify("There's no visible subtitle.", "info", 2)
+        h.notify("There's no visible subtitle.", "info", 2)
     end
 end
 
 subs.set_timing = function(position)
     subs.user_timings.set(position, mp.get_property_number('time-pos'))
-    helpers.notify(capitalize_first_letter(position) .. " time has been set.")
+    h.notify(h.capitalize_first_letter(position) .. " time has been set.")
     if not subs.observed then
         subs.observe()
     end
@@ -1324,23 +918,23 @@ end
 
 subs.set_starting_line = function()
     subs.clear()
-    if subs.get_current() then
+    if Subtitle:now() then
         subs.observe()
-        helpers.notify("Timings have been set to the current sub.", "info", 2)
+        h.notify("Timings have been set to the current sub.", "info", 2)
     else
-        helpers.notify("There's no visible subtitle.", "info", 2)
+        h.notify("There's no visible subtitle.", "info", 2)
     end
 end
 
 subs.clear = function()
     subs.unobserve()
-    subs.dialogs = new_sub_list()
-    subs.user_timings = new_timings()
+    subs.dialogs = sub_list.new()
+    subs.user_timings = timings.new()
 end
 
 subs.clear_and_notify = function()
     subs.clear()
-    helpers.notify("Timings have been reset.", "info", 2)
+    h.notify("Timings have been reset.", "info", 2)
 end
 
 
@@ -1349,7 +943,7 @@ end
 -- main menu
 
 menu = Menu:new {
-    hints_state = make_switch { 'hidden', 'menu', 'global', },
+    hints_state = switch.new { 'hidden', 'menu', 'global', },
 }
 
 menu.keybindings = {
@@ -1370,16 +964,16 @@ menu.keybindings = {
     { key = 'q', fn = function() menu:close() end },
 }
 
-function menu:make_osd()
-    local osd = OSD:new():size(config.menu_font_size):font(config.menu_font_name):align(4)
-
+function menu:print_header(osd)
     osd:submenu('mpvacious options'):newline()
-    osd:item('Timings: '):text(human_readable_time(subs.get_timing('start')))
-    osd:item(' to '):text(human_readable_time(subs.get_timing('end'))):newline()
+    osd:item('Timings: '):text(h.human_readable_time(subs.get_timing('start')))
+    osd:item(' to '):text(h.human_readable_time(subs.get_timing('end'))):newline()
     osd:item('Clipboard autocopy: '):text(clip_autocopy.is_enabled()):newline()
     osd:item('Active profile: '):text(profiles.active):newline()
     osd:item('Deck: '):text(config.deck_name):newline()
+end
 
+function menu:print_bindings(osd)
     if self.hints_state.get() == 'global' then
         osd:submenu('Global bindings'):newline()
         osd:tab():item('ctrl+c: '):text('Copy current subtitle to clipboard'):newline()
@@ -1406,9 +1000,31 @@ function menu:make_osd()
     else
         osd:italics("Press "):item('i'):italics(" to show menu bindings."):newline()
     end
+end
 
-    warn_formats(osd)
+function menu:warn_formats(osd)
+    if config.use_ffmpeg then
+        return
+    end
+    for type, codecs in pairs(codec_support) do
+        for codec, supported in pairs(codecs) do
+            if not supported and config[type .. '_codec'] == codec then
+                osd:red('warning: '):newline()
+                osd:tab():text(string.format("your version of mpv does not support %s.", codec)):newline()
+                osd:tab():text(string.format("mpvacious won't be able to create %s files.", type)):newline()
+            end
+        end
+    end
+end
 
+function menu:print_legend(osd)
+    osd:new_layer():size(config.menu_font_size):font(config.menu_font_name):align(4)
+    self:print_header(osd)
+    self:print_bindings(osd)
+    self:warn_formats(osd)
+end
+
+function menu:print_selection(osd)
     if subs.observed and config.show_selected_text then
         osd:new_layer():size(config.menu_font_size):font(config.menu_font_name):align(6)
         osd:submenu("Selected text"):newline()
@@ -1416,7 +1032,12 @@ function menu:make_osd()
             osd:text(escape_for_osd(s['text'])):newline()
         end
     end
+end
 
+function menu:make_osd()
+    local osd = OSD:new()
+    self:print_legend(osd)
+    self:print_selection(osd)
     return osd
 end
 
@@ -1433,7 +1054,7 @@ local main = (function()
         end
 
         config_manager.init(config, profiles)
-        encoder.init(config, ankiconnect.store_file, platform.tmp_dir, subprocess)
+        encoder.init(config, ankiconnect.store_file, platform.tmp_dir)
         clip_autocopy.init(config.autoclip, copy_to_clipboard)
         ensure_deck()
 

@@ -1,6 +1,6 @@
 local mp = require('mp')
 local utils = require('mp.utils')
-local helpers = require('helpers')
+local h = require('helpers')
 local self = {}
 
 ------------------------------------------------------------
@@ -149,7 +149,7 @@ end
 -- main interface
 
 local create_snapshot = function(timestamp, filename)
-    if not helpers.is_empty(self.config.image_field) then
+    if not h.is_empty(self.config.image_field) then
         local source_path = mp.get_property("path")
         local output_path = utils.join_path(self.os_temp_dir(), filename)
         local on_finish = function()
@@ -158,7 +158,7 @@ local create_snapshot = function(timestamp, filename)
         end
         if not self.config.screenshot then
             local args = self.encoder.make_snapshot_args(source_path, output_path, timestamp)
-            self.subprocess(args, on_finish)
+            h.subprocess(args, on_finish)
         else
             local args = {'screenshot-to-file', output_path, 'video',}
             mp.command_native_async(args, on_finish)
@@ -169,14 +169,14 @@ local create_snapshot = function(timestamp, filename)
 end
 
 local background_play = function(file_path, on_finish)
-    return self.subprocess(
+    return h.subprocess(
             { 'mpv', '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
             on_finish
     )
 end
 
 local create_audio = function(start_timestamp, end_timestamp, filename, padding)
-    if not helpers.is_empty(self.config.audio_field) then
+    if not h.is_empty(self.config.audio_field) then
         local source_path = mp.get_property("path")
         local output_path = utils.join_path(self.os_temp_dir(), filename)
 
@@ -197,17 +197,16 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding)
                 os.remove(output_path)
             end
         end
-        self.subprocess(args, on_finish)
+        h.subprocess(args, on_finish)
     else
         print("Audio will not be created.")
     end
 end
 
-local init = function(config, store_fn, os_temp_dir, subprocess)
+local init = function(config, store_fn, os_temp_dir)
     self.config = config
     self.store_fn = store_fn
     self.os_temp_dir = os_temp_dir
-    self.subprocess = subprocess
     self.encoder = config.use_ffmpeg and ffmpeg or mpv
 end
 
