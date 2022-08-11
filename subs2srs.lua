@@ -122,12 +122,12 @@ local switch = require('utils.switch')
 local play_control = require('utils.play_control')
 local Subtitle = require('subtitles.subtitle')
 local sub_list = require('subtitles.sub_list')
+local platform = require('platform.init')
 
 -- namespaces
 local subs
 local ankiconnect
 local menu
-local platform
 local append_forvo_pronunciation
 
 ------------------------------------------------------------
@@ -407,80 +407,6 @@ local function _(params)
         return pcall(h.unpack(params))
     end
 end
-
-------------------------------------------------------------
--- platform specific
-
-local function init_platform_windows()
-    local self = {}
-    local curl_tmpfile_path = utils.join_path(os.getenv('TEMP'), 'curl_tmp.txt')
-    mp.register_event('shutdown', function()
-        os.remove(curl_tmpfile_path)
-    end)
-
-    self.tmp_dir = function()
-        return os.getenv('TEMP')
-    end
-
-    self.copy_to_clipboard = function(text)
-        text = text:gsub("&", "^^^&"):gsub("[<>|]", "")
-        mp.commandv("run", "cmd.exe", "/d", "/c", string.format("@echo off & chcp 65001 >nul & echo %s|clip", text))
-    end
-
-    self.curl_request = function(request_json, completion_fn)
-        local handle = io.open(curl_tmpfile_path, "w")
-        handle:write(request_json)
-        handle:close()
-        local args = {
-            'curl',
-            '-s',
-            'localhost:8765',
-            '-H',
-            'Content-Type: application/json; charset=UTF-8',
-            '-X',
-            'POST',
-            '--data-binary',
-            table.concat { '@', curl_tmpfile_path }
-        }
-        return h.subprocess(args, completion_fn)
-    end
-
-    self.windows = true
-
-    return self
-end
-
-local function init_platform_nix()
-    local self = {}
-    local clip = (function()
-        if h.is_mac() then
-            return 'LANG=en_US.UTF-8 pbcopy'
-        elseif h.is_wayland() then
-            return 'wl-copy'
-        else
-            return 'xclip -i -selection clipboard'
-        end
-    end)()
-
-    self.tmp_dir = function()
-        return '/tmp'
-    end
-
-    self.copy_to_clipboard = function(text)
-        local handle = io.popen(clip, 'w')
-        handle:write(text)
-        handle:close()
-    end
-
-    self.curl_request = function(request_json, completion_fn)
-        local args = { 'curl', '-s', 'localhost:8765', '-X', 'POST', '-d', request_json }
-        return h.subprocess(args, completion_fn)
-    end
-
-    return self
-end
-
-platform = h.is_win() and init_platform_windows() or init_platform_nix()
 
 ------------------------------------------------------------
 -- utils for downloading pronunciations from Forvo
@@ -936,8 +862,6 @@ subs.clear_and_notify = function()
     subs.clear()
     h.notify("Timings have been reset.", "info", 2)
 end
-
-
 
 ------------------------------------------------------------
 -- main menu
