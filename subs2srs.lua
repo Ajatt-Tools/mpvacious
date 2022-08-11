@@ -116,10 +116,10 @@ local encoder = require('encoder')
 local helpers = require('helpers')
 local Menu = require('menu')
 local Subtitle = require('subtitle')
+local clip_autocopy = require('clip_autocopy')
 
 -- namespaces
 local subs
-local clip_autocopy
 local ankiconnect
 local menu
 local platform
@@ -1343,50 +1343,7 @@ subs.clear_and_notify = function()
     helpers.notify("Timings have been reset.", "info", 2)
 end
 
-------------------------------------------------------------
--- send subs to clipboard as they appear
 
-clip_autocopy = (function()
-    local enable = function()
-        mp.observe_property("sub-text", "string", copy_to_clipboard)
-    end
-
-    local disable = function()
-        mp.unobserve_property(copy_to_clipboard)
-    end
-
-    local state_notify = function()
-        helpers.notify(string.format("Clipboard autocopy has been %s.", config.autoclip and 'enabled' or 'disabled'))
-    end
-
-    local toggle = function()
-        config.autoclip = not config.autoclip
-        if config.autoclip == true then
-            enable()
-        else
-            disable()
-        end
-        state_notify()
-    end
-
-    local is_enabled = function()
-        return config.autoclip == true and 'enabled' or 'disabled'
-    end
-
-    local init = function()
-        if config.autoclip == true then
-            enable()
-        end
-    end
-
-    return {
-        enable = enable,
-        disable = disable,
-        init = init,
-        toggle = toggle,
-        is_enabled = is_enabled,
-    }
-end)()
 
 ------------------------------------------------------------
 -- main menu
@@ -1477,7 +1434,7 @@ local main = (function()
 
         config_manager.init(config, profiles)
         encoder.init(config, ankiconnect.store_file, platform.tmp_dir, subprocess)
-        clip_autocopy.init()
+        clip_autocopy.init(config.autoclip, copy_to_clipboard)
         ensure_deck()
 
         -- Key bindings
