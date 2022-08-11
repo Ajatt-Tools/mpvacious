@@ -115,6 +115,7 @@ local config_manager = require('config')
 local encoder = require('encoder')
 local helpers = require('helpers')
 local Menu = require('menu')
+local Subtitle = require('subtitle')
 
 -- namespaces
 local subs
@@ -123,9 +124,6 @@ local ankiconnect
 local menu
 local platform
 local append_forvo_pronunciation
-
--- classes
-local Subtitle
 
 ------------------------------------------------------------
 -- utility functions
@@ -1389,54 +1387,6 @@ clip_autocopy = (function()
         is_enabled = is_enabled,
     }
 end)()
-
-------------------------------------------------------------
--- Subtitle class provides methods for comparing subtitle lines
-
-Subtitle = {
-    ['text'] = '',
-    ['secondary'] = '',
-    ['start'] = -1,
-    ['end'] = -1,
-}
-
-function Subtitle:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
-
-function Subtitle:now()
-    local delay = mp.get_property_native("sub-delay") - mp.get_property_native("audio-delay")
-    local text = mp.get_property("sub-text")
-    local secondary = mp.get_property("secondary-sub-text")
-    local this = self:new {
-        ['text'] = text, -- if is_empty then it's dealt with later
-        ['secondary'] = secondary,
-        ['start'] = mp.get_property_number("sub-start"),
-        ['end'] = mp.get_property_number("sub-end"),
-    }
-    return this:valid() and this:delay(delay) or nil
-end
-
-function Subtitle:delay(delay)
-    self['start'] = self['start'] + delay
-    self['end'] = self['end'] + delay
-    return self
-end
-
-function Subtitle:valid()
-    return self['start'] and self['end'] and self['start'] >= 0 and self['end'] > 0
-end
-
-Subtitle.__eq = function(lhs, rhs)
-    return lhs['text'] == rhs['text']
-end
-
-Subtitle.__lt = function(lhs, rhs)
-    return lhs['start'] < rhs['start']
-end
 
 ------------------------------------------------------------
 -- main menu
