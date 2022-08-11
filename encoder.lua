@@ -160,7 +160,7 @@ local create_snapshot = function(timestamp, filename)
             local args = self.encoder.make_snapshot_args(source_path, output_path, timestamp)
             self.subprocess(args, on_finish)
         else
-            local args = {'screenshot-to-file', output_path,}
+            local args = {'screenshot-to-file', output_path, 'video',}
             mp.command_native_async(args, on_finish)
         end
     else
