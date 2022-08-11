@@ -52,6 +52,7 @@ local config = {
     tie_volumes = false, -- if set to true, the volume of the outputted audio file depends on the volume of the player at the time of export
     preview_audio = true, -- play created audio clips in background.
 
+    -- Menu
     menu_font_name = "Noto Serif CJK JP",
     menu_font_size = 25,
     show_selected_text = true,
@@ -1446,7 +1447,7 @@ menu = Menu:new {
 
 menu.keybindings = {
     { key = 'S', fn = menu:with_update { subs.set_timing_to_sub, 'start' } },
-    { key = 'E', fn = menu:with_update { subs.set_timing_to_sub, 'end'} },
+    { key = 'E', fn = menu:with_update { subs.set_timing_to_sub, 'end' } },
     { key = 's', fn = menu:with_update { subs.set_timing, 'start' } },
     { key = 'e', fn = menu:with_update { subs.set_timing, 'end' } },
     { key = 'c', fn = menu:with_update { subs.set_starting_line } },
