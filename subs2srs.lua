@@ -115,6 +115,7 @@ local config_manager = require('config')
 local encoder = require('encoder')
 local h = require('helpers')
 local Menu = require('menu')
+local ankiconnect = require('ankiconnect')
 local clip_autocopy = require('utils.clip_autocopy')
 local timings = require('utils.timings')
 local filename_factory = require('utils.filename_factory')
@@ -126,7 +127,6 @@ local platform = require('platform.init')
 
 -- namespaces
 local subs
-local ankiconnect
 local menu
 local append_forvo_pronunciation
 
@@ -228,35 +228,37 @@ local function tag_format(filename)
     return filename, episode_num or ''
 end
 
-local function substitute_fmt(tag)
-    local filename, episode = tag_format(mp.get_property("filename"))
-
-    local function substitute_filename(_tag)
-        return _tag:gsub("%%n", filename)
+local substitute_fmt = (function()
+    local function substitute_filename(tag, filename)
+        return tag:gsub("%%n", filename)
     end
 
-    local function substitute_episode_number(_tag)
-        return _tag:gsub("%%d", episode)
+    local function substitute_episode_number(tag, episode)
+        return tag:gsub("%%d", episode)
     end
 
-    local function substitute_time_pos(_tag)
+    local function substitute_time_pos(tag)
         local time_pos = h.human_readable_time(mp.get_property_number('time-pos'))
-        return _tag:gsub("%%t", time_pos)
+        return tag:gsub("%%t", time_pos)
     end
 
-    local function substitute_envvar(_tag)
+    local function substitute_envvar(tag)
         local env_tags = os.getenv('SUBS2SRS_TAGS') or ''
-        return _tag:gsub("%%e", env_tags)
+        return tag:gsub("%%e", env_tags)
     end
 
-    tag = substitute_filename(tag)
-    tag = substitute_episode_number(tag)
-    tag = substitute_time_pos(tag)
-    tag = substitute_envvar(tag)
-    tag = h.remove_leading_trailing_spaces(tag)
-
-    return tag
-end
+    return function(tag)
+        if not h.is_empty(tag) then
+            local filename, episode = tag_format(mp.get_property("filename"))
+            tag = substitute_filename(tag, filename)
+            tag = substitute_episode_number(tag, episode)
+            tag = substitute_time_pos(tag)
+            tag = substitute_envvar(tag)
+            tag = h.remove_leading_trailing_spaces(tag)
+        end
+        return tag
+    end
+end)()
 
 local function construct_note_fields(sub_text, secondary_text, snapshot_filename, audio_filename)
     local ret = {
@@ -342,7 +344,8 @@ local function export_to_anki(gui)
     encoder.create_audio(sub['start'], sub['end'], audio_filename, audio_padding())
 
     local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot_filename, audio_filename)
-    ankiconnect.add_note(note_fields, gui)
+
+    ankiconnect.add_note(note_fields, substitute_fmt(config.note_tag), gui)
     subs.clear()
 end
 
@@ -395,7 +398,7 @@ local function update_last_note(overwrite)
         new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
     end
 
-    ankiconnect.append_media(last_note_id, new_data, create_media)
+    ankiconnect.append_media(last_note_id, new_data, create_media, substitute_fmt(config.note_tag))
     subs.clear()
 end
 
@@ -546,218 +549,6 @@ do
 
         return new_data
     end
-end
-
-------------------------------------------------------------
--- AnkiConnect requests
-
-ankiconnect = {}
-
-ankiconnect.execute = function(request, completion_fn)
-    -- utils.format_json returns a string
-    -- On error, request_json will contain "null", not nil.
-    local request_json, error = utils.format_json(request)
-
-    if error ~= nil or request_json == "null" then
-        return completion_fn and completion_fn()
-    else
-        return platform.curl_request(request_json, completion_fn)
-    end
-end
-
-ankiconnect.parse_result = function(curl_output)
-    -- there are two values that we actually care about: result and error
-    -- but we need to crawl inside to get them.
-
-    if curl_output == nil then
-        return nil, "Failed to format json or no args passed"
-    end
-
-    if curl_output.status ~= 0 then
-        return nil, "Ankiconnect isn't running"
-    end
-
-    local stdout_json = utils.parse_json(curl_output.stdout)
-
-    if stdout_json == nil then
-        return nil, "Fatal error from Ankiconnect"
-    end
-
-    if stdout_json.error ~= nil then
-        return nil, tostring(stdout_json.error)
-    end
-
-    return stdout_json.result, nil
-end
-
-ankiconnect.store_file = function(filename, file_path)
-    local args = {
-        action = "storeMediaFile",
-        version = 6,
-        params = {
-            filename = filename,
-            path = file_path
-        }
-    }
-
-    local ret = ankiconnect.execute(args)
-    local _, error = ankiconnect.parse_result(ret)
-    if not error then
-        msg.info(string.format("File stored: '%s'.", filename))
-        return true
-    else
-        msg.error(string.format("Couldn't store file '%s': %s", filename, error))
-        return false
-    end
-end
-
-ankiconnect.create_deck = function(deck_name)
-    local args = {
-        action = "changeDeck",
-        version = 6,
-        params = {
-            cards = {},
-            deck = deck_name
-        }
-    }
-    local result_notify = function(_, result, _)
-        local _, error = ankiconnect.parse_result(result)
-        if not error then
-            msg.info(string.format("Deck %s: check completed.", deck_name))
-        else
-            msg.warn(string.format("Deck %s: check failed. Reason: %s.", deck_name, error))
-        end
-    end
-    ankiconnect.execute(args, result_notify)
-end
-
-ankiconnect.add_note = function(note_fields, gui)
-    local action = gui and 'guiAddCards' or 'addNote'
-    local tags = h.is_empty(config.note_tag) and {} or { substitute_fmt(config.note_tag) }
-    local args = {
-        action = action,
-        version = 6,
-        params = {
-            note = {
-                deckName = config.deck_name,
-                modelName = config.model_name,
-                fields = note_fields,
-                options = {
-                    allowDuplicate = config.allow_duplicates,
-                    duplicateScope = "deck",
-                },
-                tags = tags,
-            }
-        }
-    }
-    local result_notify = function(_, result, _)
-        local note_id, error = ankiconnect.parse_result(result)
-        if not error then
-            h.notify(string.format("Note added. ID = %s.", note_id))
-        else
-            h.notify(string.format("Error: %s.", error), "error", 2)
-        end
-    end
-    ankiconnect.execute(args, result_notify)
-end
-
-ankiconnect.get_last_note_id = function()
-    local ret = ankiconnect.execute {
-        action = "findNotes",
-        version = 6,
-        params = {
-            query = "added:1" -- find all notes added today
-        }
-    }
-
-    local note_ids, _ = ankiconnect.parse_result(ret)
-
-    if not h.is_empty(note_ids) then
-        return h.max_num(note_ids)
-    else
-        return -1
-    end
-end
-
-ankiconnect.get_note_fields = function(note_id)
-    local ret = ankiconnect.execute {
-        action = "notesInfo",
-        version = 6,
-        params = {
-            notes = { note_id }
-        }
-    }
-
-    local result, error = ankiconnect.parse_result(ret)
-
-    if error == nil then
-        result = result[1].fields
-        for key, value in pairs(result) do
-            result[key] = value.value
-        end
-        return result
-    else
-        return nil
-    end
-end
-
-ankiconnect.gui_browse = function(query)
-    if config.disable_gui_browse then
-        return
-    end
-    ankiconnect.execute {
-        action = 'guiBrowse',
-        version = 6,
-        params = {
-            query = query
-        }
-    }
-end
-
-ankiconnect.add_tag = function(note_id, tag)
-    if not h.is_empty(tag) then
-        tag = substitute_fmt(tag)
-        ankiconnect.execute {
-            action = 'addTags',
-            version = 6,
-            params = {
-                notes = { note_id },
-                tags = tag
-            }
-        }
-    end
-end
-
-ankiconnect.append_media = function(note_id, fields, create_media_fn)
-    -- AnkiConnect will fail to update the note if it's selected in the Anki Browser.
-    -- https://github.com/FooSoft/anki-connect/issues/82
-    -- Switch focus from the current note to avoid it.
-    ankiconnect.gui_browse("nid:1") -- impossible nid
-
-    local args = {
-        action = "updateNoteFields",
-        version = 6,
-        params = {
-            note = {
-                id = note_id,
-                fields = fields,
-            }
-        }
-    }
-
-    local on_finish = function(_, result, _)
-        local _, error = ankiconnect.parse_result(result)
-        if not error then
-            create_media_fn()
-            ankiconnect.add_tag(note_id, config.note_tag)
-            ankiconnect.gui_browse(string.format("nid:%s", note_id)) -- select the updated note in the card browser
-            h.notify(string.format("Note #%s updated.", note_id))
-        else
-            h.notify(string.format("Error: %s.", error), "error", 2)
-        end
-    end
-
-    ankiconnect.execute(args, on_finish)
 end
 
 ------------------------------------------------------------
@@ -978,6 +769,7 @@ local main = (function()
         end
 
         config_manager.init(config, profiles)
+        ankiconnect.init(config)
         encoder.init(config, ankiconnect.store_file, platform.tmp_dir)
         clip_autocopy.init(config.autoclip, copy_to_clipboard)
         ensure_deck()
