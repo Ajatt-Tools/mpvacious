@@ -631,16 +631,18 @@ local main = (function()
         ensure_deck()
 
         -- Key bindings
-        mp.add_forced_key_binding("Ctrl+n", "mpvacious-export-note", export_to_anki)
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
         mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", clip_autocopy.toggle)
 
         -- Open advanced menu
         mp.add_key_binding("a", "mpvacious-menu-open", function() menu:open() end)
 
+        -- Add note
+        mp.add_forced_key_binding("Ctrl+n", "mpvacious-export-note", menu:with_update { export_to_anki, false })
+
         -- Note updating
-        mp.add_key_binding("Ctrl+m", "mpvacious-update-last-note", _ { update_last_note, false })
-        mp.add_key_binding("Ctrl+M", "mpvacious-overwrite-last-note", _ { update_last_note, true })
+        mp.add_key_binding("Ctrl+m", "mpvacious-update-last-note", menu:with_update { update_last_note, false })
+        mp.add_key_binding("Ctrl+M", "mpvacious-overwrite-last-note", menu:with_update { update_last_note, true })
 
         -- Vim-like seeking between subtitle lines
         mp.add_key_binding("H", "mpvacious-sub-seek-back", _ { play_control.sub_seek, 'backward' })
