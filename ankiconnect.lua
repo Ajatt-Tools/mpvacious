@@ -6,13 +6,9 @@ AnkiConnect requests
 ]]
 
 local utils = require('mp.utils')
-local platform = require('platform.init')
 local msg = require('mp.msg')
 local h = require('helpers')
-
 local self = {}
-
-self.config = nil
 
 self.execute = function(request, completion_fn)
     -- utils.format_json returns a string
@@ -22,7 +18,7 @@ self.execute = function(request, completion_fn)
     if error ~= nil or request_json == "null" then
         return completion_fn and completion_fn()
     else
-        return platform.curl_request(request_json, completion_fn)
+        return self.platform.curl_request(request_json, completion_fn)
     end
 end
 
@@ -218,8 +214,9 @@ self.append_media = function(note_id, fields, create_media_fn, tag)
     self.execute(args, on_finish)
 end
 
-self.init = function(config)
+self.init = function(config, platform)
     self.config = config
+    self.platform = platform
 end
 
 return self

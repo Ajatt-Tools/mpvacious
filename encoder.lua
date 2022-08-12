@@ -1,3 +1,10 @@
+--[[
+Copyright: Ren Tatsumoto and contributors
+License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
+
+Encoder creates audio clips and snapshots.
+]]
+
 local mp = require('mp')
 local utils = require('mp.utils')
 local h = require('helpers')
@@ -151,7 +158,7 @@ end
 local create_snapshot = function(timestamp, filename)
     if not h.is_empty(self.config.image_field) then
         local source_path = mp.get_property("path")
-        local output_path = utils.join_path(self.os_temp_dir(), filename)
+        local output_path = utils.join_path(self.platform.tmp_dir(), filename)
         local on_finish = function()
             self.store_fn(filename, output_path)
             os.remove(output_path)
@@ -178,7 +185,7 @@ end
 local create_audio = function(start_timestamp, end_timestamp, filename, padding)
     if not h.is_empty(self.config.audio_field) then
         local source_path = mp.get_property("path")
-        local output_path = utils.join_path(self.os_temp_dir(), filename)
+        local output_path = utils.join_path(self.platform.tmp_dir(), filename)
 
         if padding > 0 then
             start_timestamp, end_timestamp = pad_timings(padding, start_timestamp, end_timestamp)
@@ -203,10 +210,10 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding)
     end
 end
 
-local init = function(config, store_fn, os_temp_dir)
+local init = function(config, store_fn, platform)
     self.config = config
     self.store_fn = store_fn
-    self.os_temp_dir = os_temp_dir
+    self.platform = platform
     self.encoder = config.use_ffmpeg and ffmpeg or mpv
 end
 
