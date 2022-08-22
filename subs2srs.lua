@@ -53,7 +53,7 @@ local config = {
     preview_audio = true, -- play created audio clips in background.
 
     -- Menu
-    menu_font_name = "Noto Serif CJK JP",
+    menu_font_name = "Noto Sans CJK JP",
     menu_font_size = 25,
     show_selected_text = true,
 
