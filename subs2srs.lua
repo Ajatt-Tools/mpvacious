@@ -273,11 +273,11 @@ local function construct_note_fields(sub_text, secondary_text, snapshot_filename
         ret[config.secondary_field] = secondary_text
     end
     if not h.is_empty(config.image_field) then
-        local attributes = config.image_attributes
-        if not h.is_empty(attributes) then
-            attributes = " " .. attributes
+        if h.is_empty(config.image_attributes) then
+            ret[config.image_field] = string.format('<img src="%s">', snapshot_filename)
+        else
+            ret[config.image_field] = string.format('<img %s src="%s">', config.image_attributes, snapshot_filename)
         end
-        ret[config.image_field] = string.format('<img%s src="%s">', attributes, snapshot_filename)
     end
     if not h.is_empty(config.audio_field) then
         ret[config.audio_field] = string.format('[sound:%s]', audio_filename)
