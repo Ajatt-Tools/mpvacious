@@ -70,7 +70,7 @@ local config = {
     secondary_field = "SentEng",
     audio_field = "SentAudio",
     image_field = "Image",
-    image_attributes = 'alt="snapshot"', -- Additional image attributes to add to Anki
+    image_template = '<img alt="snapshot" src="%s">',
     append_media = true, -- True to append video media after existing data, false to insert media before
     disable_gui_browse = false, -- Lets you disable anki browser manipulation by mpvacious.
 
@@ -273,11 +273,7 @@ local function construct_note_fields(sub_text, secondary_text, snapshot_filename
         ret[config.secondary_field] = secondary_text
     end
     if not h.is_empty(config.image_field) then
-        if h.is_empty(config.image_attributes) then
-            ret[config.image_field] = string.format('<img src="%s">', snapshot_filename)
-        else
-            ret[config.image_field] = string.format('<img %s src="%s">', config.image_attributes, snapshot_filename)
-        end
+        ret[config.image_field] = string.format(config.image_template, snapshot_filename)
     end
     if not h.is_empty(config.audio_field) then
         ret[config.audio_field] = string.format('[sound:%s]', audio_filename)
