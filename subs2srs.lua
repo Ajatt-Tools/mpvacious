@@ -51,7 +51,7 @@ local config = {
     audio_padding = 0.12, -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
     tie_volumes = false, -- if set to true, the volume of the outputted audio file depends on the volume of the player at the time of export
     preview_audio = true, -- play created audio clips in background.
-
+    video_clip_enabled = true,
     -- Menu
     menu_font_name = "Noto Sans CJK JP",
     menu_font_size = 25,
@@ -375,11 +375,14 @@ local function update_last_note(overwrite)
     end
 
     local snapshot_timestamp = mp.get_property_number("time-pos", 0)
-    local snapshot_filename = filename_factory.make_snapshot_filename(snapshot_timestamp, config.snapshot_extension)
+    local extension = config.video_clip_enabled and ".webp" or config.snapshot_extension
+    local snapshot_filename = filename_factory.make_snapshot_filename(snapshot_timestamp, extension)
     local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'], config.audio_extension)
 
     local create_media = function()
-        encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
+        if config.video_clip_enabled then encoder.create_video_clip(sub['start'],sub['end'], snapshot_filename)
+        else encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
+        end
         encoder.create_audio(sub['start'], sub['end'], audio_filename, audio_padding())
     end
 
