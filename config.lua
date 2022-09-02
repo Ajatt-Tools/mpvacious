@@ -47,10 +47,23 @@ local function check_image_settings()
     conditionally_set_defaults('snapshot_width', 'snapshot_height', 'snapshot_quality')
 end
 
+local function check_video_clip_settings()
+    ensure_in_range('video_clip_width')
+    ensure_in_range('video_clip_height')
+    conditionally_set_defaults('video_clip_width', 'video_clip_height', 'video_clip_quality')
+    -- Check fps
+    if config.video_clip_fps == nil or config.video_clip_fps <= 0 or config.video_clip_fps >= 30 then
+      config.video_clip_fps = 15
+    end
+    
+    
+end
+
 local function validate_config()
     set_audio_format()
     set_video_format()
     check_image_settings()
+    check_video_clip_settings()
 end
 
 local function load_profile(profile_name)
