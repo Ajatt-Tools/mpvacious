@@ -73,9 +73,20 @@ local make_snapshot_filename = function(timestamp, extension)
     return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
 end
 
+local make_clip_filename = function(start_time, end_time, extension)
+  local filename_timestamp = string.format(
+    '_%s-%s%s',
+    h.human_readable_time(start_time),
+    h.human_readable_time(end_time),
+    extension
+  )
+  return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
+end
+
 mp.register_event("file-loaded", make_media_filename)
 
 return {
     make_audio_filename = make_audio_filename,
     make_snapshot_filename = make_snapshot_filename,
+    make_clip_filename = make_clip_filename,
 }
