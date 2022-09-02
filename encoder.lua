@@ -2,13 +2,14 @@
 Copyright: Ren Tatsumoto and contributors
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
-Encoder creates audio clips and snapshots.
+Encoder creates audio clips and snapshots/video clips.
 ]]
 
 local mp = require('mp')
 local utils = require('mp.utils')
 local h = require('helpers')
 local self = {}
+local video_clip_enabled
 
 ------------------------------------------------------------
 -- utility functions
@@ -152,6 +153,44 @@ mpv.make_audio_args = function(source_path, output_path, start_timestamp, end_ti
     }
 end
 
+local create_webp = function(webp_start_time, webp_end_time, filename)
+  local parameters = {
+    loop = '0',            -- Number of loops in webp animation. Use '0' for infinite loop  
+    vcodec = "libwebp",    -- Documentation https://www.ffmpeg.org/ffmpeg-all.html#libwebp
+    lossless = "0",        -- lossless = 0, lossy = 1
+    compression_level = "6",
+    quality = "75",
+  }
+  local filters = string.format("fps=%d,scale=%d:%d:flags=lanczos", self.config.video_clip_fps, self.config.video_clip_width, self.config.video_clip_height)
+  local position = webp_start_time
+  local duration = webp_end_time - webp_start_time
+  local source_path = mp.get_property("path", "") -- Path of the file being played in mpv
+  local output_path = utils.join_path(self.platform.tmp_dir(), filename) -- Path where the gif will be stored (including its filename)
+  local on_finish = function()   -- Function which will be ran after creating the gif
+    self.store_fn(filename, output_path) 
+    os.remove(output_path)
+  end
+
+
+  --[[   ffmpeg -ss $POSITION -t $DURATION -i $SOURCE_PATH -vcodec libwebp -loop 0 -lossless $LOSSLESS -compression_level $COMPRESSION_LEVEL -quality $QUALITY 
+         -vf "fps=fps=$FRAMERATE,scale=$SCALE" $OUTPUT_FILENAME  ]]
+  local cmd_args = {
+    "ffmpeg", 
+    "-ss", tostring(position), 
+    "-t", tostring(duration), 
+    "-i", source_path,
+    "-an",
+    "-vcodec", parameters.vcodec,
+    "-loop", parameters.loop,
+    "-lossless", parameters.lossless,
+    "-compression_level", parameters.compression_level,
+    "-quality", parameters.quality,
+    "-vf", filters,
+    output_path    
+  }
+  h.subprocess(cmd_args, on_finish)
+end
+
 ------------------------------------------------------------
 -- main interface
 
@@ -174,6 +213,7 @@ local create_snapshot = function(timestamp, filename)
         print("Snapshot will not be created.")
     end
 end
+
 
 local background_play = function(file_path, on_finish)
     return h.subprocess(
@@ -210,15 +250,28 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding)
     end
 end
 
+
+local toggle_video_clip = function()
+  video_clip_enabled = not video_clip_enabled
+  mp.osd_message("Video clip " .. (video_clip_enabled and "enabled" or "disabled"))
+end
+local create_video_clip = function(start_time, end_time, filename)
+  create_webp(start_time, end_time, filename)
+end
+
+
 local init = function(config, store_fn, platform)
     self.config = config
     self.store_fn = store_fn
     self.platform = platform
     self.encoder = config.use_ffmpeg and ffmpeg or mpv
+    video_clip_enabled = config.video_clip_enabled
 end
 
 return {
     init = init,
     create_snapshot = create_snapshot,
+    create_video_clip = create_video_clip,
     create_audio = create_audio,
+    toggle_video_clip = toggle_video_clip,
 }
