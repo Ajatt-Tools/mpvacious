@@ -8,8 +8,19 @@ Encoder creates audio clips and snapshots/video clips.
 local mp = require('mp')
 local utils = require('mp.utils')
 local h = require('helpers')
-local self = {}
-local video_clip_enabled
+local filename_factory = require('utils.filename_factory')
+
+
+local self = {
+  video = {--[[clip_enabled, extension]]},
+  audio = {--[[extension]]},
+--[[ Contains the state of the module
+  config,
+  store_fn,
+  platform,
+  encoder
+]]
+}
 
 ------------------------------------------------------------
 -- utility functions
@@ -153,7 +164,7 @@ mpv.make_audio_args = function(source_path, output_path, start_timestamp, end_ti
     }
 end
 
-local create_webp = function(webp_start_time, webp_end_time, filename)
+local create_video_clip = function(webp_start_time, webp_end_time, source_path, output_path, on_finish_fn)
   local parameters = {
     loop = '0',            -- Number of loops in webp animation. Use '0' for infinite loop  
     vcodec = "libwebp",    -- Documentation https://www.ffmpeg.org/ffmpeg-all.html#libwebp
@@ -164,18 +175,10 @@ local create_webp = function(webp_start_time, webp_end_time, filename)
   local filters = string.format("fps=%d,scale=%d:%d:flags=lanczos", self.config.video_clip_fps, self.config.video_clip_width, self.config.video_clip_height)
   local position = webp_start_time
   local duration = webp_end_time - webp_start_time
-  local source_path = mp.get_property("path", "") -- Path of the file being played in mpv
-  local output_path = utils.join_path(self.platform.tmp_dir(), filename) -- Path where the gif will be stored (including its filename)
-  local on_finish = function()   -- Function which will be ran after creating the gif
-    self.store_fn(filename, output_path) 
-    os.remove(output_path)
-  end
-
 
   --[[   ffmpeg -ss $POSITION -t $DURATION -i $SOURCE_PATH -vcodec libwebp -loop 0 -lossless $LOSSLESS -compression_level $COMPRESSION_LEVEL -quality $QUALITY 
          -vf "fps=fps=$FRAMERATE,scale=$SCALE" $OUTPUT_FILENAME  ]]
-  local cmd_args = {
-    "ffmpeg", 
+  local args = { 
     "-ss", tostring(position), 
     "-t", tostring(duration), 
     "-i", source_path,
@@ -188,90 +191,126 @@ local create_webp = function(webp_start_time, webp_end_time, filename)
     "-vf", filters,
     output_path    
   }
-  h.subprocess(cmd_args, on_finish)
+  h.subprocess(ffmpeg.prepend(args) , on_finish_fn)
 end
 
 ------------------------------------------------------------
--- main interface
 
-local create_snapshot = function(timestamp, filename)
-    if not h.is_empty(self.config.image_field) then
-        local source_path = mp.get_property("path")
-        local output_path = utils.join_path(self.platform.tmp_dir(), filename)
-        local on_finish = function()
-            self.store_fn(filename, output_path)
-            os.remove(output_path)
-        end
-        if not self.config.screenshot then
-            local args = self.encoder.make_snapshot_args(source_path, output_path, timestamp)
-            h.subprocess(args, on_finish)
-        else
-            local args = {'screenshot-to-file', output_path, 'video',}
-            mp.command_native_async(args, on_finish)
-        end
-    else
-        print("Snapshot will not be created.")
-    end
+
+local create_snapshot = function(timestamp, source_path, output_path, on_finish_fn)
+  if not self.config.screenshot then
+    local args = self.encoder.make_snapshot_args(source_path, output_path, timestamp)
+    h.subprocess(args, on_finish_fn)
+  else
+    local args = {'screenshot-to-file', output_path, 'video',}
+    mp.command_native_async(args, on_finish_fn)
+  end
+
 end
 
 
 local background_play = function(file_path, on_finish)
-    return h.subprocess(
-            { 'mpv', '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
-            on_finish
-    )
+  return h.subprocess(
+    { 'mpv', '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
+    on_finish
+  )
 end
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- main interface
 
 local create_audio = function(start_timestamp, end_timestamp, filename, padding)
-    if not h.is_empty(self.config.audio_field) then
-        local source_path = mp.get_property("path")
-        local output_path = utils.join_path(self.platform.tmp_dir(), filename)
+  if not h.is_empty(self.config.audio_field) then
+    local source_path = mp.get_property("path")
+    local output_path = utils.join_path(self.platform.tmp_dir(), filename)
 
-        if padding > 0 then
-            start_timestamp, end_timestamp = pad_timings(padding, start_timestamp, end_timestamp)
-        end
-
-        local args = self.encoder.make_audio_args(source_path, output_path, start_timestamp, end_timestamp)
-        for arg in string.gmatch(self.config.use_ffmpeg and self.config.ffmpeg_audio_args or self.config.mpv_audio_args, "%S+") do
-            -- Prepend before output path
-            table.insert(args, #args, arg)
-        end
-        local on_finish = function()
-            self.store_fn(filename, output_path)
-            if self.config.preview_audio then
-                background_play(output_path, function() os.remove(output_path) end)
-            else
-                os.remove(output_path)
-            end
-        end
-        h.subprocess(args, on_finish)
-    else
-        print("Audio will not be created.")
+    if padding > 0 then
+      start_timestamp, end_timestamp = pad_timings(padding, start_timestamp, end_timestamp)
     end
+
+    local args = self.encoder.make_audio_args(source_path, output_path, start_timestamp, end_timestamp)
+    for arg in string.gmatch(self.config.use_ffmpeg and self.config.ffmpeg_audio_args or self.config.mpv_audio_args, "%S+") do
+      -- Prepend before output path
+      table.insert(args, #args, arg)
+    end
+    local on_finish = function()
+      self.store_fn(filename, output_path)
+      if self.config.preview_audio then
+        background_play(output_path, function() os.remove(output_path) end)
+      else
+        os.remove(output_path)
+      end
+    end
+    h.subprocess(args, on_finish)
+  else
+    print("Audio will not be created.")
+  end
 end
 
+-- Calls the proper function depending on the module state, namely whether or not a video clip should be generated
+local create_video_media = function(start_time, end_time, timestamp, filename)
+  if not h.is_empty(self.config.image_field) then
+    local source_path = mp.get_property("path")
+    local output_path = utils.join_path(self.platform.tmp_dir(), filename)
+    local on_finish = function()
+      self.store_fn(filename, output_path)
+      os.remove(output_path)
+    end
 
+    if self.video.clip_enabled then create_video_clip(start_time, end_time, source_path, output_path, on_finish)
+    else create_snapshot(timestamp, source_path, output_path, on_finish)
+    end
+  else
+    print("Video media will not be created.")
+  end
+end
+
+-- Generate a filename for the video, taking care of its extension and whether it's an animation or a snapshot
+local make_video_filename = function(start_time, end_time, timestamp)
+  if self.video.clip_enabled then
+    return filename_factory.make_clip_filename(start_time, end_time, self.video.extension)
+  else
+    return filename_factory.make_snapshot_filename(timestamp, self.video.extension)
+  end
+end
+
+-- Generates a filename for the audio
+local make_audio_filename = function(start_time, end_time) 
+  return filename_factory.make_audio_filename(start_time, end_time, self.audio.extension) 
+end
+
+-- 
 local toggle_video_clip = function()
-  video_clip_enabled = not video_clip_enabled
-  mp.osd_message("Video clip " .. (video_clip_enabled and "enabled" or "disabled"))
-end
-local create_video_clip = function(start_time, end_time, filename)
-  create_webp(start_time, end_time, filename)
+  self.video.clip_enabled = not self.video.clip_enabled
+  self.video.extension = self.video.clip_enabled and ".webp" or self.config.snapshot_extension
+  mp.osd_message("Video clip " .. (self.video.clip_enabled and "enabled" or "disabled") .. "\nExtension: " .. self.video.extension)
 end
 
-
+-- Sets the module to its preconfigured status
 local init = function(config, store_fn, platform)
-    self.config = config
-    self.store_fn = store_fn
-    self.platform = platform
-    self.encoder = config.use_ffmpeg and ffmpeg or mpv
-    video_clip_enabled = config.video_clip_enabled
+  self.config = config
+  self.store_fn = store_fn
+  self.platform = platform
+  self.encoder = config.use_ffmpeg and ffmpeg or mpv
+
+  self.video.clip_enabled = self.config.video_clip_enabled
+  self.video.extension = self.config.video_clip_enabled and ".webp" or self.config.snapshot_extension
+
+  self.audio.extension = self.config.audio_extension
 end
 
 return {
-    init = init,
-    create_snapshot = create_snapshot,
-    create_video_clip = create_video_clip,
-    create_audio = create_audio,
-    toggle_video_clip = toggle_video_clip,
+  init = init,
+  -- Interface for video media
+  video = { 
+    create = create_video_media,
+    toggle_clip = toggle_video_clip,
+    make_filename = make_video_filename,
+  },
+  -- Interface for audio media
+  audio = {
+    create = create_audio,
+    make_filename = make_audio_filename,
+  }
 }
