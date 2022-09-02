@@ -47,7 +47,8 @@ local config = {
   video_clip_fps = 15,        -- positive integer
   video_clip_width = 400,     -- positive integer or -2 to mantain ratio (in this case height can't be -2)
   video_clip_height = -2,     -- positive integer or -2 to mantain ratio (in this case width can't be -2)
-
+  video_clip_quality = 75,    -- positive integer between 0 and 100 (included)
+  
   snapshot_format = "webp", -- webp or jpg
   snapshot_quality = 15, -- from 0=lowest to 100=highest
   snapshot_width = -2, -- a positive integer or -2 for auto
@@ -120,13 +121,12 @@ local profiles = {
 local mp = require('mp')
 local OSD = require('osd_styler')
 local config_manager = require('config')
-local encoder = require('encoder')
+local media_manager = require('encoder')
 local h = require('helpers')
 local Menu = require('menu')
 local ankiconnect = require('ankiconnect')
 local clip_autocopy = require('utils.clip_autocopy')
 local timings = require('utils.timings')
-local filename_factory = require('utils.filename_factory')
 local switch = require('utils.switch')
 local play_control = require('utils.play_control')
 local Subtitle = require('subtitles.subtitle')
@@ -351,20 +351,15 @@ local function export_to_anki(gui)
     sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
   end
   local snapshot_timestamp = mp.get_property_number("time-pos", 0)
-  local extension = config.video_clip_enabled and ".webp" or config.snapshot_extension
-  local snapshot_filename = filename_factory.make_snapshot_filename(snapshot_timestamp, extension)
-  local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'], config.audio_extension)
+  local video_filename = media_manager.video.make_filename(sub['start'], sub['end'], snapshot_timestamp)
+  local audio_filename = media_manager.audio.make_filename(sub['start'], sub['end'])
 
   -- Video media generation
-  if config.video_clip_enabled then
-    encoder.create_video_clip(sub['start'], sub['end'], snapshot_filename)
-  else
-    encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
-  end
+  media_manager.video.create(sub['start'], sub['end'], snapshot_timestamp, video_filename)
   -- Audio media generation
-  encoder.create_audio(sub['start'], sub['end'], audio_filename, audio_padding())
+  media_manager.audio.create(sub['start'], sub['end'], audio_filename, audio_padding())
 
-  local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot_filename, audio_filename)
+  local note_fields = construct_note_fields(sub['text'], sub['secondary'], video_filename, audio_filename)
 
   ankiconnect.add_note(note_fields, substitute_fmt(config.note_tag), gui)
   subs.clear()
@@ -391,20 +386,18 @@ local function update_last_note(overwrite)
   end
 
   local snapshot_timestamp = mp.get_property_number("time-pos", 0)
-  local extension = config.video_clip_enabled and ".webp" or config.snapshot_extension
-  local snapshot_filename = filename_factory.make_snapshot_filename(snapshot_timestamp, extension)
-  local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'], config.audio_extension)
+  
+  local video_filename = media_manager.video.make_filename(sub['start'], sub['end'], snapshot_timestamp)
+  local audio_filename = media_manager.audio.make_filename(sub['start'], sub['end'])
 
   local create_media = function()
     -- Video media
-    if config.video_clip_enabled then encoder.create_video_clip(sub['start'],sub['end'], snapshot_filename)
-    else encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
-    end
+    media_manager.video.create(sub['start'],sub['end'],snapshot_timestamp, video_filename)
     -- Audio media
-    encoder.create_audio(sub['start'], sub['end'], audio_filename, audio_padding())
+    media_manager.audio.create(sub['start'], sub['end'], audio_filename, audio_padding())
   end
 
-  local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot_filename, audio_filename)
+  local new_data = construct_note_fields(sub['text'], sub['secondary'], video_filename, audio_filename)
   local stored_data = ankiconnect.get_note_fields(last_note_id)
   if stored_data then
     new_data = forvo.append(new_data, stored_data)
@@ -648,14 +641,14 @@ local main = (function()
       config_manager.init(config, profiles)
       ankiconnect.init(config, platform)
       forvo.init(config, ankiconnect, platform)
-      encoder.init(config, ankiconnect.store_file, platform)
+      media_manager.init(config, ankiconnect.store_file, platform)
       clip_autocopy.init(config.autoclip, copy_to_clipboard)
       ensure_deck()
 
       -- Key bindings
       mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
       mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", clip_autocopy.toggle)
-      mp.add_key_binding("Ctrl+g", "mpvacious-video-clip-toggle", encoder.toggle_video_clip)
+      mp.add_key_binding("Ctrl+g", "mpvacious-video-clip-toggle", media_manager.video.toggle_clip)
 
       -- Open advanced menu
       mp.add_key_binding("a", "mpvacious-menu-open", function() menu:open() end)
