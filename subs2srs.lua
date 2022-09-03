@@ -43,11 +43,11 @@ local config = {
     use_ffmpeg = false, -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
     
     -- Video Media
-    video_clip_enabled = true, -- if enabled generates video clips instead of snapshots
-    video_clip_fps = 15, -- positive integer between 0 and 30 (30 included)
-    video_clip_width = 400, -- positive integer or -2 to scale it mantaining ratio (height must not be -2 in that case)
-    video_clip_height = -2, -- positive integer or -2 to scale it mantaining ratio (width must not be -2 in that case)
-    video_clip_quality = 75, -- positive integer between 0 and 100 (100 included)
+    animated_snapshot_enabled = true, -- if enabled generates video clips instead of snapshots
+    animated_snapshot_fps = 15, -- positive integer between 0 and 30 (30 included)
+    animated_snapshot_width = 400, -- positive integer or -2 to scale it mantaining ratio (height must not be -2 in that case)
+    animated_snapshot_height = -2, -- positive integer or -2 to scale it mantaining ratio (width must not be -2 in that case)
+    animated_snapshot_quality = 75, -- positive integer between 0 and 100 (100 included)
     
     snapshot_format = "webp", -- webp or jpg
     snapshot_quality = 15, -- from 0=lowest to 100=highest
@@ -643,7 +643,7 @@ local main = (function()
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
         mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", clip_autocopy.toggle)
-        mp.add_key_binding("Ctrl+g", "mpvacious-video-clip-toggle", encoder.video.toggle_clip)
+        mp.add_key_binding("Ctrl+g", "mpvacious-animated-snapshot-toggle", encoder.video.toggle_animation)
 
         -- Open advanced menu
         mp.add_key_binding("a", "mpvacious-menu-open", function() menu:open() end)
