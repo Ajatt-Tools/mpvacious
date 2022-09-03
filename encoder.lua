@@ -81,7 +81,7 @@ ffmpeg.make_snapshot_args = function(source_path, output_path, timestamp)
     }
 end
 
-ffmpeg.make_video_clip_args = function(source_path, output_path, start_timestamp, end_timestamp) -- Currently generates an animated webp
+ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp) -- Currently generates an animated webp
     local parameters = {
         loop = '0',            -- Number of loops in webp animation. Use '0' for infinite loop  
         vcodec = "libwebp",    -- Documentation https://www.ffmpeg.org/ffmpeg-all.html#libwebp. The following parameters are specific to the 'libwebp' codec
@@ -89,7 +89,7 @@ ffmpeg.make_video_clip_args = function(source_path, output_path, start_timestamp
         compression_level = "6",
         quality = "75",
     }
-    local filters = string.format("fps=%d,scale=%d:%d:flags=lanczos", self.config.video_clip_fps, self.config.video_clip_width, self.config.video_clip_height)
+    local filters = string.format("fps=%d,scale=%d:%d:flags=lanczos", self.config.animated_snapshot_fps, self.config.animated_snapshot_width, self.config.animated_snapshot_height)
     return ffmpeg.prepend { 
         "-ss", tostring(start_timestamp), 
         "-t", tostring(end_timestamp - start_timestamp), 
@@ -189,8 +189,8 @@ end
 
 ------------------------------------------------------------
 
-local create_video_clip = function(start_timestamp, end_timestamp, source_path, output_path, on_finish_fn)
-    local args = ffmpeg.make_video_clip_args(source_path, output_path, start_timestamp, end_timestamp)  -- ffmpeg is needed in order to generate video clips
+local create_animated_snapshot = function(start_timestamp, end_timestamp, source_path, output_path, on_finish_fn)
+    local args = ffmpeg.make_animated_snapshot_args(source_path, output_path, start_timestamp, end_timestamp)  -- ffmpeg is needed in order to generate video clips
     h.subprocess(args , on_finish_fn)
 end
 
@@ -257,7 +257,7 @@ local create_video_media = function(start_timestamp, end_timestamp, timestamp, f
         end
 
         if self.video.clip_enabled then 
-            create_video_clip(start_timestamp, end_timestamp, source_path, output_path, on_finish)
+            create_animated_snapshot(start_timestamp, end_timestamp, source_path, output_path, on_finish)
         else 
             create_snapshot(timestamp, source_path, output_path, on_finish)
         end
@@ -281,9 +281,9 @@ local make_audio_filename = function(start_time, end_time)
 end
 
 -- 
-local toggle_video_clip = function()
+local toggle_animation = function()
     self.video.clip_enabled = not self.video.clip_enabled
-    self.video.extension = self.video.clip_enabled and self.config.video_clip_extension or self.config.snapshot_extension
+    self.video.extension = self.video.clip_enabled and self.config.animated_snapshot_extension or self.config.snapshot_extension
     mp.osd_message("Video clip " .. (self.video.clip_enabled and "enabled" or "disabled"))
 end
 
@@ -294,8 +294,8 @@ local init = function(config, store_fn, platform)
     self.platform = platform
     self.encoder = config.use_ffmpeg and ffmpeg or mpv
 
-    self.video.clip_enabled = config.video_clip_enabled
-    self.video.extension = config.video_clip_enabled and config.video_clip_extension or self.config.snapshot_extension
+    self.video.clip_enabled = config.animated_snapshot_enabled
+    self.video.extension = config.animated_snapshot_enabled and config.animated_snapshot_extension or self.config.snapshot_extension
 
     self.audio.extension = self.config.audio_extension
 end
@@ -305,7 +305,7 @@ return {
     -- Interface for video media
     video = { 
         create = create_video_media,
-        toggle_clip = toggle_video_clip,
+        toggle_animation = toggle_animation,
         make_filename = make_video_filename,
     },
     -- Interface for audio media
