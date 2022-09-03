@@ -78,7 +78,7 @@ local make_audio_filename = function(speech_start, speech_end, extension)
     return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
 end
 
-local make_clip_filename = function(clip_start, clip_end, extension)
+local make_animated_snapshot_filename = function(clip_start, clip_end, extension)
     local filename_timestamp = filename_2timestamps(clip_start, clip_end, extension)
     return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
 end
@@ -93,5 +93,5 @@ mp.register_event("file-loaded", make_media_filename)
 return {
     make_audio_filename = make_audio_filename,
     make_snapshot_filename = make_snapshot_filename,
-    make_clip_filename = make_clip_filename,
+    make_animated_snapshot_filename = make_animated_snapshot_filename,
 }
