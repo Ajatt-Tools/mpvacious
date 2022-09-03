@@ -81,7 +81,8 @@ ffmpeg.make_snapshot_args = function(source_path, output_path, timestamp)
     }
 end
 
-ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp) -- Currently generates an animated webp
+-- Currently generates an animated webp
+ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp) 
     local parameters = {
         loop = '0',            -- Number of loops in webp animation. Use '0' for infinite loop  
         vcodec = "libwebp",    -- Documentation https://www.ffmpeg.org/ffmpeg-all.html#libwebp. The following parameters are specific to the 'libwebp' codec
@@ -188,6 +189,7 @@ end
 
 ------------------------------------------------------------
 
+-- Creates the animated snapshot and then calls on_finish_fn
 local create_animated_snapshot = function(start_timestamp, end_timestamp, source_path, output_path, on_finish_fn)
     local args = ffmpeg.make_animated_snapshot_args(source_path, output_path, start_timestamp, end_timestamp)  -- ffmpeg is needed in order to generate animations
     h.subprocess(args , on_finish_fn)
@@ -279,7 +281,7 @@ local make_audio_filename = function(start_time, end_time)
     return filename_factory.make_audio_filename(start_time, end_time, self.audio.extension) 
 end
 
--- 
+-- Toggles on and off animated snapshot generation at runtime. It is called whenever ctrl+g is pressed
 local toggle_animation = function()
     self.video.animation_enabled = not self.video.animation_enabled
     self.video.extension = self.video.animation_enabled and self.config.animated_snapshot_extension or self.config.snapshot_extension
