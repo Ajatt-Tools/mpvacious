@@ -54,32 +54,37 @@ local make_media_filename = function()
     filename = h.remove_special_characters(filename)
 end
 
-local make_audio_filename = function(speech_start, speech_end, extension)
-    local filename_timestamp = string.format(
+-- Generates a filename suffix of the form: _00h00m00s000ms-99h99m99s999ms.extension (the extension parameter must already contain the dot)
+local function filename_2timestamps(start_timestamp, end_timestamp, extension)
+    return string.format(
             '_%s-%s%s',
-            h.human_readable_time(speech_start),
-            h.human_readable_time(speech_end),
+            h.human_readable_time(start_timestamp),
+            h.human_readable_time(end_timestamp),
             extension
     )
-    return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
-end
+end 
 
-local make_snapshot_filename = function(timestamp, extension)
-    local filename_timestamp = string.format(
+-- Generates a filename suffix of the form: _00h00m00s000ms.extension (the extension parameter must already contain the dot)
+local function filename_1timestamp(timestamp, extension)
+    return string.format(
             '_%s%s',
             h.human_readable_time(timestamp),
             extension
     )
+end
+
+local make_audio_filename = function(speech_start, speech_end, extension)
+    local filename_timestamp = filename_2timestamps(speech_start, speech_end, extension)
     return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
 end
 
 local make_clip_filename = function(clip_start, clip_end, extension)
-    local filename_timestamp = string.format(
-            '_%s-%s%s',
-            h.human_readable_time(clip_start),
-            h.human_readable_time(clip_end),
-            extension
-    )
+    local filename_timestamp = filename_2timestamps(clip_start, clip_end, extension)
+    return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
+end
+
+local make_snapshot_filename = function(timestamp, extension)
+    local filename_timestamp = filename_1timestamp(timestamp, extension)
     return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
 end
 
