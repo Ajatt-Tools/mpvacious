@@ -54,7 +54,7 @@ local function check_video_clip_settings()
     ensure_in_range('video_clip_height')
     conditionally_set_defaults('video_clip_width', 'video_clip_height', 'video_clip_quality')
     -- Check fps
-    if config.video_clip_fps == nil or config.video_clip_fps <= 0 or config.video_clip_fps >= 30 then
+    if config.video_clip_fps == nil or config.video_clip_fps <= 0 or config.video_clip_fps > 30 then
       config.video_clip_fps = 15
     end
 end
