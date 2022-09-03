@@ -25,7 +25,7 @@ local function set_video_format()
         config.snapshot_codec = 'mjpeg'
     end
     -- Currently the user has no choice on this.
-    config.video_clip_extension = '.webp'
+    config.animated_snapshot_extension = '.webp'
 end
 
 local function ensure_in_range(dimension)
@@ -49,12 +49,12 @@ local function check_image_settings()
     conditionally_set_defaults('snapshot_width', 'snapshot_height', 'snapshot_quality')
 end
 
-local function check_video_clip_settings()
-    ensure_in_range('video_clip_width')
-    ensure_in_range('video_clip_height')
-    conditionally_set_defaults('video_clip_width', 'video_clip_height', 'video_clip_quality')
+local function check_animated_snapshot_settings()
+    ensure_in_range('animated_snapshot_width')
+    ensure_in_range('animated_snapshot_height')
+    conditionally_set_defaults('animated_snapshot_width', 'animated_snapshot_height', 'animated_snapshot_quality')
     -- Check fps
-    if config.video_clip_fps == nil or config.video_clip_fps <= 0 or config.video_clip_fps > 30 then
+    if config.animated_snapshot_fps == nil or config.animated_snapshot_fps<= 0 or config.animated_snapshot_fps > 30 then
       config.video_clip_fps = 15
     end
 end
@@ -63,7 +63,7 @@ local function validate_config()
     set_audio_format()
     set_video_format()
     check_image_settings()
-    check_video_clip_settings()
+    check_animated_snapshot_settings()
 end
 
 local function load_profile(profile_name)
