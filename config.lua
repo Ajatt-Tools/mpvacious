@@ -24,6 +24,9 @@ local function set_video_format()
         config.snapshot_extension = '.jpg'
         config.snapshot_codec = 'mjpeg'
     end
+    -- Currently the user has no choice on this.
+    config.video_clip_extension = '.webp'
+    config.video_clip_codec = 'libwebp'
 end
 
 local function ensure_in_range(dimension)
@@ -55,8 +58,6 @@ local function check_video_clip_settings()
     if config.video_clip_fps == nil or config.video_clip_fps <= 0 or config.video_clip_fps >= 30 then
       config.video_clip_fps = 15
     end
-    
-    
 end
 
 local function validate_config()
