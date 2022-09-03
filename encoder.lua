@@ -13,7 +13,7 @@ local filename_factory = require('utils.filename_factory')
 --Contains the state of the module
 local self = {
     video = {--[[clip_enabled, extension]]},
-    audio = {--[[extension]]},    
+    audio = {--[[extension]]},
     --config,
     --store_fn,
     --platform,
@@ -78,6 +78,30 @@ ffmpeg.make_snapshot_args = function(source_path, output_path, timestamp)
         '-vf', string.format('scale=%d:%d', self.config.snapshot_width, self.config.snapshot_height),
         '-vframes', '1',
         output_path
+    }
+end
+
+ffmpeg.make_video_clip_args = function(source_path, output_path, start_timestamp, end_timestamp) -- Currently generates an animated webp
+    local parameters = {
+        loop = '0',            -- Number of loops in webp animation. Use '0' for infinite loop  
+        vcodec = "libwebp",    -- Documentation https://www.ffmpeg.org/ffmpeg-all.html#libwebp. The following parameters are specific to the 'libwebp' codec
+        lossless = "0",        -- lossless = 0, lossy = 1
+        compression_level = "6",
+        quality = "75",
+    }
+    local filters = string.format("fps=%d,scale=%d:%d:flags=lanczos", self.config.video_clip_fps, self.config.video_clip_width, self.config.video_clip_height)
+    return ffmpeg.prepend { 
+        "-ss", tostring(start_timestamp), 
+        "-t", tostring(end_timestamp - start_timestamp), 
+        "-i", source_path,
+        "-an",
+        "-vcodec", parameters.vcodec,
+        "-loop", parameters.loop,
+        "-lossless", parameters.lossless,
+        "-compression_level", parameters.compression_level,
+        "-quality", parameters.quality,
+        "-vf", filters,
+        output_path    
     }
 end
 
@@ -162,37 +186,13 @@ mpv.make_audio_args = function(source_path, output_path, start_timestamp, end_ti
     }
 end
 
-local create_video_clip = function(webp_start_time, webp_end_time, source_path, output_path, on_finish_fn)
-    local parameters = {
-        loop = '0',            -- Number of loops in webp animation. Use '0' for infinite loop  
-        vcodec = "libwebp",    -- Documentation https://www.ffmpeg.org/ffmpeg-all.html#libwebp
-        lossless = "0",        -- lossless = 0, lossy = 1
-        compression_level = "6",
-        quality = "75",
-    }
-    local filters = string.format("fps=%d,scale=%d:%d:flags=lanczos", self.config.video_clip_fps, self.config.video_clip_width, self.config.video_clip_height)
-    local position = webp_start_time
-    local duration = webp_end_time - webp_start_time
-
-    --[[   ffmpeg -ss $POSITION -t $DURATION -i $SOURCE_PATH -vcodec libwebp -loop 0 -lossless $LOSSLESS -compression_level $COMPRESSION_LEVEL -quality $QUALITY 
-         -vf "fps=fps=$FRAMERATE,scale=$SCALE" $OUTPUT_FILENAME  ]]
-    local args = { 
-        "-ss", tostring(position), 
-        "-t", tostring(duration), 
-        "-i", source_path,
-        "-an",
-        "-vcodec", parameters.vcodec,
-        "-loop", parameters.loop,
-        "-lossless", parameters.lossless,
-        "-compression_level", parameters.compression_level,
-        "-quality", parameters.quality,
-        "-vf", filters,
-        output_path    
-    }
-    h.subprocess(ffmpeg.prepend(args) , on_finish_fn)
-end
 
 ------------------------------------------------------------
+
+local create_video_clip = function(start_timestamp, end_timestamp, source_path, output_path, on_finish_fn)
+    local args = ffmpeg.make_video_clip_args(source_path, output_path, start_timestamp, end_timestamp)  -- ffmpeg is needed in order to generate video clips
+    h.subprocess(args , on_finish_fn)
+end
 
 
 local create_snapshot = function(timestamp, source_path, output_path, on_finish_fn)
@@ -213,7 +213,6 @@ local background_play = function(file_path, on_finish)
         on_finish
     )
 end
-
 
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- main interface
@@ -246,18 +245,21 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding)
     end
 end
 
--- Calls the proper function depending on the module state, namely whether or not a video clip should be generated
-local create_video_media = function(start_time, end_time, timestamp, filename)
+-- Calls the proper function depending on whether or not a video clip should be generated
+local create_video_media = function(start_timestamp, end_timestamp, timestamp, filename)
     if not h.is_empty(self.config.image_field) then
         local source_path = mp.get_property("path")
         local output_path = utils.join_path(self.platform.tmp_dir(), filename)
+
         local on_finish = function()
             self.store_fn(filename, output_path)
             os.remove(output_path)
         end
 
-        if self.video.clip_enabled then create_video_clip(start_time, end_time, source_path, output_path, on_finish)
-        else create_snapshot(timestamp, source_path, output_path, on_finish)
+        if self.video.clip_enabled then 
+            create_video_clip(start_timestamp, end_timestamp, source_path, output_path, on_finish)
+        else 
+            create_snapshot(timestamp, source_path, output_path, on_finish)
         end
     else
         print("Video media will not be created.")
@@ -281,7 +283,7 @@ end
 -- 
 local toggle_video_clip = function()
     self.video.clip_enabled = not self.video.clip_enabled
-    self.video.extension = self.video.clip_enabled and ".webp" or self.config.snapshot_extension
+    self.video.extension = self.video.clip_enabled and self.config.video_clip_extension or self.config.snapshot_extension
     mp.osd_message("Video clip " .. (self.video.clip_enabled and "enabled" or "disabled"))
 end
 
@@ -293,9 +295,9 @@ local init = function(config, store_fn, platform)
     self.encoder = config.use_ffmpeg and ffmpeg or mpv
 
     self.video.clip_enabled = config.video_clip_enabled
-    self.video.extension = config.video_clip_enabled and config.video_clip_extension or config.snapshot_extension
+    self.video.extension = config.video_clip_enabled and config.video_clip_extension or self.config.snapshot_extension
 
-    self.audio.extension = config.audio_extension
+    self.audio.extension = self.config.audio_extension
 end
 
 return {
@@ -310,5 +312,5 @@ return {
     audio = {
         create = create_audio,
         make_filename = make_audio_filename,
-    }
+    },
 }
