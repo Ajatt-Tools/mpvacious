@@ -87,7 +87,6 @@ ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_ti
         vcodec = "libwebp",    -- Documentation https://www.ffmpeg.org/ffmpeg-all.html#libwebp. The following parameters are specific to the 'libwebp' codec
         lossless = "0",        -- lossless = 0, lossy = 1
         compression_level = "6",
-        quality = "75",
     }
     local filters = string.format("fps=%d,scale=%d:%d:flags=lanczos", self.config.animated_snapshot_fps, self.config.animated_snapshot_width, self.config.animated_snapshot_height)
     return ffmpeg.prepend { 
@@ -99,7 +98,7 @@ ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_ti
         "-loop", parameters.loop,
         "-lossless", parameters.lossless,
         "-compression_level", parameters.compression_level,
-        "-quality", parameters.quality,
+        "-quality", self.config.animated_snapshot_quality,
         "-vf", filters,
         output_path    
     }
