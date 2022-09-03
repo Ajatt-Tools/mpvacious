@@ -26,7 +26,6 @@ local function set_video_format()
     end
     -- Currently the user has no choice on this.
     config.video_clip_extension = '.webp'
-    config.video_clip_codec = 'libwebp'
 end
 
 local function ensure_in_range(dimension)
