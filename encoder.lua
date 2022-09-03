@@ -12,7 +12,7 @@ local filename_factory = require('utils.filename_factory')
 
 --Contains the state of the module
 local self = {
-    video = {--[[clip_enabled, extension]]},
+    video = {--[[animation_enabled, extension]]},
     audio = {--[[extension]]},
     --config,
     --store_fn,
@@ -190,7 +190,7 @@ end
 ------------------------------------------------------------
 
 local create_animated_snapshot = function(start_timestamp, end_timestamp, source_path, output_path, on_finish_fn)
-    local args = ffmpeg.make_animated_snapshot_args(source_path, output_path, start_timestamp, end_timestamp)  -- ffmpeg is needed in order to generate video clips
+    local args = ffmpeg.make_animated_snapshot_args(source_path, output_path, start_timestamp, end_timestamp)  -- ffmpeg is needed in order to generate animations
     h.subprocess(args , on_finish_fn)
 end
 
@@ -245,7 +245,7 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding)
     end
 end
 
--- Calls the proper function depending on whether or not a video clip should be generated
+-- Calls the proper function depending on whether or not the snapshot should be animated
 local create_video_media = function(start_timestamp, end_timestamp, timestamp, filename)
     if not h.is_empty(self.config.image_field) then
         local source_path = mp.get_property("path")
@@ -256,7 +256,7 @@ local create_video_media = function(start_timestamp, end_timestamp, timestamp, f
             os.remove(output_path)
         end
 
-        if self.video.clip_enabled then 
+        if self.video.animation_enabled then 
             create_animated_snapshot(start_timestamp, end_timestamp, source_path, output_path, on_finish)
         else 
             create_snapshot(timestamp, source_path, output_path, on_finish)
@@ -268,8 +268,8 @@ end
 
 -- Generate a filename for the video, taking care of its extension and whether it's an animation or a snapshot
 local make_video_filename = function(start_time, end_time, timestamp)
-    if self.video.clip_enabled then
-        return filename_factory.make_clip_filename(start_time, end_time, self.video.extension)
+    if self.video.animation_enabled then
+        return filename_factory.make_animated_snapshot_filename(start_time, end_time, self.video.extension)
     else
         return filename_factory.make_snapshot_filename(timestamp, self.video.extension)
     end
@@ -282,9 +282,9 @@ end
 
 -- 
 local toggle_animation = function()
-    self.video.clip_enabled = not self.video.clip_enabled
-    self.video.extension = self.video.clip_enabled and self.config.animated_snapshot_extension or self.config.snapshot_extension
-    mp.osd_message("Video clip " .. (self.video.clip_enabled and "enabled" or "disabled"))
+    self.video.animation_enabled = not self.video.animation_enabled
+    self.video.extension = self.video.animation_enabled and self.config.animated_snapshot_extension or self.config.snapshot_extension
+    mp.osd_message("Animation " .. (self.video.animation_enabled and "enabled" or "disabled"))
 end
 
 -- Sets the module to its preconfigured status
@@ -294,7 +294,7 @@ local init = function(config, store_fn, platform)
     self.platform = platform
     self.encoder = config.use_ffmpeg and ffmpeg or mpv
 
-    self.video.clip_enabled = config.animated_snapshot_enabled
+    self.video.animation_enabled = config.animated_snapshot_enabled
     self.video.extension = config.animated_snapshot_enabled and config.animated_snapshot_extension or self.config.snapshot_extension
 
     self.audio.extension = self.config.audio_extension
