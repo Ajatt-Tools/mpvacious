@@ -643,7 +643,7 @@ local main = (function()
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
         mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", clip_autocopy.toggle)
-        mp.add_key_binding("Ctrl+g", "mpvacious-video-clip-toggle", media_manager.video.toggle)
+        mp.add_key_binding("Ctrl+g", "mpvacious-video-clip-toggle", media_manager.video.toggle_clip)
 
         -- Open advanced menu
         mp.add_key_binding("a", "mpvacious-menu-open", function() menu:open() end)
