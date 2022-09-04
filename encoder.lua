@@ -86,7 +86,7 @@ ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_ti
     local parameters = {
         loop = '0',            -- Number of loops in webp animation. Use '0' for infinite loop  
         vcodec = "libwebp",    -- Documentation https://www.ffmpeg.org/ffmpeg-all.html#libwebp. The following parameters are specific to the 'libwebp' codec
-        lossless = "0",        -- lossy= 0, lossless= 1
+        lossless = "0",        -- lossless = 0, lossy = 1
         compression_level = "6",
     }
     local filters = string.format("fps=%d,scale=%d:%d:flags=lanczos", self.config.animated_snapshot_fps, self.config.animated_snapshot_width, self.config.animated_snapshot_height)
