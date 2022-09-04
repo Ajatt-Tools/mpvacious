@@ -351,10 +351,10 @@ local function export_to_anki(gui)
         sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
     end
     local snapshot_timestamp = mp.get_property_number("time-pos", 0)
-    local video_filename = encoder.snapshot.make_filename(sub['start'], sub['end'], snapshot_timestamp)
+    local video_filename = encoder.video.make_filename(sub['start'], sub['end'], snapshot_timestamp)
     local audio_filename = encoder.audio.make_filename(sub['start'], sub['end'])
 
-    encoder.snapshot.create(sub['start'], sub['end'], snapshot_timestamp, video_filename)
+    encoder.video.create(sub['start'], sub['end'], snapshot_timestamp, video_filename)
     encoder.audio.create(sub['start'], sub['end'], audio_filename, audio_padding())
 
     local note_fields = construct_note_fields(sub['text'], sub['secondary'], video_filename, audio_filename)
@@ -384,11 +384,11 @@ local function update_last_note(overwrite)
     end
 
     local snapshot_timestamp = mp.get_property_number("time-pos", 0)
-    local video_filename = encoder.snapshot.make_filename(sub['start'], sub['end'], snapshot_timestamp)
+    local video_filename = encoder.video.make_filename(sub['start'], sub['end'], snapshot_timestamp)
     local audio_filename = encoder.audio.make_filename(sub['start'], sub['end'])
 
     local create_media = function()
-        encoder.snapshot.create(sub['start'], sub['end'], snapshot_timestamp, video_filename)
+        encoder.video.create(sub['start'], sub['end'], snapshot_timestamp, video_filename)
         encoder.audio.create(sub['start'], sub['end'], audio_filename, audio_padding())
     end
 
@@ -643,7 +643,7 @@ local main = (function()
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
         mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", clip_autocopy.toggle)
-        mp.add_key_binding("Ctrl+g", "mpvacious-animated-snapshot-toggle", encoder.snapshot.toggle_animation)
+        mp.add_key_binding("Ctrl+g", "mpvacious-animated-snapshot-toggle", encoder.video.toggle_animation)
 
         -- Open advanced menu
         mp.add_key_binding("a", "mpvacious-menu-open", function() menu:open() end)
