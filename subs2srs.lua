@@ -43,7 +43,7 @@ local config = {
     use_ffmpeg = false, -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
     
     -- Video Media
-    animated_snapshot_enabled = true, -- if enabled generates video clips instead of snapshots
+    animated_snapshot_enabled = true, -- if enabled captures the selected segment of the video, instead of just a frame
     animated_snapshot_fps = 15, -- positive integer between 0 and 30 (30 included)
     animated_snapshot_width = 400, -- positive integer or -2 to scale it mantaining ratio (height must not be -2 in that case)
     animated_snapshot_height = -2, -- positive integer or -2 to scale it mantaining ratio (width must not be -2 in that case)
@@ -351,13 +351,13 @@ local function export_to_anki(gui)
         sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
     end
     local snapshot_timestamp = mp.get_property_number("time-pos", 0)
-    local video_filename = encoder.video.make_filename(sub['start'], sub['end'], snapshot_timestamp)
+    local snapshot_filename = encoder.snapshot.make_filename(sub['start'], sub['end'], snapshot_timestamp)
     local audio_filename = encoder.audio.make_filename(sub['start'], sub['end'])
 
-    encoder.video.create(sub['start'], sub['end'], snapshot_timestamp, video_filename)
+    encoder.snapshot.create(sub['start'], sub['end'], snapshot_timestamp, snapshot_filename)
     encoder.audio.create(sub['start'], sub['end'], audio_filename, audio_padding())
 
-    local note_fields = construct_note_fields(sub['text'], sub['secondary'], video_filename, audio_filename)
+    local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot_filename, audio_filename)
 
     ankiconnect.add_note(note_fields, substitute_fmt(config.note_tag), gui)
     subs.clear()
@@ -384,15 +384,15 @@ local function update_last_note(overwrite)
     end
 
     local snapshot_timestamp = mp.get_property_number("time-pos", 0)
-    local video_filename = encoder.video.make_filename(sub['start'], sub['end'], snapshot_timestamp)
+    local snapshot_filename = encoder.snapshot.make_filename(sub['start'], sub['end'], snapshot_timestamp)
     local audio_filename = encoder.audio.make_filename(sub['start'], sub['end'])
 
     local create_media = function()
-        encoder.video.create(sub['start'], sub['end'], snapshot_timestamp, video_filename)
+        encoder.snapshot.create(sub['start'], sub['end'], snapshot_timestamp, snapshot_filename)
         encoder.audio.create(sub['start'], sub['end'], audio_filename, audio_padding())
     end
 
-    local new_data = construct_note_fields(sub['text'], sub['secondary'], video_filename, audio_filename)
+    local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot_filename, audio_filename)
     local stored_data = ankiconnect.get_note_fields(last_note_id)
     if stored_data then
         new_data = forvo.append(new_data, stored_data)
@@ -643,7 +643,7 @@ local main = (function()
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
         mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", clip_autocopy.toggle)
-        mp.add_key_binding("Ctrl+g", "mpvacious-animated-snapshot-toggle", encoder.video.toggle_animation)
+        mp.add_key_binding("Ctrl+g", "mpvacious-animated-snapshot-toggle", encoder.snapshot.toggle_animation)
 
         -- Open advanced menu
         mp.add_key_binding("a", "mpvacious-menu-open", function() menu:open() end)

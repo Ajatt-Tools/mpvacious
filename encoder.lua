@@ -2,7 +2,7 @@
 Copyright: Ren Tatsumoto and contributors
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
-Encoder creates audio clips and snapshots/video clips.
+Encoder creates audio clips and snapshots both animated and static ones
 ]]
 
 local mp = require('mp')
@@ -12,7 +12,7 @@ local filename_factory = require('utils.filename_factory')
 
 --Contains the state of the module
 local self = {
-    video = {--[[animation_enabled, extension]]},
+    snapshot = {--[[animation_enabled, extension]]},
     audio = {--[[extension]]},
     --config,
     --store_fn,
@@ -65,7 +65,7 @@ ffmpeg.prepend = function(args)
     return args
 end
 
-ffmpeg.make_snapshot_args = function(source_path, output_path, timestamp)
+ffmpeg.make_static_snapshot_args = function(source_path, output_path, timestamp)
     return ffmpeg.prepend {
         '-an',
         '-ss', tostring(timestamp),
@@ -84,9 +84,9 @@ end
 -- Currently generates an animated webp
 ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp) 
     local parameters = {
-        loop = '0',            -- Number of loops in webp animation. Use '0' for infinite loop  
+        loop = "0",            -- Number of loops in webp animation. Use '0' for infinite loop  
         vcodec = "libwebp",    -- Documentation https://www.ffmpeg.org/ffmpeg-all.html#libwebp. The following parameters are specific to the 'libwebp' codec
-        lossless = "0",        -- lossless = 0, lossy = 1
+        lossless = "0",        -- lossy=0, lossless = 1
         compression_level = "6",
     }
     local filters = string.format("fps=%d,scale=%d:%d:flags=lanczos", self.config.animated_snapshot_fps, self.config.animated_snapshot_width, self.config.animated_snapshot_height)
@@ -137,7 +137,7 @@ end
 
 local mpv = {}
 
-mpv.make_snapshot_args = function(source_path, output_path, timestamp)
+mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
     return {
         'mpv',
         source_path,
@@ -195,10 +195,10 @@ local create_animated_snapshot = function(start_timestamp, end_timestamp, source
     h.subprocess(args , on_finish_fn)
 end
 
-
-local create_snapshot = function(timestamp, source_path, output_path, on_finish_fn)
+-- Creates a static snapshot, in other words an image, and then calls on_finish_fn
+local create_static_snapshot = function(timestamp, source_path, output_path, on_finish_fn)
     if not self.config.screenshot then
-        local args = self.encoder.make_snapshot_args(source_path, output_path, timestamp)
+        local args = self.encoder.make_static_snapshot_args(source_path, output_path, timestamp)
         h.subprocess(args, on_finish_fn)
     else
         local args = {'screenshot-to-file', output_path, 'video',}
@@ -247,7 +247,7 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding)
 end
 
 -- Calls the proper function depending on whether or not the snapshot should be animated
-local create_video_media = function(start_timestamp, end_timestamp, timestamp, filename)
+local create_snapshot = function(start_timestamp, end_timestamp, timestamp, filename)
     if not h.is_empty(self.config.image_field) then
         local source_path = mp.get_property("path")
         local output_path = utils.join_path(self.platform.tmp_dir(), filename)
@@ -257,22 +257,22 @@ local create_video_media = function(start_timestamp, end_timestamp, timestamp, f
             os.remove(output_path)
         end
 
-        if self.video.animation_enabled then 
+        if self.snapshot.animation_enabled then 
             create_animated_snapshot(start_timestamp, end_timestamp, source_path, output_path, on_finish)
         else 
-            create_snapshot(timestamp, source_path, output_path, on_finish)
+            create_static_snapshot(timestamp, source_path, output_path, on_finish)
         end
     else
         print("Video media will not be created.")
     end
 end
 
--- Generate a filename for the video, taking care of its extension and whether it's an animation or a snapshot
-local make_video_filename = function(start_time, end_time, timestamp)
-    if self.video.animation_enabled then
-        return filename_factory.make_animated_snapshot_filename(start_time, end_time, self.video.extension)
+-- Generate a filename for the snapshot, taking care of its extension and whether it's animated or static
+local make_snapshot_filename = function(start_time, end_time, timestamp)
+    if self.snapshot.animation_enabled then
+        return filename_factory.make_animated_snapshot_filename(start_time, end_time, self.snapshot.extension)
     else
-        return filename_factory.make_snapshot_filename(timestamp, self.video.extension)
+        return filename_factory.make_static_snapshot_filename(timestamp, self.snapshot.extension)
     end
 end
 
@@ -283,9 +283,9 @@ end
 
 -- Toggles on and off animated snapshot generation at runtime. It is called whenever ctrl+g is pressed
 local toggle_animation = function()
-    self.video.animation_enabled = not self.video.animation_enabled
-    self.video.extension = self.video.animation_enabled and self.config.animated_snapshot_extension or self.config.snapshot_extension
-    mp.osd_message("Animation " .. (self.video.animation_enabled and "enabled" or "disabled"))
+    self.snapshot.animation_enabled = not self.snapshot.animation_enabled
+    self.snapshot.extension = self.snapshot.animation_enabled and self.config.animated_snapshot_extension or self.config.snapshot_extension
+    mp.osd_message("Animation " .. (self.snapshot.animation_enabled and "enabled" or "disabled"))
 end
 
 -- Sets the module to its preconfigured status
@@ -295,19 +295,19 @@ local init = function(config, store_fn, platform)
     self.platform = platform
     self.encoder = config.use_ffmpeg and ffmpeg or mpv
 
-    self.video.animation_enabled = config.animated_snapshot_enabled
-    self.video.extension = config.animated_snapshot_enabled and config.animated_snapshot_extension or self.config.snapshot_extension
+    self.snapshot.animation_enabled = config.animated_snapshot_enabled
+    self.snapshot.extension = config.animated_snapshot_enabled and config.animated_snapshot_extension or self.config.snapshot_extension
 
     self.audio.extension = self.config.audio_extension
 end
 
 return {
     init = init,
-    -- Interface for video media
-    video = { 
-        create = create_video_media,
+    -- Interface for snapshots
+    snapshot = { 
+        create = create_snapshot,
         toggle_animation = toggle_animation,
-        make_filename = make_video_filename,
+        make_filename = make_snapshot_filename,
     },
     -- Interface for audio media
     audio = {

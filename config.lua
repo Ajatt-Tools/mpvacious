@@ -55,7 +55,7 @@ local function check_animated_snapshot_settings()
     conditionally_set_defaults('animated_snapshot_width', 'animated_snapshot_height', 'animated_snapshot_quality')
     -- Check fps
     if config.animated_snapshot_fps == nil or config.animated_snapshot_fps<= 0 or config.animated_snapshot_fps > 30 then
-      config.video_clip_fps = 15
+      config.animated_snapshot_fps = 15
     end
 end
 

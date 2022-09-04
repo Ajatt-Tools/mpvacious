@@ -83,7 +83,7 @@ local make_animated_snapshot_filename = function(clip_start, clip_end, extension
     return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
 end
 
-local make_snapshot_filename = function(timestamp, extension)
+local make_static_snapshot_filename = function(timestamp, extension)
     local filename_timestamp = filename_1timestamp(timestamp, extension)
     return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
 end
@@ -92,6 +92,6 @@ mp.register_event("file-loaded", make_media_filename)
 
 return {
     make_audio_filename = make_audio_filename,
-    make_snapshot_filename = make_snapshot_filename,
+    make_static_snapshot_filename = make_static_snapshot_filename,
     make_animated_snapshot_filename = make_animated_snapshot_filename,
 }
