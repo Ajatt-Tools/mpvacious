@@ -210,8 +210,8 @@ end
 
 local background_play = function(file_path, on_finish)
     return h.subprocess(
-        { 'mpv', '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
-        on_finish
+            { 'mpv', '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
+            on_finish
     )
 end
 
