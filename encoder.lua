@@ -99,7 +99,7 @@ ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_ti
         "-loop", parameters.loop,
         "-lossless", parameters.lossless,
         "-compression_level", parameters.compression_level,
-        "-quality", tostring(self.config.animated_snapshot_quality),
+        "-quality", self.config.animated_snapshot_quality,
         "-vf", filters,
         output_path    
     }
