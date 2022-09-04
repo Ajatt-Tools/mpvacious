@@ -304,7 +304,7 @@ end
 return {
     init = init,
     -- Interface for video media
-    video = { 
+    snapshot = { 
         create = create_video_media,
         toggle_animation = toggle_animation,
         make_filename = make_video_filename,
