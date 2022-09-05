@@ -103,7 +103,7 @@ local function init(config_table, profiles_table)
     -- 'active profile' overrides it afterwards.
     mpopt.read_options(profiles, profiles_filename)
     load_profile(default_profile_filename)
-    save_initial_config(config)
+    save_initial_config()
     if profiles.active ~= default_profile_filename then
         load_profile(profiles.active)
     end
