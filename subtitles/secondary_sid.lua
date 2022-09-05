@@ -7,6 +7,7 @@ Secondary sid will be shown when mouse is moved to the top part of the mpv windo
 ]]
 
 local mp = require('mp')
+local h = require('helpers')
 
 local self = {}
 
@@ -19,9 +20,14 @@ local function is_accepted_language(sub_lang)
     return false
 end
 
+local function is_selected_language(track, active_track)
+    return track.id == mp.get_property_native('sid') or (active_track and active_track.lang == track.lang)
+end
+
 local function find_secondary_sid()
+    local active_track = h.get_active_track('sub')
     for _, track in pairs(mp.get_property_native('track-list')) do
-        if track.type == 'sub' and is_accepted_language(track.lang) then
+        if track.type == 'sub' and is_accepted_language(track.lang) and not is_selected_language(track, active_track) then
             return track.id
         end
     end
