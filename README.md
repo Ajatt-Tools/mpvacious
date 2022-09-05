@@ -347,12 +347,17 @@ or [ShareX](https://getsharex.com/) OCR to add text to the card.
 
 ### Secondary subtitles
 
-If you want to add a translation to your cards and you have the subtitles in that language,
-you can add them as secondary subtitles using `--secondary-sid=<sid>`.
+If you want to add a translation to your cards, and you have the subtitles in that language,
+you can add them as secondary subtitles if you run `mpv` with `--secondary-sid=<sid>` parameter,
 `sid` being the track identifier for the subtitle.
 
 You also need to specify `secondary_field` in the [config file](#Configuration)
 if it is different from the default.
+
+If you want to load secondary subtitles **automatically**, don't modify the run parameters
+and instead set the desired languages in the config file (`secondary_sub_lang` option).
+
+Secondary subtitles will be visible when hovering over the top part of the `mpv` window.
 
 ### Other tools
 

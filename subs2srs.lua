@@ -42,6 +42,10 @@ local config = {
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
     use_ffmpeg = false, -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
 
+    -- Secondary subtitle
+    secondary_sub_lang = 'eng,en,rus,ru,bel,be', -- Language of secondary subs that should be automatically loaded.
+    secondary_sub_area=0.15, -- Hover area. Fraction of the window from the top.
+
     -- Snapshots
     snapshot_format = "webp", -- webp or jpg
     snapshot_quality = 15, -- from 0=lowest to 100=highest
@@ -132,6 +136,7 @@ local switch = require('utils.switch')
 local play_control = require('utils.play_control')
 local Subtitle = require('subtitles.subtitle')
 local sub_list = require('subtitles.sub_list')
+local secondary_sid = require('subtitles.secondary_sid')
 local platform = require('platform.init')
 local forvo = require('utils.forvo')
 
@@ -638,6 +643,7 @@ local main = (function()
         forvo.init(config, ankiconnect, platform)
         encoder.init(config, ankiconnect.store_file, platform)
         clip_autocopy.init(config.autoclip, copy_to_clipboard)
+        secondary_sid.init(config)
         ensure_deck()
 
         -- Key bindings
