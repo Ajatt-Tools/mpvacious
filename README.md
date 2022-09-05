@@ -342,8 +342,9 @@ Open the mpvacious menu by pressing `a`, seek to the position you need, and set 
 Then press `g` to invoke the `Add Cards` dialog.
 Here's a [video demonstration](https://www.youtube.com/watch?v=BXhyckdHPGE).
 
-If the show is hard-subbed, you can use [Tesseract](https://github.com/tesseract-ocr/tesseract)
-or [ShareX](https://getsharex.com/) OCR to add text to the card.
+If the show is hard-subbed, you can use
+[transformers-ocr](https://tatsumoto.neocities.org/blog/mining-from-manga.html)
+to recognize and add text to the card.
 
 ### Secondary subtitles
 
