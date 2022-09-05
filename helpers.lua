@@ -192,4 +192,14 @@ this.notify = function(message, level, duration)
     mp.osd_message(message, duration)
 end
 
+this.get_active_track = function(track_type)
+    -- track_type == audio|sub
+    for _, track in pairs(mp.get_property_native('track-list')) do
+        if track.type == track_type and track.selected == true then
+            return track
+        end
+    end
+    return nil
+end
+
 return this

@@ -39,16 +39,6 @@ local pad_timings = function(padding, start_time, end_time)
     return start_time, end_time
 end
 
-local get_active_track = function(track_type)
-    local track_list = mp.get_property_native('track-list')
-    for _, track in pairs(track_list) do
-        if track.type == track_type and track.selected == true then
-            return track
-        end
-    end
-    return nil
-end
-
 ------------------------------------------------------------
 -- ffmpeg encoder
 
@@ -109,7 +99,7 @@ ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_ti
 end
 
 ffmpeg.make_audio_args = function(source_path, output_path, start_timestamp, end_timestamp)
-    local audio_track = get_active_track('audio')
+    local audio_track = h.get_active_track('audio')
     local audio_track_id = audio_track['ff-index']
 
     if audio_track and audio_track.external == true then
@@ -181,7 +171,7 @@ mpv.make_animated_snapshot_args = function(source_path, output_path, start_times
 end
 
 mpv.make_audio_args = function(source_path, output_path, start_timestamp, end_timestamp)
-    local audio_track = get_active_track('audio')
+    local audio_track = h.get_active_track('audio')
     local audio_track_id = mp.get_property("aid")
 
     if audio_track and audio_track.external == true then
