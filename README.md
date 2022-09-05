@@ -359,6 +359,8 @@ and instead set the desired languages in the config file (`secondary_sub_lang` o
 
 Secondary subtitles will be visible when hovering over the top part of the `mpv` window.
 
+https://user-images.githubusercontent.com/69171671/188492261-909ba3e8-b82c-493f-88cf-0ec953dfcfe1.mp4
+
 ### Other tools
 
 If you don't like the default Yomichan Search tool, try:
