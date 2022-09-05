@@ -159,6 +159,27 @@ mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
     }
 end
 
+mpv.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
+    -- Currently there's no known way to make animations loop when using the mpv encoder.
+    return {
+        'mpv',
+        source_path,
+        '--ovc=libwebp',
+        '--loop-file=no',
+        '--audio=no',
+        '--no-sub',
+        '--no-ocopy-metadata',
+        '--ovcopts-add=lossless=0',
+        '--ovcopts-add=compression_level=6',
+        table.concat { '--start=', start_timestamp },
+        table.concat { '--end=', end_timestamp },
+        table.concat { '--ovcopts-add=quality=', tostring(self.config.animated_snapshot_quality) },
+        table.concat { '--vf-add=scale=', self.config.animated_snapshot_width, ':',  self.config.animated_snapshot_height, ':flags=lanczos', },
+        table.concat { '--vf-add=fps=', self.config.animated_snapshot_fps, },
+        table.concat { '-o=', output_path }
+    }
+end
+
 mpv.make_audio_args = function(source_path, output_path, start_timestamp, end_timestamp)
     local audio_track = get_active_track('audio')
     local audio_track_id = mp.get_property("aid")
@@ -194,8 +215,7 @@ end
 
 local create_animated_snapshot = function(start_timestamp, end_timestamp, source_path, output_path, on_finish_fn)
     -- Creates the animated snapshot and then calls on_finish_fn
-    -- ffmpeg is needed in order to generate animations
-    local args = ffmpeg.make_animated_snapshot_args(source_path, output_path, start_timestamp, end_timestamp)
+    local args = self.encoder.make_animated_snapshot_args(source_path, output_path, start_timestamp, end_timestamp)
     h.subprocess(args, on_finish_fn)
 end
 
