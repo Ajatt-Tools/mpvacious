@@ -18,7 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ]]
 
 local mp = require('mp')
-local help = require('helpers')
+local msg = require('mp.msg')
+local h = require('helpers')
 
 local Menu = {
     active = false,
@@ -35,7 +36,10 @@ end
 
 function Menu:with_update(params)
     return function()
-        pcall(help.unpack(params))
+        local status, error = pcall(h.unpack(params))
+        if not status then
+            msg['error'](error)
+        end
         self:update()
     end
 end
@@ -52,7 +56,7 @@ end
 
 function Menu:open()
     if self.overlay == nil then
-        help.notify("OSD overlay is not supported in " .. mp.get_property("mpv-version"), "error", 5)
+        h.notify("OSD overlay is not supported in " .. mp.get_property("mpv-version"), "error", 5)
         return
     end
 
