@@ -1,3 +1,10 @@
+--[[
+Copyright: Ren Tatsumoto and contributors
+License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
+
+Various helper functions.
+]]
+
 local mp = require('mp')
 local msg = require('mp.msg')
 local this = {}

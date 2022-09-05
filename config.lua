@@ -1,3 +1,10 @@
+--[[
+Copyright: Ren Tatsumoto and contributors
+License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
+
+Config management, validation, loading.
+]]
+
 local mpopt = require('mp.options')
 local helpers = require('helpers')
 local initial_config = {}
