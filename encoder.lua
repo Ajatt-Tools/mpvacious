@@ -93,16 +93,17 @@ end
 ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
     -- Documentation: https://www.ffmpeg.org/ffmpeg-all.html#libwebp
     return ffmpeg.prepend {
-        "-ss", tostring(start_timestamp),
-        "-t", tostring(end_timestamp - start_timestamp),
-        "-i", source_path,
-        "-an",
-        "-vcodec", "libwebp",
-        "-loop", "0",
-        "-lossless", "0",
-        "-compression_level", "6",
-        "-quality", tostring(self.config.animated_snapshot_quality),
-        "-vf", ffmpeg.animated_snapshot_filters(),
+        '-an',
+        '-ss', tostring(start_timestamp),
+        '-t', tostring(end_timestamp - start_timestamp),
+        '-i', source_path,
+        '-map_metadata', '-1',
+        '-vcodec', 'libwebp',
+        '-loop', '0',
+        '-lossless', '0',
+        '-compression_level', '6',
+        '-quality', tostring(self.config.animated_snapshot_quality),
+        '-vf', ffmpeg.animated_snapshot_filters(),
         output_path
     }
 end
