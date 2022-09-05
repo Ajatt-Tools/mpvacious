@@ -41,11 +41,22 @@ local config = {
     nuke_spaces = false, -- remove all spaces from exported anki cards
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
     use_ffmpeg = false, -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
+
+    -- Snapshots
     snapshot_format = "webp", -- webp or jpg
     snapshot_quality = 15, -- from 0=lowest to 100=highest
     snapshot_width = -2, -- a positive integer or -2 for auto
     snapshot_height = 200, -- same
     screenshot = false, -- create a screenshot instead of a snapshot; see example config.
+
+    -- Animations
+    animated_snapshot_enabled = false, -- if enabled captures the selected segment of the video, instead of just a frame
+    animated_snapshot_fps = 10, -- positive integer between 0 and 30 (30 included)
+    animated_snapshot_width = -2, -- positive integer or -2 to scale it maintaining ratio (height must not be -2 in that case)
+    animated_snapshot_height = 200, -- positive integer or -2 to scale it maintaining ratio (width must not be -2 in that case)
+    animated_snapshot_quality = 5, -- positive integer between 0 and 100 (100 included)
+
+    -- Audio clips
     audio_format = "opus", -- opus or mp3
     audio_bitrate = "18k", -- from 16k to 32k
     audio_padding = 0.12, -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
@@ -117,7 +128,6 @@ local Menu = require('menu')
 local ankiconnect = require('ankiconnect')
 local clip_autocopy = require('utils.clip_autocopy')
 local timings = require('utils.timings')
-local filename_factory = require('utils.filename_factory')
 local switch = require('utils.switch')
 local play_control = require('utils.play_control')
 local Subtitle = require('subtitles.subtitle')
@@ -341,14 +351,14 @@ local function export_to_anki(gui)
     if not gui and h.is_empty(sub['text']) then
         sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
     end
-    local snapshot_timestamp = mp.get_property_number("time-pos", 0)
-    local snapshot_filename = filename_factory.make_snapshot_filename(snapshot_timestamp, config.snapshot_extension)
-    local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'], config.audio_extension)
 
-    encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
-    encoder.create_audio(sub['start'], sub['end'], audio_filename, audio_padding())
+    local snapshot = encoder.snapshot.create_job(sub)
+    local audio = encoder.audio.create_job(sub, audio_padding())
 
-    local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot_filename, audio_filename)
+    snapshot.run_async()
+    audio.run_async()
+
+    local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
 
     ankiconnect.add_note(note_fields, substitute_fmt(config.note_tag), gui)
     subs.clear()
@@ -374,16 +384,15 @@ local function update_last_note(overwrite)
         return
     end
 
-    local snapshot_timestamp = mp.get_property_number("time-pos", 0)
-    local snapshot_filename = filename_factory.make_snapshot_filename(snapshot_timestamp, config.snapshot_extension)
-    local audio_filename = filename_factory.make_audio_filename(sub['start'], sub['end'], config.audio_extension)
+    local snapshot = encoder.snapshot.create_job(sub)
+    local audio = encoder.audio.create_job(sub, audio_padding())
 
     local create_media = function()
-        encoder.create_snapshot(snapshot_timestamp, snapshot_filename)
-        encoder.create_audio(sub['start'], sub['end'], audio_filename, audio_padding())
+        snapshot.run_async()
+        audio.run_async()
     end
 
-    local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot_filename, audio_filename)
+    local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
     local stored_data = ankiconnect.get_note_fields(last_note_id)
     if stored_data then
         new_data = forvo.append(new_data, stored_data)
@@ -634,6 +643,7 @@ local main = (function()
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
         mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", clip_autocopy.toggle)
+        mp.add_key_binding("Ctrl+g", "mpvacious-animated-snapshot-toggle", encoder.snapshot.toggle_animation)
 
         -- Open advanced menu
         mp.add_key_binding("a", "mpvacious-menu-open", function() menu:open() end)

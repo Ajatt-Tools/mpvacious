@@ -54,28 +54,35 @@ local make_media_filename = function()
     filename = h.remove_special_characters(filename)
 end
 
-local make_audio_filename = function(speech_start, speech_end, extension)
-    local filename_timestamp = string.format(
+local function timestamp_range(start_timestamp, end_timestamp, extension)
+    -- Generates a filename suffix of the form: _00h00m00s000ms-99h99m99s999ms.extension
+    -- Extension must already contain the dot.
+    return string.format(
             '_%s-%s%s',
-            h.human_readable_time(speech_start),
-            h.human_readable_time(speech_end),
+            h.human_readable_time(start_timestamp),
+            h.human_readable_time(end_timestamp),
             extension
     )
-    return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
 end
 
-local make_snapshot_filename = function(timestamp, extension)
-    local filename_timestamp = string.format(
+local function timestamp_static(timestamp, extension)
+    -- Generates a filename suffix of the form: _00h00m00s000ms.extension
+    -- Extension must already contain the dot.
+    return string.format(
             '_%s%s',
             h.human_readable_time(timestamp),
             extension
     )
-    return anki_compatible_length(filename, filename_timestamp) .. filename_timestamp
+end
+
+local make_filename = function(...)
+    local args = {...}
+    local timestamp = #args < 3 and timestamp_static(...) or timestamp_range(...)
+    return anki_compatible_length(filename, timestamp) .. timestamp
 end
 
 mp.register_event("file-loaded", make_media_filename)
 
 return {
-    make_audio_filename = make_audio_filename,
-    make_snapshot_filename = make_snapshot_filename,
+    make_filename = make_filename,
 }
