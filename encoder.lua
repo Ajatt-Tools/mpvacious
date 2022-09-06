@@ -150,7 +150,6 @@ mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
 end
 
 mpv.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
-    -- Currently there's no known way to make animations loop when using the mpv encoder.
     return {
         'mpv',
         source_path,
@@ -166,7 +165,9 @@ mpv.make_animated_snapshot_args = function(source_path, output_path, start_times
         table.concat { '--ovcopts-add=quality=', tostring(self.config.animated_snapshot_quality) },
         table.concat { '--vf-add=scale=', self.config.animated_snapshot_width, ':',  self.config.animated_snapshot_height, ':flags=lanczos', },
         table.concat { '--vf-add=fps=', self.config.animated_snapshot_fps, },
-        table.concat { '-o=', output_path }
+        table.concat { '-o=', output_path },
+        table.concat { '--of=', self.config.animated_snapshot_extension},
+        table.concat { '--ofopts=', 'loop=0'}
     }
 end
 
