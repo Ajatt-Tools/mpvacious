@@ -238,6 +238,9 @@ mpv accepts both variants in `input.conf`.
 Menu:
 * `a` - Open `advanced menu`.
 
+Enable\Disable animation:
+* `Ctrl+g` - If animation is enabled, animated snapshots will be generated instead of static ones. Those animated snapshot are basically GIFs (just in a different format) and will capture the video from the start to the end times selected.
+
 Make a card:
 * `Ctrl+n` - Export a card with the currently visible subtitle line on the front.
 Use this when your subs are well-timed,
