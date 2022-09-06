@@ -59,7 +59,7 @@ end
 
 local function ensure_correct_fps()
     if config.animated_snapshot_fps == nil or config.animated_snapshot_fps <= 0 or config.animated_snapshot_fps > 30 then
-        config.animated_snapshot_fps = 15
+        config.animated_snapshot_fps = 10
     end
 end
 
