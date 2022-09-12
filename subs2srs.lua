@@ -44,7 +44,8 @@ local config = {
 
     -- Secondary subtitle
     secondary_sub_lang = 'eng,en,rus,ru,bel,be', -- Language of secondary subs that should be automatically loaded.
-    secondary_sub_area=0.15, -- Hover area. Fraction of the window from the top.
+    secondary_sub_area = 0.15, -- Hover area. Fraction of the window from the top.
+    secondary_sub_visibility = 'auto', -- One of: 'auto', 'never', 'always'. Controls secondary_sid visibility.
 
     -- Snapshots
     snapshot_format = "webp", -- webp or jpg
@@ -650,6 +651,7 @@ local main = (function()
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
         mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", clip_autocopy.toggle)
         mp.add_key_binding("Ctrl+g", "mpvacious-animated-snapshot-toggle", encoder.snapshot.toggle_animation)
+        mp.add_key_binding("Ctrl+v", "mpvacious-secondary-sid-toggle", secondary_sid.change_visibility)
 
         -- Open advanced menu
         mp.add_key_binding("a", "mpvacious-menu-open", function() menu:open() end)

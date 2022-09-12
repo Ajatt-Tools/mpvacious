@@ -9,7 +9,10 @@ Secondary sid will be shown when mouse is moved to the top part of the mpv windo
 local mp = require('mp')
 local h = require('helpers')
 
-local self = {}
+local self = {
+    visibility = 'auto',
+    visibility_states = { auto = true, never = true, always = true, }
+}
 
 local function is_accepted_language(sub_lang)
     for _, accepted_lang in pairs(self.accepted_sub_langs) do
@@ -48,10 +51,12 @@ end
 
 local function on_mouse_move(_, state)
     -- state = {x=int,y=int, hover=true|false, }
-    mp.set_property_bool(
-            'secondary-sub-visibility',
-            state.hover and (state.y / window_height()) < self.config.secondary_sub_area
-    )
+    if self.visibility == 'auto' then
+        mp.set_property_bool(
+                'secondary-sub-visibility',
+                state.hover and (state.y / window_height()) < self.config.secondary_sub_area
+        )
+    end
 end
 
 local function on_file_loaded()
@@ -68,10 +73,25 @@ end
 local function init(config)
     self.config = config
     self.accepted_sub_langs = get_accepted_sub_langs()
+    self.visibility = config.secondary_sub_visibility
     mp.register_event('file-loaded', on_file_loaded)
     mp.observe_property('mouse-pos', 'native', on_mouse_move)
 end
 
+local function change_visibility()
+    while true do
+        self.visibility = next(self.visibility_states, self.visibility)
+        if self.visibility ~= nil then
+            break
+        end
+    end
+    if self.visibility ~= 'auto' then
+        mp.set_property_bool('secondary-sub-visibility', self.visibility == 'always')
+    end
+    h.notify("Secondary sid visibility: " .. self.visibility)
+end
+
 return {
     init = init,
+    change_visibility = change_visibility,
 }
