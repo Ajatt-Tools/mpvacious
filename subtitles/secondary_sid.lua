@@ -51,7 +51,7 @@ end
 
 local function on_mouse_move(_, state)
     -- state = {x=int,y=int, hover=true|false, }
-    if self.visibility == 'auto' then
+    if self.visibility == 'auto' and state ~= nil then
         mp.set_property_bool(
                 'secondary-sub-visibility',
                 state.hover and (state.y / window_height()) < self.config.secondary_sub_area
