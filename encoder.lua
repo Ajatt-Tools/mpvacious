@@ -153,8 +153,10 @@ mpv.make_animated_snapshot_args = function(source_path, output_path, start_times
     return {
         'mpv',
         source_path,
-        '--ovc=libwebp',
         '--loop-file=no',
+        '--ovc=libwebp',
+        '--of=webp',
+        '--ofopts-add=loop=0',
         '--audio=no',
         '--no-sub',
         '--no-ocopy-metadata',
@@ -163,11 +165,9 @@ mpv.make_animated_snapshot_args = function(source_path, output_path, start_times
         table.concat { '--start=', start_timestamp },
         table.concat { '--end=', end_timestamp },
         table.concat { '--ovcopts-add=quality=', tostring(self.config.animated_snapshot_quality) },
-        table.concat { '--vf-add=scale=', self.config.animated_snapshot_width, ':',  self.config.animated_snapshot_height, ':flags=lanczos', },
+        table.concat { '--vf-add=scale=', self.config.animated_snapshot_width, ':', self.config.animated_snapshot_height, ':flags=lanczos', },
         table.concat { '--vf-add=fps=', self.config.animated_snapshot_fps, },
         table.concat { '-o=', output_path },
-        table.concat { '--of=', self.config.animated_snapshot_extension},
-        table.concat { '--ofopts=', 'loop=0'}
     }
 end
 
