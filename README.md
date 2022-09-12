@@ -225,6 +225,8 @@ Alt+l        script-binding mpvacious-sub-seek-forward-pause
 Ctrl+h       script-binding mpvacious-sub-rewind
 Ctrl+H       script-binding mpvacious-sub-replay
 Ctrl+L       script-binding mpvacious-sub-play-up-to-next
+
+Ctrl+v       script-binding mpvacious-secondary-sid-toggle
 ```
 
 **Note:** A capital letter means that you need to press Shift in order to activate the corresponding binding.
@@ -364,6 +366,8 @@ and instead set the desired languages in the config file (`secondary_sub_lang` o
 Secondary subtitles will be visible when hovering over the top part of the `mpv` window.
 
 https://user-images.githubusercontent.com/69171671/188492261-909ba3e8-b82c-493f-88cf-0ec953dfcfe1.mp4
+
+By pressing <kbd>Ctrl</kbd>+<kbd>v</kbd> you can control secondary sid visibility without using the mouse.
 
 ### Other tools
 
