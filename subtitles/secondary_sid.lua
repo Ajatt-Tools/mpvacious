@@ -75,7 +75,9 @@ local function init(config)
     self.visibility = config.secondary_sub_visibility
     self.accepted_languages = get_accepted_sub_langs()
     mp.register_event('file-loaded', on_file_loaded)
-    mp.observe_property('mouse-pos', 'native', on_mouse_move)
+    if config.secondary_sub_area > 0 then
+        mp.observe_property('mouse-pos', 'native', on_mouse_move)
+    end
 end
 
 local function change_visibility()
