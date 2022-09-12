@@ -15,7 +15,7 @@ local self = {
 }
 
 local function is_accepted_language(sub_lang)
-    for _, accepted_lang in pairs(self.accepted_sub_langs) do
+    for _, accepted_lang in pairs(self.accepted_languages) do
         if accepted_lang == sub_lang then
             return true
         end
@@ -42,11 +42,11 @@ local function window_height()
 end
 
 local function get_accepted_sub_langs()
-    local secondary_sub_langs = {}
-    for lang in self.config['secondary_sub_lang']:gmatch('[a-z-]+') do
-        table.insert(secondary_sub_langs, lang)
+    local languages = {}
+    for lang in self.config.secondary_sub_lang:gmatch('[a-z-]+') do
+        table.insert(languages, lang)
     end
-    return secondary_sub_langs
+    return languages
 end
 
 local function on_mouse_move(_, state)
@@ -72,8 +72,8 @@ end
 
 local function init(config)
     self.config = config
-    self.accepted_sub_langs = get_accepted_sub_langs()
     self.visibility = config.secondary_sub_visibility
+    self.accepted_languages = get_accepted_sub_langs()
     mp.register_event('file-loaded', on_file_loaded)
     mp.observe_property('mouse-pos', 'native', on_mouse_move)
 end
