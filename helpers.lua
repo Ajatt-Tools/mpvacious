@@ -51,7 +51,7 @@ this.is_win = function()
 end
 
 this.is_mac = function()
-    return mp.get_property('options/cocoa-force-dedicated-gpu') ~= nil
+    return mp.get_property('options/macos-force-dedicated-gpu') ~= nil
 end
 
 this.subprocess = function(args, completion_fn)
