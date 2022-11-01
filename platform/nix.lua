@@ -18,7 +18,7 @@ local clip = (function()
 end)()
 
 self.tmp_dir = function()
-    return '/tmp'
+    return os.getenv("TMPDIR") or '/tmp'
 end
 
 self.copy_to_clipboard = function(text)
