@@ -23,7 +23,7 @@ local self = {
 ------------------------------------------------------------
 -- utility functions
 
-local pad_timings = function(padding, start_time, end_time)
+local function pad_timings(padding, start_time, end_time)
     local video_duration = mp.get_property_number('duration')
     start_time = start_time - padding
     end_time = end_time + padding
@@ -39,12 +39,32 @@ local pad_timings = function(padding, start_time, end_time)
     return start_time, end_time
 end
 
+local function alt_path_dirs()
+    return {
+        '/opt/homebrew/bin',
+        '/usr/local/bin',
+        utils.join_path(os.getenv("HOME") or "~", '.local/bin'),
+    }
+end
+
+local function find_exec(name)
+    local path, info
+    for _, alt_dir in pairs(alt_path_dirs()) do
+        path = utils.join_path(alt_dir, name)
+        info = utils.file_info(path)
+        if info and info.is_file then
+            return path
+        end
+    end
+    return name
+end
+
 ------------------------------------------------------------
 -- ffmpeg encoder
 
 local ffmpeg = {}
 
-ffmpeg.prefix = { "ffmpeg", "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet", "-sn", }
+ffmpeg.prefix = { find_exec("ffmpeg"), "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet", "-sn", }
 
 ffmpeg.prepend = function(args)
     if next(args) ~= nil then
@@ -132,7 +152,7 @@ local mpv = {}
 
 mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
     return {
-        'mpv',
+        find_exec("mpv"),
         source_path,
         '--loop-file=no',
         '--audio=no',
@@ -151,7 +171,7 @@ end
 
 mpv.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
     return {
-        'mpv',
+        find_exec("mpv"),
         source_path,
         '--loop-file=no',
         '--ovc=libwebp',
@@ -181,7 +201,7 @@ mpv.make_audio_args = function(source_path, output_path, start_timestamp, end_ti
     end
 
     return {
-        'mpv',
+        find_exec("mpv"),
         source_path,
         '--loop-file=no',
         '--video=no',
@@ -245,7 +265,7 @@ end
 
 local background_play = function(file_path, on_finish)
     return h.subprocess(
-            { 'mpv', '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
+            { find_exec("mpv"), '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
             on_finish
     )
 end
