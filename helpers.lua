@@ -54,9 +54,22 @@ this.is_mac = function()
     return mp.get_property('options/macos-force-dedicated-gpu') ~= nil
 end
 
+local function map(tab, func)
+    local t = {}
+    for k,v in pairs(tab) do
+        t[k] = func(v)
+    end
+    return t
+end
+
+local function args_as_str(args)
+    return table.concat(map(args, function(str) return string.format("'%s'", str) end), " ")
+end
+
 this.subprocess = function(args, completion_fn)
     -- if `completion_fn` is passed, the command is ran asynchronously,
     -- and upon completion, `completion_fn` is called to process the results.
+    msg.info("Executing: " .. args_as_str(args))
     local command_native = type(completion_fn) == 'function' and mp.command_native_async or mp.command_native
     local command_table = {
         name = "subprocess",
