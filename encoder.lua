@@ -118,6 +118,22 @@ ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_ti
     }
 end
 
+ffmpeg.append_user_audio_args = function(args)
+    local should_add_filters = false
+    for arg in string.gmatch(self.config.ffmpeg_audio_args, "%S+") do
+        if (arg == '-af' or arg == '-filter:a') and self.config.tie_volumes then
+            should_add_filters = true
+            table.insert(args, #args, arg)
+        elseif should_add_filters == true then
+            should_add_filters = false
+            table.insert(args, #args, string.format("volume=%.1f,%s", (mp.get_property_native('volume') / 100.0), arg) )
+        else
+            table.insert(args, #args, arg)
+        end
+    end
+    return args
+end
+
 ffmpeg.make_audio_args = function(source_path, output_path, start_timestamp, end_timestamp)
     local audio_track = h.get_active_track('audio')
     local audio_track_id = audio_track['ff-index']
@@ -127,7 +143,7 @@ ffmpeg.make_audio_args = function(source_path, output_path, start_timestamp, end
         audio_track_id = 'a'
     end
 
-    return ffmpeg.prepend {
+    local args = ffmpeg.prepend {
         '-vn',
         '-ss', tostring(start_timestamp),
         '-to', tostring(end_timestamp),
@@ -140,9 +156,9 @@ ffmpeg.make_audio_args = function(source_path, output_path, start_timestamp, end
         '-compression_level', '10',
         '-application', 'voip',
         '-b:a', tostring(self.config.audio_bitrate),
-        '-filter:a', string.format("volume=%.1f", self.config.tie_volumes and mp.get_property_native('volume') / 100 or 1),
         output_path
     }
+    return ffmpeg.append_user_audio_args(args)
 end
 
 ------------------------------------------------------------
@@ -200,7 +216,7 @@ mpv.make_audio_args = function(source_path, output_path, start_timestamp, end_ti
         audio_track_id = 'auto'
     end
 
-    return {
+    local args = {
         find_exec("mpv"),
         source_path,
         '--loop-file=no',
@@ -219,6 +235,11 @@ mpv.make_audio_args = function(source_path, output_path, start_timestamp, end_ti
         table.concat { '--oacopts-add=b=', self.config.audio_bitrate },
         table.concat { '-o=', output_path }
     }
+    for arg in string.gmatch(self.config.mpv_audio_args, "%S+") do
+        -- Prepend before output path
+        table.insert(args, #args, arg)
+    end
+    return args
 end
 
 ------------------------------------------------------------
@@ -280,10 +301,6 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding)
         end
 
         local args = self.encoder.make_audio_args(source_path, output_path, start_timestamp, end_timestamp)
-        for arg in string.gmatch(self.config.use_ffmpeg and self.config.ffmpeg_audio_args or self.config.mpv_audio_args, "%S+") do
-            -- Prepend before output path
-            table.insert(args, #args, arg)
-        end
         local on_finish = function()
             self.store_fn(filename, output_path)
             if self.config.preview_audio then
