@@ -164,11 +164,13 @@ end
 ------------------------------------------------------------
 -- mpv encoder
 
-local mpv = {}
+local mpv = { }
+
+mpv.exec = find_exec("mpv")
 
 mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
     return {
-        find_exec("mpv"),
+        mpv.exec,
         source_path,
         '--loop-file=no',
         '--audio=no',
@@ -187,7 +189,7 @@ end
 
 mpv.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
     return {
-        find_exec("mpv"),
+        mpv.exec,
         source_path,
         '--loop-file=no',
         '--ovc=libwebp',
@@ -217,7 +219,7 @@ mpv.make_audio_args = function(source_path, output_path, start_timestamp, end_ti
     end
 
     local args = {
-        find_exec("mpv"),
+        mpv.exec,
         source_path,
         '--loop-file=no',
         '--video=no',
@@ -286,7 +288,7 @@ end
 
 local background_play = function(file_path, on_finish)
     return h.subprocess(
-            { find_exec("mpv"), '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
+            { mpv.exec, '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
             on_finish
     )
 end
