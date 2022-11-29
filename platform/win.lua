@@ -31,7 +31,7 @@ self.curl_request = function(request_json, completion_fn)
     local args = {
         'curl',
         '-s',
-        'localhost:8765',
+        '127.0.0.1:8765',
         '-H',
         'Content-Type: application/json; charset=UTF-8',
         '-X',
