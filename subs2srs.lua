@@ -75,7 +75,7 @@ local config = {
 
     -- Custom encoding args
     ffmpeg_audio_args = '-af silenceremove=1:0:-50dB,loudnorm=I=-16:TP=-1.5:LRA=11',
-    mpv_audio_args = '--af-append=silenceremove=1:0:-50dB,loudnorm=I=-16:TP=-1.5:LRA=11',
+    mpv_audio_args = '--af-append=silenceremove=1:0:-50dB --af-append=loudnorm=I=-16:TP=-1.5:LRA=11',
 
     -- Anki
     create_deck = false, -- automatically create a deck for new cards
