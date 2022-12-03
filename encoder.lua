@@ -119,17 +119,22 @@ ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_ti
 end
 
 ffmpeg.append_user_audio_args = function(args)
-    local should_add_filters = false
-    for arg in string.gmatch(self.config.ffmpeg_audio_args, "%S+") do
-        if (arg == '-af' or arg == '-filter:a') and self.config.tie_volumes then
-            should_add_filters = true
-            table.insert(args, #args, arg)
-        elseif should_add_filters == true then
-            should_add_filters = false
-            table.insert(args, #args, string.format("volume=%.1f,%s", (mp.get_property_native('volume') / 100.0), arg) )
+    local args_iter = string.gmatch(self.config.ffmpeg_audio_args, "%S+")
+    local filters = (
+            self.config.tie_volumes
+                    and string.format("volume=%.1f", mp.get_property_native('volume') / 100.0)
+                    or ""
+    )
+    for arg in args_iter do
+        if arg == '-af' or arg == '-filter:a' then
+            filters = #filters > 0 and string.format("%s,%s", args_iter(), filters) or args_iter()
         else
             table.insert(args, #args, arg)
         end
+    end
+    if #filters > 0 then
+        table.insert(args, #args, '-af')
+        table.insert(args, #args, filters)
     end
     return args
 end
