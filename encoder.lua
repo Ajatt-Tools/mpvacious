@@ -270,9 +270,13 @@ local create_static_snapshot = function(timestamp, source_path, output_path, on_
 
 end
 
+local function has_video_track()
+    return mp.get_property_native('vid') ~= false
+end
+
 local create_snapshot = function(start_timestamp, end_timestamp, current_timestamp, filename)
     -- Calls the proper function depending on whether or not the snapshot should be animated
-    if not h.is_empty(self.config.image_field) then
+    if not h.is_empty(self.config.image_field) and has_video_track() then
         local source_path = mp.get_property("path")
         local output_path = utils.join_path(self.platform.tmp_dir(), filename)
 
