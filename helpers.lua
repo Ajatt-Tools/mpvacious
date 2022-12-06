@@ -215,4 +215,12 @@ this.get_active_track = function(track_type)
     return nil
 end
 
+this.has_video_track = function()
+    return mp.get_property_native('vid') ~= false
+end
+
+this.has_audio_track = function()
+    return mp.get_property_native('aid') ~= false
+end
+
 return this

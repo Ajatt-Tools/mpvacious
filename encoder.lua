@@ -270,13 +270,9 @@ local create_static_snapshot = function(timestamp, source_path, output_path, on_
 
 end
 
-local function has_video_track()
-    return mp.get_property_native('vid') ~= false
-end
-
 local create_snapshot = function(start_timestamp, end_timestamp, current_timestamp, filename)
     -- Calls the proper function depending on whether or not the snapshot should be animated
-    if not h.is_empty(self.config.image_field) and has_video_track() then
+    if not h.is_empty(self.config.image_field) then
         local source_path = mp.get_property("path")
         local output_path = utils.join_path(self.platform.tmp_dir(), filename)
 
@@ -356,13 +352,15 @@ end
 
 local create_job = function(type, sub, audio_padding)
     local filename, run_async, current_timestamp
-    if type == 'snapshot' then
+    if type == 'snapshot' and h.has_video_track() then
         current_timestamp = mp.get_property_number("time-pos", 0)
         filename = make_snapshot_filename(sub['start'], sub['end'], current_timestamp)
         run_async = function() create_snapshot(sub['start'], sub['end'], current_timestamp, filename) end
-    else
+    elseif type == 'audioclip' and h.has_audio_track() then
         filename = make_audio_filename(sub['start'], sub['end'])
         run_async = function() create_audio(sub['start'], sub['end'], filename, audio_padding) end
+    else
+        run_async = function() print(type .. " will not be created.") end
     end
     return {
         filename = filename,

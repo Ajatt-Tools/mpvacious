@@ -288,10 +288,10 @@ local function construct_note_fields(sub_text, secondary_text, snapshot_filename
     if not h.is_empty(config.secondary_field) then
         ret[config.secondary_field] = secondary_text
     end
-    if not h.is_empty(config.image_field) then
+    if not h.is_empty(config.image_field) and not h.is_empty(snapshot_filename) then
         ret[config.image_field] = string.format(config.image_template, snapshot_filename)
     end
-    if not h.is_empty(config.audio_field) then
+    if not h.is_empty(config.audio_field) and not h.is_empty(audio_filename) then
         ret[config.audio_field] = string.format('[sound:%s]', audio_filename)
     end
     if config.miscinfo_enable == true then
