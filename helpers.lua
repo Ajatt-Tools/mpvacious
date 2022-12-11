@@ -56,7 +56,7 @@ end
 
 local function map(tab, func)
     local t = {}
-    for k,v in pairs(tab) do
+    for k, v in pairs(tab) do
         t[k] = func(v)
     end
     return t
@@ -132,7 +132,7 @@ this.escape_special_characters = (function()
     end
 end)()
 
-this.remove_extension = function (filename)
+this.remove_extension = function(filename)
     return filename:gsub('%.%w+$', '')
 end
 
@@ -221,6 +221,10 @@ end
 
 this.has_audio_track = function()
     return mp.get_property_native('aid') ~= false
+end
+
+this.str_contains = function(s, pattern)
+    return not this.is_empty(s) and string.find(string.lower(s), string.lower(pattern)) ~= nil
 end
 
 return this

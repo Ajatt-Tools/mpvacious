@@ -11,7 +11,7 @@ local h = require('helpers')
 
 local self = {
     visibility = 'auto',
-    visibility_states = { auto = true, never = true, always = true, }
+    visibility_states = { auto = true, never = true, always = true, },
 }
 
 local function is_accepted_language(sub_lang)
@@ -27,9 +27,30 @@ local function is_selected_language(track, active_track)
     return track.id == mp.get_property_native('sid') or (active_track and active_track.lang == track.lang)
 end
 
-local function find_secondary_sid()
+local function is_full(track)
+    return h.str_contains(track.title, 'full')
+end
+
+local function is_garbage(track)
+    for _, keyword in pairs({ 'song', 'sign', 'caption', 'commentary' }) do
+        if h.str_contains(track.title, keyword) then
+            return true
+        end
+    end
+    return false
+end
+
+local function prioritize_full_subs(tracks_list)
+    return table.sort(tracks_list, function(first, second)
+        return (is_full(first) and not is_full(second)) or (is_garbage(second) and not is_garbage(first))
+    end)
+end
+
+local function find_best_secondary_sid()
     local active_track = h.get_active_track('sub')
-    for _, track in pairs(mp.get_property_native('track-list')) do
+    local tracks_list = mp.get_property_native('track-list')
+    prioritize_full_subs(tracks_list)
+    for _, track in ipairs(tracks_list) do
         if track.type == 'sub' and is_accepted_language(track.lang) and not is_selected_language(track, active_track) then
             return track.id
         end
@@ -63,7 +84,7 @@ local function on_file_loaded()
     -- If secondary sid is not already set, try to find and set it.
     local secondary_sid = mp.get_property_native('secondary-sid')
     if secondary_sid == false then
-        secondary_sid = find_secondary_sid()
+        secondary_sid = find_best_secondary_sid()
         if secondary_sid ~= nil then
             mp.set_property('secondary-sid', secondary_sid)
         end
