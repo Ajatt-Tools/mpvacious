@@ -59,6 +59,11 @@ local function find_exec(name)
     return name
 end
 
+local function toms(timestamp)
+    --- Trim timestamp down to milliseconds.
+    return string.format("%.3f", timestamp)
+end
+
 ------------------------------------------------------------
 -- ffmpeg encoder
 
@@ -78,7 +83,7 @@ end
 ffmpeg.make_static_snapshot_args = function(source_path, output_path, timestamp)
     return ffmpeg.prepend {
         '-an',
-        '-ss', tostring(timestamp),
+        '-ss', toms(timestamp),
         '-i', source_path,
         '-map_metadata', '-1',
         '-vcodec', self.config.snapshot_codec,
@@ -104,8 +109,8 @@ ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_ti
     -- Documentation: https://www.ffmpeg.org/ffmpeg-all.html#libwebp
     return ffmpeg.prepend {
         '-an',
-        '-ss', tostring(start_timestamp),
-        '-t', tostring(end_timestamp - start_timestamp),
+        '-ss', toms(start_timestamp),
+        '-t', toms(end_timestamp - start_timestamp),
         '-i', source_path,
         '-map_metadata', '-1',
         '-vcodec', 'libwebp',
@@ -150,8 +155,8 @@ ffmpeg.make_audio_args = function(source_path, output_path, start_timestamp, end
 
     local args = ffmpeg.prepend {
         '-vn',
-        '-ss', tostring(start_timestamp),
-        '-to', tostring(end_timestamp),
+        '-ss', toms(start_timestamp),
+        '-to', toms(end_timestamp),
         '-i', source_path,
         '-map_metadata', '-1',
         '-map', string.format("0:%d", audio_track_id),
@@ -185,7 +190,7 @@ mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
         '--ovcopts-add=lossless=0',
         '--ovcopts-add=compression_level=6',
         table.concat { '--ovc=', self.config.snapshot_codec },
-        table.concat { '-start=', timestamp },
+        table.concat { '-start=', toms(timestamp), },
         table.concat { '--ovcopts-add=quality=', tostring(self.config.snapshot_quality) },
         table.concat { '--vf-add=scale=', self.config.snapshot_width, ':', self.config.snapshot_height },
         table.concat { '-o=', output_path }
@@ -205,8 +210,8 @@ mpv.make_animated_snapshot_args = function(source_path, output_path, start_times
         '--no-ocopy-metadata',
         '--ovcopts-add=lossless=0',
         '--ovcopts-add=compression_level=6',
-        table.concat { '--start=', start_timestamp },
-        table.concat { '--end=', end_timestamp },
+        table.concat { '--start=', toms(start_timestamp), },
+        table.concat { '--end=', toms(end_timestamp), },
         table.concat { '--ovcopts-add=quality=', tostring(self.config.animated_snapshot_quality) },
         table.concat { '--vf-add=scale=', self.config.animated_snapshot_width, ':', self.config.animated_snapshot_height, ':flags=lanczos', },
         table.concat { '--vf-add=fps=', self.config.animated_snapshot_fps, },
@@ -235,8 +240,8 @@ mpv.make_audio_args = function(source_path, output_path, start_timestamp, end_ti
         '--oacopts-add=application=voip',
         '--oacopts-add=compression_level=10',
         table.concat { '--oac=', self.config.audio_codec },
-        table.concat { '--start=', start_timestamp },
-        table.concat { '--end=', end_timestamp },
+        table.concat { '--start=', toms(start_timestamp), },
+        table.concat { '--end=', toms(end_timestamp), },
         table.concat { '--aid=', audio_track_id },
         table.concat { '--volume=', self.config.tie_volumes and mp.get_property('volume') or '100' },
         table.concat { '--oacopts-add=b=', self.config.audio_bitrate },
