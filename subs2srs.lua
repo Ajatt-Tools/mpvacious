@@ -41,6 +41,7 @@ local config = {
     nuke_spaces = false, -- remove all spaces from exported anki cards
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
     use_ffmpeg = false, -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
+    reload_config_before_card_creation = true, -- for convenience, read config file from disk before a card is made.
 
     -- Secondary subtitle
     secondary_sub_lang = 'eng,en,rus,ru,bel,be', -- Language of secondary subs that should be automatically loaded.
@@ -126,7 +127,7 @@ local profiles = {
 
 local mp = require('mp')
 local OSD = require('osd_styler')
-local config_manager = require('config')
+local cfg_mgr = require('cfg_mgr')
 local encoder = require('encoder')
 local h = require('helpers')
 local Menu = require('menu')
@@ -210,7 +211,7 @@ local function ensure_deck()
 end
 
 local function load_next_profile()
-    config_manager.next_profile()
+    cfg_mgr.next_profile()
     ensure_deck()
     h.notify("Loaded profile " .. profiles.active)
 end
@@ -347,7 +348,14 @@ end
 ------------------------------------------------------------
 -- front for adding and updating notes
 
+local function maybe_reload_config()
+    if config.reload_config_before_card_creation then
+        cfg_mgr.reload_from_disk()
+    end
+end
+
 local function export_to_anki(gui)
+    maybe_reload_config()
     local sub = subs.get()
     if sub == nil then
         h.notify("Nothing to export.", "warn", 1)
@@ -371,6 +379,7 @@ local function export_to_anki(gui)
 end
 
 local function update_last_note(overwrite)
+    maybe_reload_config()
     local sub = subs.get()
     local last_note_id = ankiconnect.get_last_note_id()
 
@@ -639,7 +648,7 @@ local main = (function()
             main_executed = true
         end
 
-        config_manager.init(config, profiles)
+        cfg_mgr.init(config, profiles)
         ankiconnect.init(config, platform)
         forvo.init(config, ankiconnect, platform)
         encoder.init(config, ankiconnect.store_file, platform)
