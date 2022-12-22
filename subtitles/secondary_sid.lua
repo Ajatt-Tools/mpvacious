@@ -91,6 +91,10 @@ local function on_file_loaded()
     end
 end
 
+local function update_visibility()
+    mp.set_property_bool('secondary-sub-visibility', self.visibility == 'always')
+end
+
 local function init(config)
     self.config = config
     self.visibility = config.secondary_sub_visibility
@@ -99,6 +103,7 @@ local function init(config)
     if config.secondary_sub_area > 0 then
         mp.observe_property('mouse-pos', 'native', on_mouse_move)
     end
+    update_visibility()
 end
 
 local function change_visibility()
@@ -108,9 +113,7 @@ local function change_visibility()
             break
         end
     end
-    if self.visibility ~= 'auto' then
-        mp.set_property_bool('secondary-sub-visibility', self.visibility == 'always')
-    end
+    update_visibility()
     h.notify("Secondary sid visibility: " .. self.visibility)
 end
 
