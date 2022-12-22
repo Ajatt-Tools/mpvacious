@@ -99,6 +99,10 @@ local function init(config)
     if config.secondary_sub_area > 0 then
         mp.observe_property('mouse-pos', 'native', on_mouse_move)
     end
+
+    if self.visibility ~= 'auto' then
+        mp.set_property_bool('secondary-sub-visibility', self.visibility == 'always')
+    end
 end
 
 local function change_visibility()
