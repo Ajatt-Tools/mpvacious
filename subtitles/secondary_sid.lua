@@ -86,7 +86,7 @@ local function on_file_loaded()
     if secondary_sid == false then
         secondary_sid = find_best_secondary_sid()
         if secondary_sid ~= nil then
-            mp.set_property('secondary-sid', secondary_sid)
+            mp.set_property_native('secondary-sid', secondary_sid)
         end
     end
 end
