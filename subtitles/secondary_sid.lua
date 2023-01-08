@@ -117,7 +117,44 @@ local function change_visibility()
     h.notify("Secondary sid visibility: " .. self.visibility)
 end
 
+local function switch_secondary_sid(direction)
+    local primary_sid = mp.get_property_native('sid')
+    local secondary_sid = mp.get_property_native('secondary-sid')
+
+    local subtitle_tracks = h.filter(h.get_loaded_tracks('sub'), function(track)
+        return track.id ~= secondary_sid and track.id ~= primary_sid
+    end)
+    table.sort(subtitle_tracks, function(track1, track2) return track1.id < track2.id end)
+
+    local new_secondary_sub = { id = false, title = "removed" }
+
+    if direction == 'prev' then
+        local previous_tracks = h.filter(subtitle_tracks, function(track)
+            return secondary_sid == false or track.id < secondary_sid
+        end)
+        if #previous_tracks > 0 then
+            new_secondary_sub = previous_tracks[#previous_tracks]
+        end
+    elseif direction == 'next' then
+        local next_tracks = h.filter(subtitle_tracks, function(track)
+            return secondary_sid == false or track.id > secondary_sid
+        end)
+        if #next_tracks > 0 then
+            new_secondary_sub = next_tracks[1]
+        end
+    end
+
+    mp.set_property_native('secondary-sid', new_secondary_sub.id)
+    if new_secondary_sub.id == false then
+        h.notify("Removed secondary sid.")
+    else
+        h.notify(string.format("Secondary #%d: %s (%s)", new_secondary_sub.id, new_secondary_sub.title, new_secondary_sub.lang))
+    end
+end
+
 return {
     init = init,
     change_visibility = change_visibility,
+    select_previous = function() switch_secondary_sid('prev') end,
+    select_next = function() switch_secondary_sid('next') end,
 }
