@@ -227,4 +227,19 @@ this.str_contains = function(s, pattern)
     return not this.is_empty(s) and string.find(string.lower(s), string.lower(pattern)) ~= nil
 end
 
+this.filter = function(arr, func)
+    local filtered = {}
+    for _, elem in ipairs(arr) do
+        if func(elem) == true then
+            table.insert(filtered, elem)
+        end
+    end
+    return filtered
+end
+
+this.get_loaded_tracks = function(track_type)
+    --- Return all sub tracks, audio tracks, etc.
+    return this.filter(mp.get_property_native('track-list'), function(track) return track.type == track_type end)
+end
+
 return this
