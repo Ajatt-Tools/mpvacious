@@ -48,10 +48,10 @@ end
 
 local function find_best_secondary_sid()
     local active_track = h.get_active_track('sub')
-    local tracks_list = mp.get_property_native('track-list')
-    prioritize_full_subs(tracks_list)
-    for _, track in ipairs(tracks_list) do
-        if track.type == 'sub' and is_accepted_language(track.lang) and not is_selected_language(track, active_track) then
+    local sub_tracks = h.get_loaded_tracks('sub')
+    prioritize_full_subs(sub_tracks)
+    for _, track in ipairs(sub_tracks) do
+        if is_accepted_language(track.lang) and not is_selected_language(track, active_track) then
             return track.id
         end
     end
