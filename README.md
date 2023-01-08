@@ -197,7 +197,7 @@ You need to have ffmpeg installed for this to work.
 
 ### Key bindings
 
-The user may change some key bindings, though this step is not necessary.
+The user may change some global key bindings, though this step is not necessary.
 See [Usage](#usage) for the explanation of what they do.
 
 | OS        | Config location                                    |
@@ -229,6 +229,8 @@ Ctrl+H       script-binding mpvacious-sub-replay
 Ctrl+L       script-binding mpvacious-sub-play-up-to-next
 
 Ctrl+v       script-binding mpvacious-secondary-sid-toggle
+Ctrl+k       script-binding mpvacious-secondary-sid-prev
+Ctrl+j       script-binding mpvacious-secondary-sid-next
 ```
 
 **Note:** A capital letter means that you need to press Shift in order to activate the corresponding binding.
@@ -239,32 +241,46 @@ mpv accepts both variants in `input.conf`.
 
 ### Global bindings
 
-Menu:
+**Menu:**
+
 * `a` - Open `advanced menu`.
 
-Enable\Disable animation:
-* `Ctrl+g` - If animation is enabled, animated snapshots will be generated instead of static ones. Those animated snapshot are basically GIFs (just in a different format) and will capture the video from the start to the end times selected.
+**Enable\Disable animation:**
 
-Make a card:
+* `Ctrl+g` - If animation is enabled, animated snapshots will be generated instead of static images.
+  Animated snapshot are like GIFs (just in a different format)
+  and will capture the video from the start to the end times selected.
+
+**Make a card:**
+
 * `Ctrl+n` - Export a card with the currently visible subtitle line on the front.
 Use this when your subs are well-timed,
 and the target sentence doesn't span multiple subs.
 
-Update the last card:
+**Update the last card:**
+
 * `Ctrl+m` - Append to the media fields of the newly added Anki card.
 * `Ctrl+Shift+m` - Overwrite media fields of the newly added Anki card.
 
-Clipboard:
+**Clipboard:**
+
 * `Ctrl+c` - Copy current subtitle string to the system clipboard.
 * `Ctrl+t` - Toggle automatic copying of subtitles to the clipboard.
 
-Seeking:
+**Seeking:**
+
 * `Shift+h` and `Shift+l` - Seek to the previous or the next subtitle.
 * `Alt+h` and `Alt+l` - Seek to the previous, or the next subtitle, and pause.
 * `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
 * `Ctrl+Shift+h` - Replay current subtitle line, and pause.
 * `Ctrl+Shift+l` - Play until the end of the next subtitle, and pause. Useful for beginners who need
-to look up words in each and every dialogue line.
+  to look up words in each and every dialogue line.
+
+**Secondary subtitles:**
+
+* `Ctrl+v` - Toggle visibility.
+* `Ctrl+k` - Switch to the previous subtitle if it's not already selected.
+* `Ctrl+j` - Switch to the next subtitle if it's not already selected.
 
 ### Menu options
 
