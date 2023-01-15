@@ -38,7 +38,7 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 local config = {
     -- Common
     autoclip = false, -- enable copying subs to the clipboard when mpv starts
-    nuke_spaces = false, -- remove all spaces from exported anki cards
+    nuke_spaces = false, -- remove all spaces from the primary subtitles on exported anki cards
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
     use_ffmpeg = false, -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
     reload_config_before_card_creation = true, -- for convenience, read config file from disk before a card is made.
@@ -269,12 +269,28 @@ local substitute_fmt = (function()
     end
 end)()
 
+local function maybe_remove_all_spaces(str)
+    if config.nuke_spaces == true and h.contains_non_latin_letters(str) then
+        return h.remove_all_spaces(str)
+    else
+        return str
+    end
+end
+
+local function prepare_for_exporting(sub_text)
+    if not h.is_empty(sub_text) then
+        sub_text = h.trim(sub_text)
+        sub_text = h.escape_special_characters(sub_text)
+    end
+    return sub_text
+end
+
 local function construct_note_fields(sub_text, secondary_text, snapshot_filename, audio_filename)
     local ret = {
-        [config.sentence_field] = sub_text,
+        [config.sentence_field] = maybe_remove_all_spaces(prepare_for_exporting(sub_text)),
     }
     if not h.is_empty(config.secondary_field) then
-        ret[config.secondary_field] = secondary_text
+        ret[config.secondary_field] = prepare_for_exporting(secondary_text)
     end
     if not h.is_empty(config.image_field) and not h.is_empty(snapshot_filename) then
         ret[config.image_field] = string.format(config.image_template, snapshot_filename)
@@ -538,7 +554,7 @@ local main = (function()
         encoder.init(config, ankiconnect.store_file, platform)
         clip_autocopy.init(config.autoclip, copy_to_clipboard)
         secondary_sid.init(config)
-        subs_observer.init(config, menu)
+        subs_observer.init(menu)
         ensure_deck()
 
         -- Key bindings

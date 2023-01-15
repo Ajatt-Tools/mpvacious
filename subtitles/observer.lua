@@ -18,14 +18,6 @@ local secondary_dialogs = sub_list.new()
 local user_timings = timings.new()
 local is_observing = false
 
-local function maybe_remove_all_spaces(str)
-    if self.config.nuke_spaces == true and h.contains_non_latin_letters(str) then
-        return str:gsub('%s*', '')
-    else
-        return str
-    end
-end
-
 local function append_primary()
     if dialogs.insert(Subtitle:now()) then
         self.menu:update()
@@ -88,11 +80,6 @@ self.collect = function()
     if sub['start'] > sub['end'] then
         sub['start'], sub['end'] = sub['end'], sub['start']
     end
-    if not h.is_empty(sub['text']) then
-        sub['text'] = h.trim(sub['text'])
-        sub['text'] = h.escape_special_characters(sub['text'])
-        sub['text'] = maybe_remove_all_spaces(sub['text'])
-    end
     return sub
 end
 
@@ -143,8 +130,7 @@ self.recorded_subs = function()
     return dialogs.get_subs_list()
 end
 
-self.init = function(config, menu)
-    self.config = config
+self.init = function(menu)
     self.menu = menu
 end
 

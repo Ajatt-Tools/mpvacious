@@ -11,6 +11,10 @@ local this = {}
 
 this.unpack = unpack and unpack or table.unpack
 
+this.remove_all_spaces = function(str)
+    return str:gsub('%s*', '')
+end
+
 this.table_get = function(table, key, default)
     if table[key] == nil then
         return default or 'nil'
