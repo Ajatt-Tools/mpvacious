@@ -1,5 +1,5 @@
 PROJECT     = mpvacious
-VERSION     = v0.20
+VERSION     = v0.21
 MD2HTML     = md2html --github --full-html
 ZIP         = $(PROJECT)_$(VERSION).zip
 BRANCH      ?= remotes/origin/master
