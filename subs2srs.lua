@@ -133,17 +133,12 @@ local h = require('helpers')
 local Menu = require('menu')
 local ankiconnect = require('ankiconnect')
 local clip_autocopy = require('utils.clip_autocopy')
-local timings = require('utils.timings')
 local switch = require('utils.switch')
 local play_control = require('utils.play_control')
-local Subtitle = require('subtitles.subtitle')
-local sub_list = require('subtitles.sub_list')
 local secondary_sid = require('subtitles.secondary_sid')
 local platform = require('platform.init')
 local forvo = require('utils.forvo')
-
--- namespaces
-local subs
+local subs_observer = require('subtitles.observer')
 local menu
 
 ------------------------------------------------------------
@@ -152,14 +147,6 @@ local menu
 local function _(params)
     return function()
         return pcall(h.unpack(params))
-    end
-end
-
-local function maybe_remove_all_spaces(str)
-    if config.nuke_spaces == true and h.contains_non_latin_letters(str) then
-        return str:gsub('%s*', '')
-    else
-        return str
     end
 end
 
@@ -339,7 +326,7 @@ local function audio_padding()
     if config.audio_padding == 0.0 or not video_duration then
         return 0.0
     end
-    if subs.user_timings.is_set('start') or subs.user_timings.is_set('end') then
+    if subs_observer.user_altered() then
         return 0.0
     end
     return config.audio_padding
@@ -356,7 +343,7 @@ end
 
 local function export_to_anki(gui)
     maybe_reload_config()
-    local sub = subs.get()
+    local sub = subs_observer.collect()
     if sub == nil then
         h.notify("Nothing to export.", "warn", 1)
         return
@@ -375,12 +362,12 @@ local function export_to_anki(gui)
     local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
 
     ankiconnect.add_note(note_fields, substitute_fmt(config.note_tag), gui)
-    subs.clear()
+    subs_observer.clear()
 end
 
 local function update_last_note(overwrite)
     maybe_reload_config()
-    local sub = subs.get()
+    local sub = subs_observer.collect()
     local last_note_id = ankiconnect.get_last_note_id()
 
     if sub == nil then
@@ -428,110 +415,7 @@ local function update_last_note(overwrite)
     end
 
     ankiconnect.append_media(last_note_id, new_data, create_media, substitute_fmt(config.note_tag))
-    subs.clear()
-end
-
-------------------------------------------------------------
--- subtitles and timings
-
-subs = {
-    dialogs = sub_list.new(),
-    user_timings = timings.new(),
-    observed = false
-}
-
-subs.get_timing = function(position)
-    if subs.user_timings.is_set(position) then
-        return subs.user_timings.get(position)
-    elseif not subs.dialogs.is_empty() then
-        return subs.dialogs.get_time(position)
-    end
-    return -1
-end
-
-subs.get = function()
-    if subs.dialogs.is_empty() then
-        subs.dialogs.insert(Subtitle:now())
-    end
-    local sub = Subtitle:new {
-        ['text'] = subs.dialogs.get_text(false),
-        ['secondary'] = subs.dialogs.get_text(true),
-        ['start'] = subs.get_timing('start'),
-        ['end'] = subs.get_timing('end'),
-    }
-    if sub['start'] < 0 or sub['end'] < 0 then
-        return nil
-    end
-    if sub['start'] == sub['end'] then
-        return nil
-    end
-    if sub['start'] > sub['end'] then
-        sub['start'], sub['end'] = sub['end'], sub['start']
-    end
-    if not h.is_empty(sub['text']) then
-        sub['text'] = h.trim(sub['text'])
-        sub['text'] = h.escape_special_characters(sub['text'])
-        sub['text'] = maybe_remove_all_spaces(sub['text'])
-    end
-    return sub
-end
-
-subs.append = function()
-    if subs.dialogs.insert(Subtitle:now()) then
-        menu:update()
-    end
-end
-
-subs.observe = function()
-    mp.observe_property("sub-text", "string", subs.append)
-    subs.observed = true
-end
-
-subs.unobserve = function()
-    mp.unobserve_property(subs.append)
-    subs.observed = false
-end
-
-subs.set_timing_to_sub = function(position)
-    local sub = Subtitle:now()
-    if sub then
-        subs.user_timings.set(position, sub[position])
-        h.notify(h.capitalize_first_letter(position) .. " time has been set.")
-        if not subs.observed then
-            subs.observe()
-        end
-    else
-        h.notify("There's no visible subtitle.", "info", 2)
-    end
-end
-
-subs.set_timing = function(position)
-    subs.user_timings.set(position, mp.get_property_number('time-pos'))
-    h.notify(h.capitalize_first_letter(position) .. " time has been set.")
-    if not subs.observed then
-        subs.observe()
-    end
-end
-
-subs.set_starting_line = function()
-    subs.clear()
-    if Subtitle:now() then
-        subs.observe()
-        h.notify("Timings have been set to the current sub.", "info", 2)
-    else
-        h.notify("There's no visible subtitle.", "info", 2)
-    end
-end
-
-subs.clear = function()
-    subs.unobserve()
-    subs.dialogs = sub_list.new()
-    subs.user_timings = timings.new()
-end
-
-subs.clear_and_notify = function()
-    subs.clear()
-    h.notify("Timings have been reset.", "info", 2)
+    subs_observer.clear()
 end
 
 ------------------------------------------------------------
@@ -542,12 +426,12 @@ menu = Menu:new {
 }
 
 menu.keybindings = {
-    { key = 'S', fn = menu:with_update { subs.set_timing_to_sub, 'start' } },
-    { key = 'E', fn = menu:with_update { subs.set_timing_to_sub, 'end' } },
-    { key = 's', fn = menu:with_update { subs.set_timing, 'start' } },
-    { key = 'e', fn = menu:with_update { subs.set_timing, 'end' } },
-    { key = 'c', fn = menu:with_update { subs.set_starting_line } },
-    { key = 'r', fn = menu:with_update { subs.clear_and_notify } },
+    { key = 'S', fn = menu:with_update { subs_observer.set_manual_timing_to_sub, 'start' } },
+    { key = 'E', fn = menu:with_update { subs_observer.set_manual_timing_to_sub, 'end' } },
+    { key = 's', fn = menu:with_update { subs_observer.set_manual_timing, 'start' } },
+    { key = 'e', fn = menu:with_update { subs_observer.set_manual_timing, 'end' } },
+    { key = 'c', fn = menu:with_update { subs_observer.begin_observing } },
+    { key = 'r', fn = menu:with_update { subs_observer.clear_and_notify } },
     { key = 'g', fn = menu:with_update { export_to_anki, true } },
     { key = 'n', fn = menu:with_update { export_to_anki, false } },
     { key = 'm', fn = menu:with_update { update_last_note, false } },
@@ -561,8 +445,8 @@ menu.keybindings = {
 
 function menu:print_header(osd)
     osd:submenu('mpvacious options'):newline()
-    osd:item('Timings: '):text(h.human_readable_time(subs.get_timing('start')))
-    osd:item(' to '):text(h.human_readable_time(subs.get_timing('end'))):newline()
+    osd:item('Timings: '):text(h.human_readable_time(subs_observer.get_timing('start')))
+    osd:item(' to '):text(h.human_readable_time(subs_observer.get_timing('end'))):newline()
     osd:item('Clipboard autocopy: '):text(clip_autocopy.is_enabled()):newline()
     osd:item('Active profile: '):text(profiles.active):newline()
     osd:item('Deck: '):text(config.deck_name):newline()
@@ -620,10 +504,10 @@ function menu:print_legend(osd)
 end
 
 function menu:print_selection(osd)
-    if subs.observed and config.show_selected_text then
+    if subs_observer.is_observing() and config.show_selected_text then
         osd:new_layer():size(config.menu_font_size):font(config.menu_font_name):align(6)
         osd:submenu("Selected text"):newline()
-        for _, s in ipairs(subs.dialogs.get_subs_list()) do
+        for _, s in ipairs(subs_observer.recorded_subs()) do
             osd:text(escape_for_osd(s['text'])):newline()
         end
     end
@@ -654,6 +538,7 @@ local main = (function()
         encoder.init(config, ankiconnect.store_file, platform)
         clip_autocopy.init(config.autoclip, copy_to_clipboard)
         secondary_sid.init(config)
+        subs_observer.init(config, menu)
         ensure_deck()
 
         -- Key bindings

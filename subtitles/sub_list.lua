@@ -9,9 +9,7 @@ local h = require('helpers')
 
 local new_sub_list = function()
     local subs_list = {}
-    local _is_empty = function()
-        return next(subs_list) == nil
-    end
+
     local find_i = function(sub)
         for i, v in ipairs(subs_list) do
             if sub < v then
@@ -24,10 +22,10 @@ local new_sub_list = function()
         local i = position == 'start' and 1 or #subs_list
         return subs_list[i][position]
     end
-    local get_text = function(is_secondary)
+    local get_text = function()
         local speech = {}
         for _, sub in ipairs(subs_list) do
-            table.insert(speech, sub[is_secondary and 'secondary' or 'text'])
+            table.insert(speech, sub['text'])
         end
         return table.concat(speech, ' ')
     end
@@ -49,8 +47,8 @@ local new_sub_list = function()
         get_subs_list = get_subs_list,
         get_time = get_time,
         get_text = get_text,
-        is_empty = _is_empty,
-        insert = insert
+        insert = insert,
+        is_empty = function() return h.is_empty(subs_list) end,
     }
 end
 

@@ -21,12 +21,12 @@ function Subtitle:new(o)
     return o
 end
 
-function Subtitle:now()
+function Subtitle:now(secondary)
+    secondary = secondary and "secondary-" or ""
     local this = self:new {
-        ['text'] = mp.get_property("sub-text"),
-        ['secondary'] = mp.get_property("secondary-sub-text"),
-        ['start'] = mp.get_property_number("sub-start"),
-        ['end'] = mp.get_property_number("sub-end"),
+        ['text'] = mp.get_property(secondary .. "sub-text"),
+        ['start'] = mp.get_property_number(secondary .. "sub-start"),
+        ['end'] = mp.get_property_number(secondary .. "sub-end"),
     }
     if this:valid() then
         return this:delay(mp.get_property_native("sub-delay") - mp.get_property_native("audio-delay"))
