@@ -65,6 +65,9 @@ self.collect = function()
     if dialogs.is_empty() then
         dialogs.insert(Subtitle:now())
     end
+    if secondary_dialogs.is_empty() then
+        secondary_dialogs.insert(Subtitle:now('secondary'))
+    end
     local sub = Subtitle:new {
         ['text'] = dialogs.get_text(),
         ['secondary'] = secondary_dialogs.get_text(),
