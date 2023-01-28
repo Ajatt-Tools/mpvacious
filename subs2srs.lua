@@ -30,7 +30,7 @@ Usage:
 
 3. Use key bindings to manipulate the script
 * Open mpvacious menu - `a`
-* Create a note from the current subtitle line - `Ctrl + e`
+* Create a note from the current subtitle line - `Ctrl + n`
 
 For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/master/README.md>
 ]]
@@ -38,7 +38,7 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 local config = {
     -- Common
     autoclip = false, -- enable copying subs to the clipboard when mpv starts
-    nuke_spaces = false, -- remove all spaces from the primary subtitles on exported anki cards
+    nuke_spaces = false, -- remove all spaces from the primary subtitles on exported anki cards and when copying text to clipboard.
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
     use_ffmpeg = false, -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
     reload_config_before_card_creation = true, -- for convenience, read config file from disk before a card is made.
