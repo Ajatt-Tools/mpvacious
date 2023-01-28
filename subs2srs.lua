@@ -156,17 +156,6 @@ local function escape_for_osd(str)
     return str
 end
 
-local function copy_to_clipboard(_, text)
-    if not h.is_empty(text) then
-        text = config.clipboard_trim_enabled and h.trim(text) or h.remove_newlines(text)
-        platform.copy_to_clipboard(text)
-    end
-end
-
-local function copy_sub_to_clipboard()
-    copy_to_clipboard("copy-on-demand", mp.get_property("sub-text"))
-end
-
 local codec_support = (function()
     local ovc_help = h.subprocess { 'mpv', '--ovc=help' }
     local oac_help = h.subprocess { 'mpv', '--oac=help' }
@@ -275,6 +264,18 @@ local function maybe_remove_all_spaces(str)
     else
         return str
     end
+end
+
+local function copy_to_clipboard(_, text)
+    if not h.is_empty(text) then
+        text = config.clipboard_trim_enabled and h.trim(text) or h.remove_newlines(text)
+        text = maybe_remove_all_spaces(text)
+        platform.copy_to_clipboard(text)
+    end
+end
+
+local function copy_sub_to_clipboard()
+    copy_to_clipboard("copy-on-demand", mp.get_property("sub-text"))
 end
 
 local function prepare_for_exporting(sub_text)
