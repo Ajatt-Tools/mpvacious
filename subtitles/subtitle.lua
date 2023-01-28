@@ -28,7 +28,7 @@ function Subtitle:now(secondary)
         ['start'] = mp.get_property_number(prefix .. "sub-start"),
         ['end'] = mp.get_property_number(prefix .. "sub-end"),
     }
-    if this:valid() then
+    if this:is_valid() then
         return this:delay(mp.get_property_native("sub-delay") - mp.get_property_native("audio-delay"))
     else
         return nil
@@ -41,8 +41,8 @@ function Subtitle:delay(delay)
     return self
 end
 
-function Subtitle:valid()
-    return self['start'] and self['end'] and self['start'] >= 0 and self['end'] > 0
+function Subtitle:is_valid()
+    return self['start'] and self['end'] and self['start'] >= 0 and self['end'] > self['start']
 end
 
 Subtitle.__eq = function(lhs, rhs)

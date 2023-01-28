@@ -360,9 +360,9 @@ end
 local function export_to_anki(gui)
     maybe_reload_config()
     local sub = subs_observer.collect()
-    if sub == nil then
-        h.notify("Nothing to export.", "warn", 1)
-        return
+
+    if not sub:is_valid() then
+        return h.notify("Nothing to export.", "warn", 1)
     end
 
     if not gui and h.is_empty(sub['text']) then
@@ -386,10 +386,11 @@ local function update_last_note(overwrite)
     local sub = subs_observer.collect()
     local last_note_id = ankiconnect.get_last_note_id()
 
-    if sub == nil then
-        h.notify("Nothing to export. Have you set the timings?", "warn", 2)
-        return
-    elseif h.is_empty(sub['text']) then
+    if not sub:is_valid() then
+        return h.notify("Nothing to export. Have you set the timings?", "warn", 2)
+    end
+
+    if h.is_empty(sub['text']) then
         -- In this case, don't modify whatever existing text there is and just
         -- modify the other fields we can. The user might be trying to add
         -- audio to a card which they've manually transcribed (either the video
@@ -398,8 +399,7 @@ local function update_last_note(overwrite)
     end
 
     if last_note_id < h.minutes_ago(10) then
-        h.notify("Couldn't find the target note.", "warn", 2)
-        return
+        return h.notify("Couldn't find the target note.", "warn", 2)
     end
 
     local snapshot = encoder.snapshot.create_job(sub)

@@ -68,22 +68,12 @@ self.collect = function()
     if secondary_dialogs.is_empty() then
         secondary_dialogs.insert(Subtitle:now('secondary'))
     end
-    local sub = Subtitle:new {
+    return Subtitle:new {
         ['text'] = dialogs.get_text(),
         ['secondary'] = secondary_dialogs.get_text(),
         ['start'] = self.get_timing('start'),
         ['end'] = self.get_timing('end'),
     }
-    if sub['start'] < 0 or sub['end'] < 0 then
-        return nil
-    end
-    if sub['start'] == sub['end'] then
-        return nil
-    end
-    if sub['start'] > sub['end'] then
-        sub['start'], sub['end'] = sub['end'], sub['start']
-    end
-    return sub
 end
 
 self.set_manual_timing = function(position)
