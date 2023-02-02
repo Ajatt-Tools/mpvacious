@@ -12,7 +12,7 @@
 mpvacious is your semi-automatic subs2srs for mpv.
 It supports multiple workflows and allows you to quickly create Anki cards
 while watching your favorite TV show.
-[Video demonstration](https://youtu.be/vU85ramvyo4).
+**[Video demonstration](https://redirect.invidious.io/watch?v=vU85ramvyo4)**.
 
 ## Requirements
 
@@ -363,7 +363,7 @@ when subtitles for the show you are watching aren't available, for example.
 mpv by default allows you to do a `1` second exact seek by pressing `Shift+LEFT` and `Shift+RIGHT`.
 Open the mpvacious menu by pressing `a`, seek to the position you need, and set the timings.
 Then press `g` to invoke the `Add Cards` dialog.
-Here's a [video demonstration](https://www.youtube.com/watch?v=BXhyckdHPGE).
+Here's a [video demonstration](https://redirect.invidious.io/watch?v=BXhyckdHPGE).
 
 If the show is hard-subbed, you can use
 [transformers-ocr](https://tatsumoto.neocities.org/blog/mining-from-manga.html)
