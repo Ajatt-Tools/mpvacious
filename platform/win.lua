@@ -21,6 +21,10 @@ end
 
 self.copy_to_clipboard = function(text)
     text = text:gsub("&", "^^^&"):gsub("[<>|]", "")
+    local _, quote_count = text:gsub("\"", "")
+    if quote_count % 2 ~= 0 then
+        text = text:gsub("\"", "'")
+    end
     mp.commandv("run", "cmd.exe", "/d", "/c", string.format("@echo off & chcp 65001 >nul & echo %s|clip", text))
 end
 
