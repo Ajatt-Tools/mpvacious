@@ -148,7 +148,12 @@ local function switch_secondary_sid(direction)
     if new_secondary_sub.id == false then
         h.notify("Removed secondary sid.")
     else
-        h.notify(string.format("Secondary #%d: %s (%s)", new_secondary_sub.id, new_secondary_sub.title, new_secondary_sub.lang))
+        h.notify(string.format(
+                "Secondary #%d: %s (%s)",
+                new_secondary_sub.id,
+                new_secondary_sub.title or "No title",
+                new_secondary_sub.lang or "Unknown"
+        ))
     end
 end
 
