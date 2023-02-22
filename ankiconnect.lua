@@ -53,9 +53,14 @@ self.store_file = function(filename, file_path)
     -- this allows files to be stored even if Anki runs in a sandboxed environment
     -- and thus doesn not have access to the host filesystem
     local file = io.open(file_path, "rb")
+    if file == nil then
+        msg.error(string.format("Couldn't open for reading: '%s'", filename))
+        return false
+    end
     local data = base64.enc(file:read("*a"))
     file:close()
 
+    -- construct args
     local args = {
         action = "storeMediaFile",
         version = 6,
