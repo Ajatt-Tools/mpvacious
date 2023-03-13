@@ -77,6 +77,13 @@ self.collect = function()
     }
 end
 
+self.recorded_or_current_text = function()
+    --- Join and return all observed text.
+    --- If there's no observed text, return the current text on screen.
+    local text = dialogs.get_text()
+    return not h.is_empty(text) and text or mp.get_property("sub-text")
+end
+
 self.set_manual_timing = function(position)
     user_timings.set(position, mp.get_property_number('time-pos'))
     h.notify(h.capitalize_first_letter(position) .. " time has been set.")

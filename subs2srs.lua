@@ -37,11 +37,14 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 
 local config = {
     -- Common
-    autoclip = false, -- enable copying subs to the clipboard when mpv starts
     nuke_spaces = false, -- remove all spaces from the primary subtitles on exported anki cards and when copying text to clipboard.
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
     use_ffmpeg = false, -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
     reload_config_before_card_creation = true, -- for convenience, read config file from disk before a card is made.
+
+    -- Clipboard and external communication
+    autoclip = false, -- enable copying subs to the clipboard when mpv starts
+    autoclip_command = "", -- command to run when autoclip is triggered. if empty, just copies sub_text to the clipboard.
 
     -- Secondary subtitle
     secondary_sub_lang = 'eng,en,rus,ru,bel,be', -- Language of secondary subs that should be automatically loaded.
@@ -553,10 +556,10 @@ local main = (function()
         ankiconnect.init(config, platform)
         forvo.init(config, ankiconnect, platform)
         encoder.init(config, ankiconnect.store_file, platform)
-        clip_autocopy.init(config.autoclip, copy_to_clipboard)
         secondary_sid.init(config)
         subs_observer.init(menu)
         ensure_deck()
+        clip_autocopy.init(config, copy_to_clipboard, subs_observer)
 
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
