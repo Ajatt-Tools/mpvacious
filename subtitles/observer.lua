@@ -62,6 +62,7 @@ end
 
 self.collect = function()
     --- Return all recorded subtitle lines as one subtitle object.
+    --- The caller has to call subs_observer.clear() afterwards.
     if dialogs.is_empty() then
         dialogs.insert(Subtitle:now())
     end
@@ -111,6 +112,8 @@ self.clear = function()
 end
 
 self.clear_and_notify = function()
+    --- Clear then notify the user.
+    --- Called by the OSD menu when the user presses a button to drop recorded subtitles.
     self.clear()
     h.notify("Timings have been reset.", "info", 2)
 end
