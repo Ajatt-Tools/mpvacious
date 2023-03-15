@@ -240,6 +240,10 @@ mpv accepts both variants in `input.conf`.
 
 ## Usage
 
+* [Create a card](howto/create_card.md)
+* [Open the "Add" dialog](howto/add_dialog.md)
+* [Usage with Yomichan](howto/yomichan.md)
+
 ### Global bindings
 
 **Menu:**
@@ -285,28 +289,21 @@ and the target sentence doesn't span multiple subs.
 
 ### Menu options
 
-Let's say your subs are well-timed,
-but the sentence you want to add is split between multiple subs.
-We need to combine the lines before making a card.
-
 Advanced menu has the following options:
 
-* <kbd>c</kbd> - Interactive subtitle selection. The range of the currently displayed subtitle line is selected. The selection then grows both ways based on the following displayed lines.
-It does nothing if there are no subs on screen.
+* <kbd>c</kbd> - Interactive subtitle selection.
+  The range of the currently displayed subtitle line is selected. The selection then grows both ways based on the following displayed lines.
+  It does nothing if there are no subs on screen.
 
 * <kbd>shift+s</kbd> - Set the start time to the current sub. The selection then grows forward based on the following displayed lines.
-The default selection spans across the range of the currently displayed subtitle line.
+  The default selection spans across the range of the currently displayed subtitle line.
 * <kbd>shift+e</kbd> - Set the end time to the current sub. The selection then grows backward based on the following displayed lines.
-The default selection spans across the range of the currently displayed subtitle line.
+  The default selection spans across the range of the currently displayed subtitle line.
 
 Then seek with <kbd>Shift+h</kbd> and <kbd>Shift+l</kbd> to the previous/next line that you want to add.
 Press <kbd>n</kbd> to make the card.
 
 * <kbd>r</kbd> - Forget all previously saved timings and associated dialogs.
-
-If subs are badly timed, first, you could try to re-time them.
-[ffsubsync](https://github.com/smacke/ffsubsync) is a program that will do it for you.
-Another option would be to shift timings using key bindings provided by mpv.
 
 * <kbd>z</kbd> and <kbd>Shift+z</kbd> - Adjust subtitle delay.
 
@@ -321,35 +318,11 @@ Then, as earlier, press <kbd>n</kbd> to make the card.
 **Tip**: change playback speed by pressing <kbd>[</kbd> and <kbd>]</kbd>
 to precisely mark start and end of the phrase.
 
-### How to add definitions to new cards
+### My subtitles are not in sync
 
-After the card is created, you can find it by typing ```tag:subs2srs added:1```
-in the Anki Browser. Then use [qolibri](https://aur.archlinux.org/packages/qolibri/)
-or similar software to add definitions to the card.
-
-### Modifying cards added with Yomichan
-
-You can add a card first using Yomichan,
-and then append an audio clip and a snapshot to it.
-
-Pressing <kbd>t</kbd> in the `advanced menu` toggles the `autoclip` option.
-Now as subtitles appear on the screen, they will be immediately copied to the clipboard.
-You can use it in combination with
-[Yomichan](https://foosoft.net/projects/yomichan/) clipboard monitor.
-
-**The process:**
-
-1) Open `Yomichan Search` by pressing <kbd>Alt+Insert</kbd> in your web browser.
-2) Enable `Clipboard autocopy` in mpvacious by pressing <kbd>t</kbd> in the `advanced menu`.
-3) When you find an unknown word, click
-[![＋](https://foosoft.net/projects/yomichan/img/btn-add-expression.png)](https://foosoft.net/projects/yomichan/index.html#flashcard-creation)
-in Yomichan to make a card for it.
-4) Go back to mpv and add the snapshot and the audio clip
-to the card you've just made by pressing <kbd>m</kbd> in the `advanced menu`.
-Pressing <kbd>Shift+m</kbd> will overwrite any existing data in media fields.
-
-Don't forget to set the right timings and join lines together
-if the sentence is split between multiple subs.
+If subs are badly timed, first, you could try to re-time them.
+Read [Retiming subtitles](https://tatsumoto.neocities.org/blog/retiming-subtitles).
+Or shift timings using key bindings provided by mpv (usually <kbd>z</kbd> and <kbd>Shift+z</kbd>).
 
 ### Example sentence card
 
