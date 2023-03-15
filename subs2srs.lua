@@ -260,26 +260,6 @@ local substitute_fmt = (function()
     end
 end)()
 
-local function maybe_remove_all_spaces(str)
-    if config.nuke_spaces == true and h.contains_non_latin_letters(str) then
-        return h.remove_all_spaces(str)
-    else
-        return str
-    end
-end
-
-local function copy_to_clipboard(_, text)
-    if not h.is_empty(text) then
-        text = config.clipboard_trim_enabled and h.trim(text) or h.remove_newlines(text)
-        text = maybe_remove_all_spaces(text)
-        platform.copy_to_clipboard(text)
-    end
-end
-
-local function copy_sub_to_clipboard()
-    copy_to_clipboard("copy-on-demand", mp.get_property("sub-text"))
-end
-
 local function prepare_for_exporting(sub_text)
     if not h.is_empty(sub_text) then
         sub_text = h.trim(sub_text)
@@ -290,7 +270,7 @@ end
 
 local function construct_note_fields(sub_text, secondary_text, snapshot_filename, audio_filename)
     local ret = {
-        [config.sentence_field] = maybe_remove_all_spaces(prepare_for_exporting(sub_text)),
+        [config.sentence_field] = subs_observer.maybe_remove_all_spaces(prepare_for_exporting(sub_text)),
     }
     if not h.is_empty(config.secondary_field) then
         ret[config.secondary_field] = prepare_for_exporting(secondary_text)
@@ -557,10 +537,10 @@ local main = (function()
         encoder.init(config, ankiconnect.store_file, platform)
         secondary_sid.init(config)
         ensure_deck()
-        subs_observer.init(menu, config, copy_to_clipboard)
+        subs_observer.init(menu, config)
 
         -- Key bindings
-        mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
+        mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", subs_observer.copy_current_to_clipboard)
         mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", subs_observer.toggle_autocopy)
         mp.add_key_binding("Ctrl+g", "mpvacious-animated-snapshot-toggle", encoder.snapshot.toggle_animation)
 

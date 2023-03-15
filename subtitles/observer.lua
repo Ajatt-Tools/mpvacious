@@ -10,6 +10,7 @@ local timings = require('utils.timings')
 local sub_list = require('subtitles.sub_list')
 local Subtitle = require('subtitles.subtitle')
 local mp = require('mp')
+local platform = require('platform.init')
 
 local self = {}
 
@@ -19,7 +20,7 @@ local user_timings = timings.new()
 local append_dialogue = false
 
 ------------------------------------------------------------
--- autocopy
+-- private
 
 local function external_command_args(lookup_word)
     local args = {}
@@ -66,9 +67,6 @@ local function copy_primary_sub()
     end
 end
 
-------------------------------------------------------------
--- dialogue list
-
 local function append_primary_sub()
     if append_dialogue and dialogs.insert(Subtitle:now()) then
         self.menu:update()
@@ -85,6 +83,39 @@ local function start_appending()
     append_dialogue = true
     append_primary_sub()
     append_secondary_sub()
+end
+
+
+local function handle_primary_sub()
+    append_primary_sub()
+    copy_primary_sub()
+end
+
+local function handle_secondary_sub()
+    append_secondary_sub()
+end
+
+------------------------------------------------------------
+-- public
+
+self.copy_to_clipboard = function(_, text)
+    if not h.is_empty(text) then
+        text = self.config.clipboard_trim_enabled and h.trim(text) or h.remove_newlines(text)
+        text = self.maybe_remove_all_spaces(text)
+        platform.copy_to_clipboard(text)
+    end
+end
+
+self.maybe_remove_all_spaces = function(str)
+    if self.config.nuke_spaces == true and h.contains_non_latin_letters(str) then
+        return h.remove_all_spaces(str)
+    else
+        return str
+    end
+end
+
+self.copy_current_to_clipboard = function()
+    self.copy_to_clipboard("copy-on-demand", mp.get_property("sub-text"))
 end
 
 self.user_altered = function()
@@ -179,22 +210,9 @@ self.toggle_autocopy = function()
     h.notify(string.format("Clipboard autocopy has been %s.", self.autocopy_status_str()))
 end
 
-------------------------------------------------------------
--- common
-
-local function handle_primary_sub()
-    append_primary_sub()
-    copy_primary_sub()
-end
-
-local function handle_secondary_sub()
-    append_secondary_sub()
-end
-
-self.init = function(menu, config, copy_to_clipboard_fn)
+self.init = function(menu, config)
     self.menu = menu
     self.config = config
-    self.copy_to_clipboard_fn = copy_to_clipboard_fn
 
     mp.observe_property("sub-text", "string", handle_primary_sub)
     mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
