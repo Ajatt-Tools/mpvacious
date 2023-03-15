@@ -16,34 +16,75 @@ local self = {}
 local dialogs = sub_list.new()
 local secondary_dialogs = sub_list.new()
 local user_timings = timings.new()
-local is_observing = false
+local append_dialogue = false
 
-local function append_primary()
-    if dialogs.insert(Subtitle:now()) then
+------------------------------------------------------------
+-- autocopy
+
+local function external_command_args(lookup_word)
+    local args = {}
+    for arg in string.gmatch(self.config.autoclip_command, "%S+") do
+        table.insert(args, arg)
+    end
+    table.insert(args, lookup_word)
+    return args
+end
+
+local function on_external_finish(success, result, error)
+    if success ~= true or error ~= nil then
+        h.notify("Command failed: " .. table.concat(result))
+    end
+end
+
+local function call_autocopy_command(text)
+    if h.is_empty(text) then
+        return
+    end
+    -- If autoclip command is not set, copy to the clipboard.
+    -- If it is set, run the external command.
+    if h.is_empty(self.config.autoclip_command) then
+        self.copy_to_clipboard_fn("autocopy action", text)
+    else
+        h.subprocess(external_command_args(text), on_external_finish)
+    end
+end
+
+local function recorded_or_current_text()
+    --- Join and return all observed text.
+    --- If there's no observed text, return the current text on screen.
+    local text = dialogs.get_text()
+    if h.is_empty(text) then
+        return mp.get_property("sub-text")
+    else
+        return text
+    end
+end
+
+local function copy_primary_sub()
+    if self.config.autoclip then
+        call_autocopy_command(recorded_or_current_text())
+    end
+end
+
+------------------------------------------------------------
+-- dialogue list
+
+local function append_primary_sub()
+    if append_dialogue and dialogs.insert(Subtitle:now()) then
         self.menu:update()
     end
 end
 
-local function append_secondary()
-    if secondary_dialogs.insert(Subtitle:now('secondary')) then
+local function append_secondary_sub()
+    if append_dialogue and secondary_dialogs.insert(Subtitle:now('secondary')) then
         self.menu:update()
     end
 end
 
-local function observe()
-    if not is_observing then
-        mp.observe_property("sub-text", "string", append_primary)
-        mp.observe_property("secondary-sub-text", "string", append_secondary)
-        is_observing = true
-    end
-end
-
-local function unobserve()
-    if is_observing then
-        mp.unobserve_property(append_primary)
-        mp.unobserve_property(append_secondary)
-        is_observing = false
-    end
+local function start_appending()
+    append_dialogue = true
+    append_primary_sub()
+    append_secondary_sub()
 end
 
 self.user_altered = function()
@@ -77,17 +118,10 @@ self.collect = function()
     }
 end
 
-self.recorded_or_current_text = function()
-    --- Join and return all observed text.
-    --- If there's no observed text, return the current text on screen.
-    local text = dialogs.get_text()
-    return not h.is_empty(text) and text or mp.get_property("sub-text")
-end
-
 self.set_manual_timing = function(position)
     user_timings.set(position, mp.get_property_number('time-pos'))
     h.notify(h.capitalize_first_letter(position) .. " time has been set.")
-    observe()
+    start_appending()
 end
 
 self.set_manual_timing_to_sub = function(position)
@@ -95,16 +129,16 @@ self.set_manual_timing_to_sub = function(position)
     if sub then
         user_timings.set(position, sub[position])
         h.notify(h.capitalize_first_letter(position) .. " time has been set.")
-        observe()
+        start_appending()
     else
         h.notify("There's no visible subtitle.", "info", 2)
     end
 end
 
-self.begin_observing = function()
+self.set_to_current_sub = function()
     self.clear()
     if Subtitle:now() then
-        observe()
+        start_appending()
         h.notify("Timings have been set to the current sub.", "info", 2)
     else
         h.notify("There's no visible subtitle.", "info", 2)
@@ -112,7 +146,7 @@ self.begin_observing = function()
 end
 
 self.clear = function()
-    unobserve()
+    append_dialogue = false
     dialogs = sub_list.new()
     secondary_dialogs = sub_list.new()
     user_timings = timings.new()
@@ -125,16 +159,45 @@ self.clear_and_notify = function()
     h.notify("Timings have been reset.", "info", 2)
 end
 
-self.is_observing = function()
-    return is_observing
+self.is_appending = function()
+    return append_dialogue
 end
 
 self.recorded_subs = function()
     return dialogs.get_subs_list()
 end
 
-self.init = function(menu)
+self.autocopy_status_str = function()
+    return self.config.autoclip == true and 'enabled' or 'disabled'
+end
+
+self.toggle_autocopy = function()
+    self.config.autoclip = not self.config.autoclip
+    if self.config.autoclip == true then
+        copy_primary_sub()
+    end
+    h.notify(string.format("Clipboard autocopy has been %s.", self.autocopy_status_str()))
+end
+
+------------------------------------------------------------
+-- common
+
+local function handle_primary_sub()
+    append_primary_sub()
+    copy_primary_sub()
+end
+
+local function handle_secondary_sub()
+    append_secondary_sub()
+end
+
+self.init = function(menu, config, copy_to_clipboard_fn)
     self.menu = menu
+    self.config = config
+    self.copy_to_clipboard_fn = copy_to_clipboard_fn
+
+    mp.observe_property("sub-text", "string", handle_primary_sub)
+    mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
 end
 
 return self

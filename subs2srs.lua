@@ -135,7 +135,6 @@ local encoder = require('encoder')
 local h = require('helpers')
 local Menu = require('menu')
 local ankiconnect = require('ankiconnect')
-local clip_autocopy = require('utils.clip_autocopy')
 local switch = require('utils.switch')
 local play_control = require('utils.play_control')
 local secondary_sid = require('subtitles.secondary_sid')
@@ -450,13 +449,13 @@ menu.keybindings = {
     { key = 'E', fn = menu:with_update { subs_observer.set_manual_timing_to_sub, 'end' } },
     { key = 's', fn = menu:with_update { subs_observer.set_manual_timing, 'start' } },
     { key = 'e', fn = menu:with_update { subs_observer.set_manual_timing, 'end' } },
-    { key = 'c', fn = menu:with_update { subs_observer.begin_observing } },
+    { key = 'c', fn = menu:with_update { subs_observer.set_to_current_sub } },
     { key = 'r', fn = menu:with_update { subs_observer.clear_and_notify } },
     { key = 'g', fn = menu:with_update { export_to_anki, true } },
     { key = 'n', fn = menu:with_update { export_to_anki, false } },
     { key = 'm', fn = menu:with_update { update_last_note, false } },
     { key = 'M', fn = menu:with_update { update_last_note, true } },
-    { key = 't', fn = menu:with_update { clip_autocopy.toggle } },
+    { key = 't', fn = menu:with_update { subs_observer.toggle_autocopy } },
     { key = 'i', fn = menu:with_update { menu.hints_state.bump } },
     { key = 'p', fn = menu:with_update { load_next_profile } },
     { key = 'ESC', fn = function() menu:close() end },
@@ -467,7 +466,7 @@ function menu:print_header(osd)
     osd:submenu('mpvacious options'):newline()
     osd:item('Timings: '):text(h.human_readable_time(subs_observer.get_timing('start')))
     osd:item(' to '):text(h.human_readable_time(subs_observer.get_timing('end'))):newline()
-    osd:item('Clipboard autocopy: '):text(clip_autocopy.is_enabled()):newline()
+    osd:item('Clipboard autocopy: '):text(subs_observer.autocopy_status_str()):newline()
     osd:item('Active profile: '):text(profiles.active):newline()
     osd:item('Deck: '):text(config.deck_name):newline()
 end
@@ -524,7 +523,7 @@ function menu:print_legend(osd)
 end
 
 function menu:print_selection(osd)
-    if subs_observer.is_observing() and config.show_selected_text then
+    if subs_observer.is_appending() and config.show_selected_text then
         osd:new_layer():size(config.menu_font_size):font(config.menu_font_name):align(6)
         osd:submenu("Selected text"):newline()
         for _, s in ipairs(subs_observer.recorded_subs()) do
@@ -557,13 +556,12 @@ local main = (function()
         forvo.init(config, ankiconnect, platform)
         encoder.init(config, ankiconnect.store_file, platform)
         secondary_sid.init(config)
-        subs_observer.init(menu)
         ensure_deck()
-        clip_autocopy.init(config, copy_to_clipboard, subs_observer)
+        subs_observer.init(menu, config, copy_to_clipboard)
 
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", copy_sub_to_clipboard)
-        mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", clip_autocopy.toggle)
+        mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", subs_observer.toggle_autocopy)
         mp.add_key_binding("Ctrl+g", "mpvacious-animated-snapshot-toggle", encoder.snapshot.toggle_animation)
 
         -- Secondary subtitles
