@@ -19,7 +19,7 @@ while watching your favorite TV show.
 <table>
 <tr>
     <th><a href="https://www.gnu.org/gnu/about-gnu.html">GNU/Linux</a></th>
-    <th><a href="https://www.gnu.org/proprietary/malware-microsoft.en.html">Windows 10</a></th>
+    <th><a href="https://www.gnu.org/proprietary/malware-microsoft.en.html">Windows 10+</a></th>
     <th><a href="https://www.gnu.org/proprietary/malware-apple.en.html">macOS</a></th>
     <th>Comments</th>
 </tr>
@@ -62,7 +62,8 @@ $ sudo pacman -Syu mpv anki curl xclip --needed
 
 * A guide on how to set up Anki can be found [on our site](https://tatsumoto.neocities.org/blog/setting-up-anki.html).
   Note that it is not recommended to use FlatPak or similar containers.
-* If you're on a **Windows** machine, a mpv build by `shinchiro` is recommended.
+* If you're on a [Windows](https://www.fsf.org/windows) or a [Windows-like](https://reactos.org/) machine,
+  a mpv build by `shinchiro` is recommended.
 * **macOS** users are advised to use [homebrew](https://brew.sh/) or manually add `mpv` to `PATH`.
 * Make sure that your build of mpv supports encoding of audio and images.
   This shell command can be used to test it.
@@ -234,7 +235,7 @@ Ctrl+j       script-binding mpvacious-secondary-sid-next
 ```
 
 **Note:** A capital letter means that you need to press Shift in order to activate the corresponding binding.
-For example, `Ctrl+M` actually means `Ctrl+Shift+m`.
+For example, <kbd>Ctrl+M</kbd> actually means <kbd>Ctrl+Shift+m</kbd>.
 mpv accepts both variants in `input.conf`.
 
 ## Usage
@@ -243,44 +244,44 @@ mpv accepts both variants in `input.conf`.
 
 **Menu:**
 
-* `a` - Open `advanced menu`.
+* <kbd>a</kbd> - Open `advanced menu`.
 
 **Enable\Disable animation:**
 
-* `Ctrl+g` - If animation is enabled, animated snapshots will be generated instead of static images.
+* <kbd>Ctrl+g</kbd> - If animation is enabled, animated snapshots will be generated instead of static images.
   Animated snapshot are like GIFs (just in a different format)
   and will capture the video from the start to the end times selected.
 
 **Make a card:**
 
-* `Ctrl+n` - Export a card with the currently visible subtitle line on the front.
+* <kbd>Ctrl+n</kbd> - Export a card with the currently visible subtitle line on the front.
 Use this when your subs are well-timed,
 and the target sentence doesn't span multiple subs.
 
 **Update the last card:**
 
-* `Ctrl+m` - Append to the media fields of the newly added Anki card.
-* `Ctrl+Shift+m` - Overwrite media fields of the newly added Anki card.
+* <kbd>Ctrl+m</kbd> - Append to the media fields of the newly added Anki card.
+* <kbd>Ctrl+Shift+m</kbd> - Overwrite media fields of the newly added Anki card.
 
 **Clipboard:**
 
-* `Ctrl+c` - Copy current subtitle string to the system clipboard.
-* `Ctrl+t` - Toggle automatic copying of subtitles to the clipboard.
+* <kbd>Ctrl+c</kbd> - Copy current subtitle string to the system clipboard.
+* <kbd>Ctrl+t</kbd> - Toggle automatic copying of subtitles to the clipboard.
 
 **Seeking:**
 
-* `Shift+h` and `Shift+l` - Seek to the previous or the next subtitle.
-* `Alt+h` and `Alt+l` - Seek to the previous, or the next subtitle, and pause.
-* `Ctrl+h` - Seek to the start of the currently visible subtitle. Use it if you missed something.
-* `Ctrl+Shift+h` - Replay current subtitle line, and pause.
-* `Ctrl+Shift+l` - Play until the end of the next subtitle, and pause. Useful for beginners who need
+* <kbd>Shift+h</kbd> and <kbd>Shift+l</kbd> - Seek to the previous or the next subtitle.
+* <kbd>Alt+h</kbd> and <kbd>Alt+l</kbd> - Seek to the previous, or the next subtitle, and pause.
+* <kbd>Ctrl+h</kbd> - Seek to the start of the currently visible subtitle. Use it if you missed something.
+* <kbd>Ctrl+Shift+h</kbd> - Replay current subtitle line, and pause.
+* <kbd>Ctrl+Shift+l</kbd> - Play until the end of the next subtitle, and pause. Useful for beginners who need
   to look up words in each and every dialogue line.
 
 **Secondary subtitles:**
 
-* `Ctrl+v` - Toggle visibility.
-* `Ctrl+k` - Switch to the previous subtitle if it's not already selected.
-* `Ctrl+j` - Switch to the next subtitle if it's not already selected.
+* <kbd>Ctrl+v</kbd> - Toggle visibility.
+* <kbd>Ctrl+k</kbd> - Switch to the previous subtitle if it's not already selected.
+* <kbd>Ctrl+j</kbd> - Switch to the next subtitle if it's not already selected.
 
 ### Menu options
 
@@ -290,34 +291,34 @@ We need to combine the lines before making a card.
 
 Advanced menu has the following options:
 
-* `c` - Interactive subtitle selection. The range of the currently displayed subtitle line is selected. The selection then grows both ways based on the following displayed lines.
+* <kbd>c</kbd> - Interactive subtitle selection. The range of the currently displayed subtitle line is selected. The selection then grows both ways based on the following displayed lines.
 It does nothing if there are no subs on screen.
 
-* `shift+s` - Set the start time to the current sub. The selection then grows forward based on the following displayed lines.
+* <kbd>shift+s</kbd> - Set the start time to the current sub. The selection then grows forward based on the following displayed lines.
 The default selection spans across the range of the currently displayed subtitle line.
-* `shift+e` - Set the end time to the current sub. The selection then grows backward based on the following displayed lines.
+* <kbd>shift+e</kbd> - Set the end time to the current sub. The selection then grows backward based on the following displayed lines.
 The default selection spans across the range of the currently displayed subtitle line.
 
-Then seek with `Shift+h` and `Shift+l` to the previous/next line that you want to add.
-Press `n` to make the card.
+Then seek with <kbd>Shift+h</kbd> and <kbd>Shift+l</kbd> to the previous/next line that you want to add.
+Press <kbd>n</kbd> to make the card.
 
-* `r` - Forget all previously saved timings and associated dialogs.
+* <kbd>r</kbd> - Forget all previously saved timings and associated dialogs.
 
 If subs are badly timed, first, you could try to re-time them.
 [ffsubsync](https://github.com/smacke/ffsubsync) is a program that will do it for you.
 Another option would be to shift timings using key bindings provided by mpv.
 
-* `z` and `Shift+z` - Adjust subtitle delay.
+* <kbd>z</kbd> and <kbd>Shift+z</kbd> - Adjust subtitle delay.
 
 If above fails, you have to manually set timings.
-* `s` - Set the start time. The selection then grows forward based on the following displayed lines.
+* <kbd>s</kbd> - Set the start time. The selection then grows forward based on the following displayed lines.
 The default selection spans across the selected start point and the end of the subtitle line.
-* `e` - Set the end time. The selection then grows backward based on the following displayed lines.
+* <kbd>e</kbd> - Set the end time. The selection then grows backward based on the following displayed lines.
 The default selection spans across the selected end point and the start of the subtitle line.
 
-Then, as earlier, press `n` to make the card.
+Then, as earlier, press <kbd>n</kbd> to make the card.
 
-**Tip**: change playback speed by pressing `[` and `]`
+**Tip**: change playback speed by pressing <kbd>[</kbd> and <kbd>]</kbd>
 to precisely mark start and end of the phrase.
 
 ### How to add definitions to new cards
@@ -331,21 +332,21 @@ or similar software to add definitions to the card.
 You can add a card first using Yomichan,
 and then append an audio clip and a snapshot to it.
 
-Pressing `t` in the `advanced menu` toggles the `autoclip` option.
+Pressing <kbd>t</kbd> in the `advanced menu` toggles the `autoclip` option.
 Now as subtitles appear on the screen, they will be immediately copied to the clipboard.
 You can use it in combination with
 [Yomichan](https://foosoft.net/projects/yomichan/) clipboard monitor.
 
 **The process:**
 
-1) Open `Yomichan Search` by pressing `Alt+Insert` in your web browser.
-2) Enable `Clipboard autocopy` in mpvacious by pressing `t` in the `advanced menu`.
+1) Open `Yomichan Search` by pressing <kbd>Alt+Insert</kbd> in your web browser.
+2) Enable `Clipboard autocopy` in mpvacious by pressing <kbd>t</kbd> in the `advanced menu`.
 3) When you find an unknown word, click
 [![＋](https://foosoft.net/projects/yomichan/img/btn-add-expression.png)](https://foosoft.net/projects/yomichan/index.html#flashcard-creation)
 in Yomichan to make a card for it.
 4) Go back to mpv and add the snapshot and the audio clip
-to the card you've just made by pressing `m` in the `advanced menu`.
-Pressing `Shift+m` will overwrite any existing data in media fields.
+to the card you've just made by pressing <kbd>m</kbd> in the `advanced menu`.
+Pressing <kbd>Shift+m</kbd> will overwrite any existing data in media fields.
 
 Don't forget to set the right timings and join lines together
 if the sentence is split between multiple subs.
@@ -360,9 +361,9 @@ With the addon you can make cards like this in just a few seconds.
 
 It is possible to make a card with just audio, and a picture
 when subtitles for the show you are watching aren't available, for example.
-mpv by default allows you to do a `1` second exact seek by pressing `Shift+LEFT` and `Shift+RIGHT`.
-Open the mpvacious menu by pressing `a`, seek to the position you need, and set the timings.
-Then press `g` to invoke the `Add Cards` dialog.
+mpv by default allows you to do a `1` second exact seek by pressing <kbd>Shift+LEFT</kbd> and <kbd>Shift+RIGHT</kbd>.
+Open the mpvacious menu by pressing <kbd>a</kbd>, seek to the position you need, and set the timings.
+Then press <kbd>g</kbd> to invoke the `Add Cards` dialog.
 Here's a [video demonstration](https://redirect.invidious.io/watch?v=BXhyckdHPGE).
 
 If the show is hard-subbed, you can use
@@ -453,7 +454,7 @@ image_field=Extra
 You don't have to redefine all settings in the new profile.
 Specify only the ones you want to be different from the default.
 
-To cycle profiles, open the advanced menu by pressing `a` and then press `p`.
+To cycle profiles, open the advanced menu by pressing <kbd>a</kbd> and then press <kbd>p</kbd>.
 At any time you can see what profile is active in the menu's status bar.
 
 ## Hacking
