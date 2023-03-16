@@ -243,6 +243,7 @@ mpv accepts both variants in `input.conf`.
 * [Create a card](howto/create_card.md)
 * [Open the "Add" dialog](howto/add_dialog.md)
 * [Usage with Yomichan](howto/yomichan.md)
+* [Usage with GoldenDict](howto/goldendict.md)
 
 ### Global bindings
 
