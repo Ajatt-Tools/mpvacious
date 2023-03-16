@@ -17,7 +17,9 @@ local self = {}
 local dialogs = sub_list.new()
 local secondary_dialogs = sub_list.new()
 local user_timings = timings.new()
+
 local append_dialogue = false
+local autoclip_enabled = false
 
 ------------------------------------------------------------
 -- private
@@ -62,7 +64,7 @@ local function recorded_or_current_text()
 end
 
 local function copy_primary_sub()
-    if self.config.autoclip then
+    if autoclip_enabled then
         call_autocopy_command(recorded_or_current_text())
     end
 end
@@ -84,7 +86,6 @@ local function start_appending()
     append_primary_sub()
     append_secondary_sub()
 end
-
 
 local function handle_primary_sub()
     append_primary_sub()
@@ -199,12 +200,12 @@ self.recorded_subs = function()
 end
 
 self.autocopy_status_str = function()
-    return self.config.autoclip == true and 'enabled' or 'disabled'
+    return autoclip_enabled and 'enabled' or 'disabled'
 end
 
 self.toggle_autocopy = function()
-    self.config.autoclip = not self.config.autoclip
-    if self.config.autoclip == true then
+    autoclip_enabled = not autoclip_enabled
+    if autoclip_enabled then
         copy_primary_sub()
     end
     h.notify(string.format("Clipboard autocopy has been %s.", self.autocopy_status_str()))
@@ -213,6 +214,10 @@ end
 self.init = function(menu, config)
     self.menu = menu
     self.config = config
+
+    -- The autoclip state is copied as a local value
+    -- to prevent it from being reset when the user reloads the config file.
+    autoclip_enabled = self.config.autoclip
 
     mp.observe_property("sub-text", "string", handle_primary_sub)
     mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
