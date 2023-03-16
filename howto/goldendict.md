@@ -34,3 +34,5 @@ Don't forget to set the right timings and join lines together
 if the sentence is split between multiple subs.
 To do it, enter interactive selection by pressing <kbd>c</kbd>
 and seek to the next or previous subtitle.
+
+To pair Mecab and GoldenDict, install [gd-tools](https://github.com/Ajatt-Tools/gd-tools).
