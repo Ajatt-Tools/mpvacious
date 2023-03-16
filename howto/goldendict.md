@@ -5,6 +5,8 @@ and then append an audio clip and a picture to it.
 
 **Note:** the only version of GoldenDict that can create Anki cards with configurable fields is
 [this one](https://github.com/xiaoyifang/goldendict).
+Read [How to connect with Anki](https://github.com/xiaoyifang/goldendict/blob/staged/howto/how%20to%20connect%20with%20anki.md)
+if you are new to GoldenDict.
 
 To send subtitles from `mpv` directly to GoldenDict,
 append the following line to `subs2srs.conf`:
