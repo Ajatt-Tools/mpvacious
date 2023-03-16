@@ -30,6 +30,8 @@ they will be immediately sent to GoldenDict instead of the system clipboard.
    to the card you've just made by pressing <kbd>m</kbd> while the `advanced menu` is open.
    Pressing <kbd>Shift+m</kbd> will overwrite any existing data in media fields.
 
+https://user-images.githubusercontent.com/69171671/225694821-1d6130bd-e17d-4da2-8e9b-5c51c70a5c82.mp4
+
 Don't forget to set the right timings and join lines together
 if the sentence is split between multiple subs.
 To do it, enter interactive selection by pressing <kbd>c</kbd>
