@@ -1,0 +1,35 @@
+name: "tagged-release"
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  tagged-release:
+    name: "Tagged Release"
+    runs-on: "ubuntu-latest"
+    permissions:
+      contents: write
+
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: "Create zip"
+        run: |
+          make BRANCH=HEAD
+
+      - name: "Create release"
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: false
+          generate_release_notes: true
+          append_body: true
+          body_path: .github/RELEASE/release-boilerplate.md
+          name: "mpvacious ${{github.ref_name}}"
+          files: |
+            .github/RELEASE/*.zip
+            .github/RELEASE/*.conf

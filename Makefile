@@ -12,12 +12,11 @@ MD2HTML      = md2html --github --full-html
 all: $(ZIP)
 docs: $(DOCS)
 
-$(ZIP): $(DOCS)
+$(ZIP):
 	git archive \
 	--prefix=$(PROJECT)_$(VERSION)/ \
 	--format=zip \
 	-o $@ \
-	--add-file=$(DOCS) \
 	$(BRANCH) \
 
 $(DOCS):
