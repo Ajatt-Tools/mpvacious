@@ -89,7 +89,7 @@ this.is_empty = function(var)
 end
 
 this.contains_non_latin_letters = function(str)
-    return str:match("[^%c%p%s%w]")
+    return str:match("[^%c%p%s%w—]")
 end
 
 this.capitalize_first_letter = function(string)
