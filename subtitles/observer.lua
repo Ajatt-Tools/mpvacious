@@ -46,7 +46,7 @@ local function call_autocopy_command(text)
     -- If autoclip command is not set, copy to the clipboard.
     -- If it is set, run the external command.
     if h.is_empty(self.config.autoclip_command) then
-        self.copy_to_clipboard_fn("autocopy action", text)
+        self.copy_to_clipboard("autocopy action", text)
     else
         h.subprocess(external_command_args(text), on_external_finish)
     end
