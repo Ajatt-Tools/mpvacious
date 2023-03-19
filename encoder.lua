@@ -159,7 +159,7 @@ ffmpeg.make_audio_args = function(source_path, output_path, start_timestamp, end
         '-to', toms(end_timestamp),
         '-i', source_path,
         '-map_metadata', '-1',
-        '-map', string.format("0:%d", audio_track_id),
+        '-map', string.format("0:%s", tostring(audio_track_id)),
         '-ac', '1',
         '-codec:a', self.config.audio_codec,
         '-vbr', 'on',
