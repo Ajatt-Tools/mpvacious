@@ -8,7 +8,6 @@ AnkiConnect requests
 local utils = require('mp.utils')
 local msg = require('mp.msg')
 local h = require('helpers')
-local base64 = require('utils.base64')
 local self = {}
 
 self.execute = function(request, completion_fn)
@@ -49,24 +48,13 @@ self.parse_result = function(curl_output)
 end
 
 self.store_file = function(filename, file_path)
-    -- read the contents of the file and encode it in base64
-    -- this allows files to be stored even if Anki runs in a sandboxed environment
-    -- and thus doesn not have access to the host filesystem
-    local file = io.open(file_path, "rb")
-    if file == nil then
-        msg.error(string.format("Couldn't open for reading: '%s'", filename))
-        return false
-    end
-    local data = base64.enc(file:read("*a"))
-    file:close()
-
     -- construct args
     local args = {
         action = "storeMediaFile",
         version = 6,
         params = {
             filename = filename,
-            data = data,
+            path = file_path
         }
     }
 
