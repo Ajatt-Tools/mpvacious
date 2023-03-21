@@ -7,6 +7,7 @@ Various helper functions.
 
 local mp = require('mp')
 local msg = require('mp.msg')
+local utils = require('mp.utils')
 local this = {}
 
 this.unpack = unpack and unpack or table.unpack
@@ -239,6 +240,16 @@ this.filter = function(arr, func)
         end
     end
     return filtered
+end
+
+this.file_exists = function(filepath)
+    if not this.is_empty(filepath) then
+        local info = utils.file_info(filepath)
+        if info and info.is_file then
+            return true
+        end
+    end
+    return false
 end
 
 this.get_loaded_tracks = function(track_type)

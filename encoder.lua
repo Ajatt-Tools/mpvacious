@@ -9,6 +9,7 @@ local mp = require('mp')
 local utils = require('mp.utils')
 local h = require('helpers')
 local filename_factory = require('utils.filename_factory')
+local msg = require('mp.msg')
 
 --Contains the state of the module
 local self = {
@@ -18,6 +19,7 @@ local self = {
     store_fn = nil,
     platform = nil,
     encoder = nil,
+    output_dir_path = nil,
 }
 
 ------------------------------------------------------------
@@ -275,15 +277,28 @@ local create_static_snapshot = function(timestamp, source_path, output_path, on_
 
 end
 
+local report_creation_result = function(file_path)
+    if h.file_exists(file_path) then
+        msg.info(string.format("Created file: %s", file_path))
+        return true
+    else
+        msg.error(string.format("Couldn't create file: %s", file_path))
+        return false
+    end
+end
+
 local create_snapshot = function(start_timestamp, end_timestamp, current_timestamp, filename)
+    if h.is_empty(self.output_dir_path) then
+        return msg.error("Output directory wasn't provided. Image file will not be created.")
+    end
+
     -- Calls the proper function depending on whether or not the snapshot should be animated
     if not h.is_empty(self.config.image_field) then
         local source_path = mp.get_property("path")
-        local output_path = utils.join_path(self.platform.tmp_dir(), filename)
+        local output_path = utils.join_path(self.output_dir_path, filename)
 
         local on_finish = function()
-            self.store_fn(filename, output_path)
-            os.remove(output_path)
+            report_creation_result(output_path)
         end
 
         if self.config.animated_snapshot_enabled then
@@ -304,9 +319,13 @@ local background_play = function(file_path, on_finish)
 end
 
 local create_audio = function(start_timestamp, end_timestamp, filename, padding)
+    if h.is_empty(self.output_dir_path) then
+        return msg.error("Output directory wasn't provided. Audio file will not be created.")
+    end
+
     if not h.is_empty(self.config.audio_field) then
         local source_path = mp.get_property("path")
-        local output_path = utils.join_path(self.platform.tmp_dir(), filename)
+        local output_path = utils.join_path(self.output_dir_path, filename)
 
         if padding > 0 then
             start_timestamp, end_timestamp = pad_timings(padding, start_timestamp, end_timestamp)
@@ -314,11 +333,8 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding)
 
         local args = self.encoder.make_audio_args(source_path, output_path, start_timestamp, end_timestamp)
         local on_finish = function()
-            self.store_fn(filename, output_path)
-            if self.config.preview_audio then
-                background_play(output_path, function() os.remove(output_path) end)
-            else
-                os.remove(output_path)
+            if report_creation_result(output_path) and self.config.preview_audio then
+                background_play(output_path, function() print("Played file: " .. output_path) end)
             end
         end
         h.subprocess(args, on_finish)
@@ -347,12 +363,16 @@ local toggle_animation = function()
     h.notify("Animation " .. (self.config.animated_snapshot_enabled and "enabled" or "disabled"), "info", 2)
 end
 
-local init = function(config, store_fn, platform)
+local init = function(config)
     -- Sets the module to its preconfigured status
     self.config = config
-    self.store_fn = store_fn
-    self.platform = platform
     self.encoder = config.use_ffmpeg and ffmpeg or mpv
+end
+
+local set_output_dir = function(dir_path)
+    -- Set directory where media files should be saved.
+    -- This function is called every time a card is created or updated.
+    self.output_dir_path = dir_path
 end
 
 local create_job = function(type, sub, audio_padding)
@@ -375,6 +395,7 @@ end
 
 return {
     init = init,
+    set_output_dir = set_output_dir,
     snapshot = {
         create_job = function(sub) return create_job('snapshot', sub) end,
         toggle_animation = toggle_animation,

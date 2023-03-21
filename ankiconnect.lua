@@ -47,25 +47,20 @@ self.parse_result = function(curl_output)
     return stdout_json.result, nil
 end
 
-self.store_file = function(filename, file_path)
-    -- construct args
-    local args = {
-        action = "storeMediaFile",
-        version = 6,
-        params = {
-            filename = filename,
-            path = file_path
-        }
-    }
+self.get_media_dir_path = function()
+    -- Ask AnkiConnect where to store media files.
+    -- If AnkiConnect isn't running, returns nil.
 
-    local ret = self.execute(args)
-    local _, error = self.parse_result(ret)
+    local ret = self.execute({
+        action = "getMediaDirPath",
+        version = 6,
+    })
+    local dir_path, error = self.parse_result(ret)
     if not error then
-        msg.info(string.format("File stored: '%s'.", filename))
-        return true
+        return dir_path
     else
-        msg.error(string.format("Couldn't store file '%s': %s", filename, error))
-        return false
+        msg.error(string.format("Couldn't retrieve path to collection.media folder: %s", error))
+        return nil
     end
 end
 

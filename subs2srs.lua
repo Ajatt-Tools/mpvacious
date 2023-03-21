@@ -352,6 +352,7 @@ local function export_to_anki(gui)
         sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
     end
 
+    encoder.set_output_dir(ankiconnect.get_media_dir_path())
     local snapshot = encoder.snapshot.create_job(sub)
     local audio = encoder.audio.create_job(sub, audio_padding())
 
@@ -385,6 +386,7 @@ local function update_last_note(overwrite)
         return h.notify("Couldn't find the target note.", "warn", 2)
     end
 
+    encoder.set_output_dir(ankiconnect.get_media_dir_path())
     local snapshot = encoder.snapshot.create_job(sub)
     local audio = encoder.audio.create_job(sub, audio_padding())
 
@@ -534,7 +536,7 @@ local main = (function()
         cfg_mgr.init(config, profiles)
         ankiconnect.init(config, platform)
         forvo.init(config, ankiconnect, platform)
-        encoder.init(config, ankiconnect.store_file, platform)
+        encoder.init(config)
         secondary_sid.init(config)
         ensure_deck()
         subs_observer.init(menu, config)
