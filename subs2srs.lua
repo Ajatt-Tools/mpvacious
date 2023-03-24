@@ -129,6 +129,7 @@ local profiles = {
 }
 
 local mp = require('mp')
+local utils = require('mp.utils')
 local OSD = require('osd_styler')
 local cfg_mgr = require('cfg_mgr')
 local encoder = require('encoder')
@@ -340,6 +341,16 @@ local function maybe_reload_config()
     end
 end
 
+local function get_anki_media_dir_path()
+    -- Try to find the collection.media directory without AnkiConnect first.
+    local r = h.subprocess{utils.join_path(mp.get_script_directory(), 'find_anki_col.sh')}
+    if r.status == 0 then
+        return r.stdout:gsub("[\r\n]*", ""):gsub("%.anki2$", ".media")
+    end
+    -- Call AnkiConnect if failed.
+    return ankiconnect.get_media_dir_path()
+end
+
 local function export_to_anki(gui)
     maybe_reload_config()
     local sub = subs_observer.collect()
@@ -352,7 +363,7 @@ local function export_to_anki(gui)
         sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
     end
 
-    encoder.set_output_dir(ankiconnect.get_media_dir_path())
+    encoder.set_output_dir(get_anki_media_dir_path())
     local snapshot = encoder.snapshot.create_job(sub)
     local audio = encoder.audio.create_job(sub, audio_padding())
 
@@ -386,7 +397,7 @@ local function update_last_note(overwrite)
         return h.notify("Couldn't find the target note.", "warn", 2)
     end
 
-    encoder.set_output_dir(ankiconnect.get_media_dir_path())
+    encoder.set_output_dir(get_anki_media_dir_path())
     local snapshot = encoder.snapshot.create_job(sub)
     local audio = encoder.audio.create_job(sub, audio_padding())
 
