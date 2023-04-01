@@ -1,6 +1,6 @@
 # Modifying cards added with Yomichan
 
-You can add a card first using [Yomichan](https://foosoft.net/projects/yomichan/),
+You can add a card first using [Yomichan](https://addons.mozilla.org/en-US/firefox/addon/rikaitan/),
 and then append an audio clip and a picture to it.
 
 1) Press <kbd>a</kbd> to open `advanced menu`.
