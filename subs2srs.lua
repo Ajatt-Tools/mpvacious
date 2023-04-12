@@ -70,7 +70,7 @@ local config = {
     audio_bitrate = "18k", -- from 16k to 32k
     audio_padding = 0.12, -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
     tie_volumes = false, -- if set to true, the volume of the outputted audio file depends on the volume of the player at the time of export
-    preview_audio = true, -- play created audio clips in background.
+    preview_audio = false, -- play created audio clips in background.
 
     -- Menu
     menu_font_name = "Noto Sans CJK JP",
