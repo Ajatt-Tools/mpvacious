@@ -9,7 +9,9 @@ local utils = require('mp.utils')
 local msg = require('mp.msg')
 local h = require('helpers')
 local base64 = require('utils.base64')
-local self = {}
+local self = {
+    output_dir_path = nil,
+}
 
 local function url_encode(url)
     -- https://gist.github.com/liukun/f9ce7d6d14fa45fe9b924a3eed5c3d99
@@ -46,11 +48,9 @@ local function reencode(source_path, dest_path)
 end
 
 local function reencode_and_store(source_path, filename)
-    local reencoded_path = utils.join_path(self.platform.tmp_dir(), 'reencoded_' .. filename)
-    reencode(source_path, reencoded_path)
-    local result = self.ankiconnect.store_file(filename, reencoded_path)
-    os.remove(reencoded_path)
-    return result
+    local reencoded_path = utils.join_path(self.output_dir_path, filename)
+    local result = reencode(source_path, reencoded_path)
+    return result.status == 0
 end
 
 local function curl_save(source_url, save_location)
@@ -127,13 +127,17 @@ local append = function(new_data, stored_data)
     return new_data
 end
 
-local function init(config, ankiconnect, platform)
+local set_output_dir = function(dir_path)
+    self.output_dir_path = dir_path
+end
+
+local function init(config, platform)
     self.config = config
-    self.ankiconnect = ankiconnect
     self.platform = platform
 end
 
 return {
     append = append,
     init = init,
+    set_output_dir = set_output_dir,
 }

@@ -397,7 +397,8 @@ local function update_last_note(overwrite)
         return h.notify("Couldn't find the target note.", "warn", 2)
     end
 
-    encoder.set_output_dir(get_anki_media_dir_path())
+    local anki_media_dir = get_anki_media_dir_path()
+    encoder.set_output_dir(anki_media_dir)
     local snapshot = encoder.snapshot.create_job(sub)
     local audio = encoder.audio.create_job(sub, audio_padding())
 
@@ -409,6 +410,7 @@ local function update_last_note(overwrite)
     local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
     local stored_data = ankiconnect.get_note_fields(last_note_id)
     if stored_data then
+        forvo.set_output_dir(anki_media_dir)
         new_data = forvo.append(new_data, stored_data)
         new_data = update_sentence(new_data, stored_data)
         if not overwrite then
@@ -546,7 +548,7 @@ local main = (function()
 
         cfg_mgr.init(config, profiles)
         ankiconnect.init(config, platform)
-        forvo.init(config, ankiconnect, platform)
+        forvo.init(config, platform)
         encoder.init(config)
         secondary_sid.init(config)
         ensure_deck()
