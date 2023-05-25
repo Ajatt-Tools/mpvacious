@@ -29,7 +29,7 @@ local function external_command_args(lookup_word)
     for arg in string.gmatch(self.config.autoclip_command, "%S+") do
         table.insert(args, arg)
     end
-    table.insert(args, lookup_word)
+    table.insert(args, self.clipboard_prepare(lookup_word))
     return args
 end
 
@@ -101,10 +101,14 @@ end
 
 self.copy_to_clipboard = function(_, text)
     if not h.is_empty(text) then
-        text = self.config.clipboard_trim_enabled and h.trim(text) or h.remove_newlines(text)
-        text = self.maybe_remove_all_spaces(text)
-        platform.copy_to_clipboard(text)
+        platform.copy_to_clipboard(self.clipboard_prepare(text))
     end
+end
+
+self.clipboard_prepare = function(text)
+    text = self.config.clipboard_trim_enabled and h.trim(text) or h.remove_newlines(text)
+    text = self.maybe_remove_all_spaces(text)
+    return text
 end
 
 self.maybe_remove_all_spaces = function(str)
