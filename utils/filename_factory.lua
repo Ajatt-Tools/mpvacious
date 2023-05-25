@@ -50,6 +50,7 @@ end)()
 local make_media_filename = function()
     filename = mp.get_property("filename") -- filename without path
     filename = h.remove_extension(filename)
+    filename = h.remove_filename_text_in_parentheses(filename)
     filename = h.remove_text_in_brackets(filename)
     filename = h.remove_special_characters(filename)
 end
