@@ -32,6 +32,7 @@ local function reencode(source_path, dest_path)
         'mpv',
         source_path,
         '--loop-file=no',
+        '--keep-open=no',
         '--video=no',
         '--no-ocopy-metadata',
         '--no-sub',
