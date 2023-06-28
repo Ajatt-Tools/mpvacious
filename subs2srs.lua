@@ -49,6 +49,7 @@ local platform = require('platform.init')
 local forvo = require('utils.forvo')
 local subs_observer = require('subtitles.observer')
 local menu
+local quick_menu
 
 ------------------------------------------------------------
 -- default config
@@ -165,6 +166,21 @@ local profiles = {
     active = "subs2srs",
 }
 
+local mp = require('mp')
+local utils = require('mp.utils')
+local OSD = require('osd_styler')
+local cfg_mgr = require('cfg_mgr')
+local encoder = require('encoder')
+local h = require('helpers')
+local Menu = require('menu')
+local ankiconnect = require('ankiconnect')
+local switch = require('utils.switch')
+local play_control = require('utils.play_control')
+local secondary_sid = require('subtitles.secondary_sid')
+local platform = require('platform.init')
+local forvo = require('utils.forvo')
+local subs_observer = require('subtitles.observer')
+local menu
 
 ------------------------------------------------------------
 -- utility functions
@@ -393,9 +409,9 @@ local function export_to_anki(gui)
     subs_observer.clear()
 end
 
-local function update_last_note(overwrite)
+local function update_last_note(overwrite, n_lines, n_cards)
     maybe_reload_config()
-    local sub = subs_observer.collect()
+    local sub = subs_observer.collect(n_lines)
     local last_note_id = ankiconnect.get_last_note_id()
 
     if not sub:is_valid() then
@@ -573,6 +589,30 @@ function menu:make_osd()
     self:print_selection(osd)
     return osd
 end
+------------------------------------------------------------
+-- main
+quick_menu = Menu:new()
+quick_menu.keybindings = {}
+for i=1,9 do
+    table.insert(quick_menu.keybindings, { key = tostring(i), fn = function() update_last_note(true, i); quick_menu:close() end})
+end
+table.insert(quick_menu.keybindings, { key = 'g', fn = function () update_last_note(true, 1); quick_menu:close() end})
+table.insert(quick_menu.keybindings, { key = 'ESC', fn = function() quick_menu:close() end })
+table.insert(quick_menu.keybindings, { key = 'q', fn = function() quick_menu:close() end })
+function quick_menu:print_header(osd)
+    osd:submenu('quick card creation'):newline()
+    osd:item('# lines: '):text('Enter 1-9'):newline()
+end
+function quick_menu:print_legend(osd)
+    osd:new_layer():size(config.menu_font_size):font(config.menu_font_name):align(4)
+    self:print_header(osd)
+    menu:warn_formats(osd)
+end
+function quick_menu:make_osd()
+    local osd = OSD:new()
+    self:print_legend(osd)
+    return osd
+end
 
 ------------------------------------------------------------
 -- main
@@ -614,6 +654,9 @@ local main = (function()
         -- Note updating
         mp.add_key_binding("Ctrl+m", "mpvacious-update-last-note", menu:with_update { update_last_note, false })
         mp.add_key_binding("Ctrl+M", "mpvacious-overwrite-last-note", menu:with_update { update_last_note, true })
+
+        mp.add_key_binding("g", "mpvacious-quick-update-lats-note", function() quick_menu:open() end)
+
 
         -- Vim-like seeking between subtitle lines
         mp.add_key_binding("H", "mpvacious-sub-seek-back", _ { play_control.sub_seek, 'backward' })

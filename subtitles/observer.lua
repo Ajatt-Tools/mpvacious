@@ -17,11 +17,13 @@ local self = {}
 
 local dialogs = sub_list.new()
 local secondary_dialogs = sub_list.new()
+local all_dialogs = sub_list.new()
 local user_timings = timings.new()
 
 local append_dialogue = false
 local autoclip_enabled = false
 local autoclip_method = {}
+
 
 ------------------------------------------------------------
 -- private
@@ -33,7 +35,9 @@ local function copy_primary_sub()
 end
 
 local function append_primary_sub()
-    if append_dialogue and dialogs.insert(Subtitle:now()) then
+    local current_sub = Subtitle:now()
+    all_dialogs.insert(current_sub)
+    if append_dialogue and dialogs.insert(current_sub) then
         self.menu:update()
     end
 end
@@ -194,9 +198,20 @@ self.get_timing = function(position)
     return -1
 end
 
-self.collect = function()
+self.collect = function(n_lines)
     --- Return all recorded subtitle lines as one subtitle object.
     --- The caller has to call subs_observer.clear() afterwards.
+    if n_lines then
+        local current_sub = Subtitle:now();
+        all_dialogs.insert(current_sub)
+        local text, end_sub = all_dialogs.get_n_text(current_sub, n_lines)
+        return Subtitle:new {
+            ['text'] = text,
+            ['secondary']='',
+            ['start'] = current_sub['start'],
+            ['end'] = end_sub['end'],
+        }
+    end
     if dialogs.is_empty() then
         dialogs.insert(Subtitle:now())
     end

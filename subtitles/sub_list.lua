@@ -9,7 +9,7 @@ local h = require('helpers')
 
 local new_sub_list = function()
     local subs_list = {}
-
+    
     local find_i = function(sub)
         for i, v in ipairs(subs_list) do
             if sub < v then
@@ -29,6 +29,18 @@ local new_sub_list = function()
         end
         return table.concat(speech, ' ')
     end
+    local get_n_text = function(sub, n_lines)
+        local speech = {}
+        local end_sub = sub
+        for _, v in ipairs(subs_list) do
+            if v['start'] - end_sub['end'] >= 20 then break end
+            if v >= sub and #speech < n_lines then
+                table.insert(speech, v['text'])
+                end_sub = v
+            end
+        end
+            return table.concat(speech, ' '), end_sub
+    end
     local insert = function(sub)
         if sub ~= nil and not h.contains(subs_list, sub) then
             table.insert(subs_list, find_i(sub), sub)
@@ -47,6 +59,7 @@ local new_sub_list = function()
         get_subs_list = get_subs_list,
         get_time = get_time,
         get_text = get_text,
+        get_n_text = get_n_text,
         insert = insert,
         is_empty = function() return h.is_empty(subs_list) end,
     }
