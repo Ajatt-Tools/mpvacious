@@ -205,6 +205,9 @@ self.collect = function(n_lines)
         local current_sub = Subtitle:now();
         all_dialogs.insert(current_sub)
         local text, end_sub = all_dialogs.get_n_text(current_sub, n_lines)
+        if all_dialogs.is_empty() then
+            return nil
+        end
         return Subtitle:new {
             ['text'] = text,
             ['secondary']='',
@@ -258,6 +261,9 @@ self.clear = function()
     dialogs = sub_list.new()
     secondary_dialogs = sub_list.new()
     user_timings = timings.new()
+end
+self.clear_all_dialogs = function()
+    all_dialogs = sub_list.new()
 end
 
 self.clear_and_notify = function()
@@ -319,6 +325,7 @@ self.init = function(menu, config)
     autoclip_method.set(self.config.autoclip_method)
 
     mp.observe_property("sub-text", "string", handle_primary_sub)
+    mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
     mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
 end
 

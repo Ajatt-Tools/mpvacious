@@ -168,7 +168,11 @@ local profiles = {
 
 ------------------------------------------------------------
 -- utility functions
-
+--
+local function clear_options()
+    n_lines = nil
+    n_cards = 1
+end
 local function _(params)
     return function()
         return pcall(h.unpack(params))
@@ -429,7 +433,6 @@ local function update_last_note(overwrite)
     end
     for i=1, n_cards do
         local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
-        mp.msg.warn('new data: ' .. dump(new_data))
         local stored_data = ankiconnect.get_note_fields(last_note_ids[i])
         if stored_data then
             forvo.set_output_dir(anki_media_dir)
@@ -453,6 +456,7 @@ local function update_last_note(overwrite)
         ankiconnect.append_media(last_note_ids[i], new_data, create_media, substitute_fmt(config.note_tag))
     end
     subs_observer.clear()
+    clear_options()
 end
 
 ------------------------------------------------------------
@@ -473,6 +477,8 @@ menu.keybindings = {
     { key = 'n', fn = menu:with_update { export_to_anki, false } },
     { key = 'm', fn = menu:with_update { update_last_note, false } },
     { key = 'M', fn = menu:with_update { update_last_note, true } },
+    { key = 'f', fn = menu:with_update { function() n_cards = n_cards + 1 end} },
+    { key = 'F', fn = menu:with_update { function() n_cards = n_cards - 1 end } },
     { key = 't', fn = menu:with_update { subs_observer.toggle_autocopy } },
     { key = 'T', fn = menu:with_update { subs_observer.next_autoclip_method } },
     { key = 'i', fn = menu:with_update { menu.hints_state.bump } },
@@ -491,6 +497,7 @@ function menu:print_header(osd)
     osd:item('Clipboard autocopy: '):text(subs_observer.autocopy_status_str()):newline()
     osd:item('Active profile: '):text(profiles.active):newline()
     osd:item('Deck: '):text(config.deck_name):newline()
+    osd:item('# cards: '):text(n_cards):newline()
 end
 
 function menu:print_bindings(osd)
@@ -510,6 +517,7 @@ function menu:print_bindings(osd)
         osd:tab():item('e: '):text('Set end time to current position'):newline()
         osd:tab():item('shift+s: '):text('Set start time to current subtitle'):newline()
         osd:tab():item('shift+e: '):text('Set end time to current subtitle'):newline()
+        osd:tab():item('f: '):text('Increment # cards to update '):italics('(+shift to decrement)'):newline()
         osd:tab():item('r: '):text('Reset timings'):newline()
         osd:tab():item('n: '):text('Export note'):newline()
         osd:tab():item('g: '):text('GUI export'):newline()
@@ -581,15 +589,19 @@ function menu:make_osd()
 end
 ------------------------------------------------------------
 -- quick_menu line selection
-quick_menu = Menu:new()
-quick_menu.keybindings = {}
+local choose_cards = function(i)
+    n_cards = i
+    quick_menu_card:close()
+    quick_menu:open()
+end
 local choose_lines = function(i)
     n_lines = i
     update_last_note(true)
-    n_lines = nil
-    n_cards = 1
     quick_menu:close()
 end
+
+quick_menu = Menu:new()
+quick_menu.keybindings = {}
 for i=1,9 do
     table.insert(quick_menu.keybindings, { key = tostring(i), fn = function() choose_lines(i) end})
 end
@@ -613,11 +625,6 @@ end
 -- quick_menu card selection
 quick_menu_card = Menu:new()
 quick_menu_card.keybindings = {}
-local choose_cards = function(i)
-    n_cards = i
-    quick_menu_card:close()
-    quick_menu:open()
-end
 for i=1,9 do
     table.insert(quick_menu_card.keybindings, { key = tostring(i), fn = function() choose_cards(i) end})
 end
@@ -645,6 +652,7 @@ local main = (function()
     local main_executed = false
     return function()
         if main_executed then
+            subs_observer.clear_all_dialogs()
             return
         else
             main_executed = true
