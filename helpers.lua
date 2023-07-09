@@ -245,7 +245,7 @@ end
 this.file_exists = function(filepath)
     if not this.is_empty(filepath) then
         local info = utils.file_info(filepath)
-        if info and info.is_file then
+        if info and info.is_file and info.size > 0 then
             return true
         end
     end
