@@ -9,6 +9,9 @@ local mpopt = require('mp.options')
 local msg = require('mp.msg')
 local h = require('helpers')
 
+local min_side_px = 42
+local max_side_px = 640
+
 local self = {
     config = nil,
     profiles = nil,
@@ -42,8 +45,8 @@ local function set_video_format()
 end
 
 local function ensure_in_range(dimension)
-    self.config[dimension] = self.config[dimension] < 42 and -2 or self.config[dimension]
-    self.config[dimension] = self.config[dimension] > 640 and 640 or self.config[dimension]
+    self.config[dimension] = self.config[dimension] < min_side_px and -2 or self.config[dimension]
+    self.config[dimension] = self.config[dimension] > max_side_px and max_side_px or self.config[dimension]
 end
 
 local function conditionally_set_defaults(width, height, quality)
