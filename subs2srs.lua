@@ -89,6 +89,7 @@ local config = {
     sentence_field = "SentKanji",
     secondary_field = "SentEng",
     audio_field = "SentAudio",
+    audio_template = '[sound:%s]',
     image_field = "Image",
     image_template = '<img alt="snapshot" src="%s">',
     append_media = true, -- True to append video media after existing data, false to insert media before
@@ -280,7 +281,7 @@ local function construct_note_fields(sub_text, secondary_text, snapshot_filename
         ret[config.image_field] = string.format(config.image_template, snapshot_filename)
     end
     if not h.is_empty(config.audio_field) and not h.is_empty(audio_filename) then
-        ret[config.audio_field] = string.format('[sound:%s]', audio_filename)
+        ret[config.audio_field] = string.format(config.audio_template, audio_filename)
     end
     if config.miscinfo_enable == true then
         ret[config.miscinfo_field] = substitute_fmt(config.miscinfo_format)
