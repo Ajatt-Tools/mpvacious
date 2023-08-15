@@ -88,7 +88,7 @@ local function get_forvo_pronunciation(word)
 
     local result
     if curl_save(audio_url, tmp_filepath) and reencode_and_store(tmp_filepath, filename) then
-        result = string.format('[sound:%s]', filename)
+        result = string.format(self.config.audio_template, filename)
     else
         msg.warn(string.format("Couldn't download audio for word %s from Forvo.", word))
     end
