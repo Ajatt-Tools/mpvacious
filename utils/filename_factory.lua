@@ -79,7 +79,9 @@ end
 local make_filename = function(...)
     local args = {...}
     local timestamp = #args < 3 and timestamp_static(...) or timestamp_range(...)
-    return anki_compatible_length(filename, timestamp) .. timestamp
+    local filename_ = anki_compatible_length(filename, timestamp) .. timestamp
+    filename_ = filename_:lower()
+    return filename_
 end
 
 mp.register_event("file-loaded", make_media_filename)
