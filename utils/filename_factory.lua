@@ -59,7 +59,7 @@ local function timestamp_range(start_timestamp, end_timestamp, extension)
     -- Generates a filename suffix of the form: _00h00m00s000ms-99h99m99s999ms.extension
     -- Extension must already contain the dot.
     return string.format(
-            '_%s-%s%s',
+            '_%s_%s%s',
             h.human_readable_time(start_timestamp),
             h.human_readable_time(end_timestamp),
             extension
@@ -79,7 +79,7 @@ end
 local make_filename = function(...)
     local args = {...}
     local timestamp = #args < 3 and timestamp_static(...) or timestamp_range(...)
-    return anki_compatible_length(filename, timestamp) .. timestamp
+    return string.lower(anki_compatible_length(filename, timestamp) .. timestamp)
 end
 
 mp.register_event("file-loaded", make_media_filename)
