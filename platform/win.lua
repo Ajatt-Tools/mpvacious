@@ -28,14 +28,14 @@ self.copy_to_clipboard = function(text)
     mp.commandv("run", "cmd.exe", "/d", "/c", string.format("@echo off & chcp 65001 >nul & echo %s|clip", text))
 end
 
-self.curl_request = function(request_json, completion_fn)
+self.curl_request = function(url, request_json, completion_fn)
     local handle = io.open(curl_tmpfile_path, "w")
     handle:write(request_json)
     handle:close()
     local args = {
         'curl',
         '-s',
-        '127.0.0.1:8765',
+        url,
         '-H',
         'Content-Type: application/json; charset=UTF-8',
         '-X',
