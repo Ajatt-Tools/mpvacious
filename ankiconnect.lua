@@ -18,7 +18,7 @@ self.execute = function(request, completion_fn)
     if error ~= nil or request_json == "null" then
         return completion_fn and completion_fn()
     else
-        return self.platform.curl_request(request_json, completion_fn)
+        return self.platform.curl_request(self.config.ankiconnect_url, request_json, completion_fn)
     end
 end
 

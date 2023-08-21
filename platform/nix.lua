@@ -27,8 +27,8 @@ self.copy_to_clipboard = function(text)
     handle:close()
 end
 
-self.curl_request = function(request_json, completion_fn)
-    local args = { 'curl', '-s', '127.0.0.1:8765', '-X', 'POST', '-d', request_json }
+self.curl_request = function(url, request_json, completion_fn)
+    local args = { 'curl', '-s', url, '-X', 'POST', '-d', request_json }
     return h.subprocess(args, completion_fn)
 end
 
