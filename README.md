@@ -292,13 +292,13 @@ and the target sentence doesn't span multiple subs.
 
 Advanced menu has the following options:
 
-* <kbd>c</kbd> - Interactive subtitle selection.
+* <kbd>x</kbd> - Interactive subtitle selection.
   The range of the currently displayed subtitle line is selected. The selection then grows both ways based on the following displayed lines.
   It does nothing if there are no subs on screen.
 
-* <kbd>shift+s</kbd> - Set the start time to the current sub. The selection then grows forward based on the following displayed lines.
+* <kbd>Shift+c</kbd> - Set the start time to the current sub. The selection then grows forward based on the following displayed lines.
   The default selection spans across the range of the currently displayed subtitle line.
-* <kbd>shift+e</kbd> - Set the end time to the current sub. The selection then grows backward based on the following displayed lines.
+* <kbd>Shift+v</kbd> - Set the end time to the current sub. The selection then grows backward based on the following displayed lines.
   The default selection spans across the range of the currently displayed subtitle line.
 
 Then seek with <kbd>Shift+h</kbd> and <kbd>Shift+l</kbd> to the previous/next line that you want to add.
@@ -309,9 +309,9 @@ Press <kbd>n</kbd> to make the card.
 * <kbd>z</kbd> and <kbd>Shift+z</kbd> - Adjust subtitle delay.
 
 If above fails, you have to manually set timings.
-* <kbd>s</kbd> - Set the start time. The selection then grows forward based on the following displayed lines.
+* <kbd>c</kbd> - Set the start time. The selection then grows forward based on the following displayed lines.
 The default selection spans across the selected start point and the end of the subtitle line.
-* <kbd>e</kbd> - Set the end time. The selection then grows backward based on the following displayed lines.
+* <kbd>v</kbd> - Set the end time. The selection then grows backward based on the following displayed lines.
 The default selection spans across the selected end point and the start of the subtitle line.
 
 Then, as earlier, press <kbd>n</kbd> to make the card.

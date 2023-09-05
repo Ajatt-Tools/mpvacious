@@ -442,11 +442,11 @@ menu = Menu:new {
 }
 
 menu.keybindings = {
-    { key = 'S', fn = menu:with_update { subs_observer.set_manual_timing_to_sub, 'start' } },
-    { key = 'E', fn = menu:with_update { subs_observer.set_manual_timing_to_sub, 'end' } },
-    { key = 's', fn = menu:with_update { subs_observer.set_manual_timing, 'start' } },
-    { key = 'e', fn = menu:with_update { subs_observer.set_manual_timing, 'end' } },
-    { key = 'c', fn = menu:with_update { subs_observer.set_to_current_sub } },
+    { key = 'C', fn = menu:with_update { subs_observer.set_manual_timing_to_sub, 'start' } },
+    { key = 'V', fn = menu:with_update { subs_observer.set_manual_timing_to_sub, 'end' } },
+    { key = 'c', fn = menu:with_update { subs_observer.set_manual_timing, 'start' } },
+    { key = 'v', fn = menu:with_update { subs_observer.set_manual_timing, 'end' } },
+    { key = 'x', fn = menu:with_update { subs_observer.set_to_current_sub } },
     { key = 'r', fn = menu:with_update { subs_observer.clear_and_notify } },
     { key = 'g', fn = menu:with_update { export_to_anki, true } },
     { key = 'n', fn = menu:with_update { export_to_anki, false } },
@@ -479,11 +479,11 @@ function menu:print_bindings(osd)
         osd:italics("Press "):item('i'):italics(" to hide bindings."):newline()
     elseif self.hints_state.get() == 'menu' then
         osd:submenu('Menu bindings'):newline()
-        osd:tab():item('c: '):text('Set timings to the current sub'):newline()
-        osd:tab():item('s: '):text('Set start time to current position'):newline()
-        osd:tab():item('e: '):text('Set end time to current position'):newline()
-        osd:tab():item('shift+s: '):text('Set start time to current subtitle'):newline()
-        osd:tab():item('shift+e: '):text('Set end time to current subtitle'):newline()
+        osd:tab():item('x: '):text('Set timings to the current sub'):newline()
+        osd:tab():item('c: '):text('Set start time to current position'):newline()
+        osd:tab():item('v: '):text('Set end time to current position'):newline()
+        osd:tab():item('shift+c: '):text('Set start time to current subtitle'):newline()
+        osd:tab():item('shift+v: '):text('Set end time to current subtitle'):newline()
         osd:tab():item('r: '):text('Reset timings'):newline()
         osd:tab():item('n: '):text('Export note'):newline()
         osd:tab():item('g: '):text('GUI export'):newline()
