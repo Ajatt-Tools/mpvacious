@@ -47,7 +47,8 @@ local config = {
     autoclip_command = "", -- command to run when autoclip is triggered. if empty, just copies sub_text to the clipboard.
 
     -- Secondary subtitle
-    secondary_sub_lang = 'eng,en,rus,ru,bel,be', -- Language of secondary subs that should be automatically loaded.
+    secondary_sub_auto_load = true, -- Automatically load secondary subtitle track when a video file is opened.
+    secondary_sub_lang = 'eng,en,rus,ru,jp,jpn,ja', -- Language of secondary subs that should be automatically loaded.
     secondary_sub_area = 0.15, -- Hover area. Fraction of the window from the top.
     secondary_sub_visibility = 'auto', -- One of: 'auto', 'never', 'always'. Controls secondary_sid visibility. Ctrl+V to cycle.
 
