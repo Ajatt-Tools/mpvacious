@@ -155,7 +155,7 @@ self.collect = function()
 end
 
 self.set_manual_timing = function(position)
-    user_timings.set(position, mp.get_property_number('time-pos'))
+    user_timings.set(position, mp.get_property_number('time-pos') - mp.get_property("audio-delay"))
     h.notify(h.capitalize_first_letter(position) .. " time has been set.")
     start_appending()
 end
@@ -163,7 +163,7 @@ end
 self.set_manual_timing_to_sub = function(position)
     local sub = Subtitle:now()
     if sub then
-        user_timings.set(position, sub[position])
+        user_timings.set(position, sub[position] - mp.get_property("audio-delay"))
         h.notify(h.capitalize_first_letter(position) .. " time has been set.")
         start_appending()
     else
