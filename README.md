@@ -211,6 +211,8 @@ Default bindings:
 ```
 a            script-binding mpvacious-menu-open
 
+Ctrl+g       script-binding mpvacious-animated-snapshot-toggle
+
 Ctrl+n       script-binding mpvacious-export-note
 
 Ctrl+m       script-binding mpvacious-update-last-note
