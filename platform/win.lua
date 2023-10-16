@@ -20,11 +20,7 @@ self.tmp_dir = function()
 end
 
 self.copy_to_clipboard = function(text)
-    text = text:gsub("&", "^^^&"):gsub("[<>|]", "")
-    local _, quote_count = text:gsub("\"", "")
-    if quote_count % 2 ~= 0 then
-        text = text:gsub("\"", "'")
-    end
+    text = text:gsub("&", "^^^&"):gsub("[<>|]", ""):gsub("\"", '“')
     mp.commandv("run", "cmd.exe", "/d", "/c", string.format("@echo off & chcp 65001 >nul & echo %s|clip", text))
 end
 
@@ -47,4 +43,3 @@ self.curl_request = function(url, request_json, completion_fn)
 end
 
 return self
-
