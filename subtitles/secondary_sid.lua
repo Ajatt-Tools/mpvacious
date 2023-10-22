@@ -121,7 +121,13 @@ local function switch_secondary_sid(direction)
         return track.id ~= secondary_sid and track.id ~= primary_sid
     end)
     table.sort(subtitle_tracks, function(track1, track2)
-        return (is_accepted_language(track1.lang) and not is_accepted_language(track2.lang)) or (track1.id < track2.id)
+        if is_accepted_language(track1.lang) and not is_accepted_language(track2.lang) then
+            return true
+        elseif not is_accepted_language(track1.lang) and is_accepted_language(track2.lang) then
+            return false
+        else
+            return (track1.id < track2.id)
+        end
     end)
 
     local new_secondary_sub = { id = false, title = "removed" }
