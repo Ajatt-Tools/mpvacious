@@ -15,12 +15,8 @@ local self = {
 }
 
 local function is_accepted_language(sub_lang)
-    for _, accepted_lang in pairs(self.accepted_languages) do
-        if accepted_lang == sub_lang then
-            return true
-        end
-    end
-    return false
+    -- for missing keys compares nil to true
+    return self.accepted_languages[sub_lang] == true
 end
 
 local function is_selected_language(track, active_track)
@@ -65,7 +61,7 @@ end
 local function get_accepted_sub_langs()
     local languages = {}
     for lang in self.config.secondary_sub_lang:gmatch('[a-z-]+') do
-        table.insert(languages, lang)
+        languages[lang] = true
     end
     return languages
 end
