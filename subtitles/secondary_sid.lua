@@ -164,6 +164,10 @@ end
 return {
     init = init,
     change_visibility = change_visibility,
-    select_previous = function() switch_secondary_sid('prev') end,
-    select_next = function() switch_secondary_sid('next') end,
+    select_previous = function()
+        switch_secondary_sid('prev')
+    end,
+    select_next = function()
+        switch_secondary_sid('next')
+    end,
 }
