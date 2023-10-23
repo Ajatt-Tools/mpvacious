@@ -113,40 +113,63 @@ local function change_visibility()
     h.notify("Secondary sid visibility: " .. self.visibility)
 end
 
-local function switch_secondary_sid(direction)
-    local primary_sid = mp.get_property_native('sid')
-    local secondary_sid = mp.get_property_native('secondary-sid')
+local function compare_by_preference_then_id(track1, track2)
+    if is_accepted_language(track1.lang) and not is_accepted_language(track2.lang) then
+        return true
+    elseif not is_accepted_language(track1.lang) and is_accepted_language(track2.lang) then
+        return false
+    else
+        return (track1.id < track2.id)
+    end
+end
 
-    local subtitle_tracks = h.filter(h.get_loaded_tracks('sub'), function(track)
-        return track.id ~= secondary_sid and track.id ~= primary_sid
-    end)
-    table.sort(subtitle_tracks, function(track1, track2)
-        if is_accepted_language(track1.lang) and not is_accepted_language(track2.lang) then
-            return true
-        elseif not is_accepted_language(track1.lang) and is_accepted_language(track2.lang) then
-            return false
-        else
-            return (track1.id < track2.id)
+local function split_before_after(previous_tracks, next_tracks, all_tracks, current_track_id)
+    -- works like take_while() and drop_while() combined
+    local prev = true
+    for _, track in ipairs(all_tracks) do
+        if prev == true and track.id == current_track_id then
+            prev = false
         end
-    end)
-
-    local new_secondary_sub = { id = false, title = "removed" }
-
-    if direction == 'prev' then
-        local previous_tracks = h.filter(subtitle_tracks, function(track)
-            return secondary_sid == false or track.id < secondary_sid
-        end)
-        if #previous_tracks > 0 then
-            new_secondary_sub = previous_tracks[#previous_tracks]
-        end
-    elseif direction == 'next' then
-        local next_tracks = h.filter(subtitle_tracks, function(track)
-            return secondary_sid == false or track.id > secondary_sid
-        end)
-        if #next_tracks > 0 then
-            new_secondary_sub = next_tracks[1]
+        if track.id ~= current_track_id then
+            if prev then
+                table.insert(previous_tracks, track)
+            else
+                table.insert(next_tracks, track)
+            end
         end
     end
+end
+
+local function not_primary_sid(track)
+    return mp.get_property_native('sid') ~= track.id
+end
+
+local function find_new_secondary_sub(direction)
+    local subtitle_tracks = h.filter(h.get_loaded_tracks('sub'), not_primary_sid)
+    table.sort(subtitle_tracks, compare_by_preference_then_id)
+
+    local secondary_sid = mp.get_property_native('secondary-sid')
+    local new_secondary_sub = { id = false, title = "removed" }
+
+    if #subtitle_tracks > 0 then
+        if not secondary_sid then
+            new_secondary_sub = (direction == 'prev') and subtitle_tracks[#subtitle_tracks] or subtitle_tracks[1]
+        else
+            local previous_tracks = {}
+            local next_tracks = {}
+            split_before_after(previous_tracks, next_tracks, subtitle_tracks, secondary_sid)
+            if direction == 'prev' and #previous_tracks > 0 then
+                new_secondary_sub = previous_tracks[#previous_tracks]
+            elseif direction == 'next' and #next_tracks > 0 then
+                new_secondary_sub = next_tracks[1]
+            end
+        end
+    end
+    return new_secondary_sub
+end
+
+local function switch_secondary_sid(direction)
+    local new_secondary_sub = find_new_secondary_sub(direction)
 
     mp.set_property_native('secondary-sid', new_secondary_sub.id)
     if new_secondary_sub.id == false then
