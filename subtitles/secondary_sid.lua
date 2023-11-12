@@ -60,7 +60,7 @@ end
 
 local function get_accepted_sub_langs()
     local languages = {}
-    for lang in self.config.secondary_sub_lang:gmatch('[a-z-]+') do
+    for lang in self.config.secondary_sub_lang:gmatch('[a-zA-Z-]+') do
         languages[lang] = true
     end
     return languages
