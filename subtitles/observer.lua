@@ -96,6 +96,10 @@ local function handle_secondary_sub()
     append_secondary_sub()
 end
 
+local function copy_subtitle(subtitle_id)
+    self.copy_to_clipboard("copy-on-demand", mp.get_property(subtitle_id))
+end
+
 ------------------------------------------------------------
 -- public
 
@@ -119,8 +123,12 @@ self.maybe_remove_all_spaces = function(str)
     end
 end
 
-self.copy_current_to_clipboard = function()
-    self.copy_to_clipboard("copy-on-demand", mp.get_property("sub-text"))
+self.copy_current_primary_to_clipboard = function()
+    copy_subtitle("sub-text")
+end
+
+self.copy_current_secondary_to_clipboard = function()
+    copy_subtitle("secondary-sub-text")
 end
 
 self.user_altered = function()
