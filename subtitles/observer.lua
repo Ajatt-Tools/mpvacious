@@ -11,6 +11,7 @@ local sub_list = require('subtitles.sub_list')
 local Subtitle = require('subtitles.subtitle')
 local mp = require('mp')
 local platform = require('platform.init')
+local utils = require('mp.utils')
 
 local self = {}
 
@@ -20,6 +21,7 @@ local user_timings = timings.new()
 
 local append_dialogue = false
 local autoclip_enabled = false
+local autoclip_json_enabled = false
 
 ------------------------------------------------------------
 -- private
@@ -52,7 +54,37 @@ local function call_autocopy_command(text)
     end
 end
 
+local function recorded_or_current_text_json()
+    local primary = dialogs.get_text()
+
+    if h.is_empty(primary) then
+        primary = mp.get_property("sub-text")
+    end
+
+    if h.is_empty(primary) then
+        return nil
+    end
+
+    local secondary = secondary_dialogs.get_text()
+
+    if h.is_empty(secondary) then
+        secondary = mp.get_property("secondary-sub-text")
+    end
+
+    local copy_json, error = utils.format_json({ primary = primary, secondary = secondary })
+
+    if error ~= nil then
+        return nil
+    end
+
+    return copy_json
+end
+
 local function recorded_or_current_text()
+    if autoclip_json_enabled then
+        return recorded_or_current_text_json()
+    end
+
     --- Join and return all observed text.
     --- If there's no observed text, return the current text on screen.
     local text = dialogs.get_text()
@@ -204,15 +236,42 @@ self.recorded_subs = function()
 end
 
 self.autocopy_status_str = function()
-    return autoclip_enabled and 'enabled' or 'disabled'
+    local status = autoclip_enabled and 'enabled' or 'disabled'
+
+    if autoclip_json_enabled then
+        return status .. ' (JSON)'
+    else
+        return status
+    end
 end
 
-self.toggle_autocopy = function()
-    autoclip_enabled = not autoclip_enabled
+local function notify_autocopy()
     if autoclip_enabled then
         copy_primary_sub()
     end
     h.notify(string.format("Clipboard autocopy has been %s.", self.autocopy_status_str()))
+end
+
+self.toggle_autocopy = function()
+    if autoclip_json_enabled then
+        autoclip_json_enabled = false
+        autoclip_enabled = true
+    else
+        autoclip_enabled = not autoclip_enabled
+    end
+
+    notify_autocopy()
+end
+
+self.toggle_autocopy_json = function()
+    if not autoclip_json_enabled then
+        autoclip_json_enabled = true
+        autoclip_enabled = true
+    else
+        autoclip_enabled = not autoclip_enabled
+    end
+
+    notify_autocopy()
 end
 
 self.init = function(menu, config)
