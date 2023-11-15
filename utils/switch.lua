@@ -19,9 +19,17 @@ local make_switch = function(states)
     local get = function()
         return self.states[self.current_state]
     end
+    local set = function(new_state)
+        for idx, value in ipairs(self.states) do
+            if value == new_state then
+                self.current_state = idx
+            end
+        end
+    end
     return {
         bump = bump,
-        get = get
+        get = get,
+        set = set,
     }
 end
 

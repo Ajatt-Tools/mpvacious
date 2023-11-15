@@ -12,6 +12,7 @@ local Subtitle = require('subtitles.subtitle')
 local mp = require('mp')
 local platform = require('platform.init')
 local utils = require('mp.utils')
+local switch = require('utils.switch')
 
 local self = {}
 
@@ -21,83 +22,14 @@ local user_timings = timings.new()
 
 local append_dialogue = false
 local autoclip_enabled = false
-local autoclip_json_enabled = false
+local autoclip_method = {}
 
 ------------------------------------------------------------
 -- private
 
-local function external_command_args(lookup_word)
-    local args = {}
-    for arg in string.gmatch(self.config.autoclip_command, "%S+") do
-        table.insert(args, arg)
-    end
-    table.insert(args, self.clipboard_prepare(lookup_word))
-    return args
-end
-
-local function on_external_finish(success, result, error)
-    if success ~= true or error ~= nil then
-        h.notify("Command failed: " .. table.concat(result))
-    end
-end
-
-local function call_autocopy_command(text)
-    if h.is_empty(text) then
-        return
-    end
-    -- If autoclip command is not set, copy to the clipboard.
-    -- If it is set, run the external command.
-    if h.is_empty(self.config.autoclip_command) then
-        self.copy_to_clipboard("autocopy action", text)
-    else
-        h.subprocess(external_command_args(text), on_external_finish)
-    end
-end
-
-local function recorded_or_current_text_json()
-    local primary = dialogs.get_text()
-
-    if h.is_empty(primary) then
-        primary = mp.get_property("sub-text")
-    end
-
-    if h.is_empty(primary) then
-        return nil
-    end
-
-    local secondary = secondary_dialogs.get_text()
-
-    if h.is_empty(secondary) then
-        secondary = mp.get_property("secondary-sub-text")
-    end
-
-    local copy_json, error = utils.format_json({ primary = primary, secondary = secondary })
-
-    if error ~= nil then
-        return nil
-    end
-
-    return copy_json
-end
-
-local function recorded_or_current_text()
-    if autoclip_json_enabled then
-        return recorded_or_current_text_json()
-    end
-
-    --- Join and return all observed text.
-    --- If there's no observed text, return the current text on screen.
-    local text = dialogs.get_text()
-    if h.is_empty(text) then
-        return mp.get_property("sub-text")
-    else
-        return text
-    end
-end
-
 local function copy_primary_sub()
     if autoclip_enabled then
-        call_autocopy_command(recorded_or_current_text())
+        autoclip_method.call()
     end
 end
 
@@ -128,8 +60,99 @@ local function handle_secondary_sub()
     append_secondary_sub()
 end
 
+local function on_external_finish(success, result, error)
+    if success ~= true or error ~= nil then
+        h.notify("Command failed: " .. table.concat(result))
+    end
+end
+
+local function external_command_args(lookup_word)
+    local args = {}
+    for arg in string.gmatch(self.config.autoclip_command, "%S+") do
+        table.insert(args, arg)
+    end
+    table.insert(args, self.clipboard_prepare(lookup_word))
+    return args
+end
+
+local function call_external_command(text)
+    if not h.is_empty(self.config.autoclip_command) then
+        h.subprocess(external_command_args(text), on_external_finish)
+    end
+end
+
+local function recorded_or_current_text_json()
+    local primary = dialogs.get_text()
+
+    if h.is_empty(primary) then
+        primary = mp.get_property("sub-text")
+    end
+
+    if h.is_empty(primary) then
+        return nil
+    end
+
+    local secondary = secondary_dialogs.get_text()
+
+    if h.is_empty(secondary) then
+        secondary = mp.get_property("secondary-sub-text")
+    end
+
+    local copy_json, error = utils.format_json({ primary = primary, secondary = secondary })
+
+    if error ~= nil then
+        return nil
+    end
+
+    return copy_json
+end
+
+------------------------------------------------------------
+-- autoclip methods
+
+autoclip_method = (function()
+    local methods = { 'clipboard', 'goldendict', 'clipboard_json', 'custom_command', }
+    local current_method = switch.new(methods)
+
+    local function call()
+        local text = self.current_primary_text()
+        if h.is_empty(text) then
+            return
+        end
+        if current_method.get() == 'clipboard' then
+            self.copy_to_clipboard("autocopy action", text)
+        elseif current_method.get() == 'goldendict' then
+            h.subprocess({ 'goldendict', text }, on_external_finish)
+        elseif current_method.get() == 'custom_command' then
+            call_external_command(text)
+        elseif current_method.get() == 'clipboard_json' then
+            self.copy_to_clipboard("autocopy json action", recorded_or_current_text_json())
+        end
+    end
+
+    return {
+        call = call,
+        get = current_method.get,
+        bump = current_method.bump,
+        set = current_method.set,
+    }
+end)()
+
 ------------------------------------------------------------
 -- public
+
+self.current_primary_text = function()
+    --- Join and return all observed text.
+    --- If there's no observed text, return the current text on screen.
+    local text = dialogs.get_text()
+    if h.is_empty(text) then
+        text = mp.get_property("sub-text")
+        if h.is_empty(text) then
+            return
+        end
+    end
+    return self.clipboard_prepare(text)
+end
 
 self.copy_to_clipboard = function(_, text)
     if not h.is_empty(text) then
@@ -236,13 +259,11 @@ self.recorded_subs = function()
 end
 
 self.autocopy_status_str = function()
-    local status = autoclip_enabled and 'enabled' or 'disabled'
-
-    if autoclip_json_enabled then
-        return status .. ' (JSON)'
-    else
-        return status
-    end
+    return string.format(
+            "%s (%s)",
+            (autoclip_enabled and 'enabled' or 'disabled'),
+            autoclip_method.get()
+    )
 end
 
 local function notify_autocopy()
@@ -253,24 +274,12 @@ local function notify_autocopy()
 end
 
 self.toggle_autocopy = function()
-    if autoclip_json_enabled then
-        autoclip_json_enabled = false
-        autoclip_enabled = true
-    else
-        autoclip_enabled = not autoclip_enabled
-    end
-
+    autoclip_enabled = not autoclip_enabled
     notify_autocopy()
 end
 
-self.toggle_autocopy_json = function()
-    if not autoclip_json_enabled then
-        autoclip_json_enabled = true
-        autoclip_enabled = true
-    else
-        autoclip_enabled = not autoclip_enabled
-    end
-
+self.next_autoclip_method = function()
+    autoclip_method.bump()
     notify_autocopy()
 end
 
@@ -281,6 +290,7 @@ self.init = function(menu, config)
     -- The autoclip state is copied as a local value
     -- to prevent it from being reset when the user reloads the config file.
     autoclip_enabled = self.config.autoclip
+    autoclip_method.set(self.config.autoclip_method)
 
     mp.observe_property("sub-text", "string", handle_primary_sub)
     mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
