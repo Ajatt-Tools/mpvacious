@@ -11,7 +11,6 @@ local sub_list = require('subtitles.sub_list')
 local Subtitle = require('subtitles.subtitle')
 local mp = require('mp')
 local platform = require('platform.init')
-local utils = require('mp.utils')
 local switch = require('utils.switch')
 
 local self = {}
@@ -66,22 +65,26 @@ local function on_external_finish(success, result, error)
     end
 end
 
-local function external_command_args(lookup_word)
+local function external_command_args(cur_lines)
     local args = {}
     for arg in string.gmatch(self.config.autoclip_command, "%S+") do
+        if arg == '%MPV_PRIMARY%' then
+            arg = cur_lines.primary
+        elseif arg == '%MPV_SECONDARY%' then
+            arg = cur_lines.secondary
+        end
         table.insert(args, arg)
     end
-    table.insert(args, self.clipboard_prepare(lookup_word))
     return args
 end
 
-local function call_external_command(text)
+local function call_external_command(cur_lines)
     if not h.is_empty(self.config.autoclip_command) then
-        h.subprocess(external_command_args(text), on_external_finish)
+        h.subprocess(external_command_args(cur_lines), on_external_finish)
     end
 end
 
-local function recorded_or_current_text_json()
+local function current_subtitle_lines()
     local primary = dialogs.get_text()
 
     if h.is_empty(primary) then
@@ -95,38 +98,31 @@ local function recorded_or_current_text_json()
     local secondary = secondary_dialogs.get_text()
 
     if h.is_empty(secondary) then
-        secondary = mp.get_property("secondary-sub-text")
+        secondary = mp.get_property("secondary-sub-text") or ""
     end
 
-    local copy_json, error = utils.format_json({ primary = primary, secondary = secondary })
-
-    if error ~= nil then
-        return nil
-    end
-
-    return copy_json
+    return { primary = self.clipboard_prepare(primary), secondary = secondary }
 end
 
 ------------------------------------------------------------
 -- autoclip methods
 
 autoclip_method = (function()
-    local methods = { 'clipboard', 'goldendict', 'clipboard_json', 'custom_command', }
+    local methods = { 'clipboard', 'goldendict', 'custom_command', }
     local current_method = switch.new(methods)
 
     local function call()
-        local text = self.current_primary_text()
-        if h.is_empty(text) then
+        local cur_lines = current_subtitle_lines()
+        if h.is_empty(cur_lines) then
             return
         end
+
         if current_method.get() == 'clipboard' then
-            self.copy_to_clipboard("autocopy action", text)
+            self.copy_to_clipboard("autocopy action", cur_lines.primary)
         elseif current_method.get() == 'goldendict' then
-            h.subprocess({ 'goldendict', text }, on_external_finish)
+            h.subprocess({ 'goldendict', cur_lines.primary }, on_external_finish)
         elseif current_method.get() == 'custom_command' then
-            call_external_command(text)
-        elseif current_method.get() == 'clipboard_json' then
-            self.copy_to_clipboard("autocopy json action", recorded_or_current_text_json())
+            call_external_command(cur_lines)
         end
     end
 
@@ -140,19 +136,6 @@ end)()
 
 ------------------------------------------------------------
 -- public
-
-self.current_primary_text = function()
-    --- Join and return all observed text.
-    --- If there's no observed text, return the current text on screen.
-    local text = dialogs.get_text()
-    if h.is_empty(text) then
-        text = mp.get_property("sub-text")
-        if h.is_empty(text) then
-            return
-        end
-    end
-    return self.clipboard_prepare(text)
-end
 
 self.copy_to_clipboard = function(_, text)
     if not h.is_empty(text) then
@@ -262,7 +245,7 @@ self.autocopy_status_str = function()
     return string.format(
             "%s (%s)",
             (autoclip_enabled and 'enabled' or 'disabled'),
-            autoclip_method.get()
+            autoclip_method.get():gsub('_', ' ')
     )
 end
 
