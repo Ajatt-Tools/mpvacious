@@ -67,7 +67,7 @@ end
 
 local function external_command_args(cur_lines)
     local args = {}
-    for arg in string.gmatch(self.config.autoclip_command, "%S+") do
+    for arg in string.gmatch(self.config.autoclip_custom_args, "%S+") do
         if arg == '%MPV_PRIMARY%' then
             arg = cur_lines.primary
         elseif arg == '%MPV_SECONDARY%' then
@@ -79,7 +79,7 @@ local function external_command_args(cur_lines)
 end
 
 local function call_external_command(cur_lines)
-    if not h.is_empty(self.config.autoclip_command) then
+    if not h.is_empty(self.config.autoclip_custom_args) then
         h.subprocess(external_command_args(cur_lines), on_external_finish)
     end
 end

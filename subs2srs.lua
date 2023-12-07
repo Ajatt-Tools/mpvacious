@@ -47,7 +47,7 @@ local config = {
     -- Clipboard and external communication
     autoclip = false, -- enable copying subs to the clipboard when mpv starts
     autoclip_method = "clipboard", -- one of the methods
-    autoclip_command = "", -- command to run when autoclip is triggered and autoclip_method and set to "custom_command".
+    autoclip_custom_args = "", -- command to run when autoclip is triggered and autoclip_method and set to "custom_command".
 
     -- Secondary subtitle
     secondary_sub_auto_load = true, -- Automatically load secondary subtitle track when a video file is opened.
