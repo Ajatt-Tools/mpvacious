@@ -13,10 +13,11 @@ To send subtitles from `mpv` directly to GoldenDict,
 append the following line to `subs2srs.conf`:
 
 ```
-autoclip_command=goldendict
+autoclip_method=goldendict
 ```
 
-**Note:** If `goldendict` is not in the PATH, you have to specify the entire path to the executable.
+**Note:** If `goldendict` is not in the PATH,
+you have to [add it to the PATH](https://wiki.archlinux.org/title/Environment_variables#Per_user).
 
 1) Press <kbd>a</kbd> to open `advanced menu`.
 2) Press <kbd>t</kbd> to toggle the `autoclip` option.
