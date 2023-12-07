@@ -219,7 +219,7 @@ Ctrl+m       script-binding mpvacious-update-last-note
 Ctrl+M       script-binding mpvacious-overwrite-last-note
 
 Ctrl+c       script-binding mpvacious-copy-primary-sub-to-clipboard
-Ctrl+x       script-binding mpvacious-copy-secondary-sub-to-clipboard
+Ctrl+C       script-binding mpvacious-copy-secondary-sub-to-clipboard
 Ctrl+t       script-binding mpvacious-autocopy-toggle
 
 H            script-binding mpvacious-sub-seek-back
