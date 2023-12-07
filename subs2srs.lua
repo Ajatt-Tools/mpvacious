@@ -36,6 +36,8 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 ]]
 
 local config = {
+    -- The user should not modify anything below.
+
     -- Common
     nuke_spaces = false, -- remove all spaces from the primary subtitles on exported anki cards and when copying text to clipboard.
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
@@ -44,7 +46,8 @@ local config = {
 
     -- Clipboard and external communication
     autoclip = false, -- enable copying subs to the clipboard when mpv starts
-    autoclip_command = "", -- command to run when autoclip is triggered. if empty, just copies sub_text to the clipboard.
+    autoclip_method = "clipboard", -- one of the methods
+    autoclip_command = "", -- command to run when autoclip is triggered and autoclip_method and set to "custom_command".
 
     -- Secondary subtitle
     secondary_sub_auto_load = true, -- Automatically load secondary subtitle track when a video file is opened.
@@ -454,6 +457,7 @@ menu.keybindings = {
     { key = 'm', fn = menu:with_update { update_last_note, false } },
     { key = 'M', fn = menu:with_update { update_last_note, true } },
     { key = 't', fn = menu:with_update { subs_observer.toggle_autocopy } },
+    { key = 'T', fn = menu:with_update { subs_observer.next_autoclip_method } },
     { key = 'i', fn = menu:with_update { menu.hints_state.bump } },
     { key = 'p', fn = menu:with_update { load_next_profile } },
     { key = 'ESC', fn = function() menu:close() end },
@@ -491,6 +495,7 @@ function menu:print_bindings(osd)
         osd:tab():item('g: '):text('GUI export'):newline()
         osd:tab():item('m: '):text('Update the last added note '):italics('(+shift to overwrite)'):newline()
         osd:tab():item('t: '):text('Toggle clipboard autocopy'):newline()
+        osd:tab():item('T: '):text('Switch to the next clipboard method'):newline()
         osd:tab():item('p: '):text('Switch to next profile'):newline()
         osd:tab():item('ESC: '):text('Close'):newline()
         osd:italics("Press "):item('i'):italics(" to show global bindings."):newline()
