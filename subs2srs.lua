@@ -142,6 +142,7 @@ local encoder = require('encoder')
 local h = require('helpers')
 local Menu = require('menu')
 local ankiconnect = require('ankiconnect')
+local sid_collect_display = require('utils.sid_collect_display')
 local switch = require('utils.switch')
 local play_control = require('utils.play_control')
 local secondary_sid = require('subtitles.secondary_sid')
@@ -456,6 +457,7 @@ menu.keybindings = {
     { key = 'n', fn = menu:with_update { export_to_anki, false } },
     { key = 'm', fn = menu:with_update { update_last_note, false } },
     { key = 'M', fn = menu:with_update { update_last_note, true } },
+    { key = 'Ctrl+x', fn = menu:with_update { sid_collect_display.toggle } },
     { key = 't', fn = menu:with_update { subs_observer.toggle_autocopy } },
     { key = 'T', fn = menu:with_update { subs_observer.next_autoclip_method } },
     { key = 'i', fn = menu:with_update { menu.hints_state.bump } },
@@ -469,6 +471,7 @@ function menu:print_header(osd)
     osd:item('Timings: '):text(h.human_readable_time(subs_observer.get_timing('start')))
     osd:item(' to '):text(h.human_readable_time(subs_observer.get_timing('end'))):newline()
     osd:item('Clipboard autocopy: '):text(subs_observer.autocopy_status_str()):newline()
+    osd:item('Sid Collect: '):text(sid_collect_display.is_enabled()):newline()
     osd:item('Active profile: '):text(profiles.active):newline()
     osd:item('Deck: '):text(config.deck_name):newline()
 end
@@ -533,6 +536,12 @@ function menu:print_selection(osd)
         for _, s in ipairs(subs_observer.recorded_subs()) do
             osd:text(escape_for_osd(s['text'])):newline()
         end
+        if sid_collect_display.is_enabled() == 'enabled' then
+            osd:text("------------------"):newline()
+            for _, s in ipairs(subs_observer.recorded_secondary_subs()) do
+                osd:text(escape_for_osd(s['text'])):newline()
+            end
+        end
     end
 end
 
@@ -560,6 +569,7 @@ local main = (function()
         forvo.init(config, platform)
         encoder.init(config)
         secondary_sid.init(config)
+        sid_collect_display.init(false)
         ensure_deck()
         subs_observer.init(menu, config)
 
