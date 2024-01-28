@@ -195,6 +195,8 @@ set `audio_format` to `mp3` and/or `snapshot_format` to `jpg`.
 Otherwise, I recommend sticking with `opus` and `webp`,
 as they greatly reduce the size of the generated files.
 
+If you use AnkiMobile, it's recommended to set `audio_format` to `caf`. The resulting files will use Opus as the coding format and Apple's Core Audio format as the container format, but will still have the .ogg extension to make it easier to open in media players because the .caf extension is not commonly recognized.
+
 If no matter what mpvacious fails to create audio clips and/or snapshots,
 change `use_ffmpeg` to `yes`.
 By using ffmpeg instead of the encoder built in mpv you can work around most encoder issues.

@@ -25,6 +25,9 @@ local function set_audio_format()
     if self.config.audio_format == 'opus' then
         self.config.audio_codec = 'libopus'
         self.config.audio_extension = '.ogg'
+    elseif self.config.audio_format == 'caf' then
+        self.config.audio_codec = 'libopus'
+        self.config.audio_extension = '.ogg'
     else
         self.config.audio_codec = 'libmp3lame'
         self.config.audio_extension = '.mp3'
