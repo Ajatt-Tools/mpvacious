@@ -529,14 +529,14 @@ end
 function menu:print_selection(osd)
     if subs_observer.is_appending() and config.show_selected_text then
         osd:new_layer():size(config.menu_font_size):font(config.menu_font_name):align(6)
-        osd:submenu("Selected text"):newline()
+        osd:submenu("Primary text"):newline()
         for _, s in ipairs(subs_observer.recorded_subs()) do
             osd:text(escape_for_osd(s['text'])):newline()
         end
         if not h.is_empty(config.secondary_field) then
             -- If the user wants to add secondary subs to Anki,
             -- it's okay to print them on the screen.
-            osd:text("------------------"):newline()
+            osd:submenu("Secondary text"):newline()
             for _, s in ipairs(subs_observer.recorded_secondary_subs()) do
                 osd:text(escape_for_osd(s['text'])):newline()
             end
