@@ -98,7 +98,8 @@ but we acknowledge that some people haven't switched to GNU/Linux yet.
 Clone the repo to the `scripts` directory.
 
 ```
-$ git clone 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
+mkdir -p ~/.config/mpv/scripts/
+git clone 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
 ```
 
 To update, run the following command.
@@ -112,6 +113,9 @@ cd ~/.config/mpv/scripts/subs2srs && git pull
 `mpvacious` can be installed with the [mpv-mpvacious](https://aur.archlinux.org/packages/mpv-mpvacious/) package.
 
 ### Manually
+
+This way is not recommended because it's easy to make a mistake during the process
+and end up with a broken install.
 
 Download
 [the repository](https://github.com/Ajatt-Tools/mpvacious/archive/refs/heads/master.zip)
