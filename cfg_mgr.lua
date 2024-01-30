@@ -22,10 +22,9 @@ local default_profile_filename = 'subs2srs'
 local profiles_filename = 'subs2srs_profiles'
 
 local function set_audio_format()
-    if self.config.audio_format == 'opus' then
-        self.config.audio_codec = 'libopus'
-        self.config.audio_extension = '.ogg'
-    elseif self.config.audio_format == 'caf' then
+    if self.config.audio_format == 'opus' or self.config.audio_format == 'caf' then
+        -- https://opus-codec.org/
+        -- https://en.wikipedia.org/wiki/Core_Audio_Format
         self.config.audio_codec = 'libopus'
         self.config.audio_extension = '.ogg'
     else
