@@ -42,6 +42,7 @@ local function reencode(source_path, dest_path)
         '--oacopts-add=compression_level=10',
         '--af-append=silenceremove=1:0:-50dB',
         table.concat { '--oac=', self.config.audio_codec },
+        table.concat { '--of=', self.config.audio_format },
         table.concat { '--oacopts-add=b=', self.config.audio_bitrate },
         table.concat { '-o=', dest_path }
     }
