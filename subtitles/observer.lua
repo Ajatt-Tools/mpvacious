@@ -11,6 +11,7 @@ local sub_list = require('subtitles.sub_list')
 local Subtitle = require('subtitles.subtitle')
 local mp = require('mp')
 local platform = require('platform.init')
+local switch = require('utils.switch')
 
 local self = {}
 
@@ -20,52 +21,14 @@ local user_timings = timings.new()
 
 local append_dialogue = false
 local autoclip_enabled = false
+local autoclip_method = {}
 
 ------------------------------------------------------------
 -- private
 
-local function external_command_args(lookup_word)
-    local args = {}
-    for arg in string.gmatch(self.config.autoclip_command, "%S+") do
-        table.insert(args, arg)
-    end
-    table.insert(args, self.clipboard_prepare(lookup_word))
-    return args
-end
-
-local function on_external_finish(success, result, error)
-    if success ~= true or error ~= nil then
-        h.notify("Command failed: " .. table.concat(result))
-    end
-end
-
-local function call_autocopy_command(text)
-    if h.is_empty(text) then
-        return
-    end
-    -- If autoclip command is not set, copy to the clipboard.
-    -- If it is set, run the external command.
-    if h.is_empty(self.config.autoclip_command) then
-        self.copy_to_clipboard("autocopy action", text)
-    else
-        h.subprocess(external_command_args(text), on_external_finish)
-    end
-end
-
-local function recorded_or_current_text()
-    --- Join and return all observed text.
-    --- If there's no observed text, return the current text on screen.
-    local text = dialogs.get_text()
-    if h.is_empty(text) then
-        return mp.get_property("sub-text")
-    else
-        return text
-    end
-end
-
 local function copy_primary_sub()
     if autoclip_enabled then
-        call_autocopy_command(recorded_or_current_text())
+        autoclip_method.call()
     end
 end
 
@@ -95,6 +58,81 @@ end
 local function handle_secondary_sub()
     append_secondary_sub()
 end
+
+local function on_external_finish(success, result, error)
+    if success ~= true or error ~= nil then
+        h.notify("Command failed: " .. table.concat(result))
+    end
+end
+
+local function external_command_args(cur_lines)
+    local args = {}
+    for arg in string.gmatch(self.config.autoclip_custom_args, "%S+") do
+        if arg == '%MPV_PRIMARY%' then
+            arg = cur_lines.primary
+        elseif arg == '%MPV_SECONDARY%' then
+            arg = cur_lines.secondary
+        end
+        table.insert(args, arg)
+    end
+    return args
+end
+
+local function call_external_command(cur_lines)
+    if not h.is_empty(self.config.autoclip_custom_args) then
+        h.subprocess(external_command_args(cur_lines), on_external_finish)
+    end
+end
+
+local function current_subtitle_lines()
+    local primary = dialogs.get_text()
+
+    if h.is_empty(primary) then
+        primary = mp.get_property("sub-text")
+    end
+
+    if h.is_empty(primary) then
+        return nil
+    end
+
+    local secondary = secondary_dialogs.get_text()
+
+    if h.is_empty(secondary) then
+        secondary = mp.get_property("secondary-sub-text") or ""
+    end
+
+    return { primary = self.clipboard_prepare(primary), secondary = secondary }
+end
+
+------------------------------------------------------------
+-- autoclip methods
+
+autoclip_method = (function()
+    local methods = { 'clipboard', 'goldendict', 'custom_command', }
+    local current_method = switch.new(methods)
+
+    local function call()
+        local cur_lines = current_subtitle_lines()
+        if h.is_empty(cur_lines) then
+            return
+        end
+
+        if current_method.get() == 'clipboard' then
+            self.copy_to_clipboard("autocopy action", cur_lines.primary)
+        elseif current_method.get() == 'goldendict' then
+            h.subprocess({ 'goldendict', cur_lines.primary }, on_external_finish)
+        elseif current_method.get() == 'custom_command' then
+            call_external_command(cur_lines)
+        end
+    end
+
+    return {
+        call = call,
+        get = current_method.get,
+        bump = current_method.bump,
+        set = current_method.set,
+    }
+end)()
 
 local function copy_subtitle(subtitle_id)
     self.copy_to_clipboard("copy-on-demand", mp.get_property(subtitle_id))
@@ -211,16 +249,33 @@ self.recorded_subs = function()
     return dialogs.get_subs_list()
 end
 
-self.autocopy_status_str = function()
-    return autoclip_enabled and 'enabled' or 'disabled'
+self.recorded_secondary_subs = function()
+    return secondary_dialogs.get_subs_list()
 end
 
-self.toggle_autocopy = function()
-    autoclip_enabled = not autoclip_enabled
+self.autocopy_status_str = function()
+    return string.format(
+            "%s (%s)",
+            (autoclip_enabled and 'enabled' or 'disabled'),
+            autoclip_method.get():gsub('_', ' ')
+    )
+end
+
+local function notify_autocopy()
     if autoclip_enabled then
         copy_primary_sub()
     end
     h.notify(string.format("Clipboard autocopy has been %s.", self.autocopy_status_str()))
+end
+
+self.toggle_autocopy = function()
+    autoclip_enabled = not autoclip_enabled
+    notify_autocopy()
+end
+
+self.next_autoclip_method = function()
+    autoclip_method.bump()
+    notify_autocopy()
 end
 
 self.init = function(menu, config)
@@ -230,6 +285,7 @@ self.init = function(menu, config)
     -- The autoclip state is copied as a local value
     -- to prevent it from being reset when the user reloads the config file.
     autoclip_enabled = self.config.autoclip
+    autoclip_method.set(self.config.autoclip_method)
 
     mp.observe_property("sub-text", "string", handle_primary_sub)
     mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
