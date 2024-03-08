@@ -348,12 +348,6 @@ local function maybe_reload_config()
 end
 
 local function get_anki_media_dir_path()
-    -- Try to find the collection.media directory without AnkiConnect first.
-    local r = h.subprocess{utils.join_path(mp.get_script_directory(), 'find_anki_col.sh')}
-    if r.status == 0 then
-        return r.stdout:gsub("[\r\n]*", ""):gsub("%.anki2$", ".media")
-    end
-    -- Call AnkiConnect if failed.
     return ankiconnect.get_media_dir_path()
 end
 
