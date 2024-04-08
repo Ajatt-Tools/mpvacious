@@ -6,23 +6,31 @@ Platform-specific functions for *nix systems.
 ]]
 
 local h = require('helpers')
-local self = {}
-local clip = (function()
-    if h.is_mac() then
-        return 'LANG=en_US.UTF-8 pbcopy'
-    elseif h.is_wayland() then
-        return 'wl-copy'
-    else
-        return 'xclip -i -selection clipboard'
-    end
-end)()
+local self = { healthy = true, clip_util = "", clip_cmd = "", }
+
+local function is_installed(exe_name)
+    return os.execute("which " .. exe_name) == 0
+end
+
+if h.is_mac() then
+    self.clip_util = "pbcopy"
+    self.clip_cmd = "LANG=en_US.UTF-8 " .. self.clip_util
+elseif h.is_wayland() then
+    self.clip_util = "wl-copy"
+    self.clip_cmd = self.clip_util
+    self.healthy = is_installed(self.clip_util)
+else
+    self.clip_util = "xclip"
+    self.clip_cmd = self.clip_util .. " -i -selection clipboard"
+    self.healthy = is_installed(self.clip_util)
+end
 
 self.tmp_dir = function()
     return os.getenv("TMPDIR") or '/tmp'
 end
 
 self.copy_to_clipboard = function(text)
-    local handle = io.popen(clip, 'w')
+    local handle = io.popen(self.clip_cmd, 'w')
     handle:write(text)
     handle:close()
 end

@@ -142,6 +142,10 @@ end
 -- public
 
 self.copy_to_clipboard = function(_, text)
+    if platform.healthy == false then
+        h.notify(platform.clip_util .. " is not installed.", "error", 5)
+        return
+    end
     if not h.is_empty(text) then
         platform.copy_to_clipboard(self.clipboard_prepare(text))
     end
