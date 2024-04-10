@@ -513,11 +513,18 @@ function menu:warn_formats(osd)
     end
 end
 
+function menu:warn_clipboard(osd)
+    if subs_observer.autocopy_current_method() == "clipboard" and platform.healthy == false then
+        osd:red('warning: '):text(string.format("%s is not installed.", platform.clip_util)):newline()
+    end
+end
+
 function menu:print_legend(osd)
     osd:new_layer():size(config.menu_font_size):font(config.menu_font_name):align(4)
     self:print_header(osd)
     self:print_bindings(osd)
     self:warn_formats(osd)
+    self:warn_clipboard(osd)
 end
 
 function menu:print_selection(osd)

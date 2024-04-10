@@ -80,6 +80,7 @@ this.subprocess = function(args, completion_fn)
         name = "subprocess",
         playback_only = false,
         capture_stdout = true,
+        capture_stderr = true,
         args = args
     }
     return command_native(command_table, completion_fn)

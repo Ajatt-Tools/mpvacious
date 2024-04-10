@@ -144,7 +144,6 @@ end
 self.copy_to_clipboard = function(_, text)
     if platform.healthy == false then
         h.notify(platform.clip_util .. " is not installed.", "error", 5)
-        return
     end
     if not h.is_empty(text) then
         platform.copy_to_clipboard(self.clipboard_prepare(text))
@@ -263,6 +262,10 @@ self.autocopy_status_str = function()
             (autoclip_enabled and 'enabled' or 'disabled'),
             autoclip_method.get():gsub('_', ' ')
     )
+end
+
+self.autocopy_current_method = function()
+    return autoclip_method.get()
 end
 
 local function notify_autocopy()
