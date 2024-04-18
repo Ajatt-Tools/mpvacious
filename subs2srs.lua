@@ -436,7 +436,7 @@ end
 -- main menu
 
 menu = Menu:new {
-    hints_state = switch.new { 'hidden', 'menu', 'global', },
+    hints_state = switch.new { 'basic', 'menu', 'global', 'hidden', },
 }
 
 menu.keybindings = {
@@ -459,6 +459,9 @@ menu.keybindings = {
 }
 
 function menu:print_header(osd)
+    if self.hints_state.get() == 'hidden' then
+        return
+    end
     osd:submenu('mpvacious options'):newline()
     osd:item('Timings: '):text(h.human_readable_time(subs_observer.get_timing('start')))
     osd:item(' to '):text(h.human_readable_time(subs_observer.get_timing('end'))):newline()
@@ -476,7 +479,7 @@ function menu:print_bindings(osd)
         osd:tab():item('ctrl+shift+h: '):text('Replay current subtitle'):newline()
         osd:tab():item('shift+h/l: '):text('Seek to the previous/next subtitle'):newline()
         osd:tab():item('alt+h/l: '):text('Seek to the previous/next subtitle and pause'):newline()
-        osd:italics("Press "):item('i'):italics(" to hide bindings."):newline()
+        osd:italics("Press "):item('i'):italics(" to hide mpvacious options."):newline()
     elseif self.hints_state.get() == 'menu' then
         osd:submenu('Menu bindings'):newline()
         osd:tab():item('c: '):text('Set timings to the current sub'):newline()
@@ -493,6 +496,8 @@ function menu:print_bindings(osd)
         osd:tab():item('p: '):text('Switch to next profile'):newline()
         osd:tab():item('ESC: '):text('Close'):newline()
         osd:italics("Press "):item('i'):italics(" to show global bindings."):newline()
+    elseif self.hints_state.get() == 'hidden' then
+        -- Menu bindings are active but hidden
     else
         osd:italics("Press "):item('i'):italics(" to show menu bindings."):newline()
     end
