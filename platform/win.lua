@@ -20,8 +20,7 @@ self.tmp_dir = function()
 end
 
 self.copy_to_clipboard = function(text)
-    text = text:gsub("&", "^^^&"):gsub("[<>|]", ""):gsub("\"", '“')
-    mp.commandv("run", "cmd.exe", "/d", "/c", string.format("@echo off & chcp 65001 >nul & echo %s|clip", text))
+    mp.commandv("run", "powershell", "-command", string.format('Set-Clipboard -Value "%s"', text:gsub('"', '`"')))
 end
 
 self.curl_request = function(url, request_json, completion_fn)
