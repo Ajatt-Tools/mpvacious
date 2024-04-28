@@ -14,7 +14,7 @@ if h.is_mac() then
 elseif h.is_wayland() then
     local function is_wl_copy_installed()
         local handle = h.subprocess { 'wl-copy', '--version' }
-        return handle.status == 0 and handle.stdout:match("wl-clipboard") ~= nil
+        return handle.status == 0 and handle.stdout:match("wl%-clipboard") ~= nil
     end
 
     self.clip_util = "wl-copy"
