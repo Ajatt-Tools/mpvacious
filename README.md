@@ -61,10 +61,11 @@ $ sudo pacman -Syu mpv anki curl xclip --needed
 ## Prerequisites
 
 * A guide on how to set up Anki can be found [on our site](https://tatsumoto.neocities.org/blog/setting-up-anki.html).
-  Note that it is not recommended to use FlatPak or similar containers.
 * If you're on a [Windows](https://www.fsf.org/windows) or a [Windows-like](https://reactos.org/) machine,
   a mpv build by `shinchiro` is recommended.
 * **macOS** users are advised to use [homebrew](https://brew.sh/) or manually add `mpv` to `PATH`.
+* Note that it is not recommended to use FlatPak or similar containers.
+  If you still want to, [read this](howto/flatpak.md).
 * Make sure that your build of mpv supports encoding of audio and images.
   This shell command can be used to test it.
 
@@ -74,8 +75,8 @@ $ sudo pacman -Syu mpv anki curl xclip --needed
 
   If the command fails, find a compatible build on the [mpv website](https://mpv.io/installation/)
   or instead install FFmpeg and [enable FFmpeg support](#configuration) in `mpvacious`'s config file.
-
-  Most problems with adding audio or images to Anki cards can be fixed by installing and enabling FFmpeg separately.
+* Most problems with adding audio or images to Anki cards can be fixed
+  by installing FFmpeg and enabling it settings.
 
 ## Installation
 
