@@ -355,7 +355,9 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding)
         local args = self.encoder.make_audio_args(source_path, output_path, start_timestamp, end_timestamp)
         local on_finish = function()
             if report_creation_result(output_path) and self.config.preview_audio then
-                background_play(output_path, function() print("Played file: " .. output_path) end)
+                background_play(output_path, function()
+                    print("Played file: " .. output_path)
+                end)
             end
         end
         h.subprocess(args, on_finish)
@@ -401,12 +403,18 @@ local create_job = function(type, sub, audio_padding)
     if type == 'snapshot' and h.has_video_track() then
         current_timestamp = mp.get_property_number("time-pos", 0)
         filename = make_snapshot_filename(sub['start'], sub['end'], current_timestamp)
-        run_async = function() create_snapshot(sub['start'], sub['end'], current_timestamp, filename) end
+        run_async = function()
+            create_snapshot(sub['start'], sub['end'], current_timestamp, filename)
+        end
     elseif type == 'audioclip' and h.has_audio_track() then
         filename = make_audio_filename(sub['start'], sub['end'])
-        run_async = function() create_audio(sub['start'], sub['end'], filename, audio_padding) end
+        run_async = function()
+            create_audio(sub['start'], sub['end'], filename, audio_padding)
+        end
     else
-        run_async = function() print(type .. " will not be created.") end
+        run_async = function()
+            print(type .. " will not be created.")
+        end
     end
     return {
         filename = filename,
@@ -418,10 +426,14 @@ return {
     init = init,
     set_output_dir = set_output_dir,
     snapshot = {
-        create_job = function(sub) return create_job('snapshot', sub) end,
+        create_job = function(sub)
+            return create_job('snapshot', sub)
+        end,
         toggle_animation = toggle_animation,
     },
     audio = {
-        create_job = function(sub, padding) return create_job('audioclip', sub, padding) end,
+        create_job = function(sub, padding)
+            return create_job('audioclip', sub, padding)
+        end,
     },
 }
