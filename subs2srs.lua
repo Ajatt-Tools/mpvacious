@@ -56,7 +56,7 @@ local config = {
     secondary_sub_visibility = 'auto', -- One of: 'auto', 'never', 'always'. Controls secondary_sid visibility. Ctrl+V to cycle.
 
     -- Snapshots
-    snapshot_format = "webp", -- webp or jpg
+    snapshot_format = "avif", -- avif, webp or jpg
     snapshot_quality = 15, -- from 0=lowest to 100=highest
     snapshot_width = -2, -- a positive integer or -2 for auto
     snapshot_height = 200, -- same

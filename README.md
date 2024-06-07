@@ -193,7 +193,8 @@ Alternatively, we have a collection of user-created note types, which you can br
 
 If you are having problems playing media files on older mobile devices,
 set `audio_format` to `mp3` and/or `snapshot_format` to `jpg`.
-Otherwise, I recommend sticking with `opus` and `webp`,
+Otherwise, I recommend sticking with `opus` for audio,
+and `avif` or `webp` for images,
 as they greatly reduce the size of the generated files.
 
 If you still use AnkiMobile (the [proprietary](https://www.gnu.org/proprietary/) Anki app),
