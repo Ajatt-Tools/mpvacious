@@ -34,7 +34,10 @@ local function set_audio_format()
 end
 
 local function set_video_format()
-    if self.config.snapshot_format == 'webp' then
+    if self.config.snapshot_format == 'avif' then
+        self.config.snapshot_extension = '.avif'
+        self.config.snapshot_codec = 'libaom-av1'
+    elseif self.config.snapshot_format == 'webp' then
         self.config.snapshot_extension = '.webp'
         self.config.snapshot_codec = 'libwebp'
     else
