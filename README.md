@@ -258,7 +258,7 @@ mpv accepts both variants in `input.conf`.
 
 * [Create a card](howto/create_card.md)
 * [Open the "Add" dialog](howto/add_dialog.md)
-* [Usage with Yomichan](howto/yomichan.md)
+* [Usage with Rikaitan](howto/yomichan.md)
 * [Usage with GoldenDict](howto/goldendict.md)
 
 ### Global bindings
@@ -380,7 +380,7 @@ By pressing <kbd>Ctrl</kbd>+<kbd>v</kbd> you can control secondary sid visibilit
 
 ### Other tools
 
-If you don't like the default Yomichan Search tool, try:
+If you don't like the default Rikaitan Search tool, try:
 
 * Clipboard Inserter browser add-on
 ([chrome](https://chrome.google.com/webstore/detail/clipboard-inserter/deahejllghicakhplliloeheabddjajm))
