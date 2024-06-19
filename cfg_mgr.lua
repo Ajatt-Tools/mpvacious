@@ -22,11 +22,16 @@ local default_profile_filename = 'subs2srs'
 local profiles_filename = 'subs2srs_profiles'
 
 local function set_audio_format()
-    if self.config.audio_format == 'opus' or self.config.audio_format == 'caf' then
-        -- https://opus-codec.org/
-        -- https://en.wikipedia.org/wiki/Core_Audio_Format
+    if self.config.audio_format == 'opus' then
         self.config.audio_codec = 'libopus'
+        -- Default to OGG, then change if an extension is supported.
         self.config.audio_extension = '.ogg'
+        for i, v in ipairs({ 'opus', 'm4a', 'webm', 'caf' }) do
+            if v == self.config.opus_container then
+                self.config.audio_extension = '.' .. self.config.opus_container
+                break
+            end
+        end
     else
         self.config.audio_codec = 'libmp3lame'
         self.config.audio_extension = '.mp3'
@@ -44,19 +49,24 @@ local function set_video_format()
         self.config.snapshot_extension = '.jpg'
         self.config.snapshot_codec = 'mjpeg'
     end
-    -- Animated webp images can only have .webp extension.
-    -- The user has no choice on this.
-    self.config.animated_snapshot_extension = '.webp'
+
+    if self.config.animated_snapshot_format == 'avif' then
+        self.config.animated_snapshot_extension = '.avif'
+        self.config.animated_snapshot_codec = 'libaom-av1'
+    else
+        self.config.animated_snapshot_extension = '.webp'
+        self.config.animated_snapshot_codec = 'libwebp'
+    end
 end
 
 local function ensure_in_range(dimension)
-    self.config[dimension] = self.config[dimension] < min_side_px and -2 or self.config[dimension]
+    self.config[dimension] = self.config[dimension] < min_side_px and -1 or self.config[dimension]
     self.config[dimension] = self.config[dimension] > max_side_px and max_side_px or self.config[dimension]
 end
 
 local function conditionally_set_defaults(width, height, quality)
     if self.config[width] < 1 and self.config[height] < 1 then
-        self.config[width] = -2
+        self.config[width] = -1
         self.config[height] = 200
     end
     if self.config[quality] < 0 or self.config[quality] > 100 then

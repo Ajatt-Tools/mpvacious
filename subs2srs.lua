@@ -58,19 +58,21 @@ local config = {
     -- Snapshots
     snapshot_format = "avif", -- avif, webp or jpg
     snapshot_quality = 15, -- from 0=lowest to 100=highest
-    snapshot_width = -2, -- a positive integer or -2 for auto
+    snapshot_width = -1, -- a positive integer or -1 for auto
     snapshot_height = 200, -- same
     screenshot = false, -- create a screenshot instead of a snapshot; see example config.
 
     -- Animations
     animated_snapshot_enabled = false, -- if enabled captures the selected segment of the video, instead of just a frame
+    animated_snapshot_format = "avif", -- avif or webp
     animated_snapshot_fps = 10, -- positive integer between 0 and 30 (30 included)
-    animated_snapshot_width = -2, -- positive integer or -2 to scale it maintaining ratio (height must not be -2 in that case)
-    animated_snapshot_height = 200, -- positive integer or -2 to scale it maintaining ratio (width must not be -2 in that case)
+    animated_snapshot_width = -1, -- positive integer or -1 to scale it maintaining ratio (height must not be -1 in that case)
+    animated_snapshot_height = 200, -- positive integer or -1 to scale it maintaining ratio (width must not be -1 in that case)
     animated_snapshot_quality = 5, -- positive integer between 0 and 100 (100 included)
 
     -- Audio clips
     audio_format = "opus", -- opus or mp3
+    opus_container = "ogg", -- ogg, opus, m4a, webm or caf
     audio_bitrate = "18k", -- from 16k to 32k
     audio_padding = 0.12, -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
     tie_volumes = false, -- if set to true, the volume of the outputted audio file depends on the volume of the player at the time of export
@@ -81,9 +83,15 @@ local config = {
     menu_font_size = 25,
     show_selected_text = true,
 
+    loudnorm = true,
+    loudnorm_target = -16,
+    loudnorm_range = 11,
+    loudnorm_peak = -1.5,
+
     -- Custom encoding args
-    ffmpeg_audio_args = '-af loudnorm=I=-16:TP=-1.5:LRA=11',
-    mpv_audio_args = '--af-append=loudnorm=I=-16:TP=-1.5:LRA=11',
+
+    ffmpeg_audio_args = '',
+    mpv_audio_args = '',
 
     -- Anki
     create_deck = false, -- automatically create a deck for new cards
@@ -179,6 +187,7 @@ local codec_support = (function()
 
     return {
         snapshot = {
+            ['libaom-av1'] = is_image_supported('libaom-av1'),
             libwebp = is_image_supported('libwebp'),
             mjpeg = is_image_supported('mjpeg'),
         },
