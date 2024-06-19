@@ -113,14 +113,14 @@ ffmpeg.make_static_snapshot_args = function(source_path, output_path, timestamp)
     end
 
     local args = ffmpeg.prepend(
-        '-an',
-        '-ss', toms(timestamp),
-        '-i', source_path,
-        '-map_metadata', '-1',
-        '-vf', string.format("scale='min(%d,iw)':'min(%d,ih)':flags=sinc+accurate_rnd",
-                             self.config.snapshot_width, self.config.snapshot_height),
-        '-frames:v', '1',
-        table.unpack(encoder_args)
+            '-an',
+            '-ss', toms(timestamp),
+            '-i', source_path,
+            '-map_metadata', '-1',
+            '-vf', string.format("scale='min(%d,iw)':'min(%d,ih)':flags=sinc+accurate_rnd",
+                    self.config.snapshot_width, self.config.snapshot_height),
+            '-frames:v', '1',
+            h.unpack(encoder_args)
     )
     table.insert(args, output_path)
     return args
@@ -142,7 +142,7 @@ ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_ti
             '-c:v', 'libaom-av1',
             '-cpu-used', '6', -- cpu-used < 6 can take a lot of time to encode.
             '-crf', tostring(rescale_quality(self.config.animated_snapshot_quality,
-                                             self.max_avif_crf, 0)),
+                    self.max_avif_crf, 0)),
         }
     else
         -- Documentation: https://www.ffmpeg.org/ffmpeg-all.html#libwebp
@@ -154,14 +154,14 @@ ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_ti
     end
 
     local args = ffmpeg.prepend(
-        '-an',
-        '-ss', toms(start_timestamp),
-        '-to', toms(end_timestamp),
-        '-i', source_path,
-        '-map_metadata', '-1',
-        '-loop', '0',
-        '-vf', ffmpeg.animated_snapshot_filters(),
-        table.unpack(encoder_args)
+            '-an',
+            '-ss', toms(start_timestamp),
+            '-to', toms(end_timestamp),
+            '-i', source_path,
+            '-map_metadata', '-1',
+            '-loop', '0',
+            '-vf', ffmpeg.animated_snapshot_filters(),
+            h.unpack(encoder_args)
     )
     table.insert(args, output_path)
     return args
@@ -169,10 +169,10 @@ end
 
 local function make_loudnorm_targets()
     return string.format(
-        'loudnorm=I=%s:LRA=%s:TP=%s:dual_mono=true',
-        self.config.loudnorm_target,
-        self.config.loudnorm_range,
-        self.config.loudnorm_peak
+            'loudnorm=I=%s:LRA=%s:TP=%s:dual_mono=true',
+            self.config.loudnorm_target,
+            self.config.loudnorm_range,
+            self.config.loudnorm_peak
     )
 end
 
@@ -248,17 +248,17 @@ ffmpeg.make_audio_args = function(source_path, output_path,
 
     local function make_ffargs(...)
         return ffmpeg.append_user_audio_args(
-            ffmpeg.prepend(
-                '-vn',
-                '-ss', toms(start_timestamp),
-                '-to', toms(end_timestamp),
-                '-i', source_path,
-                '-map_metadata', '-1',
-                '-map_chapters', '-1',
-                '-map', string.format("0:%s", tostring(audio_track_id)),
-                '-ac', '1',
-                ...
-            )
+                ffmpeg.prepend(
+                        '-vn',
+                        '-ss', toms(start_timestamp),
+                        '-to', toms(end_timestamp),
+                        '-i', source_path,
+                        '-map_metadata', '-1',
+                        '-map_chapters', '-1',
+                        '-map', string.format("0:%s", tostring(audio_track_id)),
+                        '-ac', '1',
+                        ...
+                )
         )
     end
 
@@ -284,8 +284,7 @@ ffmpeg.make_audio_args = function(source_path, output_path,
             }
         end
 
-        local args = make_ffargs('-b:a', tostring(self.config.audio_bitrate),
-                                 table.unpack(encoder_args))
+        local args = make_ffargs('-b:a', tostring(self.config.audio_bitrate), h.unpack(encoder_args))
         if loudnorm_args then
             table.insert(args, '-af')
             table.insert(args, loudnorm_args)
@@ -301,20 +300,20 @@ ffmpeg.make_audio_args = function(source_path, output_path,
 
     local loudnorm_targets = make_loudnorm_targets()
     h.subprocess(
-        make_ffargs(
-            '-loglevel', 'info',
-            '-af', loudnorm_targets .. ':print_format=json',
-            '-f', 'null',
-            '-'
-        ),
-        parse_loudnorm(
-            loudnorm_targets,
-            function(stdout, stderr)
-                local start, stop, json = string.find(stderr, '%[Parsed_loudnorm_0.-({.-})')
-                return json
-            end,
-            make_encoding_args
-        )
+            make_ffargs(
+                    '-loglevel', 'info',
+                    '-af', loudnorm_targets .. ':print_format=json',
+                    '-f', 'null',
+                    '-'
+            ),
+            parse_loudnorm(
+                    loudnorm_targets,
+                    function(stdout, stderr)
+                        local start, stop, json = string.find(stderr, '%[Parsed_loudnorm_0.-({.-})')
+                        return json
+                    end,
+                    make_encoding_args
+            )
     )
 end
 
@@ -344,8 +343,10 @@ mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
         encoder_args = {
             '--ovc=libaom-av1',
             '--ovcopts-add=cpu-used=6', -- cpu-used < 6 can take a lot of time to encode.
-            string.format('--ovcopts-add=crf=%d',
-                          rescale_quality(self.config.snapshot_quality, self.max_avif_crf, 0)),
+            string.format(
+                    '--ovcopts-add=crf=%d',
+                    rescale_quality(self.config.snapshot_quality, self.max_avif_crf, 0)
+            ),
             '--ovcopts-add=still-picture=1',
         }
     elseif self.config.snapshot_format == 'webp' then
@@ -358,20 +359,24 @@ mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
         encoder_args = {
             '--ovc=mjpeg',
             '--vf-add=scale=out_range=jpeg',
-            string.format('--ovcopts=global_quality=%d*QP2LAMBDA,flags=+qscale',
-                          rescale_quality(self.config.snapshot_quality, 31, 2)),
+            string.format(
+                    '--ovcopts=global_quality=%d*QP2LAMBDA,flags=+qscale',
+                    rescale_quality(self.config.snapshot_quality, 31, 2)
+            ),
         }
     end
 
     return mpv.prepend_common_args(
-        source_path,
-        '--audio=no',
-        '--frames=1',
-        '--start=' .. toms(timestamp),
-        string.format("--vf-add=lavfi=[scale='min(%d,iw)':'min(%d,ih)':flags=sinc+accurate_rnd]",
-                      self.config.snapshot_width, self.config.snapshot_height),
-        '-o=' .. output_path,
-        table.unpack(encoder_args)
+            source_path,
+            '--audio=no',
+            '--frames=1',
+            '--start=' .. toms(timestamp),
+            string.format(
+                    "--vf-add=lavfi=[scale='min(%d,iw)':'min(%d,ih)':flags=sinc+accurate_rnd]",
+                    self.config.snapshot_width, self.config.snapshot_height
+            ),
+            '-o=' .. output_path,
+            h.unpack(encoder_args)
     )
 end
 
@@ -381,8 +386,10 @@ mpv.make_animated_snapshot_args = function(source_path, output_path, start_times
         encoder_args = {
             '--ovc=libaom-av1',
             '--ovcopts-add=cpu-used=6', -- cpu-used < 6 can take a lot of time to encode.
-            string.format('--ovcopts-add=crf=%d',
-                          rescale_quality(self.config.snapshot_quality, self.max_avif_crf, 0)),
+            string.format(
+                    '--ovcopts-add=crf=%d',
+                    rescale_quality(self.config.snapshot_quality, self.max_avif_crf, 0)
+            ),
         }
     else
         encoder_args = {
@@ -393,18 +400,18 @@ mpv.make_animated_snapshot_args = function(source_path, output_path, start_times
     end
 
     return mpv.prepend_common_args(
-        source_path,
-        '--audio=no',
-        '--start=' .. toms(start_timestamp),
-        '--end=' .. toms(end_timestamp),
-        '--ofopts-add=loop=0',
-        string.format('--vf-add=fps=%d', self.config.animated_snapshot_fps),
-        string.format(
-            "--vf-add=lavfi=[scale='min(%d,iw)':'min(%d,ih)':flags=lanczos+accurate_rnd]",
-            self.config.animated_snapshot_width, self.config.animated_snapshot_height
-        ),
-        '-o=' .. output_path,
-        table.unpack(encoder_args)
+            source_path,
+            '--audio=no',
+            '--start=' .. toms(start_timestamp),
+            '--end=' .. toms(end_timestamp),
+            '--ofopts-add=loop=0',
+            string.format('--vf-add=fps=%d', self.config.animated_snapshot_fps),
+            string.format(
+                    "--vf-add=lavfi=[scale='min(%d,iw)':'min(%d,ih)':flags=lanczos+accurate_rnd]",
+                    self.config.animated_snapshot_width, self.config.animated_snapshot_height
+            ),
+            '-o=' .. output_path,
+            h.unpack(encoder_args)
     )
 end
 
@@ -420,17 +427,17 @@ mpv.make_audio_args = function(source_path, output_path,
 
     local function make_mpvargs(...)
         local args = mpv.prepend_common_args(
-            source_path,
-            '--video=no',
-            '--aid=' .. audio_track_id,
-            '--audio-channels=mono',
-            '--start=' .. toms(start_timestamp),
-            '--end=' .. toms(end_timestamp),
-            string.format(
-                '--volume=%d',
-                self.config.tie_volumes and mp.get_property('volume') or 100
-            ),
-            ...
+                source_path,
+                '--video=no',
+                '--aid=' .. audio_track_id,
+                '--audio-channels=mono',
+                '--start=' .. toms(start_timestamp),
+                '--end=' .. toms(end_timestamp),
+                string.format(
+                        '--volume=%d',
+                        self.config.tie_volumes and mp.get_property('volume') or 100
+                ),
+                ...
         )
         for arg in string.gmatch(self.config.mpv_audio_args, "%S+") do
             table.insert(args, arg)
@@ -460,9 +467,9 @@ mpv.make_audio_args = function(source_path, output_path,
         end
 
         local args = make_mpvargs(
-            '--oacopts-add=b=' .. self.config.audio_bitrate,
-            '-o=' .. output_path,
-            table.unpack(encoder_args)
+                '--oacopts-add=b=' .. self.config.audio_bitrate,
+                '-o=' .. output_path,
+                h.unpack(encoder_args)
         )
         if loudnorm_args then
             table.insert(args, '--af-append=' .. loudnorm_args)
@@ -477,23 +484,23 @@ mpv.make_audio_args = function(source_path, output_path,
 
     local loudnorm_targets = make_loudnorm_targets()
     h.subprocess(
-        make_mpvargs(
-            '-v',
-            '--af-append=' .. loudnorm_targets .. ':print_format=json',
-            '--ao=null',
-            '--of=null'
-        ),
-        parse_loudnorm(
-            loudnorm_targets,
-            function(stdout, stderr)
-                local start, stop, json = string.find(stdout, '%[ffmpeg%] ({.-})')
-                if json then
-                    json = string.gsub(json, '%[ffmpeg%]', '')
-                end
-                return json
-            end,
-            make_encoding_args
-        )
+            make_mpvargs(
+                    '-v',
+                    '--af-append=' .. loudnorm_targets .. ':print_format=json',
+                    '--ao=null',
+                    '--of=null'
+            ),
+            parse_loudnorm(
+                    loudnorm_targets,
+                    function(stdout, stderr)
+                        local start, stop, json = string.find(stdout, '%[ffmpeg%] ({.-})')
+                        if json then
+                            json = string.gsub(json, '%[ffmpeg%]', '')
+                        end
+                        return json
+                    end,
+                    make_encoding_args
+            )
     )
 end
 
@@ -586,7 +593,7 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding)
         end
 
         self.encoder.make_audio_args(
-            source_path, output_path, start_timestamp, end_timestamp, start_encoding)
+                source_path, output_path, start_timestamp, end_timestamp, start_encoding)
     else
         print("Audio will not be created.")
     end
