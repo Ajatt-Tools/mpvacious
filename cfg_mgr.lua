@@ -63,6 +63,8 @@ local function set_video_format()
         self.config.snapshot_codec = 'mjpeg'
     end
 
+    -- Animated webp images can only have .webp extension.
+    -- The user has no choice on this. Same logic for avif.
     if self.config.animated_snapshot_format == 'avif' then
         self.config.animated_snapshot_extension = '.avif'
         self.config.animated_snapshot_codec = 'libaom-av1'
