@@ -96,6 +96,15 @@ ffmpeg.prepend = function(...)
     }
 end
 
+ffmpeg.get_static_scale_arg = function()
+    -- Image scaling uses "sinc", which is the best downscaling algorithm: https://stackoverflow.com/a/6171860
+    -- Animated images still use Lanczos.
+    return string.format(
+            "scale='min(%d,iw)':'min(%d,ih)':flags=sinc+accurate_rnd",
+            self.config.snapshot_width, self.config.snapshot_height
+    )
+end
+
 ffmpeg.make_static_snapshot_args = function(source_path, output_path, timestamp)
     local encoder_args
     if self.config.snapshot_format == 'avif' then
@@ -125,10 +134,7 @@ ffmpeg.make_static_snapshot_args = function(source_path, output_path, timestamp)
             '-ss', toms(timestamp),
             '-i', source_path,
             '-map_metadata', '-1',
-            '-vf', string.format(
-                    "scale='min(%d,iw)':'min(%d,ih)':flags=sinc+accurate_rnd",
-                    self.config.snapshot_width, self.config.snapshot_height
-            ),
+            '-vf', ffmpeg.get_static_scale_arg(),
             '-frames:v', '1',
             h.unpack(encoder_args)
     )
