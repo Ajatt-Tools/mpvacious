@@ -102,15 +102,20 @@ local config = {
     menu_font_size = 25,
     show_selected_text = true,
 
-    loudnorm = true,
+    -- Make sure to remove loudnorm from ffmpeg_audio_args and mpv_audio_args before enabling.
+    loudnorm = false,
     loudnorm_target = -16,
     loudnorm_range = 11,
     loudnorm_peak = -1.5,
 
     -- Custom encoding args
-
-    ffmpeg_audio_args = '',
-    mpv_audio_args = '',
+    -- Defaults are for backward compatibility, in case someone
+    -- updates mpvacious without updating their config.
+    -- Better to remove loudnorm from custom args and enable two-pass loudnorm.
+    -- Enabling loudnorm both through the separate switch and through custom args
+    -- can lead to unpredictable results.
+    ffmpeg_audio_args = '-af loudnorm=I=-16:TP=-1.5:LRA=11:dual_mono=true',
+    mpv_audio_args = '--af-append=loudnorm=I=-16:TP=-1.5:LRA=11:dual_mono=true',
 
     -- Anki
     create_deck = false, -- automatically create a deck for new cards

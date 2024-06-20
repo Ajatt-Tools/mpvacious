@@ -20,10 +20,6 @@ local self = {
     platform = nil,
     encoder = nil,
     output_dir_path = nil,
-    max_avif_crf = 63,
-    min_avif_crf = 0,
-    max_jpeg_crf = 31,
-    min_jpeg_crf = 2,
 }
 
 ------------------------------------------------------------
@@ -70,10 +66,10 @@ local function toms(timestamp)
     return string.format("%.3f", timestamp)
 end
 
-local function rescale_quality(quality, min_q, max_q)
-    local scaled = min_q + (max_q - min_q) * quality / 100
+local function fit_quality_percentage_to_range(quality, worst_val, best_val)
+    local scaled = worst_val + (best_val - worst_val) * quality / 100
     -- Round to the nearest integer that's better in quality.
-    if min_q > max_q then
+    if worst_val > best_val then
         return math.floor(scaled)
     end
     return math.ceil(scaled)
@@ -81,11 +77,15 @@ end
 
 local function quality_to_crf_avif(quality_value)
     -- Quality is from 0 to 100. For avif images CRF is from 0 to 63 and reversed.
-    return rescale_quality(quality_value, self.max_avif_crf, self.min_avif_crf)
+    local worst_avif_crf = 63
+    local best_avif_crf = 0
+    return fit_quality_percentage_to_range(quality_value, worst_avif_crf, best_avif_crf)
 end
 
-local function quality_to_crf_jpeg(quality_value)
-    return rescale_quality(quality_value, self.max_jpeg_crf, self.min_jpeg_crf)
+local function quality_to_jpeg_qscale(quality_value)
+    local worst_jpeg_quality = 31
+    local best_jpeg_quality = 2
+    return fit_quality_percentage_to_range(quality_value, worst_jpeg_quality, best_jpeg_quality)
 end
 
 ------------------------------------------------------------
@@ -102,13 +102,23 @@ ffmpeg.prepend = function(...)
     }
 end
 
-ffmpeg.get_static_scale_arg = function()
-    -- Image scaling uses "sinc", which is the best downscaling algorithm: https://stackoverflow.com/a/6171860
-    -- Animated images still use Lanczos.
+local function make_scale_filter(algorithm, width, height)
+    -- algorithm is either "sinc" or "lanczos"
+    -- Static image scaling uses "sinc", which is the best downscaling algorithm: https://stackoverflow.com/a/6171860
+    -- Animated images use Lanczos, which is faster.
     return string.format(
-            "scale='min(%d,iw)':'min(%d,ih)':flags=sinc+accurate_rnd",
-            self.config.snapshot_width, self.config.snapshot_height
+            "scale='min(%d,iw)':'min(%d,ih)':flags=%s+accurate_rnd",
+            width, height, algorithm
     )
+end
+
+local function static_scale_filter()
+    return make_scale_filter('sinc', self.config.snapshot_width, self.config.snapshot_height)
+end
+
+local function animated_scale_filter()
+    return make_scale_filter(
+        'lanczos', self.config.animated_snapshot_width, self.config.animated_snapshot_height)
 end
 
 ffmpeg.make_static_snapshot_args = function(source_path, output_path, timestamp)
@@ -131,7 +141,7 @@ ffmpeg.make_static_snapshot_args = function(source_path, output_path, timestamp)
     else
         encoder_args = {
             '-c:v', 'mjpeg',
-            '-q:v', tostring(quality_to_crf_jpeg(self.config.snapshot_quality)),
+            '-q:v', tostring(quality_to_jpeg_qscale(self.config.snapshot_quality)),
         }
     end
 
@@ -140,21 +150,12 @@ ffmpeg.make_static_snapshot_args = function(source_path, output_path, timestamp)
             '-ss', toms(timestamp),
             '-i', source_path,
             '-map_metadata', '-1',
-            '-vf', ffmpeg.get_static_scale_arg(),
+            '-vf', static_scale_filter(),
             '-frames:v', '1',
             h.unpack(encoder_args)
     )
     table.insert(args, output_path)
     return args
-end
-
-ffmpeg.animated_snapshot_filters = function()
-    return string.format(
-            "fps=%d,scale='min(%d,iw)':'min(%d,ih)':flags=lanczos+accurate_rnd",
-            self.config.animated_snapshot_fps,
-            self.config.animated_snapshot_width,
-            self.config.animated_snapshot_height
-    )
 end
 
 ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
@@ -183,7 +184,8 @@ ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_ti
             '-i', source_path,
             '-map_metadata', '-1',
             '-loop', '0',
-            '-vf', ffmpeg.animated_snapshot_filters(),
+            '-vf', string.format(
+                'fps=%d,%s', self.config.animated_snapshot_fps, animated_scale_filter()),
             h.unpack(encoder_args)
     )
     table.insert(args, output_path)
@@ -239,24 +241,55 @@ local function parse_loudnorm(loudnorm_targets, json_extractor, loudnorm_consume
 end
 
 ffmpeg.append_user_audio_args = function(args)
-    local args_iter = string.gmatch(self.config.ffmpeg_audio_args, "%S+")
-    local filters = (
-            self.config.tie_volumes
-                    and string.format("volume=%.1f", mp.get_property_native('volume') / 100.0)
-                    or ""
-    )
-    for arg in args_iter do
-        if arg == '-af' or arg == '-filter:a' then
-            filters = #filters > 0 and string.format("%s,%s", args_iter(), filters) or args_iter()
+    local new_args = {}
+    local filters = ''
+
+    local function add_filter(flt)
+        if #filters == 0 then
+            filters = flt
         else
-            table.insert(args, arg)
+            filters = string.format('%s,%s', filters, flt)
         end
     end
-    if #filters > 0 then
-        table.insert(args, '-af')
-        table.insert(args, filters)
+
+    local function separate_filters(args)
+        -- Would've strongly preferred
+        --     if args[i] == '-af' or arg == '-filter:a' then
+        --         i = i + 1
+        --         add_filter(args[i])
+        -- but https://lua.org/manual/5.4/manual.html#3.3.5 says that
+        -- "You should not change the value of the control variable during the loop."
+        local expect_filter = false
+        for i = 1, #args do
+            if args[i] == '-af' or arg == '-filter:a' then
+                expect_filter = true
+            else
+                if expect_filter then
+                    add_filter(args[i])
+                else
+                    table.insert(new_args, args[i])
+                end
+                expect_filter = false
+            end
+        end
     end
-    return args
+
+    separate_filters(args)
+    if self.config.tie_volumes then
+        add_filter(string.format("volume=%.1f", mp.get_property_native('volume') / 100.0))
+    end
+
+    local user_args = {}
+    for arg in string.gmatch(self.config.ffmpeg_audio_args, "%S+") do
+        table.insert(user_args, arg)
+    end
+    separate_filters(user_args)
+
+    if #filters > 0 then
+        table.insert(new_args, '-af')
+        table.insert(new_args, filters)
+    end
+    return new_args
 end
 
 ffmpeg.make_audio_args = function(
@@ -308,11 +341,12 @@ ffmpeg.make_audio_args = function(
             }
         end
 
-        local args = make_ffargs('-b:a', tostring(self.config.audio_bitrate), h.unpack(encoder_args))
+        encoder_args = { '-b:a', tostring(self.config.audio_bitrate), h.unpack(encoder_args) }
         if loudnorm_args then
-            table.insert(args, '-af')
-            table.insert(args, loudnorm_args)
+            table.insert(encoder_args, '-af')
+            table.insert(encoder_args, loudnorm_args)
         end
+        local args = make_ffargs(h.unpack(encoder_args))
         table.insert(args, output_path)
         args_consumer(args)
     end
@@ -323,13 +357,13 @@ ffmpeg.make_audio_args = function(
     end
 
     local loudnorm_targets = make_loudnorm_targets()
+    local args = make_ffargs('-loglevel', 'info',
+                             '-af', loudnorm_targets .. ':print_format=json')
+    table.insert(args, '-f')
+    table.insert(args, 'null')
+    table.insert(args, '-')
     h.subprocess(
-            make_ffargs(
-                    '-loglevel', 'info',
-                    '-af', loudnorm_targets .. ':print_format=json',
-                    '-f', 'null',
-                    '-'
-            ),
+            args,
             parse_loudnorm(
                     loudnorm_targets,
                     function(stdout, stderr)
@@ -361,16 +395,6 @@ mpv.prepend_common_args = function(source_path, ...)
     }
 end
 
-mpv.get_scale_arg = function(algorithm, width, height)
-    -- algorithm is either "sinc" or "lanczos"
-    -- Static image scaling uses "sinc", which is the best downscaling algorithm: https://stackoverflow.com/a/6171860
-    -- Animated images still use Lanczos.
-    return string.format(
-            "--vf-add=lavfi=[scale='min(%d,iw)':'min(%d,ih)':flags=%s+accurate_rnd]",
-            width, height, algorithm
-    )
-end
-
 mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
     local encoder_args
     if self.config.snapshot_format == 'avif' then
@@ -393,7 +417,7 @@ mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
             '--vf-add=scale=out_range=jpeg',
             string.format(
                     '--ovcopts=global_quality=%d*QP2LAMBDA,flags=+qscale',
-                    quality_to_crf_jpeg(self.config.snapshot_quality)
+                    quality_to_jpeg_qscale(self.config.snapshot_quality)
             ),
         }
     end
@@ -403,7 +427,7 @@ mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
             '--audio=no',
             '--frames=1',
             '--start=' .. toms(timestamp),
-            mpv.get_scale_arg("sinc", self.config.snapshot_width, self.config.snapshot_height),
+            string.format('--vf-add=lavfi=[%s]', static_scale_filter()),
             '-o=' .. output_path,
             h.unpack(encoder_args)
     )
@@ -433,7 +457,7 @@ mpv.make_animated_snapshot_args = function(source_path, output_path, start_times
             '--end=' .. toms(end_timestamp),
             '--ofopts-add=loop=0',
             string.format('--vf-add=fps=%d', self.config.animated_snapshot_fps),
-            mpv.get_scale_arg("lanczos", self.config.animated_snapshot_width, self.config.animated_snapshot_height),
+            string.format('--vf-add=lavfi=[%s]', animated_scale_filter()),
             '-o=' .. output_path,
             h.unpack(encoder_args)
     )
