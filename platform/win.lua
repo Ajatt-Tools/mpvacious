@@ -8,6 +8,7 @@ Platform-specific functions for Windows.
 local mp = require('mp')
 local h = require('helpers')
 local utils = require('mp.utils')
+local base64 = require('utils.base64')
 local curl_tmpfile_path = utils.join_path(os.getenv('TEMP'), 'curl_tmp.txt')
 local self = { windows = true, healthy = true, clip_util="cmd", }
 
@@ -20,8 +21,12 @@ self.tmp_dir = function()
 end
 
 self.copy_to_clipboard = function(text)
-    mp.commandv("run", "powershell", "-command",
-        string.format('Set-Clipboard -Value "%s"', text:gsub('"', '`"'):gsub('“', '`“'):gsub('”', '`”'))
+    mp.commandv(
+        "run", "powershell", "-NoLogo", "-NoProfile", "-WindowStyle", "Hidden", "-Command",
+        string.format(
+            "Set-Clipboard ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('%s')))",
+            base64.enc(text)
+        )
     )
 end
 
