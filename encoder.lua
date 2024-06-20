@@ -22,6 +22,8 @@ local self = {
     output_dir_path = nil,
     max_avif_crf = 63,
     min_avif_crf = 0,
+    max_jpeg_crf = 31,
+    min_jpeg_crf = 2,
 }
 
 ------------------------------------------------------------
@@ -82,6 +84,10 @@ local function quality_to_crf_avif(quality_value)
     return rescale_quality(quality_value, self.max_avif_crf, self.min_avif_crf)
 end
 
+local function quality_to_crf_jpeg(quality_value)
+    return rescale_quality(quality_value, self.max_jpeg_crf, self.min_jpeg_crf)
+end
+
 ------------------------------------------------------------
 -- ffmpeg encoder
 
@@ -125,7 +131,7 @@ ffmpeg.make_static_snapshot_args = function(source_path, output_path, timestamp)
     else
         encoder_args = {
             '-c:v', 'mjpeg',
-            '-q:v', tostring(rescale_quality(self.config.snapshot_quality, 31, 2)),
+            '-q:v', tostring(quality_to_crf_jpeg(self.config.snapshot_quality)),
         }
     end
 
@@ -253,8 +259,9 @@ ffmpeg.append_user_audio_args = function(args)
     return args
 end
 
-ffmpeg.make_audio_args = function(source_path, output_path,
-                                  start_timestamp, end_timestamp, args_consumer)
+ffmpeg.make_audio_args = function(
+        source_path, output_path, start_timestamp, end_timestamp, args_consumer
+)
     local audio_track = h.get_active_track('audio')
     local audio_track_id = audio_track['ff-index']
 
@@ -386,7 +393,7 @@ mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
             '--vf-add=scale=out_range=jpeg',
             string.format(
                     '--ovcopts=global_quality=%d*QP2LAMBDA,flags=+qscale',
-                    rescale_quality(self.config.snapshot_quality, 31, 2)
+                    quality_to_crf_jpeg(self.config.snapshot_quality)
             ),
         }
     end
@@ -610,7 +617,8 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding)
         end
 
         self.encoder.make_audio_args(
-                source_path, output_path, start_timestamp, end_timestamp, start_encoding)
+                source_path, output_path, start_timestamp, end_timestamp, start_encoding
+        )
     else
         print("Audio will not be created.")
     end
