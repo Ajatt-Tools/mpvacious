@@ -21,6 +21,7 @@ local self = {
     encoder = nil,
     output_dir_path = nil,
     max_avif_crf = 63,
+    min_avif_crf = 0,
 }
 
 ------------------------------------------------------------
@@ -76,6 +77,11 @@ local function rescale_quality(quality, min_q, max_q)
     return math.ceil(scaled)
 end
 
+local function quality_to_crf_avif(quality_value)
+    -- Quality is from 0 to 100. For avif images CRF is from 0 to 63 and reversed.
+    return rescale_quality(quality_value, self.max_avif_crf, self.min_avif_crf)
+end
+
 ------------------------------------------------------------
 -- ffmpeg encoder
 
@@ -95,8 +101,10 @@ ffmpeg.make_static_snapshot_args = function(source_path, output_path, timestamp)
     if self.config.snapshot_format == 'avif' then
         encoder_args = {
             '-c:v', 'libaom-av1',
-            '-cpu-used', '6', -- cpu-used < 6 can take a lot of time to encode.
-            '-crf', tostring(rescale_quality(self.config.snapshot_quality, self.max_avif_crf, 0)),
+            -- cpu-used < 6 can take a lot of time to encode.
+            '-cpu-used', '6',
+            -- Avif quality can be controlled with crf.
+            '-crf', tostring(quality_to_crf_avif(self.config.snapshot_quality)),
             '-still-picture', '1',
         }
     elseif self.config.snapshot_format == 'webp' then
@@ -117,8 +125,10 @@ ffmpeg.make_static_snapshot_args = function(source_path, output_path, timestamp)
             '-ss', toms(timestamp),
             '-i', source_path,
             '-map_metadata', '-1',
-            '-vf', string.format("scale='min(%d,iw)':'min(%d,ih)':flags=sinc+accurate_rnd",
-                    self.config.snapshot_width, self.config.snapshot_height),
+            '-vf', string.format(
+                    "scale='min(%d,iw)':'min(%d,ih)':flags=sinc+accurate_rnd",
+                    self.config.snapshot_width, self.config.snapshot_height
+            ),
             '-frames:v', '1',
             h.unpack(encoder_args)
     )
@@ -140,9 +150,10 @@ ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_ti
     if self.config.animated_snapshot_format == 'avif' then
         encoder_args = {
             '-c:v', 'libaom-av1',
-            '-cpu-used', '6', -- cpu-used < 6 can take a lot of time to encode.
-            '-crf', tostring(rescale_quality(self.config.animated_snapshot_quality,
-                    self.max_avif_crf, 0)),
+            -- cpu-used < 6 can take a lot of time to encode.
+            '-cpu-used', '6',
+            -- Avif quality can be controlled with crf.
+            '-crf', tostring(quality_to_crf_avif(self.config.animated_snapshot_quality)),
         }
     else
         -- Documentation: https://www.ffmpeg.org/ffmpeg-all.html#libwebp
@@ -342,11 +353,9 @@ mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
     if self.config.snapshot_format == 'avif' then
         encoder_args = {
             '--ovc=libaom-av1',
-            '--ovcopts-add=cpu-used=6', -- cpu-used < 6 can take a lot of time to encode.
-            string.format(
-                    '--ovcopts-add=crf=%d',
-                    rescale_quality(self.config.snapshot_quality, self.max_avif_crf, 0)
-            ),
+            -- cpu-used < 6 can take a lot of time to encode.
+            '--ovcopts-add=cpu-used=6',
+            string.format('--ovcopts-add=crf=%d', quality_to_crf_avif(self.config.snapshot_quality)),
             '--ovcopts-add=still-picture=1',
         }
     elseif self.config.snapshot_format == 'webp' then
@@ -386,10 +395,7 @@ mpv.make_animated_snapshot_args = function(source_path, output_path, start_times
         encoder_args = {
             '--ovc=libaom-av1',
             '--ovcopts-add=cpu-used=6', -- cpu-used < 6 can take a lot of time to encode.
-            string.format(
-                    '--ovcopts-add=crf=%d',
-                    rescale_quality(self.config.snapshot_quality, self.max_avif_crf, 0)
-            ),
+            string.format('--ovcopts-add=crf=%d', quality_to_crf_avif(self.config.animated_snapshot_quality)),
         }
     else
         encoder_args = {
