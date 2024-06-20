@@ -196,4 +196,6 @@ return {
     reload_from_disk = reload_from_disk,
     init = init,
     next_profile = next_profile,
+    default_height_px = default_height_px,
+    preserve_aspect_ratio = preserve_aspect_ratio,
 }
