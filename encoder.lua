@@ -354,6 +354,16 @@ mpv.prepend_common_args = function(source_path, ...)
     }
 end
 
+mpv.get_scale_arg = function(algorithm, width, height)
+    -- algorithm is either "sinc" or "lanczos"
+    -- Static image scaling uses "sinc", which is the best downscaling algorithm: https://stackoverflow.com/a/6171860
+    -- Animated images still use Lanczos.
+    return string.format(
+            "--vf-add=lavfi=[scale='min(%d,iw)':'min(%d,ih)':flags=%s+accurate_rnd]",
+            width, height, algorithm
+    )
+end
+
 mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
     local encoder_args
     if self.config.snapshot_format == 'avif' then
@@ -386,10 +396,7 @@ mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
             '--audio=no',
             '--frames=1',
             '--start=' .. toms(timestamp),
-            string.format(
-                    "--vf-add=lavfi=[scale='min(%d,iw)':'min(%d,ih)':flags=sinc+accurate_rnd]",
-                    self.config.snapshot_width, self.config.snapshot_height
-            ),
+            mpv.get_scale_arg("sinc", self.config.snapshot_width, self.config.snapshot_height),
             '-o=' .. output_path,
             h.unpack(encoder_args)
     )
@@ -400,14 +407,15 @@ mpv.make_animated_snapshot_args = function(source_path, output_path, start_times
     if self.config.animated_snapshot_format == 'avif' then
         encoder_args = {
             '--ovc=libaom-av1',
-            '--ovcopts-add=cpu-used=6', -- cpu-used < 6 can take a lot of time to encode.
+            -- cpu-used < 6 can take a lot of time to encode.
+            '--ovcopts-add=cpu-used=6',
             string.format('--ovcopts-add=crf=%d', quality_to_crf_avif(self.config.animated_snapshot_quality)),
         }
     else
         encoder_args = {
             '--ovc=libwebp',
             '--ovcopts-add=compression_level=6',
-            string.format('--ovcopts-add=quality=%d', self.config.snapshot_quality),
+            string.format('--ovcopts-add=quality=%d', self.config.animated_snapshot_quality),
         }
     end
 
@@ -418,10 +426,7 @@ mpv.make_animated_snapshot_args = function(source_path, output_path, start_times
             '--end=' .. toms(end_timestamp),
             '--ofopts-add=loop=0',
             string.format('--vf-add=fps=%d', self.config.animated_snapshot_fps),
-            string.format(
-                    "--vf-add=lavfi=[scale='min(%d,iw)':'min(%d,ih)':flags=lanczos+accurate_rnd]",
-                    self.config.animated_snapshot_width, self.config.animated_snapshot_height
-            ),
+            mpv.get_scale_arg("lanczos", self.config.animated_snapshot_width, self.config.animated_snapshot_height),
             '-o=' .. output_path,
             h.unpack(encoder_args)
     )
