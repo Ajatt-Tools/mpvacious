@@ -198,11 +198,12 @@ and `avif` or `webp` for images,
 as they greatly reduce the size of the generated files.
 
 If you still use AnkiMobile (the [proprietary](https://www.gnu.org/proprietary/) Anki app),
-set `audio_format` to [caf](https://en.wikipedia.org/wiki/Core_Audio_Format) for compatibility.
-The resulting files will use `Opus` as the coding format and Apple's Core Audio
-format as the container format, but will still have the `.ogg` extension to make
-it easier to open in media players because the `.caf` extension is not commonly
-recognized.
+set `opus_container` to `m4a` or `webm`. I'll allow iOS to play Opus files, while still maintaining
+compatibility with non-Apple devices. For really old iOS devices, set `opus_container` to
+[`caf`](https://en.wikipedia.org/wiki/Core_Audio_Format). CAF plays only on Anki Desktop,
+AnkiWeb in Safari and AnkiMobile, and is really not recommended. (Please note that
+[Lockdown Mode](https://support.apple.com/en-us/105120) completely disables Opus and AVIF support,
+though you may try to add an exception for AnkiMobile.)
 
 If no matter what mpvacious fails to create audio clips and/or snapshots,
 change `use_ffmpeg` to `yes`.
