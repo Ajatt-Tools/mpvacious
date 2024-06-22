@@ -35,6 +35,25 @@ Usage:
 For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/master/README.md>
 ]]
 
+local mp = require('mp')
+local utils = require('mp.utils')
+local OSD = require('osd_styler')
+local cfg_mgr = require('cfg_mgr')
+local encoder = require('encoder')
+local h = require('helpers')
+local Menu = require('menu')
+local ankiconnect = require('ankiconnect')
+local switch = require('utils.switch')
+local play_control = require('utils.play_control')
+local secondary_sid = require('subtitles.secondary_sid')
+local platform = require('platform.init')
+local forvo = require('utils.forvo')
+local subs_observer = require('subtitles.observer')
+local menu
+
+------------------------------------------------------------
+-- default config
+
 local config = {
     -- The user should not modify anything below.
 
@@ -58,19 +77,21 @@ local config = {
     -- Snapshots
     snapshot_format = "avif", -- avif, webp or jpg
     snapshot_quality = 15, -- from 0=lowest to 100=highest
-    snapshot_width = -2, -- a positive integer or -2 for auto
-    snapshot_height = 200, -- same
+    snapshot_width = cfg_mgr.preserve_aspect_ratio, -- a positive integer or -2 for auto
+    snapshot_height = cfg_mgr.default_height_px, -- same
     screenshot = false, -- create a screenshot instead of a snapshot; see example config.
 
     -- Animations
     animated_snapshot_enabled = false, -- if enabled captures the selected segment of the video, instead of just a frame
+    animated_snapshot_format = "avif", -- avif or webp
     animated_snapshot_fps = 10, -- positive integer between 0 and 30 (30 included)
-    animated_snapshot_width = -2, -- positive integer or -2 to scale it maintaining ratio (height must not be -2 in that case)
-    animated_snapshot_height = 200, -- positive integer or -2 to scale it maintaining ratio (width must not be -2 in that case)
+    animated_snapshot_width = cfg_mgr.preserve_aspect_ratio, -- positive integer or -2 to scale it maintaining ratio (height must not be -2 in that case)
+    animated_snapshot_height = cfg_mgr.default_height_px, -- positive integer or -2 to scale it maintaining ratio (width must not be -2 in that case)
     animated_snapshot_quality = 5, -- positive integer between 0 and 100 (100 included)
 
     -- Audio clips
     audio_format = "opus", -- opus or mp3
+    opus_container = "ogg", -- ogg, opus, m4a, webm or caf
     audio_bitrate = "18k", -- from 16k to 32k
     audio_padding = 0.12, -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
     tie_volumes = false, -- if set to true, the volume of the outputted audio file depends on the volume of the player at the time of export
@@ -81,9 +102,20 @@ local config = {
     menu_font_size = 25,
     show_selected_text = true,
 
+    -- Make sure to remove loudnorm from ffmpeg_audio_args and mpv_audio_args before enabling.
+    loudnorm = false,
+    loudnorm_target = -16,
+    loudnorm_range = 11,
+    loudnorm_peak = -1.5,
+
     -- Custom encoding args
-    ffmpeg_audio_args = '-af loudnorm=I=-16:TP=-1.5:LRA=11',
-    mpv_audio_args = '--af-append=loudnorm=I=-16:TP=-1.5:LRA=11',
+    -- Defaults are for backward compatibility, in case someone
+    -- updates mpvacious without updating their config.
+    -- Better to remove loudnorm from custom args and enable two-pass loudnorm.
+    -- Enabling loudnorm both through the separate switch and through custom args
+    -- can lead to unpredictable results.
+    ffmpeg_audio_args = '-af loudnorm=I=-16:TP=-1.5:LRA=11:dual_mono=true',
+    mpv_audio_args = '--af-append=loudnorm=I=-16:TP=-1.5:LRA=11:dual_mono=true',
 
     -- Anki
     create_deck = false, -- automatically create a deck for new cards
@@ -134,21 +166,6 @@ local profiles = {
     active = "subs2srs",
 }
 
-local mp = require('mp')
-local utils = require('mp.utils')
-local OSD = require('osd_styler')
-local cfg_mgr = require('cfg_mgr')
-local encoder = require('encoder')
-local h = require('helpers')
-local Menu = require('menu')
-local ankiconnect = require('ankiconnect')
-local switch = require('utils.switch')
-local play_control = require('utils.play_control')
-local secondary_sid = require('subtitles.secondary_sid')
-local platform = require('platform.init')
-local forvo = require('utils.forvo')
-local subs_observer = require('subtitles.observer')
-local menu
 
 ------------------------------------------------------------
 -- utility functions
@@ -179,6 +196,7 @@ local codec_support = (function()
 
     return {
         snapshot = {
+            ['libaom-av1'] = is_image_supported('libaom-av1'),
             libwebp = is_image_supported('libwebp'),
             mjpeg = is_image_supported('mjpeg'),
         },

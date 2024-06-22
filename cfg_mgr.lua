@@ -11,6 +11,13 @@ local h = require('helpers')
 
 local min_side_px = 42
 local max_side_px = 640
+local default_height_px = 200
+
+-- This constant should be used in place of width and/or height in the config file.
+-- It tells the encoder to preserve aspect ratio when downscaling snapshots.
+-- The user almost always wants to set either width or height to this value.
+-- Note: If set to -1, encoding will fail with the "height/width not divisible by 2" error.
+local preserve_aspect_ratio = -2
 
 local self = {
     config = nil,
@@ -21,12 +28,23 @@ local self = {
 local default_profile_filename = 'subs2srs'
 local profiles_filename = 'subs2srs_profiles'
 
+local function set_file_extension_for_opus()
+    -- Default to OGG, then change if an extension is supported.
+    -- https://en.wikipedia.org/wiki/Core_Audio_Format
+    self.config.audio_extension = '.ogg'
+    for _, extension in ipairs({ 'opus', 'm4a', 'webm', 'caf' }) do
+        if extension == self.config.opus_container then
+            self.config.audio_extension = '.' .. self.config.opus_container
+            break
+        end
+    end
+end
+
 local function set_audio_format()
-    if self.config.audio_format == 'opus' or self.config.audio_format == 'caf' then
+    if self.config.audio_format == 'opus' then
         -- https://opus-codec.org/
-        -- https://en.wikipedia.org/wiki/Core_Audio_Format
         self.config.audio_codec = 'libopus'
-        self.config.audio_extension = '.ogg'
+        set_file_extension_for_opus()
     else
         self.config.audio_codec = 'libmp3lame'
         self.config.audio_extension = '.mp3'
@@ -44,20 +62,27 @@ local function set_video_format()
         self.config.snapshot_extension = '.jpg'
         self.config.snapshot_codec = 'mjpeg'
     end
+
     -- Animated webp images can only have .webp extension.
-    -- The user has no choice on this.
-    self.config.animated_snapshot_extension = '.webp'
+    -- The user has no choice on this. Same logic for avif.
+    if self.config.animated_snapshot_format == 'avif' then
+        self.config.animated_snapshot_extension = '.avif'
+        self.config.animated_snapshot_codec = 'libaom-av1'
+    else
+        self.config.animated_snapshot_extension = '.webp'
+        self.config.animated_snapshot_codec = 'libwebp'
+    end
 end
 
 local function ensure_in_range(dimension)
-    self.config[dimension] = self.config[dimension] < min_side_px and -2 or self.config[dimension]
+    self.config[dimension] = self.config[dimension] < min_side_px and preserve_aspect_ratio or self.config[dimension]
     self.config[dimension] = self.config[dimension] > max_side_px and max_side_px or self.config[dimension]
 end
 
 local function conditionally_set_defaults(width, height, quality)
     if self.config[width] < 1 and self.config[height] < 1 then
-        self.config[width] = -2
-        self.config[height] = 200
+        self.config[width] = preserve_aspect_ratio
+        self.config[height] = default_height_px
     end
     if self.config[quality] < 0 or self.config[quality] > 100 then
         self.config[quality] = 15
@@ -171,4 +196,6 @@ return {
     reload_from_disk = reload_from_disk,
     init = init,
     next_profile = next_profile,
+    default_height_px = default_height_px,
+    preserve_aspect_ratio = preserve_aspect_ratio,
 }
