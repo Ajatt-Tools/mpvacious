@@ -104,6 +104,14 @@ local function current_subtitle_lines()
     return { primary = self.clipboard_prepare(primary), secondary = secondary }
 end
 
+local function ensure_goldendict_running()
+    --- Ensure that goldendict is running and is disowned by mpv.
+    --- Avoid goldendict getting killed when mpv exits.
+    if autoclip_enabled and self.autocopy_current_method() == "goldendict" then
+        os.execute("setsid -f goldendict")
+    end
+end
+
 ------------------------------------------------------------
 -- autoclip methods
 
@@ -270,6 +278,7 @@ end
 
 local function notify_autocopy()
     if autoclip_enabled then
+        ensure_goldendict_running()
         copy_primary_sub()
     end
     h.notify(string.format("Clipboard autocopy has been %s.", self.autocopy_status_str()))
