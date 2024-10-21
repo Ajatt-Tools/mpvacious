@@ -11,4 +11,4 @@ To make a card from two or more subtitle lines:
 
 After the card is created, you can find it by typing `added:1` in the Anki Browser.
 The card doesn't contain dictionary definitions.
-You need to add them yourself afterwards, using software like GoldenDict, Qolibri, etc.
+You need to add them yourself afterward, using software like GoldenDict, Qolibri, etc.
