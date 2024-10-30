@@ -578,6 +578,40 @@ end
 ------------------------------------------------------------
 -- main
 
+local function create_config_file()
+    local NAME = "subs2srs"
+    local parent, child = utils.split_path(mp.get_script_directory())
+    parent, child = utils.split_path(parent:gsub("/$", ""))
+
+    local config_filepath = utils.join_path(utils.join_path(parent, "script-opts"), string.format('%s.conf', NAME))
+    local example_config_filepath = utils.join_path(mp.get_script_directory(), ".github/RELEASE/subs2srs.conf")
+
+    local file_info = utils.file_info(config_filepath)
+    if file_info and file_info.is_file then
+        print("config already exists")
+        return
+    end
+
+    local handle = io.open(example_config_filepath, 'r')
+    if handle == nil then
+        return
+    end
+
+    local content = handle:read("*a")
+    handle:close()
+
+    handle = io.open(config_filepath, 'w')
+    if handle == nil then
+        h.notify(string.format("Couldn't open %s.", config_filepath), "error", 4)
+        return
+    end
+
+    handle:write(string.format("# Written by %s on %s.\n", NAME, os.date()))
+    handle:write(content)
+    handle:close()
+    h.notify("Settings saved.", "info", 2)
+end
+
 local main = (function()
     local main_executed = false
     return function()
@@ -587,6 +621,7 @@ local main = (function()
             main_executed = true
         end
 
+        create_config_file()
         cfg_mgr.init(config, profiles)
         ankiconnect.init(config, platform)
         forvo.init(config, platform)
