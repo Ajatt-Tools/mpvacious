@@ -5,9 +5,11 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Config management, validation, loading.
 ]]
 
+local mp = require('mp')
 local mpopt = require('mp.options')
 local msg = require('mp.msg')
 local h = require('helpers')
+local utils = require('mp.utils')
 
 local min_side_px = 42
 local max_side_px = 640
@@ -179,7 +181,42 @@ local function next_profile()
     reload_from_disk()
 end
 
+local function create_config_file()
+    local name = default_profile_filename
+    local parent, child = utils.split_path(mp.get_script_directory())
+    parent, child = utils.split_path(parent:gsub("/$", ""))
+
+    local config_filepath = utils.join_path(utils.join_path(parent, "script-opts"), string.format('%s.conf', name))
+    local example_config_filepath = utils.join_path(mp.get_script_directory(), ".github/RELEASE/subs2srs.conf")
+
+    local file_info = utils.file_info(config_filepath)
+    if file_info and file_info.is_file then
+        print("config already exists")
+        return
+    end
+
+    local handle = io.open(example_config_filepath, 'r')
+    if handle == nil then
+        return
+    end
+
+    local content = handle:read("*a")
+    handle:close()
+
+    handle = io.open(config_filepath, 'w')
+    if handle == nil then
+        h.notify(string.format("Couldn't open %s.", config_filepath), "error", 4)
+        return
+    end
+
+    handle:write(string.format("# Written by %s on %s.\n", name, os.date()))
+    handle:write(content)
+    handle:close()
+    h.notify("Settings saved.", "info", 2)
+end
+
 local function init(config_table, profiles_table)
+    create_config_file()
     self.config, self.profiles = config_table, profiles_table
     -- 'subs2srs' is the main profile, it is always loaded. 'active profile' overrides it afterwards.
     -- initial state is saved to another table to maintain consistency when cycling through incomplete profiles.
