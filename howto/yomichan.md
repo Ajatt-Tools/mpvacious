@@ -5,7 +5,7 @@ You can add a card first using
 and then append an audio clip and a picture to it.
 
 1) Press <kbd>a</kbd> to open `advanced menu`.
-1) Press <kbd>t</kbd> to toogle the `autoclip` option.
+1) Press <kbd>t</kbd> to toggle the `autoclip` option.
 
 Now as subtitles appear on the screen, they will be immediately copied to the clipboard.
 You can use it in combination with clipboard monitor.
