@@ -417,7 +417,7 @@ local function update_last_note(overwrite)
     end
 
     --first element is the earliest
-    
+
     if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(10) then
         return h.notify("Couldn't find the target note.", "warn", 2)
     end
@@ -431,7 +431,7 @@ local function update_last_note(overwrite)
         snapshot.run_async()
         audio.run_async()
     end
-    for i=1, n_cards do
+    for i = 1, n_cards do
         local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
         local stored_data = ankiconnect.get_note_fields(last_note_ids[i])
         if stored_data then
@@ -477,14 +477,22 @@ menu.keybindings = {
     { key = 'n', fn = menu:with_update { export_to_anki, false } },
     { key = 'm', fn = menu:with_update { update_last_note, false } },
     { key = 'M', fn = menu:with_update { update_last_note, true } },
-    { key = 'f', fn = menu:with_update { function() n_cards = n_cards + 1 end} },
-    { key = 'F', fn = menu:with_update { function() n_cards = n_cards - 1 end } },
+    { key = 'f', fn = menu:with_update { function()
+        n_cards = n_cards + 1
+    end } },
+    { key = 'F', fn = menu:with_update { function()
+        n_cards = n_cards - 1
+    end } },
     { key = 't', fn = menu:with_update { subs_observer.toggle_autocopy } },
     { key = 'T', fn = menu:with_update { subs_observer.next_autoclip_method } },
     { key = 'i', fn = menu:with_update { menu.hints_state.bump } },
     { key = 'p', fn = menu:with_update { load_next_profile } },
-    { key = 'ESC', fn = function() menu:close() end },
-    { key = 'q', fn = function() menu:close() end },
+    { key = 'ESC', fn = function()
+        menu:close()
+    end },
+    { key = 'q', fn = function()
+        menu:close()
+    end },
 }
 
 function menu:print_header(osd)
@@ -587,6 +595,7 @@ function menu:make_osd()
     self:print_selection(osd)
     return osd
 end
+
 ------------------------------------------------------------
 -- quick_menu line selection
 local choose_cards = function(i)
@@ -602,12 +611,20 @@ end
 
 quick_menu = Menu:new()
 quick_menu.keybindings = {}
-for i=1,9 do
-    table.insert(quick_menu.keybindings, { key = tostring(i), fn = function() choose_lines(i) end})
+for i = 1, 9 do
+    table.insert(quick_menu.keybindings, { key = tostring(i), fn = function()
+        choose_lines(i)
+    end })
 end
-table.insert(quick_menu.keybindings, { key = 'g', fn = function () choose_lines(1) end})
-table.insert(quick_menu.keybindings, { key = 'ESC', fn = function() quick_menu:close() end })
-table.insert(quick_menu.keybindings, { key = 'q', fn = function() quick_menu:close() end })
+table.insert(quick_menu.keybindings, { key = 'g', fn = function()
+    choose_lines(1)
+end })
+table.insert(quick_menu.keybindings, { key = 'ESC', fn = function()
+    quick_menu:close()
+end })
+table.insert(quick_menu.keybindings, { key = 'q', fn = function()
+    quick_menu:close()
+end })
 function quick_menu:print_header(osd)
     osd:submenu('quick card creation'):newline()
     osd:item('# lines: '):text('Enter 1-9'):newline()
@@ -622,14 +639,21 @@ function quick_menu:make_osd()
     self:print_legend(osd)
     return osd
 end
+
 -- quick_menu card selection
 quick_menu_card = Menu:new()
 quick_menu_card.keybindings = {}
-for i=1,9 do
-    table.insert(quick_menu_card.keybindings, { key = tostring(i), fn = function() choose_cards(i) end})
+for i = 1, 9 do
+    table.insert(quick_menu_card.keybindings, { key = tostring(i), fn = function()
+        choose_cards(i)
+    end })
 end
-table.insert(quick_menu_card.keybindings, { key = 'ESC', fn = function() quick_menu_card:close() end })
-table.insert(quick_menu_card.keybindings, { key = 'q', fn = function() quick_menu_card:close() end })
+table.insert(quick_menu_card.keybindings, { key = 'ESC', fn = function()
+    quick_menu_card:close()
+end })
+table.insert(quick_menu_card.keybindings, { key = 'q', fn = function()
+    quick_menu_card:close()
+end })
 function quick_menu_card:print_header(osd)
     osd:submenu('quick card creation'):newline()
     osd:item('# cards: '):text('Enter 1-9'):newline()
@@ -689,7 +713,6 @@ local main = (function()
 
         mp.add_key_binding("g", "mpvacious-quick-update-last-note", function() quick_menu:open() end)
         mp.add_key_binding("Alt+g", "mpvacious-quick-update-choose-cards", function() quick_menu_card:open() end)
-
 
         -- Vim-like seeking between subtitle lines
         mp.add_key_binding("H", "mpvacious-sub-seek-back", _ { play_control.sub_seek, 'backward' })

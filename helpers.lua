@@ -35,7 +35,7 @@ this.max_num = function(table)
 end
 this.max_n = function(note_ids, n)
     table.sort(note_ids)
-    return {table.unpack(note_ids, math.max(#note_ids - n + 1, 1), #note_ids)}
+    return { table.unpack(note_ids, math.max(#note_ids - n + 1, 1), #note_ids) }
 end
 
 this.contains = function(table, element)

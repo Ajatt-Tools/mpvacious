@@ -10,7 +10,7 @@ local h = require('helpers')
 local utils = require('mp.utils')
 local base64 = require('utils.base64')
 local curl_tmpfile_path = utils.join_path(os.getenv('TEMP'), 'curl_tmp.txt')
-local self = { windows = true, healthy = true, clip_util="cmd", }
+local self = { windows = true, healthy = true, clip_util = "cmd", }
 
 mp.register_event('shutdown', function()
     os.remove(curl_tmpfile_path)

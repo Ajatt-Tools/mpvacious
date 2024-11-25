@@ -210,7 +210,7 @@ self.collect = function(n_lines)
         end
         return Subtitle:new {
             ['text'] = text,
-            ['secondary']='',
+            ['secondary'] = '',
             ['start'] = current_sub['start'],
             ['end'] = end_sub['end'],
         }
