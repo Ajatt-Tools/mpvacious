@@ -125,7 +125,7 @@ self.get_last_note_ids = function(n_cards)
     local note_ids, _ = self.parse_result(ret)
 
     if not h.is_empty(note_ids) then
-        return h.max_n(note_ids, n_cards)
+        return h.get_last_n_added_notes(note_ids, n_cards)
     else
         return {}
     end
