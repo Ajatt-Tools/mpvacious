@@ -326,7 +326,6 @@ self.init = function(menu, config)
 
     mp.observe_property("sub-text", "string", handle_primary_sub)
     mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
-    mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
 end
 
 return self
