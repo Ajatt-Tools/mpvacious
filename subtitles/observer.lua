@@ -204,10 +204,10 @@ self.collect = function(n_lines)
     if n_lines then
         local current_sub = Subtitle:now();
         all_dialogs.insert(current_sub)
-        local text, end_sub = all_dialogs.get_n_text(current_sub, n_lines)
-        if all_dialogs.is_empty() then
-            return nil
+        if current_sub == nil then
+            return Subtitle:new() -- return a default empty new Subtitle to let consumer handle
         end
+        local text, end_sub = all_dialogs.get_n_text(current_sub, n_lines)
         return Subtitle:new {
             ['text'] = text,
             ['secondary'] = '',
