@@ -481,7 +481,7 @@ menu.keybindings = {
         n_cards = n_cards + 1
     end } },
     { key = 'F', fn = menu:with_update { function()
-        n_cards = n_cards - 1
+        n_cards = math.max(n_cards - 1, 1)
     end } },
     { key = 't', fn = menu:with_update { subs_observer.toggle_autocopy } },
     { key = 'T', fn = menu:with_update { subs_observer.next_autoclip_method } },
