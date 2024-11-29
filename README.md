@@ -232,6 +232,9 @@ Ctrl+n       script-binding mpvacious-export-note
 Ctrl+m       script-binding mpvacious-update-last-note
 Ctrl+M       script-binding mpvacious-overwrite-last-note
 
+g            script-binding mpvacious-quick-card-menu-open
+Alt+g        script-binding mpvacious-quick-card-sel-menu-open
+
 Ctrl+c       script-binding mpvacious-copy-primary-sub-to-clipboard
 Ctrl+C       script-binding mpvacious-copy-secondary-sub-to-clipboard
 Ctrl+t       script-binding mpvacious-autocopy-toggle
@@ -258,6 +261,7 @@ mpv accepts both variants in `input.conf`.
 ## Usage
 
 * [Create a card](howto/create_card.md)
+* [Quick card creation](howto/create_quick_card.md)
 * [Open the "Add" dialog](howto/add_dialog.md)
 * [Usage with Rikaitan](howto/yomichan.md)
 * [Usage with GoldenDict](howto/goldendict.md)
@@ -279,6 +283,10 @@ mpv accepts both variants in `input.conf`.
 * <kbd>Ctrl+n</kbd> - Export a card with the currently visible subtitle line on the front.
 Use this when your subs are well-timed,
 and the target sentence doesn't span multiple subs.
+
+**Quick card creation:**
+* <kbd>g</kbd> - Quick card creation menu.
+* <kbd>Alt+g</kbd> - Quick card creation, card selection menu.
 
 **Update the last card:**
 
@@ -308,6 +316,9 @@ and the target sentence doesn't span multiple subs.
 ### Menu options
 
 Advanced menu has the following options:
+
+* <kbd>f</kbd> - Increment number of cards to update. Only affects note updating, including quick card creation. The number of cards to update is reset to 1 upon updating a note. 
+* <kbd>shift+f</kbd> - Decrement number of cards to update.
 
 * <kbd>c</kbd> - Interactive subtitle selection.
   The range of the currently displayed subtitle line is selected. The selection then grows both ways based on the following displayed lines.

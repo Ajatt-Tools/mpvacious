@@ -711,8 +711,8 @@ local main = (function()
         mp.add_key_binding("Ctrl+m", "mpvacious-update-last-note", menu:with_update { update_last_note, false })
         mp.add_key_binding("Ctrl+M", "mpvacious-overwrite-last-note", menu:with_update { update_last_note, true })
 
-        mp.add_key_binding("g", "mpvacious-quick-update-last-note", function() quick_menu:open() end)
-        mp.add_key_binding("Alt+g", "mpvacious-quick-update-choose-cards", function() quick_menu_card:open() end)
+        mp.add_key_binding("g", "mpvacious-quick-card-menu-open", function() quick_menu:open() end)
+        mp.add_key_binding("Alt+g", "mpvacious-quick-card-sel-menu-open", function() quick_menu_card:open() end)
 
         -- Vim-like seeking between subtitle lines
         mp.add_key_binding("H", "mpvacious-sub-seek-back", _ { play_control.sub_seek, 'backward' })
