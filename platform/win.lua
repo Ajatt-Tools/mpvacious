@@ -43,7 +43,7 @@ self.curl_request = function(url, request_json, completion_fn)
         '-X',
         'POST',
         '--data-binary',
-        request_json
+        table.concat { '@', curl_tmpfile_path }
     }
     return h.subprocess(args, completion_fn)
 end
