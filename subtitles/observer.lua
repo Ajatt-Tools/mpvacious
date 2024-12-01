@@ -198,23 +198,23 @@ self.get_timing = function(position)
     return -1
 end
 
-self.collect = function(n_lines)
+self.collect_from_all_dialogues = function (n_lines)
+    local current_sub = Subtitle:now();
+    all_dialogs.insert(current_sub)
+    if current_sub == nil then
+        return Subtitle:new() -- return a default empty new Subtitle to let consumer handle
+    end
+    local text, end_sub = all_dialogs.get_n_text(current_sub, n_lines)
+    return Subtitle:new {
+        ['text'] = text,
+        ['secondary'] = '',
+        ['start'] = current_sub['start'],
+        ['end'] = end_sub['end'],
+    }
+end
+self.collect_from_current = function()
     --- Return all recorded subtitle lines as one subtitle object.
     --- The caller has to call subs_observer.clear() afterwards.
-    if n_lines then
-        local current_sub = Subtitle:now();
-        all_dialogs.insert(current_sub)
-        if current_sub == nil then
-            return Subtitle:new() -- return a default empty new Subtitle to let consumer handle
-        end
-        local text, end_sub = all_dialogs.get_n_text(current_sub, n_lines)
-        return Subtitle:new {
-            ['text'] = text,
-            ['secondary'] = '',
-            ['start'] = current_sub['start'],
-            ['end'] = end_sub['end'],
-        }
-    end
     if dialogs.is_empty() then
         dialogs.insert(Subtitle:now())
     end

@@ -49,8 +49,20 @@ local platform = require('platform.init')
 local forvo = require('utils.forvo')
 local subs_observer = require('subtitles.observer')
 local menu, quick_menu, quick_menu_card
-local n_lines
-local n_cards = 1
+local quick_creation_opts = {
+  _n_lines = nil,
+  _n_cards = 1,
+  set_cards = function (self, n) self._n_cards = math.max(0, n) end,
+  set_lines = function (self, n) self._n_lines = math.max(0, n) end,
+  get_cards = function (self) return self._n_lines end,
+  get_lines = function (self) return self._n_cards end,
+  increment_cards = function (self) self:set_cards(self._n_cards + 1) end,
+  decrement_cards = function (self) self:set_cards(self._n_cards - 1) end,
+  clear_options = function(self)
+    self._n_lines = nil
+    self._n_cards = 1
+  end
+}
 ------------------------------------------------------------
 -- default config
 
@@ -168,11 +180,6 @@ local profiles = {
 
 ------------------------------------------------------------
 -- utility functions
---
-local function clear_options()
-    n_lines = nil
-    n_cards = 1
-end
 local function _(params)
     return function()
         return pcall(h.unpack(params))
@@ -399,9 +406,16 @@ end
 
 local function update_last_note(overwrite)
     maybe_reload_config()
-    local sub = subs_observer.collect(n_lines)
+    local sub
+    local n_lines = quick_creation_opts:get_lines()
+    local n_cards = quick_creation_opts:get_cards()
+    if n_lines then
+      sub = subs_observer.collect_from_all_dialogues(n_lines)
+    else
+      sub = subs_observer.collect_from_current()
+    end
     -- this now returns a table
-    local last_note_ids = ankiconnect.get_last_note_ids(n_cards or 1)
+    local last_note_ids = ankiconnect.get_last_note_ids(n_cards)
     n_cards = #last_note_ids
 
     if not sub:is_valid() then
@@ -456,7 +470,7 @@ local function update_last_note(overwrite)
         ankiconnect.append_media(last_note_ids[i], new_data, create_media, substitute_fmt(config.note_tag))
     end
     subs_observer.clear()
-    clear_options()
+    quick_creation_opts:clear_options()
 end
 
 ------------------------------------------------------------
@@ -478,10 +492,10 @@ menu.keybindings = {
     { key = 'm', fn = menu:with_update { update_last_note, false } },
     { key = 'M', fn = menu:with_update { update_last_note, true } },
     { key = 'f', fn = menu:with_update { function()
-        n_cards = n_cards + 1
+        quick_creation_opts:increment_cards()
     end } },
     { key = 'F', fn = menu:with_update { function()
-        n_cards = math.max(n_cards - 1, 1)
+        quick_creation_opts:decrement_cards()
     end } },
     { key = 't', fn = menu:with_update { subs_observer.toggle_autocopy } },
     { key = 'T', fn = menu:with_update { subs_observer.next_autoclip_method } },
@@ -505,7 +519,7 @@ function menu:print_header(osd)
     osd:item('Clipboard autocopy: '):text(subs_observer.autocopy_status_str()):newline()
     osd:item('Active profile: '):text(profiles.active):newline()
     osd:item('Deck: '):text(config.deck_name):newline()
-    osd:item('# cards: '):text(n_cards):newline()
+    osd:item('# cards: '):text(quick_creation_opts:get_cards()):newline()
 end
 
 function menu:print_bindings(osd)
@@ -597,14 +611,14 @@ function menu:make_osd()
 end
 
 ------------------------------------------------------------
--- quick_menu line selection
+--quick_menu line selection
 local choose_cards = function(i)
-    n_cards = i
+    quick_creation_opts:set_cards(i)
     quick_menu_card:close()
     quick_menu:open()
 end
 local choose_lines = function(i)
-    n_lines = i
+    quick_creation_opts:set_lines(i)
     update_last_note(true)
     quick_menu:close()
 end
