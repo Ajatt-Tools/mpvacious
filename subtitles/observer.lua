@@ -18,6 +18,7 @@ local self = {}
 local dialogs = sub_list.new()
 local secondary_dialogs = sub_list.new()
 local all_dialogs = sub_list.new()
+local all_secondary_dialogs = sub_list.new()
 local user_timings = timings.new()
 
 local append_dialogue = false
@@ -43,6 +44,8 @@ local function append_primary_sub()
 end
 
 local function append_secondary_sub()
+    local current_secondary = Subtitle:now('secondary')
+    all_secondary_dialogs.insert(current_secondary)
     if append_dialogue and secondary_dialogs.insert(Subtitle:now('secondary')) then
         self.menu:update()
     end
@@ -200,14 +203,22 @@ end
 
 self.collect_from_all_dialogues = function (n_lines)
     local current_sub = Subtitle:now();
+    local current_secondary_sub = Subtitle:now('secondary');
     all_dialogs.insert(current_sub)
+    all_secondary_dialogs.insert(current_secondary_sub)
     if current_sub == nil then
         return Subtitle:new() -- return a default empty new Subtitle to let consumer handle
     end
     local text, end_sub = all_dialogs.get_n_text(current_sub, n_lines)
+    local secondary_text, _
+    if current_secondary_sub == nil then
+      secondary_text = ''
+    else
+      secondary_text, _ = all_secondary_dialogs.get_n_text(current_secondary_sub, n_lines) -- we'll use main sub's timing
+    end
     return Subtitle:new {
         ['text'] = text,
-        ['secondary'] = '',
+        ['secondary'] = secondary_text,
         ['start'] = current_sub['start'],
         ['end'] = end_sub['end'],
     }
@@ -264,6 +275,7 @@ self.clear = function()
 end
 self.clear_all_dialogs = function()
     all_dialogs = sub_list.new()
+    all_secondary_dialogs = sub_list.new()
 end
 
 self.clear_and_notify = function()
