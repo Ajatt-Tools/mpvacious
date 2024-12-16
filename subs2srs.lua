@@ -381,7 +381,7 @@ end
 
 local function export_to_anki(gui)
     maybe_reload_config()
-    local sub = subs_observer.collect()
+    local sub = subs_observer.collect_from_current()
 
     if not sub:is_valid() then
         return h.notify("Nothing to export.", "warn", 1)
