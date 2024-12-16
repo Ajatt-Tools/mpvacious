@@ -54,8 +54,8 @@ local quick_creation_opts = {
   _n_cards = 1,
   set_cards = function (self, n) self._n_cards = math.max(0, n) end,
   set_lines = function (self, n) self._n_lines = math.max(0, n) end,
-  get_cards = function (self) return self._n_lines end,
-  get_lines = function (self) return self._n_cards end,
+  get_cards = function (self) return self._n_cards end,
+  get_lines = function (self) return self._n_lines end,
   increment_cards = function (self) self:set_cards(self._n_cards + 1) end,
   decrement_cards = function (self) self:set_cards(self._n_cards - 1) end,
   clear_options = function(self)
