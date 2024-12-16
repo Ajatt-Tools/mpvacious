@@ -10,6 +10,13 @@ local h = require('helpers')
 local utils = require('mp.utils')
 local base64 = require('utils.base64')
 local self = { windows = true, healthy = true, clip_util = "cmd", }
+local tmp_files = {}
+
+mp.register_event('shutdown', function()
+    for _, file in ipairs(tmp_files) do
+        os.remove(file)
+    end
+end)
 
 self.tmp_dir = function()
     return os.getenv('TEMP')
@@ -42,6 +49,7 @@ self.curl_request = function(url, request_json, completion_fn)
     local handle = io.open(curl_tmpfile_path, "w")
     handle:write(request_json)
     handle:close()
+    table.insert(tmp_files, curl_tmpfile_path)
     local args = {
         'curl',
         '-s',
@@ -53,11 +61,7 @@ self.curl_request = function(url, request_json, completion_fn)
         '--data-binary',
         table.concat { '@', curl_tmpfile_path }
     }
-    local function wrap()
-        completion_fn()
-        os.remove(curl_tmpfile_path)
-    end
-    return h.subprocess(args, wrap)
+    return h.subprocess(args, completion_fn)
 end
 
 return self
