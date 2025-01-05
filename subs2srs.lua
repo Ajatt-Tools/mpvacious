@@ -186,14 +186,14 @@ local codec_support = (function()
     local oac_help = h.subprocess { 'mpv', '--oac=help' }
 
     local function is_audio_supported(codec)
-        return oac_help.status == 0 and oac_help.stdout:match('--oac=' .. codec) ~= nil
+        return oac_help.status == 0 and oac_help.stdout:find('--oac=' .. codec, 1, true) ~= nil
     end
 
     local function is_image_supported(codec)
-        return ovc_help.status == 0 and ovc_help.stdout:match('--ovc=' .. codec) ~= nil
+        return ovc_help.status == 0 and ovc_help.stdout:find('--ovc=' .. codec, 1, true) ~= nil
     end
 
-    return {
+    local inspection_result = {
         snapshot = {
             ['libaom-av1'] = is_image_supported('libaom-av1'),
             libwebp = is_image_supported('libwebp'),
@@ -204,6 +204,12 @@ local codec_support = (function()
             libopus = is_audio_supported('libopus'),
         },
     }
+    for type, codecs in pairs(inspection_result) do
+        for codec, supported in pairs(codecs) do
+            mp.msg.info(string.format("mpv supports %s codec %s: %s", type, codec, supported))
+        end
+    end
+    return inspection_result
 end)()
 
 local function ensure_deck()
