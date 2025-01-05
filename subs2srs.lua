@@ -206,7 +206,7 @@ local codec_support = (function()
     }
     for type, codecs in pairs(inspection_result) do
         for codec, supported in pairs(codecs) do
-             mp.msg.info(string.format("mpv supports %s codec %s: %s",type, codec, supported))
+            mp.msg.info(string.format("mpv supports %s codec %s: %s", type, codec, supported))
         end
     end
     return inspection_result
