@@ -50,18 +50,30 @@ local forvo = require('utils.forvo')
 local subs_observer = require('subtitles.observer')
 local menu, quick_menu, quick_menu_card
 local quick_creation_opts = {
-  _n_lines = nil,
-  _n_cards = 1,
-  set_cards = function (self, n) self._n_cards = math.max(0, n) end,
-  set_lines = function (self, n) self._n_lines = math.max(0, n) end,
-  get_cards = function (self) return self._n_cards end,
-  get_lines = function (self) return self._n_lines end,
-  increment_cards = function (self) self:set_cards(self._n_cards + 1) end,
-  decrement_cards = function (self) self:set_cards(self._n_cards - 1) end,
-  clear_options = function(self)
-    self._n_lines = nil
-    self._n_cards = 1
-  end
+    _n_lines = nil,
+    _n_cards = 1,
+    set_cards = function(self, n)
+        self._n_cards = math.max(0, n)
+    end,
+    set_lines = function(self, n)
+        self._n_lines = math.max(0, n)
+    end,
+    get_cards = function(self)
+        return self._n_cards
+    end,
+    get_lines = function(self)
+        return self._n_lines
+    end,
+    increment_cards = function(self)
+        self:set_cards(self._n_cards + 1)
+    end,
+    decrement_cards = function(self)
+        self:set_cards(self._n_cards - 1)
+    end,
+    clear_options = function(self)
+        self._n_lines = nil
+        self._n_cards = 1
+    end
 }
 ------------------------------------------------------------
 -- default config
@@ -416,9 +428,9 @@ local function update_last_note(overwrite)
     local n_lines = quick_creation_opts:get_lines()
     local n_cards = quick_creation_opts:get_cards()
     if n_lines then
-      sub = subs_observer.collect_from_all_dialogues(n_lines)
+        sub = subs_observer.collect_from_all_dialogues(n_lines)
     else
-      sub = subs_observer.collect_from_current()
+        sub = subs_observer.collect_from_current()
     end
     -- this now returns a table
     local last_note_ids = ankiconnect.get_last_note_ids(n_cards)
@@ -722,7 +734,9 @@ local main = (function()
         mp.add_key_binding("Ctrl+j", "mpvacious-secondary-sid-next", secondary_sid.select_next)
 
         -- Open advanced menu
-        mp.add_key_binding("a", "mpvacious-menu-open", function() menu:open() end)
+        mp.add_key_binding("a", "mpvacious-menu-open", function()
+            menu:open()
+        end)
 
         -- Add note
         mp.add_forced_key_binding("Ctrl+n", "mpvacious-export-note", menu:with_update { export_to_anki, false })
@@ -731,8 +745,12 @@ local main = (function()
         mp.add_key_binding("Ctrl+m", "mpvacious-update-last-note", menu:with_update { update_last_note, false })
         mp.add_key_binding("Ctrl+M", "mpvacious-overwrite-last-note", menu:with_update { update_last_note, true })
 
-        mp.add_key_binding("g", "mpvacious-quick-card-menu-open", function() quick_menu:open() end)
-        mp.add_key_binding("Alt+g", "mpvacious-quick-card-sel-menu-open", function() quick_menu_card:open() end)
+        mp.add_key_binding("g", "mpvacious-quick-card-menu-open", function()
+            quick_menu:open()
+        end)
+        mp.add_key_binding("Alt+g", "mpvacious-quick-card-sel-menu-open", function()
+            quick_menu_card:open()
+        end)
 
         -- Vim-like seeking between subtitle lines
         mp.add_key_binding("H", "mpvacious-sub-seek-back", _ { play_control.sub_seek, 'backward' })
