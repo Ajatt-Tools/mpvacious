@@ -38,7 +38,7 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 local mp = require('mp')
 local OSD = require('osd_styler')
 local cfg_mgr = require('cfg_mgr')
-local encoder = require('encoder')
+local encoder = require('encoder.encoder')
 local h = require('helpers')
 local Menu = require('menu')
 local ankiconnect = require('ankiconnect')
