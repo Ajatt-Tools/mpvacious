@@ -195,7 +195,7 @@ local codec_support = (function()
 
     return {
         snapshot = {
-            ['libaom-av1'] = is_image_supported('libaom-av1'),
+            ['libaom-av1'] = is_image_supported('libaom%-av1'),
             libwebp = is_image_supported('libwebp'),
             mjpeg = is_image_supported('mjpeg'),
         },
