@@ -33,6 +33,10 @@ this.max_num = function(table)
     end
     return max
 end
+this.get_last_n_added_notes = function(note_ids, n)
+    table.sort(note_ids)
+    return { this.unpack(note_ids, math.max(#note_ids - n + 1, 1), #note_ids) }
+end
 
 this.contains = function(table, element)
     for _, value in pairs(table) do

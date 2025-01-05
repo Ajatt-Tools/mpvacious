@@ -113,7 +113,7 @@ self.add_note = function(note_fields, tag, gui)
     self.execute(args, result_notify)
 end
 
-self.get_last_note_id = function()
+self.get_last_note_ids = function(n_cards)
     local ret = self.execute {
         action = "findNotes",
         version = 6,
@@ -125,9 +125,9 @@ self.get_last_note_id = function()
     local note_ids, _ = self.parse_result(ret)
 
     if not h.is_empty(note_ids) then
-        return h.max_num(note_ids)
+        return h.get_last_n_added_notes(note_ids, n_cards)
     else
-        return -1
+        return {}
     end
 end
 

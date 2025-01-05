@@ -48,8 +48,21 @@ local secondary_sid = require('subtitles.secondary_sid')
 local platform = require('platform.init')
 local forvo = require('utils.forvo')
 local subs_observer = require('subtitles.observer')
-local menu
-
+local menu, quick_menu, quick_menu_card
+local quick_creation_opts = {
+  _n_lines = nil,
+  _n_cards = 1,
+  set_cards = function (self, n) self._n_cards = math.max(0, n) end,
+  set_lines = function (self, n) self._n_lines = math.max(0, n) end,
+  get_cards = function (self) return self._n_cards end,
+  get_lines = function (self) return self._n_lines end,
+  increment_cards = function (self) self:set_cards(self._n_cards + 1) end,
+  decrement_cards = function (self) self:set_cards(self._n_cards - 1) end,
+  clear_options = function(self)
+    self._n_lines = nil
+    self._n_cards = 1
+  end
+}
 ------------------------------------------------------------
 -- default config
 
@@ -165,10 +178,8 @@ local profiles = {
     active = "subs2srs",
 }
 
-
 ------------------------------------------------------------
 -- utility functions
-
 local function _(params)
     return function()
         return pcall(h.unpack(params))
@@ -376,7 +387,7 @@ end
 
 local function export_to_anki(gui)
     maybe_reload_config()
-    local sub = subs_observer.collect()
+    local sub = subs_observer.collect_from_current()
 
     if not sub:is_valid() then
         return h.notify("Nothing to export.", "warn", 1)
@@ -401,8 +412,17 @@ end
 
 local function update_last_note(overwrite)
     maybe_reload_config()
-    local sub = subs_observer.collect()
-    local last_note_id = ankiconnect.get_last_note_id()
+    local sub
+    local n_lines = quick_creation_opts:get_lines()
+    local n_cards = quick_creation_opts:get_cards()
+    if n_lines then
+      sub = subs_observer.collect_from_all_dialogues(n_lines)
+    else
+      sub = subs_observer.collect_from_current()
+    end
+    -- this now returns a table
+    local last_note_ids = ankiconnect.get_last_note_ids(n_cards)
+    n_cards = #last_note_ids
 
     if not sub:is_valid() then
         return h.notify("Nothing to export. Have you set the timings?", "warn", 2)
@@ -416,7 +436,9 @@ local function update_last_note(overwrite)
         sub['text'] = nil
     end
 
-    if last_note_id < h.minutes_ago(10) then
+    --first element is the earliest
+
+    if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(10) then
         return h.notify("Couldn't find the target note.", "warn", 2)
     end
 
@@ -429,30 +451,32 @@ local function update_last_note(overwrite)
         snapshot.run_async()
         audio.run_async()
     end
-
-    local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
-    local stored_data = ankiconnect.get_note_fields(last_note_id)
-    if stored_data then
-        forvo.set_output_dir(anki_media_dir)
-        new_data = forvo.append(new_data, stored_data)
-        new_data = update_sentence(new_data, stored_data)
-        if not overwrite then
-            if config.append_media then
-                new_data = join_media_fields(new_data, stored_data)
-            else
-                new_data = join_media_fields(stored_data, new_data)
+    for i = 1, n_cards do
+        local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
+        local stored_data = ankiconnect.get_note_fields(last_note_ids[i])
+        if stored_data then
+            forvo.set_output_dir(anki_media_dir)
+            new_data = forvo.append(new_data, stored_data)
+            new_data = update_sentence(new_data, stored_data)
+            if not overwrite then
+                if config.append_media then
+                    new_data = join_media_fields(new_data, stored_data)
+                else
+                    new_data = join_media_fields(stored_data, new_data)
+                end
             end
         end
-    end
 
-    -- If the text is still empty, put some dummy text to let the user know why
-    -- there's no text in the sentence field.
-    if h.is_empty(new_data[config.sentence_field]) then
-        new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
-    end
+        -- If the text is still empty, put some dummy text to let the user know why
+        -- there's no text in the sentence field.
+        if h.is_empty(new_data[config.sentence_field]) then
+            new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
+        end
 
-    ankiconnect.append_media(last_note_id, new_data, create_media, substitute_fmt(config.note_tag))
+        ankiconnect.append_media(last_note_ids[i], new_data, create_media, substitute_fmt(config.note_tag))
+    end
     subs_observer.clear()
+    quick_creation_opts:clear_options()
 end
 
 ------------------------------------------------------------
@@ -473,12 +497,22 @@ menu.keybindings = {
     { key = 'n', fn = menu:with_update { export_to_anki, false } },
     { key = 'm', fn = menu:with_update { update_last_note, false } },
     { key = 'M', fn = menu:with_update { update_last_note, true } },
+    { key = 'f', fn = menu:with_update { function()
+        quick_creation_opts:increment_cards()
+    end } },
+    { key = 'F', fn = menu:with_update { function()
+        quick_creation_opts:decrement_cards()
+    end } },
     { key = 't', fn = menu:with_update { subs_observer.toggle_autocopy } },
     { key = 'T', fn = menu:with_update { subs_observer.next_autoclip_method } },
     { key = 'i', fn = menu:with_update { menu.hints_state.bump } },
     { key = 'p', fn = menu:with_update { load_next_profile } },
-    { key = 'ESC', fn = function() menu:close() end },
-    { key = 'q', fn = function() menu:close() end },
+    { key = 'ESC', fn = function()
+        menu:close()
+    end },
+    { key = 'q', fn = function()
+        menu:close()
+    end },
 }
 
 function menu:print_header(osd)
@@ -491,6 +525,7 @@ function menu:print_header(osd)
     osd:item('Clipboard autocopy: '):text(subs_observer.autocopy_status_str()):newline()
     osd:item('Active profile: '):text(profiles.active):newline()
     osd:item('Deck: '):text(config.deck_name):newline()
+    osd:item('# cards: '):text(quick_creation_opts:get_cards()):newline()
 end
 
 function menu:print_bindings(osd)
@@ -510,6 +545,7 @@ function menu:print_bindings(osd)
         osd:tab():item('e: '):text('Set end time to current position'):newline()
         osd:tab():item('shift+s: '):text('Set start time to current subtitle'):newline()
         osd:tab():item('shift+e: '):text('Set end time to current subtitle'):newline()
+        osd:tab():item('f: '):text('Increment # cards to update '):italics('(+shift to decrement)'):newline()
         osd:tab():item('r: '):text('Reset timings'):newline()
         osd:tab():item('n: '):text('Export note'):newline()
         osd:tab():item('g: '):text('GUI export'):newline()
@@ -581,12 +617,86 @@ function menu:make_osd()
 end
 
 ------------------------------------------------------------
+--quick_menu line selection
+local choose_cards = function(i)
+    quick_creation_opts:set_cards(i)
+    quick_menu_card:close()
+    quick_menu:open()
+end
+local choose_lines = function(i)
+    quick_creation_opts:set_lines(i)
+    update_last_note(true)
+    quick_menu:close()
+end
+
+quick_menu = Menu:new()
+quick_menu.keybindings = {}
+for i = 1, 9 do
+    table.insert(quick_menu.keybindings, { key = tostring(i), fn = function()
+        choose_lines(i)
+    end })
+end
+table.insert(quick_menu.keybindings, { key = 'g', fn = function()
+    choose_lines(1)
+end })
+table.insert(quick_menu.keybindings, { key = 'ESC', fn = function()
+    quick_menu:close()
+end })
+table.insert(quick_menu.keybindings, { key = 'q', fn = function()
+    quick_menu:close()
+end })
+function quick_menu:print_header(osd)
+    osd:submenu('quick card creation: line selection'):newline()
+    osd:item('# lines: '):text('Enter 1-9'):newline()
+end
+function quick_menu:print_legend(osd)
+    osd:new_layer():size(config.menu_font_size):font(config.menu_font_name):align(4)
+    self:print_header(osd)
+    menu:warn_formats(osd)
+end
+function quick_menu:make_osd()
+    local osd = OSD:new()
+    self:print_legend(osd)
+    return osd
+end
+
+-- quick_menu card selection
+quick_menu_card = Menu:new()
+quick_menu_card.keybindings = {}
+for i = 1, 9 do
+    table.insert(quick_menu_card.keybindings, { key = tostring(i), fn = function()
+        choose_cards(i)
+    end })
+end
+table.insert(quick_menu_card.keybindings, { key = 'ESC', fn = function()
+    quick_menu_card:close()
+end })
+table.insert(quick_menu_card.keybindings, { key = 'q', fn = function()
+    quick_menu_card:close()
+end })
+function quick_menu_card:print_header(osd)
+    osd:submenu('quick card creation: card selection'):newline()
+    osd:item('# cards: '):text('Enter 1-9'):newline()
+end
+function quick_menu_card:print_legend(osd)
+    osd:new_layer():size(config.menu_font_size):font(config.menu_font_name):align(4)
+    self:print_header(osd)
+    menu:warn_formats(osd)
+end
+function quick_menu_card:make_osd()
+    local osd = OSD:new()
+    self:print_legend(osd)
+    return osd
+end
+
+------------------------------------------------------------
 -- main
 
 local main = (function()
     local main_executed = false
     return function()
         if main_executed then
+            subs_observer.clear_all_dialogs()
             return
         else
             main_executed = true
@@ -620,6 +730,9 @@ local main = (function()
         -- Note updating
         mp.add_key_binding("Ctrl+m", "mpvacious-update-last-note", menu:with_update { update_last_note, false })
         mp.add_key_binding("Ctrl+M", "mpvacious-overwrite-last-note", menu:with_update { update_last_note, true })
+
+        mp.add_key_binding("g", "mpvacious-quick-card-menu-open", function() quick_menu:open() end)
+        mp.add_key_binding("Alt+g", "mpvacious-quick-card-sel-menu-open", function() quick_menu_card:open() end)
 
         -- Vim-like seeking between subtitle lines
         mp.add_key_binding("H", "mpvacious-sub-seek-back", _ { play_control.sub_seek, 'backward' })
