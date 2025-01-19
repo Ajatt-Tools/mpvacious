@@ -118,7 +118,10 @@ end
 
 local function animated_scale_filter()
     return make_scale_filter(
-        'lanczos', self.config.animated_snapshot_width, self.config.animated_snapshot_height)
+            'lanczos',
+            self.config.animated_snapshot_width,
+            self.config.animated_snapshot_height
+    )
 end
 
 ffmpeg.make_static_snapshot_args = function(source_path, output_path, timestamp)
@@ -185,7 +188,10 @@ ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_ti
             '-map_metadata', '-1',
             '-loop', '0',
             '-vf', string.format(
-                'fps=%d,%s', self.config.animated_snapshot_fps, animated_scale_filter()),
+                    'fps=%d,%s',
+                    self.config.animated_snapshot_fps,
+                    animated_scale_filter()
+            ),
             h.unpack(encoder_args)
     )
     table.insert(args, output_path)
@@ -357,8 +363,10 @@ ffmpeg.make_audio_args = function(
     end
 
     local loudnorm_targets = make_loudnorm_targets()
-    local args = make_ffargs('-loglevel', 'info',
-                             '-af', loudnorm_targets .. ':print_format=json')
+    local args = make_ffargs(
+            '-loglevel', 'info',
+            '-af', loudnorm_targets .. ':print_format=json'
+    )
     table.insert(args, '-f')
     table.insert(args, 'null')
     table.insert(args, '-')
