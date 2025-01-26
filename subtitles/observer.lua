@@ -135,7 +135,7 @@ autoclip_method = (function()
         if current_method.get() == 'clipboard' then
             self.copy_to_clipboard("autocopy action", cur_lines.primary)
         elseif current_method.get() == 'goldendict' then
-            h.subprocess({ 'goldendict', cur_lines.primary }, on_external_finish)
+            h.subprocess_detached({ 'goldendict', cur_lines.primary }, on_external_finish)
         elseif current_method.get() == 'custom_command' then
             call_external_command(cur_lines)
         end
@@ -313,7 +313,6 @@ end
 
 local function notify_autocopy()
     if autoclip_enabled then
-        ensure_goldendict_running()
         copy_primary_sub()
     end
     h.notify(string.format("Clipboard autocopy has been %s.", self.autocopy_status_str()))
