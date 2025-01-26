@@ -183,9 +183,11 @@ end
 
 local function create_config_file()
     local name = default_profile_filename
+    -- ~/.config/mpv/scripts/ and the mpvacious dir
     local parent, child = utils.split_path(mp.get_script_directory())
+    -- ~/.config/mpv/ and "scripts"
     parent, child = utils.split_path(parent:gsub("/$", ""))
-
+    -- ~/.config/mpv/script-opts/subs2srs.conf
     local config_filepath = utils.join_path(utils.join_path(parent, "script-opts"), string.format('%s.conf', name))
     local example_config_filepath = utils.join_path(mp.get_script_directory(), ".github/RELEASE/subs2srs.conf")
 
