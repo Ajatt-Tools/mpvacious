@@ -75,7 +75,7 @@ local function args_as_str(args)
     return table.concat(map(args, function(str) return string.format("'%s'", str) end), " ")
 end
 
-this.subprocess = function(args, completion_fn)
+this.subprocess = function(args, completion_fn, override_settings)
     -- if `completion_fn` is passed, the command is ran asynchronously,
     -- and upon completion, `completion_fn` is called to process the results.
     msg.info("Executing: " .. args_as_str(args))
@@ -87,7 +87,21 @@ this.subprocess = function(args, completion_fn)
         capture_stderr = true,
         args = args
     }
+    if not this.is_empty(override_settings) then
+        for k,v in pairs(override_settings) do
+            command_table[k] = v
+        end
+    end
     return command_native(command_table, completion_fn)
+end
+
+this.subprocess_detached = function(args, completion_fn)
+    local overwrite_settings = {
+        detach=true,
+        capture_stdout = false,
+        capture_stderr = false,
+    }
+    return this.subprocess(args, completion_fn, overwrite_settings)
 end
 
 this.is_empty = function(var)
