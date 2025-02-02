@@ -33,7 +33,7 @@ self.copy_to_clipboard = function(text)
 end
 
 self.gen_random_tmp_file_path = function()
-    return utils.join_path(self.tmp_dir(), string.format('curl_tmp_%d.txt', math.random(10^9)))
+    return utils.join_path(self.tmp_dir(), string.format('curl_tmp_%d.txt', math.random(10 ^ 9)))
 end
 
 self.gen_unique_tmp_file_path = function()
