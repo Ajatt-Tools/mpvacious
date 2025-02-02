@@ -23,12 +23,17 @@ self.tmp_dir = function()
 end
 
 self.copy_to_clipboard = function(text)
-    mp.commandv(
-        "run", "powershell", "-NoLogo", "-NoProfile", "-WindowStyle", "Hidden", "-Command",
+    local args = {
+        "powershell", "-NoLogo", "-NoProfile", "-WindowStyle", "Hidden", "-Command",
         string.format(
-            "Set-Clipboard ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('%s')))",
-            base64.enc(text)
+                "Set-Clipboard ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('%s')))",
+                base64.enc(text)
         )
+    }
+    return h.subprocess_detached(
+            args,
+            function()
+            end
     )
 end
 
