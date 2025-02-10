@@ -33,7 +33,7 @@ local inspection_result = {
 }
 for type, codecs in pairs(inspection_result) do
     for codec, supported in pairs(codecs) do
-        mp.msg.info(string.format("mpv supports %s codec %s: %s", type, codec, supported))
+        mp.msg.info(string.format("mpv supports %s codec %s: %s", type, codec, tostring(supported)))
     end
 end
 
