@@ -131,6 +131,16 @@ self.get_last_note_ids = function(n_cards)
     end
 end
 
+self.get_selected_note_ids = function()
+    local ret = self.execute {
+        action = "guiSelectedNotes",
+        version = 6
+    }
+
+    local note_ids, _ = self.parse_result(ret)
+    return note_ids
+end
+
 self.get_note_fields = function(note_id)
     local ret = self.execute {
         action = "notesInfo",
