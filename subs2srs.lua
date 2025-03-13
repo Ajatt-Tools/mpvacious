@@ -461,35 +461,35 @@ local function update_notes(note_ids, overwrite)
 end
 
 local function update_last_note(overwrite)
-	maybe_reload_config()
-	
-	local n_cards = quick_creation_opts:get_cards()
-	-- this now returns a table
+    maybe_reload_config()
+    
+    local n_cards = quick_creation_opts:get_cards()
+    -- this now returns a table
     local last_note_ids = ankiconnect.get_last_note_ids(n_cards)
     n_cards = #last_note_ids
 
-	 --first element is the earliest
+     --first element is the earliest
     if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(10) then
         return h.notify("Couldn't find the target note.", "warn", 2)
     end
-	
-	update_notes(last_note_ids, overwrite)
+    
+    update_notes(last_note_ids, overwrite)
 end
 
 local function update_selected_note(overwrite)
-	maybe_reload_config()
-	
+    maybe_reload_config()
+    
     local selected_note_ids = ankiconnect.get_selected_note_ids()
     
-	if h.is_empty(selected_note_ids) then
+    if h.is_empty(selected_note_ids) then
         return h.notify("Couldn't find the target note(s). Did you select the notes you want in Anki?", "warn", 3)
     end
-	
-	if #selected_note_ids > config.card_overwrite_safeguard then
+    
+    if #selected_note_ids > config.card_overwrite_safeguard then
         return h.notify(string.format("Safeguard: more than %i notes selected\nYou can change the limit in your config", config.card_overwrite_safeguard), "warn", 4)
     end
-	
-	update_notes(selected_note_ids, overwrite)
+    
+    update_notes(selected_note_ids, overwrite)
 end
 
 ------------------------------------------------------------
@@ -508,8 +508,8 @@ menu.keybindings = {
     { key = 'r', fn = menu:with_update { subs_observer.clear_and_notify } },
     { key = 'g', fn = menu:with_update { export_to_anki, true } },
     { key = 'n', fn = menu:with_update { export_to_anki, false } },
-	{ key = 'b', fn = menu:with_update { update_selected_note, false } },
-	{ key = 'B', fn = menu:with_update { update_selected_note, true } },
+    { key = 'b', fn = menu:with_update { update_selected_note, false } },
+    { key = 'B', fn = menu:with_update { update_selected_note, true } },
     { key = 'm', fn = menu:with_update { update_last_note, false } },
     { key = 'M', fn = menu:with_update { update_last_note, true } },
     { key = 'f', fn = menu:with_update { function()
@@ -564,7 +564,7 @@ function menu:print_bindings(osd)
         osd:tab():item('r: '):text('Reset timings'):newline()
         osd:tab():item('n: '):text('Export note'):newline()
         osd:tab():item('g: '):text('GUI export'):newline()
-		osd:tab():item('b: '):text('Update the selected note' ):italics('(+shift to overwrite)'):newline()
+        osd:tab():item('b: '):text('Update the selected note' ):italics('(+shift to overwrite)'):newline()
         osd:tab():item('m: '):text('Update the last added note '):italics('(+shift to overwrite)'):newline()
         osd:tab():item('t: '):text('Toggle clipboard autocopy'):newline()
         osd:tab():item('T: '):text('Switch to the next clipboard method'):newline()
@@ -746,8 +746,8 @@ local main = (function()
         mp.add_forced_key_binding("Ctrl+n", "mpvacious-export-note", menu:with_update { export_to_anki, false })
 
         -- Note updating
-		mp.add_key_binding("Ctrl+b", "mpvacious-update-selected-note", menu:with_update { update_selected_note, false })
-		mp.add_key_binding("Ctrl+B", "mpvacious-overwrite-selected-note", menu:with_update { update_selected_note, true })
+        mp.add_key_binding("Ctrl+b", "mpvacious-update-selected-note", menu:with_update { update_selected_note, false })
+        mp.add_key_binding("Ctrl+B", "mpvacious-overwrite-selected-note", menu:with_update { update_selected_note, true })
         mp.add_key_binding("Ctrl+m", "mpvacious-update-last-note", menu:with_update { update_last_note, false })
         mp.add_key_binding("Ctrl+M", "mpvacious-overwrite-last-note", menu:with_update { update_last_note, true })
 
