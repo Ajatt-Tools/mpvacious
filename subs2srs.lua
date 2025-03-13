@@ -462,7 +462,7 @@ end
 
 local function update_last_note(overwrite)
     maybe_reload_config()
-    
+
     local n_cards = quick_creation_opts:get_cards()
     -- this now returns a table
     local last_note_ids = ankiconnect.get_last_note_ids(n_cards)
@@ -472,23 +472,23 @@ local function update_last_note(overwrite)
     if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(10) then
         return h.notify("Couldn't find the target note.", "warn", 2)
     end
-    
+
     update_notes(last_note_ids, overwrite)
 end
 
 local function update_selected_note(overwrite)
     maybe_reload_config()
-    
+
     local selected_note_ids = ankiconnect.get_selected_note_ids()
-    
+
     if h.is_empty(selected_note_ids) then
         return h.notify("Couldn't find the target note(s). Did you select the notes you want in Anki?", "warn", 3)
     end
-    
+
     if #selected_note_ids > config.card_overwrite_safeguard then
         return h.notify(string.format("Safeguard: more than %i notes selected\nYou can change the limit in your config", config.card_overwrite_safeguard), "warn", 4)
     end
-    
+
     update_notes(selected_note_ids, overwrite)
 end
 
