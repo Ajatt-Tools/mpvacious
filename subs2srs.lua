@@ -50,7 +50,7 @@ local forvo = require('utils.forvo')
 local subs_observer = require('subtitles.observer')
 local codec_support = require('encoder.codec_support')
 
-local menu, quick_menu, quick_menu_card
+local menu, quick_menu, quick_menu_card, first_field
 local quick_creation_opts = {
     _n_lines = nil,
     _n_cards = 1,
@@ -146,6 +146,7 @@ local config = {
     -- Anki
     create_deck = false, -- automatically create a deck for new cards
     allow_duplicates = false, -- allow making notes with the same sentence field
+    empty_placeholder = "", -- text to add to the first card field if empty
     deck_name = "Learning", -- name of the deck for new cards
     model_name = "Japanese sentences", -- Tools -> Manage note types
     sentence_field = "SentKanji",
@@ -361,6 +362,7 @@ end
 local function maybe_reload_config()
     if config.reload_config_before_card_creation then
         cfg_mgr.reload_from_disk()
+        first_field = ankiconnect.get_first_field(config.model_name)
     end
 end
 
@@ -388,6 +390,9 @@ local function export_to_anki(gui)
     audio.run_async()
 
     local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
+    if not h.is_empty(config.empty_placeholder) and not h.is_empty(first_field) then
+        note_fields[first_field] = config.empty_placeholder
+    end
 
     ankiconnect.add_note(note_fields, substitute_fmt(config.note_tag), gui)
     subs_observer.clear()
@@ -692,6 +697,8 @@ local main = (function()
         secondary_sid.init(config)
         ensure_deck()
         subs_observer.init(menu, config)
+
+        first_field = ankiconnect.get_first_field(config.model_name)
 
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", subs_observer.copy_current_primary_to_clipboard)

@@ -285,6 +285,7 @@ Use this when your subs are well-timed,
 and the target sentence doesn't span multiple subs.
 
 **Quick card creation:**
+
 * <kbd>g</kbd> - Quick card creation menu.
 * <kbd>Alt+g</kbd> - Quick card creation, card selection menu.
 
@@ -317,7 +318,7 @@ and the target sentence doesn't span multiple subs.
 
 Advanced menu has the following options:
 
-* <kbd>f</kbd> - Increment number of cards to update. Only affects note updating, including quick card creation. The number of cards to update is reset to 1 upon updating a note. 
+* <kbd>f</kbd> - Increment number of cards to update. Only affects note updating, including quick card creation. The number of cards to update is reset to 1 upon updating a note.
 * <kbd>shift+f</kbd> - Decrement number of cards to update.
 
 * <kbd>c</kbd> - Interactive subtitle selection.
