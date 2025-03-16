@@ -389,7 +389,7 @@ local function export_to_anki(gui)
     audio.run_async()
 
     local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
-    if not h.is_empty(first_field) then
+    if not h.is_empty(first_field) and h.is_empty(note_fields[first_field]) then
         note_fields[first_field] = "[empty]"
     end
 
