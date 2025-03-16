@@ -146,7 +146,6 @@ local config = {
     -- Anki
     create_deck = false, -- automatically create a deck for new cards
     allow_duplicates = false, -- allow making notes with the same sentence field
-    empty_placeholder = "", -- text to add to the first card field if empty
     deck_name = "Learning", -- name of the deck for new cards
     model_name = "Japanese sentences", -- Tools -> Manage note types
     sentence_field = "SentKanji",
@@ -390,8 +389,8 @@ local function export_to_anki(gui)
     audio.run_async()
 
     local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
-    if not h.is_empty(config.empty_placeholder) and not h.is_empty(first_field) then
-        note_fields[first_field] = config.empty_placeholder
+    if not h.is_empty(first_field) then
+        note_fields[first_field] = "[empty]"
     end
 
     ankiconnect.add_note(note_fields, substitute_fmt(config.note_tag), gui)

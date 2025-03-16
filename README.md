@@ -173,7 +173,7 @@ The config file should be created by the user, if needed.
 |--------------------|-------------------------------------------------------------------|
 | GNU/Linux          | `~/.config/mpv/script-opts/subs2srs.conf`                         |
 | Windows            | `C:/Users/Username/AppData/Roaming/mpv/script-opts/subs2srs.conf` |
-| Windows (portable) | `mpv.exeフォルダ/portable_config/script-opts/subs2srs.conf`           |
+| Windows (portable) | `mpv.exeフォルダ/portable_config/script-opts/subs2srs.conf`       |
 
 If a parameter is not specified
 in the config file, the default value will be used.
@@ -183,8 +183,9 @@ mpv doesn't tolerate spaces before and after `=`.
   <a href="https://github.com/Ajatt-Tools/mpvacious/blob/master/.github/RELEASE/subs2srs.conf">Example configuration file</a>
 </p>
 
-Sentence field should be first in the note type settings.
+If the first field is empty, it will be set contain the string `[empty]`.
 Otherwise, Anki won't allow mpvacious to add new notes.
+This won't happen if the sentence field is first in the note type settings.
 
 **Tip**: Try [our official note type](https://ankiweb.net/shared/info/1557722832)
 if you don't want to configure note fields yourself.
