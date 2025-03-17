@@ -431,6 +431,7 @@ local function update_notes(note_ids, overwrite)
     end
 
     local n_cards = #note_ids
+    local multiple_cards = n_cards > 1;
 
     for i = 1, n_cards do
         local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
@@ -454,8 +455,22 @@ local function update_notes(note_ids, overwrite)
             new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
         end
 
-        ankiconnect.append_media(note_ids[i], new_data, create_media, substitute_fmt(config.note_tag))
+        ankiconnect.append_media(note_ids[i], new_data, create_media, substitute_fmt(config.note_tag), multiple_cards)
     end
+
+    if multiple_cards then
+        -- Opens all the cards in gui browser
+        if not config.disable_gui_browser then
+            local gui_query = string.format("nid:%s", note_ids[1])
+            for i = 2, n_cards do
+                gui_query = gui_query .. " OR nid:" .. note_ids[i]
+            end
+            ankiconnect.gui_browse(gui_query)
+        end
+
+        h.notify(string.format("Updated %i notes.", n_cards))
+    end
+
     subs_observer.clear()
     quick_creation_opts:clear_options()
 end
