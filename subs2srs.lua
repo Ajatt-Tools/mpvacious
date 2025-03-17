@@ -88,7 +88,7 @@ local config = {
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
     use_ffmpeg = false, -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
     reload_config_before_card_creation = true, -- for convenience, read config file from disk before a card is made.
-    card_overwrite_safeguard = 5, -- a safeguard for accidentally overwriting more cards than intended.
+    card_overwrite_safeguard = 1, -- a safeguard for accidentally overwriting more cards than intended.
 
     -- Clipboard and external communication
     autoclip = false, -- enable copying subs to the clipboard when mpv starts
@@ -501,7 +501,7 @@ local function update_selected_note(overwrite)
     end
 
     if #selected_note_ids > config.card_overwrite_safeguard then
-        return h.notify(string.format("Safeguard: more than %i notes selected\nYou can change the limit in your config", config.card_overwrite_safeguard), "warn", 4)
+        return h.notify(string.format("More than %i notes selected\nnot recommended, but you can change the limit in your config", config.card_overwrite_safeguard), "warn", 4)
     end
 
     update_notes(selected_note_ids, overwrite)
