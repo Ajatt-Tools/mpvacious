@@ -50,7 +50,7 @@ local forvo = require('utils.forvo')
 local subs_observer = require('subtitles.observer')
 local codec_support = require('encoder.codec_support')
 
-local menu, quick_menu, quick_menu_card, first_field
+local menu, quick_menu, quick_menu_card
 local quick_creation_opts = {
     _n_lines = nil,
     _n_cards = 1,
@@ -361,7 +361,6 @@ end
 local function maybe_reload_config()
     if config.reload_config_before_card_creation then
         cfg_mgr.reload_from_disk()
-        first_field = ankiconnect.get_first_field(config.model_name)
     end
 end
 
@@ -389,6 +388,8 @@ local function export_to_anki(gui)
     audio.run_async()
 
     local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
+
+    local first_field = ankiconnect.get_first_field(config.model_name)
     if not h.is_empty(first_field) and h.is_empty(note_fields[first_field]) then
         note_fields[first_field] = "[empty]"
     end
@@ -696,8 +697,6 @@ local main = (function()
         secondary_sid.init(config)
         ensure_deck()
         subs_observer.init(menu, config)
-
-        first_field = ankiconnect.get_first_field(config.model_name)
 
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", subs_observer.copy_current_primary_to_clipboard)
