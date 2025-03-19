@@ -173,7 +173,7 @@ The config file should be created by the user, if needed.
 |--------------------|-------------------------------------------------------------------|
 | GNU/Linux          | `~/.config/mpv/script-opts/subs2srs.conf`                         |
 | Windows            | `C:/Users/Username/AppData/Roaming/mpv/script-opts/subs2srs.conf` |
-| Windows (portable) | `mpv.exeフォルダ/portable_config/script-opts/subs2srs.conf`       |
+| Windows (portable) | `mpv.exeフォルダ/portable_config/script-opts/subs2srs.conf`           |
 
 If a parameter is not specified
 in the config file, the default value will be used.
