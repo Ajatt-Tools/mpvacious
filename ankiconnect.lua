@@ -171,9 +171,9 @@ self.get_first_field = function(model_name)
             end
         end
     else
+        msg.error(string.format("Couldn't retrieve the first field's name of note type %s: %s", model_name, error))
         return nil
     end
-
 end
 
 self.gui_browse = function(query)
