@@ -390,7 +390,6 @@ local function export_to_anki(gui)
     local first_field = ankiconnect.get_first_field(config.model_name)
     local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
 
-    local first_field = ankiconnect.get_first_field(config.model_name)
     if not h.is_empty(first_field) and h.is_empty(note_fields[first_field]) then
         note_fields[first_field] = "[empty]"
     end
