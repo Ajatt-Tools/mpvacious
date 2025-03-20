@@ -230,6 +230,9 @@ Ctrl+g       script-binding mpvacious-animated-snapshot-toggle
 
 Ctrl+n       script-binding mpvacious-export-note
 
+Ctrl+b       script-binding mpvacious-update-selected-note
+Ctrl+B       script-binding mpvacious-overwrite-selected-note
+
 Ctrl+m       script-binding mpvacious-update-last-note
 Ctrl+M       script-binding mpvacious-overwrite-last-note
 
@@ -263,6 +266,7 @@ mpv accepts both variants in `input.conf`.
 
 * [Create a card](howto/create_card.md)
 * [Quick card creation](howto/create_quick_card.md)
+* [Updating selected cards](howto/update_selected_card.md)
 * [Open the "Add" dialog](howto/add_dialog.md)
 * [Usage with Rikaitan](howto/yomichan.md)
 * [Usage with GoldenDict](howto/goldendict.md)
@@ -289,6 +293,11 @@ and the target sentence doesn't span multiple subs.
 
 * <kbd>g</kbd> - Quick card creation menu.
 * <kbd>Alt+g</kbd> - Quick card creation, card selection menu.
+
+**Update the selected cards:**
+
+* <kbd>Ctrl+b</kbd> - Append to the media fields of the selected Anki cards.
+* <kbd>Ctrl+Shift+b</kbd> - Overwrite media fields of the selected Anki cards.
 
 **Update the last card:**
 
@@ -345,6 +354,10 @@ The default selection spans across the selected start point and the end of the s
 The default selection spans across the selected end point and the start of the subtitle line.
 
 Then, as earlier, press <kbd>n</kbd> to make the card.
+
+Alternatively:
+* <kbd>m</kbd> to update the last card(s). (<kbd>Shift+m</kbd> to overwrite)
+* <kbd>b</kbd> to update the selected card(s). (<kbd>Shift+b</kbd> to overwrite)
 
 **Tip**: change playback speed by pressing <kbd>[</kbd> and <kbd>]</kbd>
 to precisely mark start and end of the phrase.
