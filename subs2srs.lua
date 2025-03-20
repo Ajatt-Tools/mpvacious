@@ -387,7 +387,12 @@ local function export_to_anki(gui)
     snapshot.run_async()
     audio.run_async()
 
+    local first_field = ankiconnect.get_first_field(config.model_name)
     local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
+
+    if not h.is_empty(first_field) and h.is_empty(note_fields[first_field]) then
+        note_fields[first_field] = "[empty]"
+    end
 
     ankiconnect.add_note(note_fields, substitute_fmt(config.note_tag), gui)
     subs_observer.clear()

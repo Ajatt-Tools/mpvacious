@@ -183,8 +183,9 @@ mpv doesn't tolerate spaces before and after `=`.
   <a href="https://github.com/Ajatt-Tools/mpvacious/blob/master/.github/RELEASE/subs2srs.conf">Example configuration file</a>
 </p>
 
-Sentence field should be first in the note type settings.
+If the first field is empty, it will be set contain the string `[empty]`.
 Otherwise, Anki won't allow mpvacious to add new notes.
+This won't happen if the sentence field is first in the note type settings.
 
 **Tip**: Try [our official note type](https://ankiweb.net/shared/info/1557722832)
 if you don't want to configure note fields yourself.
@@ -285,6 +286,7 @@ Use this when your subs are well-timed,
 and the target sentence doesn't span multiple subs.
 
 **Quick card creation:**
+
 * <kbd>g</kbd> - Quick card creation menu.
 * <kbd>Alt+g</kbd> - Quick card creation, card selection menu.
 
@@ -317,7 +319,7 @@ and the target sentence doesn't span multiple subs.
 
 Advanced menu has the following options:
 
-* <kbd>f</kbd> - Increment number of cards to update. Only affects note updating, including quick card creation. The number of cards to update is reset to 1 upon updating a note. 
+* <kbd>f</kbd> - Increment number of cards to update. Only affects note updating, including quick card creation. The number of cards to update is reset to 1 upon updating a note.
 * <kbd>shift+f</kbd> - Decrement number of cards to update.
 
 * <kbd>c</kbd> - Interactive subtitle selection.

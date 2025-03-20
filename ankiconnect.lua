@@ -153,6 +153,29 @@ self.get_note_fields = function(note_id)
     end
 end
 
+self.get_first_field = function(model_name)
+    local ret = self.execute {
+        action = "findModelsByName",
+        version = 6,
+        params = {
+            modelNames = { model_name }
+        }
+    }
+
+    local result, error = self.parse_result(ret)
+
+    if error == nil then
+        for _, field in pairs(result[1].flds) do
+            if field.ord == 0 then
+                return field.name
+            end
+        end
+    else
+        msg.error(string.format("Couldn't retrieve the first field's name of note type %s: %s", model_name, error))
+        return nil
+    end
+end
+
 self.gui_browse = function(query)
     if not self.config.disable_gui_browse then
         self.execute {
