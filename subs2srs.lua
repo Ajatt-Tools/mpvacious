@@ -43,6 +43,7 @@ local h = require('helpers')
 local Menu = require('menu')
 local ankiconnect = require('ankiconnect')
 local switch = require('utils.switch')
+local dec_counter = require('utils.dec_counter')
 local play_control = require('utils.play_control')
 local secondary_sid = require('subtitles.secondary_sid')
 local platform = require('platform.init')
@@ -425,17 +426,29 @@ local function update_notes(note_ids, overwrite)
     local snapshot = encoder.snapshot.create_job(sub)
     local audio = encoder.audio.create_job(sub, audio_padding())
 
-    local create_media = function()
-        snapshot.run_async()
-        audio.run_async()
+    snapshot.run_async()
+    audio.run_async()
+
+    local function notify_user_on_finish()
+        -- Opens all the cards in gui browser
+        local queries = {}
+        for _, note_id in ipairs(note_ids) do
+            table.insert(queries, string.format("nid:%s", tostring(note_id)))
+        end
+        local query = table.concat(queries, " OR ")
+        ankiconnect.gui_browse(query)
+        if #note_ids > 1 then
+            h.notify(string.format("Updated %i notes.", #note_ids))
+        else
+            h.notify(string.format("Updated note #%s.", tostring(note_ids[1])))
+        end
     end
 
-    local n_cards = #note_ids
-    local multiple_cards = n_cards > 1;
+    local countdown = dec_counter.new(#note_ids).on_finish(notify_user_on_finish)
 
-    for i = 1, n_cards do
+    for _, note_id in pairs(note_ids) do
         local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
-        local stored_data = ankiconnect.get_note_fields(note_ids[i])
+        local stored_data = ankiconnect.get_note_fields(note_id)
         if stored_data then
             forvo.set_output_dir(anki_media_dir)
             new_data = forvo.append(new_data, stored_data)
@@ -455,20 +468,7 @@ local function update_notes(note_ids, overwrite)
             new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
         end
 
-        ankiconnect.append_media(note_ids[i], new_data, create_media, substitute_fmt(config.note_tag), multiple_cards)
-    end
-
-    if multiple_cards then
-        -- Opens all the cards in gui browser
-        if not config.disable_gui_browser then
-            local gui_query = string.format("nid:%s", note_ids[1])
-            for i = 2, n_cards do
-                gui_query = gui_query .. " OR nid:" .. note_ids[i]
-            end
-            ankiconnect.gui_browse(gui_query)
-        end
-
-        h.notify(string.format("Updated %i notes.", n_cards))
+        ankiconnect.append_media(note_id, new_data, substitute_fmt(config.note_tag), countdown.decrease)
     end
 
     subs_observer.clear()
@@ -483,7 +483,7 @@ local function update_last_note(overwrite)
     local last_note_ids = ankiconnect.get_last_note_ids(n_cards)
     n_cards = #last_note_ids
 
-     --first element is the earliest
+    --first element is the earliest
     if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(10) then
         return h.notify("Couldn't find the target note.", "warn", 2)
     end
@@ -579,7 +579,7 @@ function menu:print_bindings(osd)
         osd:tab():item('r: '):text('Reset timings'):newline()
         osd:tab():item('n: '):text('Export note'):newline()
         osd:tab():item('g: '):text('GUI export'):newline()
-        osd:tab():item('b: '):text('Update the selected note' ):italics('(+shift to overwrite)'):newline()
+        osd:tab():item('b: '):text('Update the selected note'):italics('(+shift to overwrite)'):newline()
         osd:tab():item('m: '):text('Update the last added note '):italics('(+shift to overwrite)'):newline()
         osd:tab():item('t: '):text('Toggle clipboard autocopy'):newline()
         osd:tab():item('T: '):text('Switch to the next clipboard method'):newline()
