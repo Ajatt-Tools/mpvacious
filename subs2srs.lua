@@ -423,6 +423,8 @@ local function update_notes(note_ids, overwrite)
 
     local anki_media_dir = get_anki_media_dir_path()
     encoder.set_output_dir(anki_media_dir)
+    forvo.set_output_dir(anki_media_dir)
+
     local snapshot = encoder.snapshot.create_job(sub)
     local audio = encoder.audio.create_job(sub, audio_padding())
 
@@ -445,12 +447,11 @@ local function update_notes(note_ids, overwrite)
     end
 
     local countdown = dec_counter.new(#note_ids).on_finish(notify_user_on_finish)
+    local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
 
     for _, note_id in pairs(note_ids) do
-        local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
         local stored_data = ankiconnect.get_note_fields(note_id)
         if stored_data then
-            forvo.set_output_dir(anki_media_dir)
             new_data = forvo.append(new_data, stored_data)
             new_data = update_sentence(new_data, stored_data)
             if not overwrite then
