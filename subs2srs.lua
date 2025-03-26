@@ -400,6 +400,62 @@ local function export_to_anki(gui)
     subs_observer.clear()
 end
 
+local function as_callback(fn, ...)
+    --- Convenience utility.
+    local args = {...}
+    return function()
+        return fn(h.unpack(args))
+    end
+end
+
+local function notify_user_on_finish(note_ids)
+    --- Run this callback once all notes are changed.
+
+    -- Construct a search query for the Anki Browser.
+    local queries = {}
+    for _, note_id in ipairs(note_ids) do
+        table.insert(queries, string.format("nid:%s", tostring(note_id)))
+    end
+    local query = table.concat(queries, " OR ")
+    ankiconnect.gui_browse(query)
+
+    -- Notify the user.
+    if #note_ids > 1 then
+        h.notify(string.format("Updated %i notes.", #note_ids))
+    else
+        h.notify(string.format("Updated note #%s.", tostring(note_ids[1])))
+    end
+end
+
+local function change_fields(note_ids, new_data, overwrite)
+    --- Run this callback once audio and image files are created.
+
+    local change_notes_countdown = dec_counter.new(#note_ids).on_finish(as_callback(notify_user_on_finish, note_ids))
+
+    for _, note_id in pairs(note_ids) do
+        local stored_data = ankiconnect.get_note_fields(note_id)
+        if stored_data then
+            new_data = forvo.append(new_data, stored_data)
+            new_data = update_sentence(new_data, stored_data)
+            if not overwrite then
+                if config.append_media then
+                    new_data = join_media_fields(new_data, stored_data)
+                else
+                    new_data = join_media_fields(stored_data, new_data)
+                end
+            end
+        end
+
+        -- If the text is still empty, put some dummy text to let the user know why
+        -- there's no text in the sentence field.
+        if h.is_empty(new_data[config.sentence_field]) then
+            new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
+        end
+
+        ankiconnect.append_media(note_id, new_data, substitute_fmt(config.note_tag), change_notes_countdown.decrease)
+    end
+end
+
 local function update_notes(note_ids, overwrite)
     local sub
     local n_lines = quick_creation_opts:get_lines()
@@ -427,50 +483,11 @@ local function update_notes(note_ids, overwrite)
 
     local snapshot = encoder.snapshot.create_job(sub)
     local audio = encoder.audio.create_job(sub, audio_padding())
-
-    snapshot.run_async()
-    audio.run_async()
-
-    local function notify_user_on_finish()
-        -- Opens all the cards in gui browser
-        local queries = {}
-        for _, note_id in ipairs(note_ids) do
-            table.insert(queries, string.format("nid:%s", tostring(note_id)))
-        end
-        local query = table.concat(queries, " OR ")
-        ankiconnect.gui_browse(query)
-        if #note_ids > 1 then
-            h.notify(string.format("Updated %i notes.", #note_ids))
-        else
-            h.notify(string.format("Updated note #%s.", tostring(note_ids[1])))
-        end
-    end
-
-    local countdown = dec_counter.new(#note_ids).on_finish(notify_user_on_finish)
     local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
+    local create_files_countdown = dec_counter.new(2).on_finish(as_callback(change_fields, note_ids, new_data, overwrite))
 
-    for _, note_id in pairs(note_ids) do
-        local stored_data = ankiconnect.get_note_fields(note_id)
-        if stored_data then
-            new_data = forvo.append(new_data, stored_data)
-            new_data = update_sentence(new_data, stored_data)
-            if not overwrite then
-                if config.append_media then
-                    new_data = join_media_fields(new_data, stored_data)
-                else
-                    new_data = join_media_fields(stored_data, new_data)
-                end
-            end
-        end
-
-        -- If the text is still empty, put some dummy text to let the user know why
-        -- there's no text in the sentence field.
-        if h.is_empty(new_data[config.sentence_field]) then
-            new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
-        end
-
-        ankiconnect.append_media(note_id, new_data, substitute_fmt(config.note_tag), countdown.decrease)
-    end
+    snapshot.on_finish(create_files_countdown.decrease).run_async()
+    audio.on_finish(create_files_countdown.decrease).run_async()
 
     subs_observer.clear()
     quick_creation_opts:clear_options()
