@@ -12,7 +12,7 @@ local make_counter = function(initial_value)
     self.decrease = function()
         -- Decrease counter.
         value = value - 1
-        if on_finish_fn ~= nil and value <= 0 then
+        if type(on_finish_fn) == 'function' and value <= 0 then
             on_finish_fn()
             on_finish_fn = nil
         end

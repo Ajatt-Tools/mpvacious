@@ -591,7 +591,7 @@ local report_creation_result = function(file_path, on_finish_fn)
             msg.error(string.format("Couldn't create file: %s", file_path))
             success = false
         end
-        if on_finish_fn ~= nil then
+        if type(on_finish_fn) == 'function' then
             on_finish_fn(success)
         end
         return success
@@ -709,7 +709,7 @@ local create_job = function(type, sub, audio_padding)
         job.filename = nil
         job.run_async = function()
             print(type .. " will not be created.")
-            if on_finish_fn ~= nil then
+            if type(on_finish_fn) == 'function' then
                 on_finish_fn()
             end
         end
