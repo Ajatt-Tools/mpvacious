@@ -131,6 +131,16 @@ self.get_last_note_ids = function(n_cards)
     end
 end
 
+self.get_selected_note_ids = function()
+    local ret = self.execute {
+        action = "guiSelectedNotes",
+        version = 6
+    }
+
+    local note_ids, _ = self.parse_result(ret)
+    return note_ids
+end
+
 self.get_note_fields = function(note_id)
     local ret = self.execute {
         action = "notesInfo",
@@ -201,7 +211,7 @@ self.add_tag = function(note_id, tag)
     end
 end
 
-self.append_media = function(note_id, fields, create_media_fn, tag)
+self.append_media = function(note_id, fields, tag, on_finish_fn)
     -- AnkiConnect will fail to update the note if it's selected in the Anki Browser.
     -- https://github.com/FooSoft/anki-connect/issues/82
     -- Switch focus from the current note to avoid it.
@@ -218,19 +228,17 @@ self.append_media = function(note_id, fields, create_media_fn, tag)
         }
     }
 
-    local on_finish = function(_, result, _)
+    local on_finish_wrap = function(_, result, _)
         local _, error = self.parse_result(result)
         if not error then
-            create_media_fn()
             self.add_tag(note_id, tag)
-            self.gui_browse(string.format("nid:%s", note_id)) -- select the updated note in the card browser
-            h.notify(string.format("Note #%s updated.", note_id))
         else
             h.notify(string.format("Error: %s.", error), "error", 2)
         end
+        on_finish_fn(error)
     end
 
-    self.execute(args, on_finish)
+    self.execute(args, on_finish_wrap)
 end
 
 self.init = function(config, platform)

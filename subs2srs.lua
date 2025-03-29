@@ -43,6 +43,7 @@ local h = require('helpers')
 local Menu = require('menu')
 local ankiconnect = require('ankiconnect')
 local switch = require('utils.switch')
+local dec_counter = require('utils.dec_counter')
 local play_control = require('utils.play_control')
 local secondary_sid = require('subtitles.secondary_sid')
 local platform = require('platform.init')
@@ -88,6 +89,7 @@ local config = {
     clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
     use_ffmpeg = false, -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
     reload_config_before_card_creation = true, -- for convenience, read config file from disk before a card is made.
+    card_overwrite_safeguard = 1, -- a safeguard for accidentally overwriting more cards than intended.
 
     -- Clipboard and external communication
     autoclip = false, -- enable copying subs to the clipboard when mpv starts
@@ -398,52 +400,41 @@ local function export_to_anki(gui)
     subs_observer.clear()
 end
 
-local function update_last_note(overwrite)
-    maybe_reload_config()
-    local sub
-    local n_lines = quick_creation_opts:get_lines()
-    local n_cards = quick_creation_opts:get_cards()
-    if n_lines then
-        sub = subs_observer.collect_from_all_dialogues(n_lines)
+local function as_callback(fn, ...)
+    --- Convenience utility.
+    local args = {...}
+    return function()
+        return fn(h.unpack(args))
+    end
+end
+
+local function notify_user_on_finish(note_ids)
+    --- Run this callback once all notes are changed.
+
+    -- Construct a search query for the Anki Browser.
+    local queries = {}
+    for _, note_id in ipairs(note_ids) do
+        table.insert(queries, string.format("nid:%s", tostring(note_id)))
+    end
+    local query = table.concat(queries, " OR ")
+    ankiconnect.gui_browse(query)
+
+    -- Notify the user.
+    if #note_ids > 1 then
+        h.notify(string.format("Updated %i notes.", #note_ids))
     else
-        sub = subs_observer.collect_from_current()
+        h.notify(string.format("Updated note #%s.", tostring(note_ids[1])))
     end
-    -- this now returns a table
-    local last_note_ids = ankiconnect.get_last_note_ids(n_cards)
-    n_cards = #last_note_ids
+end
 
-    if not sub:is_valid() then
-        return h.notify("Nothing to export. Have you set the timings?", "warn", 2)
-    end
+local function change_fields(note_ids, new_data, overwrite)
+    --- Run this callback once audio and image files are created.
 
-    if h.is_empty(sub['text']) then
-        -- In this case, don't modify whatever existing text there is and just
-        -- modify the other fields we can. The user might be trying to add
-        -- audio to a card which they've manually transcribed (either the video
-        -- has no subtitles or it has image subtitles).
-        sub['text'] = nil
-    end
+    local change_notes_countdown = dec_counter.new(#note_ids).on_finish(as_callback(notify_user_on_finish, note_ids))
 
-    --first element is the earliest
-
-    if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(10) then
-        return h.notify("Couldn't find the target note.", "warn", 2)
-    end
-
-    local anki_media_dir = get_anki_media_dir_path()
-    encoder.set_output_dir(anki_media_dir)
-    local snapshot = encoder.snapshot.create_job(sub)
-    local audio = encoder.audio.create_job(sub, audio_padding())
-
-    local create_media = function()
-        snapshot.run_async()
-        audio.run_async()
-    end
-    for i = 1, n_cards do
-        local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
-        local stored_data = ankiconnect.get_note_fields(last_note_ids[i])
+    for _, note_id in pairs(note_ids) do
+        local stored_data = ankiconnect.get_note_fields(note_id)
         if stored_data then
-            forvo.set_output_dir(anki_media_dir)
             new_data = forvo.append(new_data, stored_data)
             new_data = update_sentence(new_data, stored_data)
             if not overwrite then
@@ -461,10 +452,77 @@ local function update_last_note(overwrite)
             new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
         end
 
-        ankiconnect.append_media(last_note_ids[i], new_data, create_media, substitute_fmt(config.note_tag))
+        ankiconnect.append_media(note_id, new_data, substitute_fmt(config.note_tag), change_notes_countdown.decrease)
     end
+end
+
+local function update_notes(note_ids, overwrite)
+    local sub
+    local n_lines = quick_creation_opts:get_lines()
+    if n_lines then
+        sub = subs_observer.collect_from_all_dialogues(n_lines)
+    else
+        sub = subs_observer.collect_from_current()
+    end
+
+    if not sub:is_valid() then
+        return h.notify("Nothing to export. Have you set the timings?", "warn", 2)
+    end
+
+    if h.is_empty(sub['text']) then
+        -- In this case, don't modify whatever existing text there is and just
+        -- modify the other fields we can. The user might be trying to add
+        -- audio to a card which they've manually transcribed (either the video
+        -- has no subtitles or it has image subtitles).
+        sub['text'] = nil
+    end
+
+    local anki_media_dir = get_anki_media_dir_path()
+    encoder.set_output_dir(anki_media_dir)
+    forvo.set_output_dir(anki_media_dir)
+
+    local snapshot = encoder.snapshot.create_job(sub)
+    local audio = encoder.audio.create_job(sub, audio_padding())
+    local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
+    local create_files_countdown = dec_counter.new(2).on_finish(as_callback(change_fields, note_ids, new_data, overwrite))
+
+    snapshot.on_finish(create_files_countdown.decrease).run_async()
+    audio.on_finish(create_files_countdown.decrease).run_async()
+
     subs_observer.clear()
     quick_creation_opts:clear_options()
+end
+
+local function update_last_note(overwrite)
+    maybe_reload_config()
+
+    local n_cards = quick_creation_opts:get_cards()
+    -- this now returns a table
+    local last_note_ids = ankiconnect.get_last_note_ids(n_cards)
+    n_cards = #last_note_ids
+
+    --first element is the earliest
+    if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(10) then
+        return h.notify("Couldn't find the target note.", "warn", 2)
+    end
+
+    update_notes(last_note_ids, overwrite)
+end
+
+local function update_selected_note(overwrite)
+    maybe_reload_config()
+
+    local selected_note_ids = ankiconnect.get_selected_note_ids()
+
+    if h.is_empty(selected_note_ids) then
+        return h.notify("Couldn't find the target note(s). Did you select the notes you want in Anki?", "warn", 3)
+    end
+
+    if #selected_note_ids > config.card_overwrite_safeguard then
+        return h.notify(string.format("More than %i notes selected\nnot recommended, but you can change the limit in your config", config.card_overwrite_safeguard), "warn", 4)
+    end
+
+    update_notes(selected_note_ids, overwrite)
 end
 
 ------------------------------------------------------------
@@ -483,6 +541,8 @@ menu.keybindings = {
     { key = 'r', fn = menu:with_update { subs_observer.clear_and_notify } },
     { key = 'g', fn = menu:with_update { export_to_anki, true } },
     { key = 'n', fn = menu:with_update { export_to_anki, false } },
+    { key = 'b', fn = menu:with_update { update_selected_note, false } },
+    { key = 'B', fn = menu:with_update { update_selected_note, true } },
     { key = 'm', fn = menu:with_update { update_last_note, false } },
     { key = 'M', fn = menu:with_update { update_last_note, true } },
     { key = 'f', fn = menu:with_update { function()
@@ -537,6 +597,7 @@ function menu:print_bindings(osd)
         osd:tab():item('r: '):text('Reset timings'):newline()
         osd:tab():item('n: '):text('Export note'):newline()
         osd:tab():item('g: '):text('GUI export'):newline()
+        osd:tab():item('b: '):text('Update the selected note'):italics('(+shift to overwrite)'):newline()
         osd:tab():item('m: '):text('Update the last added note '):italics('(+shift to overwrite)'):newline()
         osd:tab():item('t: '):text('Toggle clipboard autocopy'):newline()
         osd:tab():item('T: '):text('Switch to the next clipboard method'):newline()
@@ -718,6 +779,8 @@ local main = (function()
         mp.add_forced_key_binding("Ctrl+n", "mpvacious-export-note", menu:with_update { export_to_anki, false })
 
         -- Note updating
+        mp.add_key_binding("Ctrl+b", "mpvacious-update-selected-note", menu:with_update { update_selected_note, false })
+        mp.add_key_binding("Ctrl+B", "mpvacious-overwrite-selected-note", menu:with_update { update_selected_note, true })
         mp.add_key_binding("Ctrl+m", "mpvacious-update-last-note", menu:with_update { update_last_note, false })
         mp.add_key_binding("Ctrl+M", "mpvacious-overwrite-last-note", menu:with_update { update_last_note, true })
 
