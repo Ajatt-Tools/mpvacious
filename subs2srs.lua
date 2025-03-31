@@ -316,7 +316,7 @@ end
 local function join_fields(new_data, stored_data)
     for _, field in pairs { config.audio_field, config.image_field, config.miscinfo_field, config.sentence_field, config.secondary_field } do
         if not h.is_empty(field) then
-            if not h.match_substring(h.table_get(stored_data, field, ""), h.table_get(new_data, field, "")) then
+            if not string.find(h.table_get(stored_data, field, ""), h.table_get(new_data, field, ""), 1, true) then
                 if not h.is_empty(h.table_get(stored_data, field, "")) then
                     new_data[field] = h.table_get(stored_data, field, "") .. "<br>" .. h.table_get(new_data, field, "")
                 else

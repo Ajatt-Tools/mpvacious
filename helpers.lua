@@ -277,13 +277,4 @@ this.get_loaded_tracks = function(track_type)
     return this.filter(mp.get_property_native('track-list'), function(track) return track.type == track_type end)
 end
 
-this.match_substring = function(text, substring)
-    local escaped_substring = substring:gsub("([%W])", "%%%1")
-
-    return string.match(text, "^" .. escaped_substring .. "$")
-        or string.match(text, "^" .. escaped_substring .. "<br>")
-        or string.match(text, "<br>" .. escaped_substring .. "$")
-        or string.match(text, "<br>" .. escaped_substring .. "<br>")
-end
-
 return this
