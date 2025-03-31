@@ -290,19 +290,22 @@ this.file_exists = function(filepath)
     return false
 end
 
+this.equal = function(first, last)
+    --- Test whether two values are equal
+    if type(last) == 'table' then
+        return (utils.format_json(first) == utils.format_json(last))
+    else
+        return (first == last)
+    end
+end
+
 this.get_loaded_tracks = function(track_type)
     --- Return all sub tracks, audio tracks, etc.
     return this.filter(mp.get_property_native('track-list'), function(track) return track.type == track_type end)
 end
 
 this.assert_equals = function(actual, expected)
-    local eq = false
-    if type(expected) == 'table' then
-        eq = utils.format_json(actual) == utils.format_json(expected)
-    else
-        eq = (actual == expected)
-    end
-    if eq == false then
+    if this.equal(actual, expected) == false then
         mp.commandv("quit")
         error(string.format("TEST FAILED: Expected '%s', got '%s'", expected, actual))
     end
