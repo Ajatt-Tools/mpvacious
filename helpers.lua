@@ -16,6 +16,14 @@ this.remove_all_spaces = function(str)
     return str:gsub('%s*', '')
 end
 
+this.as_callback = function(fn, ...)
+    --- Convenience utility.
+    local args = { ... }
+    return function()
+        return fn(this.unpack(args))
+    end
+end
+
 this.table_get = function(table, key, default)
     if table[key] == nil then
         return default or 'nil'

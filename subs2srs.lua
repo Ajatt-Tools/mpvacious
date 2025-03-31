@@ -418,14 +418,6 @@ local function export_to_anki(gui)
     subs_observer.clear()
 end
 
-local function as_callback(fn, ...)
-    --- Convenience utility.
-    local args = {...}
-    return function()
-        return fn(h.unpack(args))
-    end
-end
-
 local function notify_user_on_finish(note_ids)
     --- Run this callback once all notes are changed.
 
@@ -448,7 +440,7 @@ end
 local function change_fields(note_ids, new_data, overwrite)
     --- Run this callback once audio and image files are created.
 
-    local change_notes_countdown = dec_counter.new(#note_ids).on_finish(as_callback(notify_user_on_finish, note_ids))
+    local change_notes_countdown = dec_counter.new(#note_ids).on_finish(h.as_callback(notify_user_on_finish, note_ids))
 
     for _, note_id in pairs(note_ids) do
         local stored_data = ankiconnect.get_note_fields(note_id)
