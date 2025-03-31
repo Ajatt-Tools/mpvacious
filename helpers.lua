@@ -81,7 +81,10 @@ local function map(tab, func)
 end
 
 local function args_as_str(args)
-    return table.concat(map(args, function(str) return string.format("'%s'", str) end), " ")
+    local function single_quote(str)
+        return string.format("'%s'", str)
+    end
+    return table.concat(map(args, single_quote), " ")
 end
 
 this.subprocess = function(args, completion_fn, override_settings)
@@ -97,7 +100,7 @@ this.subprocess = function(args, completion_fn, override_settings)
         args = args
     }
     if not this.is_empty(override_settings) then
-        for k,v in pairs(override_settings) do
+        for k, v in pairs(override_settings) do
             command_table[k] = v
         end
     end
@@ -106,7 +109,7 @@ end
 
 this.subprocess_detached = function(args, completion_fn)
     local overwrite_settings = {
-        detach=true,
+        detach = true,
         capture_stdout = false,
         capture_stderr = false,
     }
@@ -301,7 +304,10 @@ end
 
 this.get_loaded_tracks = function(track_type)
     --- Return all sub tracks, audio tracks, etc.
-    return this.filter(mp.get_property_native('track-list'), function(track) return track.type == track_type end)
+    local function tracks_equal(track)
+        return track.type == track_type
+    end
+    return this.filter(mp.get_property_native('track-list'), tracks_equal)
 end
 
 this.assert_equals = function(actual, expected)
