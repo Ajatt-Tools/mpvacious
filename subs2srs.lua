@@ -313,10 +313,18 @@ local function construct_note_fields(sub_text, secondary_text, snapshot_filename
     return ret
 end
 
-local function join_media_fields(new_data, stored_data)
-    for _, field in pairs { config.audio_field, config.image_field, config.miscinfo_field } do
+local function join_fields(new_data, stored_data)
+    for _, field in pairs { config.audio_field, config.image_field, config.miscinfo_field, config.sentence_field, config.secondary_field } do
         if not h.is_empty(field) then
-            new_data[field] = h.table_get(stored_data, field, "") .. h.table_get(new_data, field, "")
+            if not h.match_substring(h.table_get(stored_data, field, ""), h.table_get(new_data, field, "")) then
+                if not h.is_empty(h.table_get(stored_data, field, "")) then
+                    new_data[field] = h.table_get(stored_data, field, "") .. "<br>" .. h.table_get(new_data, field, "")
+                else
+                    new_data[field] = h.table_get(new_data, field, "")
+                end
+            else
+                new_data[field] = h.table_get(stored_data, field, "")
+            end
         end
     end
     return new_data
@@ -439,9 +447,9 @@ local function change_fields(note_ids, new_data, overwrite)
             new_data = update_sentence(new_data, stored_data)
             if not overwrite then
                 if config.append_media then
-                    new_data = join_media_fields(new_data, stored_data)
+                    new_data = join_fields(new_data, stored_data)
                 else
-                    new_data = join_media_fields(stored_data, new_data)
+                    new_data = join_fields(stored_data, new_data)
                 end
             end
         end
