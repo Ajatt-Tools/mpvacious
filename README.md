@@ -474,6 +474,14 @@ Specify only the ones you want to be different from the default.
 To cycle profiles, open the advanced menu by pressing <kbd>a</kbd> and then press <kbd>p</kbd>.
 At any time you can see what profile is active in the menu's status bar.
 
+## Running tests
+
+```bash
+MPVACIOUS_TEST=TRUE mpv 'path/to/some/file.mkv'
+```
+
+The results will be printed to the console.
+
 ## Hacking
 
 If you want to modify this script
