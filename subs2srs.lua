@@ -317,15 +317,15 @@ local function join_field_content(new_text, old_text, separator)
     -- By default, join fields with a HTML newline.
     separator = separator or "<br>"
 
+    if h.is_empty(old_text) then
+        -- If 'old_text' is empty, there's no need to join content with the separator.
+        return new_text
+    end
+
     if h.is_substr(old_text, new_text) then
         -- If 'old_text' (field) already contains new_text (sentence, image, audio, etc.),
         -- there's no need to add 'new_text' to 'old_text'.
         return old_text
-    end
-
-    if h.is_empty(old_text) then
-        -- If 'old_text' is empty, there's no need to join content with the separator.
-        return new_text
     end
 
     return string.format("%s%s%s", old_text, separator, new_text)
