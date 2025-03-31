@@ -313,18 +313,28 @@ local function construct_note_fields(sub_text, secondary_text, snapshot_filename
     return ret
 end
 
+local function join_field_content(new_text, old_text, separator)
+    -- By default, join fields with a HTML newline.
+    separator = separator or "<br>"
+
+    if h.is_substr(old_text, new_text) then
+        -- If 'old_text' (field) already contains new_text (sentence, image, audio, etc.),
+        -- there's no need to add 'new_text' to 'old_text'.
+        return old_text
+    end
+
+    if h.is_empty(old_text) then
+        -- If 'old_text' is empty, there's no need to join content with the separator.
+        return new_text
+    end
+
+    return string.format("%s%s%s", old_text, separator, new_text)
+end
+
 local function join_fields(new_data, stored_data)
     for _, field in pairs { config.audio_field, config.image_field, config.miscinfo_field, config.sentence_field, config.secondary_field } do
         if not h.is_empty(field) then
-            if not string.find(h.table_get(stored_data, field, ""), h.table_get(new_data, field, ""), 1, true) then
-                if not h.is_empty(h.table_get(stored_data, field, "")) then
-                    new_data[field] = h.table_get(stored_data, field, "") .. "<br>" .. h.table_get(new_data, field, "")
-                else
-                    new_data[field] = h.table_get(new_data, field, "")
-                end
-            else
-                new_data[field] = h.table_get(stored_data, field, "")
-            end
+            new_data[field] = join_field_content(h.table_get(new_data, field, ""), h.table_get(stored_data, field, ""))
         end
     end
     return new_data

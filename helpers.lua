@@ -248,8 +248,18 @@ this.has_audio_track = function()
     return mp.get_property_native('aid') ~= false
 end
 
-this.str_contains = function(s, pattern)
-    return not this.is_empty(s) and string.find(string.lower(s), string.lower(pattern)) ~= nil
+this.str_contains = function(str, pattern, search_plain)
+    --- Return True if 'pattern' can be found in 'str'.
+    --- Matching is case-insensitive.
+    --- If 'search_plain' is True, turns off the pattern matching facilities.
+    return not this.is_empty(str) and string.find(string.lower(str), string.lower(pattern), 1, search_plain) ~= nil
+end
+
+this.is_substr = function(str, substr)
+    --- Return True if 'substr' is a substring of 'str'.
+    --- Matching is case-insensitive.
+    --- Plain search is used == turns off the pattern matching facilities.
+    return this.str_contains(str, substr, true)
 end
 
 this.filter = function(arr, func)
