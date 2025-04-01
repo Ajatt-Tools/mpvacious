@@ -494,7 +494,7 @@ local function update_notes(note_ids, overwrite)
     local snapshot = encoder.snapshot.create_job(sub)
     local audio = encoder.audio.create_job(sub, audio_padding())
     local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
-    local create_files_countdown = dec_counter.new(2).on_finish(as_callback(change_fields, note_ids, new_data, overwrite))
+    local create_files_countdown = dec_counter.new(2).on_finish(h.as_callback(change_fields, note_ids, new_data, overwrite))
 
     snapshot.on_finish(create_files_countdown.decrease).run_async()
     audio.on_finish(create_files_countdown.decrease).run_async()
