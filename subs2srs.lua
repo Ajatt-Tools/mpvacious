@@ -444,25 +444,26 @@ local function change_fields(note_ids, new_data, overwrite)
 
     for _, note_id in pairs(note_ids) do
         local stored_data = ankiconnect.get_note_fields(note_id)
+        local tmp_new_data = h.deep_copy(new_data, false)
         if stored_data then
-            new_data = forvo.append(new_data, stored_data)
-            new_data = update_sentence(new_data, stored_data)
+            tmp_new_data = forvo.append(tmp_new_data, stored_data)
+            tmp_new_data = update_sentence(tmp_new_data, stored_data)
             if not overwrite then
                 if config.append_media then
-                    new_data = join_fields(new_data, stored_data)
+                    tmp_new_data = join_fields(tmp_new_data, stored_data)
                 else
-                    new_data = join_fields(stored_data, new_data)
+                    tmp_new_data = join_fields(stored_data, tmp_new_data)
                 end
             end
         end
 
         -- If the text is still empty, put some dummy text to let the user know why
         -- there's no text in the sentence field.
-        if h.is_empty(new_data[config.sentence_field]) then
-            new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
+        if h.is_empty(tmp_new_data[config.sentence_field]) then
+            tmp_new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
         end
 
-        ankiconnect.append_media(note_id, new_data, substitute_fmt(config.note_tag), change_notes_countdown.decrease)
+        ankiconnect.append_media(note_id, tmp_new_data, substitute_fmt(config.note_tag), change_notes_countdown.decrease)
     end
 end
 
