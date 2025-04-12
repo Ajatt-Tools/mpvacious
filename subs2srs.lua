@@ -437,32 +437,38 @@ local function notify_user_on_finish(note_ids)
     end
 end
 
+local function make_new_note_data(note_id, new_data, overwrite)
+    local stored_data = ankiconnect.get_note_fields(note_id)
+    if stored_data then
+        new_data = forvo.append(new_data, stored_data)
+        new_data = update_sentence(new_data, stored_data)
+        if not overwrite then
+            if config.append_media then
+                new_data = join_fields(new_data, stored_data)
+            else
+                new_data = join_fields(stored_data, new_data)
+            end
+        end
+    end
+    -- If the text is still empty, put some dummy text to let the user know why
+    -- there's no text in the sentence field.
+    if h.is_empty(new_data[config.sentence_field]) then
+        new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
+    end
+    return new_data
+end
+
 local function change_fields(note_ids, new_data, overwrite)
     --- Run this callback once audio and image files are created.
-
     local change_notes_countdown = dec_counter.new(#note_ids).on_finish(h.as_callback(notify_user_on_finish, note_ids))
 
     for _, note_id in pairs(note_ids) do
-        local stored_data = ankiconnect.get_note_fields(note_id)
-        if stored_data then
-            new_data = forvo.append(new_data, stored_data)
-            new_data = update_sentence(new_data, stored_data)
-            if not overwrite then
-                if config.append_media then
-                    new_data = join_fields(new_data, stored_data)
-                else
-                    new_data = join_fields(stored_data, new_data)
-                end
-            end
-        end
-
-        -- If the text is still empty, put some dummy text to let the user know why
-        -- there's no text in the sentence field.
-        if h.is_empty(new_data[config.sentence_field]) then
-            new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
-        end
-
-        ankiconnect.append_media(note_id, new_data, substitute_fmt(config.note_tag), change_notes_countdown.decrease)
+        ankiconnect.append_media(
+                note_id,
+                make_new_note_data(note_id, h.deep_copy(new_data), overwrite),
+                substitute_fmt(config.note_tag),
+                change_notes_countdown.decrease
+        )
     end
 end
 
