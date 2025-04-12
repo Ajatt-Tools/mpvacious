@@ -438,8 +438,7 @@ local function notify_user_on_finish(note_ids)
     end
 end
 
-local function make_new_note_data(note_id, new_data, overwrite)
-    local stored_data = ankiconnect.get_note_fields(note_id)
+local function make_new_note_data(stored_data, new_data, overwrite)
     if stored_data then
         new_data = forvo.append(new_data, stored_data)
         new_data = update_sentence(new_data, stored_data)
@@ -462,11 +461,10 @@ end
 local function change_fields(note_ids, new_data, overwrite)
     --- Run this callback once audio and image files are created.
     local change_notes_countdown = dec_counter.new(#note_ids).on_finish(h.as_callback(notify_user_on_finish, note_ids))
-
     for _, note_id in pairs(note_ids) do
         ankiconnect.append_media(
                 note_id,
-                make_new_note_data(note_id, h.deep_copy(new_data), overwrite),
+                make_new_note_data(ankiconnect.get_note_fields(note_id), h.deep_copy(new_data), overwrite),
                 substitute_fmt(config.note_tag),
                 change_notes_countdown.decrease
         )
