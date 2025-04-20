@@ -11,7 +11,7 @@ local h = require('helpers')
 local self = {}
 
 self.execute = function(request, completion_fn)
-    if self.config.ankiconnect_api_key ~= '' then
+    if not h.is_empty(self.config.ankiconnect_api_key) then
         request.key = self.config.ankiconnect_api_key
     end
 
