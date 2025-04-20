@@ -159,6 +159,7 @@ local config = {
     append_media = true, -- True to append video media after existing data, false to insert media before
     disable_gui_browse = false, -- Lets you disable anki browser manipulation by mpvacious.
     ankiconnect_url = '127.0.0.1:8765',
+    ankiconnect_api_key = '',
 
     -- Note tagging
     -- The tag(s) added to new notes. Spaces separate multiple tags.
