@@ -191,6 +191,7 @@ self.get_first_field = function(model_name)
 end
 
 self.gui_browse = function(query)
+    --- query is a string, e.g. "deck:current", "nid:12345"
     if not self.config.disable_gui_browse then
         self.execute {
             action = 'guiBrowse',
