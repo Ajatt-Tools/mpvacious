@@ -12,8 +12,11 @@ local h = require('helpers')
 local utils = require('mp.utils')
 
 local min_side_px = 42
-local max_side_px = 640
-local default_height_px = 200
+local max_side_px = 1920
+local default_height_px = 350
+
+-- Measure quality from 0 (worst/lowest) to 100 (best/highest)
+local default_image_quality = 15
 
 -- This constant should be used in place of width and/or height in the config file.
 -- It tells the encoder to preserve aspect ratio when downscaling snapshots.
@@ -87,7 +90,7 @@ local function conditionally_set_defaults(width, height, quality)
         self.config[height] = default_height_px
     end
     if self.config[quality] < 0 or self.config[quality] > 100 then
-        self.config[quality] = 15
+        self.config[quality] = default_image_quality
     end
 end
 
