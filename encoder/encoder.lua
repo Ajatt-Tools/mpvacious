@@ -691,16 +691,16 @@ local set_output_dir = function(dir_path)
     self.output_dir_path = dir_path
 end
 
-local create_job = function(type, sub, audio_padding)
+local create_job = function(job_type, sub, audio_padding)
     local current_timestamp, on_finish_fn
     local job = {}
-    if type == 'snapshot' and h.has_video_track() then
+    if job_type == 'snapshot' and h.has_video_track() then
         current_timestamp = mp.get_property_number("time-pos", 0)
         job.filename = make_snapshot_filename(sub['start'], sub['end'], current_timestamp)
         job.run_async = function()
             create_snapshot(sub['start'], sub['end'], current_timestamp, job.filename, on_finish_fn)
         end
-    elseif type == 'audioclip' and h.has_audio_track() then
+    elseif job_type == 'audioclip' and h.has_audio_track() then
         job.filename = make_audio_filename(sub['start'], sub['end'])
         job.run_async = function()
             create_audio(sub['start'], sub['end'], job.filename, audio_padding, on_finish_fn)
@@ -708,7 +708,7 @@ local create_job = function(type, sub, audio_padding)
     else
         job.filename = nil
         job.run_async = function()
-            print(type .. " will not be created.")
+            print(job_type .. " will not be created.")
             if type(on_finish_fn) == 'function' then
                 on_finish_fn()
             end
@@ -720,6 +720,7 @@ local create_job = function(type, sub, audio_padding)
     end
     return job
 end
+
 
 return {
     init = init,
