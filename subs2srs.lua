@@ -169,6 +169,7 @@ local config = {
     --   %t - timestamp
     --   %d - episode number (if none found, returns nothing)
     --   %e - SUBS2SRS_TAGS environment variable
+    --   %f - full file path of the video
     note_tag = "subs2srs %n",
     tag_nuke_brackets = true, -- delete all text inside brackets before substituting filename into tag
     tag_nuke_parentheses = false, -- delete all text inside parentheses before substituting filename into tag
@@ -274,6 +275,11 @@ local substitute_fmt = (function()
         return tag:gsub("%%e", env_tags)
     end
 
+    local function substitute_fullpath(tag)
+        local full_path = mp.get_property("path") or ''
+        return tag:gsub("%%f", full_path)
+    end
+
     return function(tag)
         if not h.is_empty(tag) then
             local filename, episode = tag_format(mp.get_property("filename"))
@@ -281,6 +287,7 @@ local substitute_fmt = (function()
             tag = substitute_episode_number(tag, episode)
             tag = substitute_time_pos(tag)
             tag = substitute_envvar(tag)
+            tag = substitute_fullpath(tag)
             tag = h.remove_leading_trailing_spaces(tag)
         end
         return tag
