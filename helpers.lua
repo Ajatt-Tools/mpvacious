@@ -148,10 +148,21 @@ this.remove_newlines = function(str)
     return str:gsub('[\n\r]+', ' ')
 end
 
+this.remove_full_width_spaces = function(str)
+    -- remove so-called Ideographic Spaces
+    return str:gsub('　+', ' ')
+end
+
+this.remove_duplicated_spaces = function(str)
+    return str:gsub('  +', ' ')
+end
+
 this.trim = function(str)
     str = this.remove_leading_trailing_spaces(str)
     str = this.remove_text_in_parentheses(str)
     str = this.remove_newlines(str)
+    str = this.remove_full_width_spaces(str)
+    str = this.remove_duplicated_spaces(str)
     return str
 end
 
