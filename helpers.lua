@@ -148,7 +148,7 @@ end
 
 this.normalize_spaces = function(str)
     -- replace sequences of ASCII spaces or full-width ideographic spaces with a single ASCII space
-    return str:gsub('[ 　]+', ' ')
+    return str:gsub('(　| )+', ' ')
 end
 
 this.trim = function(str)
