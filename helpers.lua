@@ -148,10 +148,16 @@ this.remove_newlines = function(str)
     return str:gsub('[\n\r]+', ' ')
 end
 
+this.normalize_spaces = function(str)
+    -- replace sequences of ASCII spaces or full-width ideographic spaces with a single ASCII space
+    return str:gsub('(　| )+', ' ')
+end
+
 this.trim = function(str)
     str = this.remove_leading_trailing_spaces(str)
     str = this.remove_text_in_parentheses(str)
     str = this.remove_newlines(str)
+    str = this.normalize_spaces(str)
     return str
 end
 
