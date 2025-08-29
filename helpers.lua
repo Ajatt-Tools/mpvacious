@@ -3,7 +3,9 @@ Copyright: Ren Tatsumoto and contributors
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
 Various helper functions.
-]] local mp = require('mp')
+]]
+
+local mp = require('mp')
 local msg = require('mp.msg')
 local utils = require('mp.utils')
 local this = {}
@@ -16,7 +18,7 @@ end
 
 this.as_callback = function(fn, ...)
     --- Convenience utility.
-    local args = {...}
+    local args = { ... }
     return function()
         return fn(this.unpack(args))
     end
@@ -42,7 +44,7 @@ end
 
 this.get_last_n_added_notes = function(note_ids, n)
     table.sort(note_ids)
-    return {this.unpack(note_ids, math.max(#note_ids - n + 1, 1), #note_ids)}
+    return { this.unpack(note_ids, math.max(#note_ids - n + 1, 1), #note_ids) }
 end
 
 this.contains = function(table, element)
@@ -109,7 +111,7 @@ this.subprocess_detached = function(args, completion_fn)
     local overwrite_settings = {
         detach = true,
         capture_stdout = false,
-        capture_stderr = false
+        capture_stderr = false,
     }
     return this.subprocess(args, completion_fn, overwrite_settings)
 end
@@ -165,7 +167,7 @@ this.escape_special_characters = (function()
         ['"'] = '&quot;',
         ["'"] = '&apos;',
         ['<'] = '&lt;',
-        ['>'] = '&gt;'
+        ['>'] = '&gt;',
     }
     return function(s)
         return s:gsub('[&"\'<>]', entities)
@@ -190,8 +192,7 @@ end
 
 this.remove_common_resolutions = function(str)
     -- Also removes empty leftover parentheses and brackets.
-    return str:gsub("2160p", ""):gsub("1080p", ""):gsub("720p", ""):gsub("576p", ""):gsub("480p", ""):gsub("%(%)", "")
-        :gsub("%[%]", "")
+    return str:gsub("2160p", ""):gsub("1080p", ""):gsub("720p", ""):gsub("576p", ""):gsub("480p", ""):gsub("%(%)", ""):gsub("%[%]", "")
 end
 
 this.human_readable_time = function(seconds)
@@ -203,7 +204,7 @@ this.human_readable_time = function(seconds)
         h = math.floor(seconds / 3600),
         m = math.floor(seconds / 60) % 60,
         s = math.floor(seconds % 60),
-        ms = math.floor((seconds * 1000) % 1000)
+        ms = math.floor((seconds * 1000) % 1000),
     }
 
     local ret = string.format("%02dm%02ds%03dms", parts.m, parts.s, parts.ms)
@@ -219,16 +220,16 @@ this.get_episode_number = function(filename)
     -- Reverses the filename to start the search from the end as the media title might contain similar numbers.
     local filename_reversed = filename:reverse()
 
-    local ep_num_patterns =
-        {"[%s_](%d?%d?%d)[pP]?[eE]", -- Starting with E or EP (case-insensitive). "Example Series S01E01 [94Z295D1]"
+    local ep_num_patterns = {
+        "[%s_](%d?%d?%d)[pP]?[eE]", -- Starting with E or EP (case-insensitive). "Example Series S01E01 [94Z295D1]"
         "^(%d?%d?%d)[pP]?[eE]", -- Starting with E or EP (case-insensitive) at the end of filename. "Example Series S01E01"
-         "%)(%d?%d?%d)%(", -- Surrounded by parentheses. "Example Series (12)"
+        "%)(%d?%d?%d)%(", -- Surrounded by parentheses. "Example Series (12)"
         "%](%d?%d?%d)%[", -- Surrounded by brackets. "Example Series [01]"
         "%s(%d?%d?%d)%s", -- Surrounded by whitespace. "Example Series 124 [1080p 10-bit]"
         "_(%d?%d?%d)_", -- Surrounded by underscores. "Example_Series_04_1080p"
         "^(%d?%d?%d)[%s_]", -- Ending to the episode number. "Example Series 124"
-        "(%d?%d?%d)%-edosipE" -- Prepended by "Episode-". "Example Episode-165"
-        }
+        "(%d?%d?%d)%-edosipE", -- Prepended by "Episode-". "Example Episode-165"
+    }
 
     local s, e, episode_num
     for _, pattern in pairs(ep_num_patterns) do
@@ -329,18 +330,18 @@ this.run_tests = function()
     this.assert_equals(this.str_contains("abcd", "^.*d.*$"), true)
     this.assert_equals(this.str_contains("abcd", "^.*z.*$"), false)
 
-    local ep_num_to_filename = {{nil, "A Whisker Away.mkv"},
-                                {nil, "[Placeholder] Gekijouban SHIROBAKO [Ma10p_1080p][x265_flac]"},
-                                {"06", "[Placeholder] Sono Bisque Doll wa Koi wo Suru - 06 [54E495D0]"},
-                                {"02",
-                                 "(Hi10)_Kobayashi-san_Chi_no_Maid_Dragon_-_02_(BD_1080p)_(Placeholder)_(12C5D2B4)"},
-                                {"01", "[Placeholder] Koi to Yobu ni wa Kimochi Warui - 01 (1080p) [D517C9F0]"},
-                                {"01", "[Placeholder] Tsukimonogatari 01 [BD 1080p x264 10-bit FLAC] [5CD88145]"},
-                                {"01", "[Placeholder] 86 - Eighty Six - 01 (1080p) [1B13598F]"},
-                                {"00",
-                                 "[Placeholder] Fate Stay Night - Unlimited Blade Works - 00 (BD 1080p Hi10 FLAC) [95590B7F]"},
-                                {"01", "House, M.D. S01E01 Pilot - Everybody Lies (1080p x265 Placeholder)"},
-                                {"165", "A Generic Episode-165"}}
+    local ep_num_to_filename = {
+        { nil, "A Whisker Away.mkv" },
+        { nil, "[Placeholder] Gekijouban SHIROBAKO [Ma10p_1080p][x265_flac]" },
+        { "06", "[Placeholder] Sono Bisque Doll wa Koi wo Suru - 06 [54E495D0]" },
+        { "02", "(Hi10)_Kobayashi-san_Chi_no_Maid_Dragon_-_02_(BD_1080p)_(Placeholder)_(12C5D2B4)" },
+        { "01", "[Placeholder] Koi to Yobu ni wa Kimochi Warui - 01 (1080p) [D517C9F0]" },
+        { "01", "[Placeholder] Tsukimonogatari 01 [BD 1080p x264 10-bit FLAC] [5CD88145]" },
+        { "01", "[Placeholder] 86 - Eighty Six - 01 (1080p) [1B13598F]" },
+        { "00", "[Placeholder] Fate Stay Night - Unlimited Blade Works - 00 (BD 1080p Hi10 FLAC) [95590B7F]" },
+        { "01", "House, M.D. S01E01 Pilot - Everybody Lies (1080p x265 Placeholder)" },
+        { "165", "A Generic Episode-165" }
+    }
 
     for _, case in pairs(ep_num_to_filename) do
         local expected, filename = this.unpack(case)
