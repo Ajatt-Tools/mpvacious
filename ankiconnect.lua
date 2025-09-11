@@ -191,6 +191,23 @@ self.get_first_field = function(model_name)
     end
 end
 
+self.get_field = function(note_id, field)
+  local ret = self.execute {
+    action = "cardsInfo",
+    version = 6,
+    params = {
+      cards = { note_id }
+    }
+  }
+
+  local result, error = self.parse_result(ret)
+
+  if error == nil then
+    return result[1].fields[field].value
+  end
+
+end
+
 self.gui_browse = function(query)
     --- query is a string, e.g. "deck:current", "nid:12345"
     if not self.config.disable_gui_browse then
