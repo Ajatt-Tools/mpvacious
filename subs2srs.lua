@@ -443,7 +443,7 @@ local function notify_user_on_finish(note_ids)
     if #note_ids > 1 then
         h.notify(string.format("Updated %i notes.", #note_ids))
     else
-        field_data = ankiconnect.get_field(note_ids[1], first_field)
+        field_data = ankiconnect.get_note_fields(note_ids[1])[first_field]
         h.notify(string.format("Updated note: %s.", field_data))
     end
 end
