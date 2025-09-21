@@ -248,9 +248,9 @@ end
 
 local function add_filter(filters, filter)
     if #filters == 0 then
-        filters = filter
+        return filter
     else
-        filters = string.format('%s,%s', filters, filter)
+        return string.format('%s,%s', filters, filter)
     end
 end
 
@@ -267,29 +267,30 @@ local function separate_filters(filters, new_args, args)
             expect_filter = true
         else
             if expect_filter then
-                add_filter(filters, args[i])
+                filters = add_filter(filters, args[i])
             else
                 table.insert(new_args, args[i])
             end
             expect_filter = false
         end
     end
+    return filters
 end
 
 ffmpeg.append_user_audio_args = function(args)
     local new_args = {}
     local filters = ''
 
-    separate_filters(filters, new_args, args)
+    filters = separate_filters(filters, new_args, args)
     if self.config.tie_volumes then
-        add_filter(filters, string.format("volume=%.1f", mp.get_property_native('volume') / 100.0))
+        filters = add_filter(filters, string.format("volume=%.1f", mp.get_property_native('volume') / 100.0))
     end
 
     local user_args = {}
     for arg in string.gmatch(self.config.ffmpeg_audio_args, "%S+") do
         table.insert(user_args, arg)
     end
-    separate_filters(filters, new_args, user_args)
+    filters = separate_filters(filters, new_args, user_args)
 
     if #filters > 0 then
         table.insert(new_args, '-af')
@@ -578,7 +579,6 @@ local create_static_snapshot = function(timestamp, source_path, output_path, on_
         local args = { 'screenshot-to-file', output_path, 'video', }
         mp.command_native_async(args, on_finish_fn)
     end
-
 end
 
 local report_creation_result = function(file_path, on_finish_fn)
