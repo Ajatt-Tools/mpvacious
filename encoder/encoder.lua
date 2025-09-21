@@ -694,13 +694,13 @@ end
 local create_job = function(job_type, sub, audio_padding)
     local current_timestamp, on_finish_fn
     local job = {}
-    if job_type == 'snapshot' and h.has_video_track() then
+    if job_type == 'snapshot' and h.has_video_track() and not h.is_empty(self.config.image_field) then
         current_timestamp = mp.get_property_number("time-pos", 0)
         job.filename = make_snapshot_filename(sub['start'], sub['end'], current_timestamp)
         job.run_async = function()
             create_snapshot(sub['start'], sub['end'], current_timestamp, job.filename, on_finish_fn)
         end
-    elseif job_type == 'audioclip' and h.has_audio_track() then
+    elseif job_type == 'audioclip' and h.has_audio_track() and not h.is_empty(self.config.audio_field) then
         job.filename = make_audio_filename(sub['start'], sub['end'])
         job.run_async = function()
             create_audio(sub['start'], sub['end'], job.filename, audio_padding, on_finish_fn)
