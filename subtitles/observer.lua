@@ -166,7 +166,11 @@ self.copy_to_clipboard = function(_, text)
 end
 
 self.clipboard_prepare = function(text)
-    text = self.config.clipboard_trim_enabled and h.trim(text) or h.remove_newlines(text)
+    if self.config.clipboard_trim_enabled then
+        text = h.trim(text)
+    else
+        text = h.remove_newlines(text)
+    end
     text = self.maybe_remove_all_spaces(text)
     return text
 end
