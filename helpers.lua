@@ -369,4 +369,23 @@ this.deep_copy = function(obj, seen)
     return setmetatable(res, getmetatable(obj))
 end
 
+this.maybe_require = function(module_name)
+    local search_template = mp.get_script_directory() .. "/?.lua"
+    local module_path = package.searchpath(module_name, search_template)
+
+    if not module_path then
+        return nil
+    end
+
+    local ok, loaded_module = pcall(require, module_name)
+
+    if not ok then
+        error(string.format("Failed to load module '%s' from '%s'. Error: %s", module_name,
+        module_path,
+        tostring(loaded_module)))
+    end
+
+    return loaded_module
+end
+
 return this

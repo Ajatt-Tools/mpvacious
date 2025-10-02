@@ -12,15 +12,7 @@ local Subtitle = require('subtitles.subtitle')
 local mp = require('mp')
 local platform = require('platform.init')
 local switch = require('utils.switch')
-
-local custom_sub_filter = nil
-if package.searchpath("custom_sub_filter", mp.get_script_directory(), "?", ".lua") then
-    local ok, loaded_module = pcall(require, "custom_sub_filter")
-
-    if ok then
-        custom_sub_filter = loaded_module
-    end
-end
+local custom_sub_filter = h.maybe_require('custom_sub_filter.main')
 
 local self = {}
 
