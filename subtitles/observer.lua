@@ -187,7 +187,8 @@ self.copy_to_clipboard = function(_, text)
 end
 
 self.clipboard_prepare = function(text)
-    local text, trim_func = apply_custom_sub_filter(text)
+    local trim_func
+    text, trim_func = apply_custom_sub_filter(text)
 
     text = self.config.clipboard_trim_enabled and trim_func(text) or h.remove_newlines(text)
     text = self.maybe_remove_all_spaces(text)
