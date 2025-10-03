@@ -2,5 +2,4 @@
 .vscode
 /.github/RELEASE/*.zip
 /.github/RELEASE/*.html
-/custom_sub_filter/*
 *TODO*
