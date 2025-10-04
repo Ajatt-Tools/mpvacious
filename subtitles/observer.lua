@@ -190,7 +190,11 @@ self.clipboard_prepare = function(text)
     local trim_func
     text, trim_func = apply_custom_sub_filter(text)
 
-    text = self.config.clipboard_trim_enabled and trim_func(text) or h.remove_newlines(text)
+    if self.config.clipboard_trim_enabled then
+        text = trim_func(text)
+    else
+        text = h.remove_newlines(text)
+    end
     text = self.maybe_remove_all_spaces(text)
     return text
 end
