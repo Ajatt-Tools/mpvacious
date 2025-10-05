@@ -612,7 +612,6 @@ function menu:print_bindings(osd)
         osd:tab():item('ctrl+shift+h: '):text('Replay current subtitle'):newline()
         osd:tab():item('shift+h/l: '):text('Seek to the previous/next subtitle'):newline()
         osd:tab():item('alt+h/l: '):text('Seek to the previous/next subtitle and pause'):newline()
-        osd:tab():item('alt+m: '):text('Toggle the custom sub filter'):newline()
         osd:italics("Press "):item('i'):italics(" to hide mpvacious options."):newline()
     elseif self.hints_state.get() == 'menu' then
         osd:submenu('Menu bindings'):newline()
@@ -827,7 +826,7 @@ local main = (function()
         mp.add_key_binding("Ctrl+C", "mpvacious-copy-secondary-sub-to-clipboard", subs_observer.copy_current_secondary_to_clipboard)
         mp.add_key_binding("Ctrl+t", "mpvacious-autocopy-toggle", subs_observer.toggle_autocopy)
         mp.add_key_binding("Ctrl+g", "mpvacious-animated-snapshot-toggle", encoder.snapshot.toggle_animation)
-        mp.add_key_binding("Alt+m", "mpvacious-toggle-custom-sub-filter", subs_observer.toggle_custom_sub_filter)
+        mp.add_key_binding("", "mpvacious-toggle-custom-sub-filter", subs_observer.toggle_custom_sub_filter)
 
         -- Secondary subtitles
         mp.add_key_binding("Ctrl+v", "mpvacious-secondary-sid-toggle", secondary_sid.change_visibility)
