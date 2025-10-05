@@ -12,6 +12,7 @@ local Subtitle = require('subtitles.subtitle')
 local mp = require('mp')
 local platform = require('platform.init')
 local switch = require('utils.switch')
+local custom_sub_filter = h.maybe_require('subs2srs_sub_filter')
 
 local self = {}
 
@@ -22,6 +23,7 @@ local all_secondary_dialogs = sub_list.new()
 local user_timings = timings.new()
 
 local append_dialogue = false
+local custom_sub_filter_enabled = false
 local autoclip_enabled = false
 local autoclip_method = {}
 
@@ -154,6 +156,25 @@ local function copy_subtitle(subtitle_id)
 end
 
 ------------------------------------------------------------
+-- custom sub filter method
+
+local function apply_custom_sub_filter(text)
+    local trim_func = h.trim
+
+    if custom_sub_filter then
+        if custom_sub_filter_enabled and custom_sub_filter.preprocess then
+            text = custom_sub_filter.preprocess(text)
+        end
+        
+        if self.config.use_custom_trim and custom_sub_filter.trim then
+            trim_func = custom_sub_filter.trim
+        end
+    end
+    
+    return text, trim_func
+end
+
+------------------------------------------------------------
 -- public
 
 self.copy_to_clipboard = function(_, text)
@@ -166,8 +187,11 @@ self.copy_to_clipboard = function(_, text)
 end
 
 self.clipboard_prepare = function(text)
+    local trim_func
+    text, trim_func = apply_custom_sub_filter(text)
+
     if self.config.clipboard_trim_enabled then
-        text = h.trim(text)
+        text = trim_func(text)
     else
         text = h.remove_newlines(text)
     end
@@ -332,6 +356,28 @@ self.next_autoclip_method = function()
     notify_autocopy()
 end
 
+local function notify_custom_sub_filter(state)
+    if not (custom_sub_filter and custom_sub_filter.preprocess) then
+        return
+    end
+
+    local prefix = self.config.custom_sub_filter_notification
+
+    local state_text
+    if state then
+        state_text = "ON"
+    else
+        state_text = "OFF"
+    end
+
+    h.notify(string.format("%s: %s", prefix, state_text))
+end
+
+self.toggle_custom_sub_filter = function()
+    custom_sub_filter_enabled = not custom_sub_filter_enabled
+    notify_custom_sub_filter(custom_sub_filter_enabled)
+end
+
 self.init = function(menu, config)
     self.menu = menu
     self.config = config
@@ -340,6 +386,8 @@ self.init = function(menu, config)
     -- to prevent it from being reset when the user reloads the config file.
     autoclip_enabled = self.config.autoclip
     autoclip_method.set(self.config.autoclip_method)
+
+    custom_sub_filter_enabled = config.custom_sub_filter_enabled
 
     mp.observe_property("sub-text", "string", handle_primary_sub)
     mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
