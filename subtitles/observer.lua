@@ -363,13 +363,14 @@ local function notify_custom_sub_filter(state)
 
     local prefix = self.config.custom_sub_filter_notification
 
-    local state_text = "ON"
-    if not state then
+    local state_text
+    if state then
+        state_text = "ON"
+    else
         state_text = "OFF"
     end
 
-    local message = h.notify(string.format("%s: %s", prefix, state_text))
-    return message
+    h.notify(string.format("%s: %s", prefix, state_text))
 end
 
 self.toggle_custom_sub_filter = function()
