@@ -158,19 +158,17 @@ end
 -- custom sub filter method
 
 local function apply_custom_sub_filter(text)
-    local trim_func = h.trim
-
-    if custom_sub_filter then
-        if self.config.custom_sub_filter_enabled and custom_sub_filter.preprocess then
-            text = custom_sub_filter.preprocess(text)
-        end
-
-        if self.config.use_custom_trim and custom_sub_filter.trim then
-            trim_func = custom_sub_filter.trim
-        end
+    if self.config.custom_sub_filter_enabled and custom_sub_filter and custom_sub_filter.preprocess then
+		return custom_sub_filter.preprocess(text)
     end
+    return text
+end
 
-    return text, trim_func
+local function apply_custom_trim(text)
+    if self.config.use_custom_trim and custom_sub_filter and custom_sub_filter.trim then
+		return custom_sub_filter.trim(text)
+    end
+    return h.trim(text)
 end
 
 ------------------------------------------------------------
@@ -186,14 +184,14 @@ self.copy_to_clipboard = function(_, text)
 end
 
 self.clipboard_prepare = function(text)
-    local trim_func
-    text, trim_func = apply_custom_sub_filter(text)
+    text = apply_custom_sub_filter(text)
 
     if self.config.clipboard_trim_enabled then
-        text = trim_func(text)
+        text = apply_custom_trim(text)
     else
         text = h.remove_newlines(text)
     end
+
     text = self.maybe_remove_all_spaces(text)
     return text
 end
