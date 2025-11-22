@@ -353,23 +353,6 @@ self.next_autoclip_method = function()
     notify_autocopy()
 end
 
-local function notify_custom_sub_filter(state)
-    if not (custom_sub_filter and custom_sub_filter.preprocess) then
-        return
-    end
-
-    local prefix = self.config.custom_sub_filter_notification
-
-    local state_text
-    if state then
-        state_text = "ON"
-    else
-        state_text = "OFF"
-    end
-
-    h.notify(string.format("%s: %s", prefix, state_text))
-end
-
 self.init = function(menu, config)
     self.menu = menu
     self.config = config
