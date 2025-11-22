@@ -23,7 +23,6 @@ local all_secondary_dialogs = sub_list.new()
 local user_timings = timings.new()
 
 local append_dialogue = false
-local custom_sub_filter_enabled = false
 local autoclip_enabled = false
 local autoclip_method = {}
 
@@ -162,15 +161,15 @@ local function apply_custom_sub_filter(text)
     local trim_func = h.trim
 
     if custom_sub_filter then
-        if custom_sub_filter_enabled and custom_sub_filter.preprocess then
+        if self.config.custom_sub_filter_enabled and custom_sub_filter.preprocess then
             text = custom_sub_filter.preprocess(text)
         end
-        
+
         if self.config.use_custom_trim and custom_sub_filter.trim then
             trim_func = custom_sub_filter.trim
         end
     end
-    
+
     return text, trim_func
 end
 
@@ -373,11 +372,6 @@ local function notify_custom_sub_filter(state)
     h.notify(string.format("%s: %s", prefix, state_text))
 end
 
-self.toggle_custom_sub_filter = function()
-    custom_sub_filter_enabled = not custom_sub_filter_enabled
-    notify_custom_sub_filter(custom_sub_filter_enabled)
-end
-
 self.init = function(menu, config)
     self.menu = menu
     self.config = config
@@ -386,8 +380,6 @@ self.init = function(menu, config)
     -- to prevent it from being reset when the user reloads the config file.
     autoclip_enabled = self.config.autoclip
     autoclip_method.set(self.config.autoclip_method)
-
-    custom_sub_filter_enabled = config.custom_sub_filter_enabled
 
     mp.observe_property("sub-text", "string", handle_primary_sub)
     mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
