@@ -437,11 +437,22 @@ local function notify_user_on_finish(note_ids)
     local query = table.concat(queries, " OR ")
     ankiconnect.gui_browse(query)
 
+    local first_field = ankiconnect.get_first_field(config.model_name)
+
     -- Notify the user.
     if #note_ids > 1 then
         h.notify(string.format("Updated %i notes.", #note_ids))
     else
-        h.notify(string.format("Updated note #%s.", tostring(note_ids[1])))
+        field_data = ankiconnect.get_note_fields(note_ids[1])[first_field]
+        if not h.is_empty(field_data) then
+          local max_len = 20
+          if string.len(field_data) > max_len then
+            field_data = field_data:sub(1, max_len) .. "…"
+          end
+          h.notify(string.format("Updated note: %s.", field_data))
+        else
+          h.notify(string.format("Updated note #%s.", tostring(note_ids[1])))
+        end
     end
 end
 
