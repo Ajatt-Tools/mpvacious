@@ -444,7 +444,15 @@ local function notify_user_on_finish(note_ids)
         h.notify(string.format("Updated %i notes.", #note_ids))
     else
         field_data = ankiconnect.get_note_fields(note_ids[1])[first_field]
-        h.notify(string.format("Updated note: %s.", field_data))
+        if not h.is_empty(field_data) then
+          local max_len = 20
+          if string.len(field_data) > max_len then
+            field_data = field_data:sub(1, max_len) .. "…"
+          end
+          h.notify(string.format("Updated note: %s.", field_data))
+        else
+          h.notify(string.format("Updated note #%s.", tostring(note_ids[1])))
+        end
     end
 end
 
