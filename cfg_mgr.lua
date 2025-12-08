@@ -210,7 +210,7 @@ local function create_config_file()
 
     handle = io.open(config_filepath, 'w')
     if handle == nil then
-        h.notify(string.format("Couldn't open %s.", config_filepath), "error", 4)
+        h.notify(string.format("Warning: failed to write '%s.'", config_filepath), "warn", 5)
         return
     end
 
