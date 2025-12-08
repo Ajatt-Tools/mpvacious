@@ -369,4 +369,36 @@ this.deep_copy = function(obj, seen)
     return setmetatable(res, getmetatable(obj))
 end
 
+this.maybe_require = function(module_name)
+    -- ~/.config/mpv/scripts/ and the mpvacious dir
+    local parent, child = utils.split_path(mp.get_script_directory())
+    -- ~/.config/mpv/ and "scripts"
+    parent, child = utils.split_path(parent:gsub("/$", ""))
+    -- ~/.config/mpv/subs2srs_sub_filter
+    local external_scripts_path = utils.join_path(parent, "subs2srs_sub_filter")
+
+    local search_template = external_scripts_path .. "/?.lua;"
+    local module_path = package.searchpath(module_name, search_template)
+
+    if not module_path then
+        return nil
+    end
+
+    local original_package_path = package.path
+    package.path = search_template .. package.path
+
+    local ok, loaded_module = pcall(require, module_name)
+
+    package.path = original_package_path
+
+    if not ok then
+        error(string.format("Failed to load module '%s' from '%s'. Error: %s",
+        module_name,
+        module_path,
+        tostring(loaded_module)))
+    end
+
+    return loaded_module
+end
+
 return this

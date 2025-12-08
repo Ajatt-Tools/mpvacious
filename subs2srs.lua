@@ -186,6 +186,11 @@ local config = {
     use_forvo = "yes", -- 'yes', 'no', 'always'
     vocab_field = "VocabKanji", -- target word field
     vocab_audio_field = "VocabAudio", -- target word audio
+
+    -- Custom Sub Filter
+    custom_sub_filter_enabled = false, -- True to enable custom sub preprocessing be default
+    custom_sub_filter_notification = "Custom Sub Filter", -- Notification prefix for toggle
+    use_custom_trim = false  -- True to use a custom trim instead of the built in one
 }
 
 -- Defines config profiles
@@ -296,7 +301,7 @@ end)()
 
 local function prepare_for_exporting(sub_text)
     if not h.is_empty(sub_text) then
-        sub_text = h.trim(sub_text)
+        sub_text = subs_observer.clipboard_prepare(sub_text)
         sub_text = h.escape_special_characters(sub_text)
     end
     return sub_text
@@ -304,7 +309,7 @@ end
 
 local function construct_note_fields(sub_text, secondary_text, snapshot_filename, audio_filename)
     local ret = {
-        [config.sentence_field] = subs_observer.maybe_remove_all_spaces(prepare_for_exporting(sub_text)),
+        [config.sentence_field] = prepare_for_exporting(sub_text),
     }
     if not h.is_empty(config.secondary_field) then
         ret[config.secondary_field] = prepare_for_exporting(secondary_text)
