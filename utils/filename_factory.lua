@@ -31,7 +31,7 @@ local anki_compatible_length = (function()
         end
 
         local ret = h.subprocess {
-            'awk',
+            'gawk',
             '-v', string.format('str=%s', str),
             '-v', string.format('limit=%d', limit_chars),
             'BEGIN{print substr(str, 1, limit); exit}'
@@ -52,8 +52,8 @@ local make_media_filename = function()
     filename = h.remove_extension(filename)
 
     local operations = {
-        h.remove_filename_text_in_parentheses, 
-        h.remove_text_in_brackets, 
+        h.remove_filename_text_in_parentheses,
+        h.remove_text_in_brackets,
         h.remove_special_characters
     }
     for _, f in ipairs(operations) do
