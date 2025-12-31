@@ -30,8 +30,12 @@ local anki_compatible_length = (function()
             return str:sub(1, limit_bytes)
         end
 
+        -- NOTE: since MacOS's awk currently doesn't support split UTF-8 char correctly
+        -- We should examine either gawk is installed and use it instead.
+        local subprocess_name = h.is_mac() and 'gawk' or 'awk'
+
         local ret = h.subprocess {
-            'awk',
+            subprocess_name,
             '-v', string.format('str=%s', str),
             '-v', string.format('limit=%d', limit_chars),
             'BEGIN{print substr(str, 1, limit); exit}'
