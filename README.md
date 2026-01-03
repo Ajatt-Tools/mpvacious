@@ -64,6 +64,7 @@ $ sudo pacman -Syu mpv anki curl xclip --needed
 * If you're on a [Windows](https://www.fsf.org/windows) or a [Windows-like](https://reactos.org/) machine,
   a mpv build by `shinchiro` is recommended.
 * **macOS** users are advised to use [homebrew](https://brew.sh/) or manually add `mpv` to `PATH`.
+* **macOS** users are advised to install `gawk` to correctly split the filename.
 * Note that it is not recommended to use FlatPak or similar containers.
   If you still want to, [read this](howto/flatpak.md).
 * Make sure that your build of mpv supports encoding of audio and images.
