@@ -30,12 +30,11 @@ local anki_compatible_length = (function()
             return str:sub(1, limit_bytes)
         end
 
-        -- NOTE: since MacOS's awk currently doesn't support split UTF-8 char correctly
-        -- We should examine either gawk is installed and use it instead.
-        local subprocess_name = h.is_mac() and 'gawk' or 'awk'
-
+        -- NOTE: since MacOS's awk currently doesn't support split UTF-8 char correctly,
+        -- we should call gawk instead.
+        -- On GNU/Linux, awk is an alias for gawk.
         local ret = h.subprocess {
-            subprocess_name,
+            'gawk',
             '-v', string.format('str=%s', str),
             '-v', string.format('limit=%d', limit_chars),
             'BEGIN{print substr(str, 1, limit); exit}'
@@ -56,8 +55,8 @@ local make_media_filename = function()
     filename = h.remove_extension(filename)
 
     local operations = {
-        h.remove_filename_text_in_parentheses, 
-        h.remove_text_in_brackets, 
+        h.remove_filename_text_in_parentheses,
+        h.remove_text_in_brackets,
         h.remove_special_characters
     }
     for _, f in ipairs(operations) do
