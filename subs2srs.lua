@@ -43,14 +43,14 @@ local h = require('helpers')
 local Menu = require('menu')
 local ankiconnect = require('anki.ankiconnect')
 local switch = require('utils.switch')
-local dec_counter = require('utils.dec_counter')
 local play_control = require('utils.play_control')
 local secondary_sid = require('subtitles.secondary_sid')
 local platform = require('platform.init')
 local forvo = require('utils.forvo')
 local subs_observer = require('subtitles.observer')
 local codec_support = require('encoder.codec_support')
-local new_note_checker = require('anki.new_note_checker')
+local make_new_note_checker = require('anki.new_note_checker')
+local make_note_exporter = require('anki.note_exporter')
 
 local menu, quick_menu, quick_menu_card
 local quick_creation_opts = {
@@ -208,6 +208,7 @@ local profiles = {
 
 ------------------------------------------------------------
 -- utility functions
+
 local function _(params)
     return function()
         return pcall(h.unpack(params))
@@ -232,342 +233,8 @@ local function load_next_profile()
     h.notify("Loaded profile " .. profiles.active)
 end
 
-local function tag_format(filename)
-    filename = h.remove_extension(filename)
-    filename = h.remove_common_resolutions(filename)
-
-    local s, e, episode_num = h.get_episode_number(filename)
-
-    if config.tag_del_episode_num == true and not h.is_empty(s) then
-        if config.tag_del_after_episode_num == true then
-            -- Removing everything (e.g. episode name) after the episode number including itself.
-            filename = filename:sub(1, s)
-        else
-            -- Removing the first found instance of the episode number.
-            filename = filename:sub(1, s) .. filename:sub(e + 1, -1)
-        end
-    end
-
-    if config.tag_nuke_brackets == true then
-        filename = h.remove_text_in_brackets(filename)
-    end
-    if config.tag_nuke_parentheses == true then
-        filename = h.remove_filename_text_in_parentheses(filename)
-    end
-
-    if config.tag_filename_lowercase == true then
-        filename = filename:lower()
-    end
-
-    filename = h.remove_leading_trailing_spaces(filename)
-    filename = filename:gsub(" ", "_")
-    filename = filename:gsub("_%-_", "_") -- Replaces garbage _-_ substrings with a underscore
-    filename = h.remove_leading_trailing_dashes(filename)
-    return filename, episode_num or ''
-end
-
-local substitute_fmt = (function()
-    local function substitute_filename(tag, filename)
-        return tag:gsub("%%n", filename)
-    end
-
-    local function substitute_episode_number(tag, episode)
-        return tag:gsub("%%d", episode)
-    end
-
-    local function substitute_time_pos(tag)
-        local time_pos = h.human_readable_time(mp.get_property_number('time-pos'))
-        return tag:gsub("%%t", time_pos)
-    end
-
-    local function substitute_envvar(tag)
-        local env_tags = os.getenv('SUBS2SRS_TAGS') or ''
-        return tag:gsub("%%e", env_tags)
-    end
-
-    local function substitute_fullpath(tag)
-        local full_path = mp.get_property("path") or ''
-        return tag:gsub("%%f", full_path)
-    end
-
-    return function(tag)
-        if not h.is_empty(tag) then
-            local filename, episode = tag_format(mp.get_property("filename"))
-            tag = substitute_filename(tag, filename)
-            tag = substitute_episode_number(tag, episode)
-            tag = substitute_time_pos(tag)
-            tag = substitute_envvar(tag)
-            tag = substitute_fullpath(tag)
-            tag = h.remove_leading_trailing_spaces(tag)
-        end
-        return tag
-    end
-end)()
-
-local function prepare_for_exporting(sub_text)
-    if not h.is_empty(sub_text) then
-        sub_text = subs_observer.clipboard_prepare(sub_text)
-        sub_text = h.escape_special_characters(sub_text)
-    end
-    return sub_text
-end
-
-local function construct_note_fields(sub_text, secondary_text, snapshot_filename, audio_filename)
-    local ret = {
-        [config.sentence_field] = prepare_for_exporting(sub_text),
-    }
-    if not h.is_empty(config.secondary_field) then
-        ret[config.secondary_field] = prepare_for_exporting(secondary_text)
-    end
-    if not h.is_empty(config.image_field) and not h.is_empty(snapshot_filename) then
-        ret[config.image_field] = string.format(config.image_template, snapshot_filename)
-    end
-    if not h.is_empty(config.audio_field) and not h.is_empty(audio_filename) then
-        ret[config.audio_field] = string.format(config.audio_template, audio_filename)
-    end
-    if config.miscinfo_enable == true then
-        ret[config.miscinfo_field] = substitute_fmt(config.miscinfo_format)
-    end
-    return ret
-end
-
-local function join_field_content(new_text, old_text, separator)
-    -- By default, join fields with a HTML newline.
-    separator = separator or "<br>"
-
-    if h.is_empty(old_text) then
-        -- If 'old_text' is empty, there's no need to join content with the separator.
-        return new_text
-    end
-
-    if h.is_substr(old_text, new_text) then
-        -- If 'old_text' (field) already contains new_text (sentence, image, audio, etc.),
-        -- there's no need to add 'new_text' to 'old_text'.
-        return old_text
-    end
-
-    return string.format("%s%s%s", old_text, separator, new_text)
-end
-
-local function join_fields(new_data, stored_data)
-    for _, field in pairs { config.audio_field, config.image_field, config.miscinfo_field, config.sentence_field, config.secondary_field } do
-        if not h.is_empty(field) then
-            new_data[field] = join_field_content(h.table_get(new_data, field, ""), h.table_get(stored_data, field, ""))
-        end
-    end
-    return new_data
-end
-
-local function update_sentence(new_data, stored_data)
-    -- adds support for TSCs
-    -- https://tatsumoto-ren.github.io/blog/discussing-various-card-templates.html#targeted-sentence-cards
-    -- if the target word was marked by Rikaitan, this function makes sure that the highlighting doesn't get erased.
-
-    if h.is_empty(stored_data[config.sentence_field]) then
-        -- sentence field is empty. can't continue.
-        return new_data
-    elseif h.is_empty(new_data[config.sentence_field]) then
-        -- *new* sentence field is empty, but old one contains data. don't delete the existing sentence.
-        new_data[config.sentence_field] = stored_data[config.sentence_field]
-        return new_data
-    end
-
-    local _, opentag, target, closetag, _ = stored_data[config.sentence_field]:match('^(.-)(<[^>]+>)(.-)(</[^>]+>)(.-)$')
-    if target then
-        local prefix, _, suffix = new_data[config.sentence_field]:match(table.concat { '^(.-)(', target, ')(.-)$' })
-        if prefix and suffix then
-            new_data[config.sentence_field] = table.concat { prefix, opentag, target, closetag, suffix }
-        end
-    end
-    return new_data
-end
-
-local function audio_padding()
-    local video_duration = mp.get_property_number('duration')
-    if config.audio_padding == 0.0 or not video_duration then
-        return 0.0
-    end
-    if subs_observer.user_altered() then
-        return 0.0
-    end
-    return config.audio_padding
-end
-
-------------------------------------------------------------
--- front for adding and updating notes
-
-local function maybe_reload_config()
-    if config.reload_config_before_card_creation then
-        cfg_mgr.reload_from_disk()
-    end
-end
-
-local function get_anki_media_dir_path()
-    return ankiconnect.get_media_dir_path()
-end
-
-local function export_to_anki(gui)
-    maybe_reload_config()
-    local sub = subs_observer.collect_from_current()
-
-    if not sub:is_valid() then
-        return h.notify("Nothing to export.", "warn", 1)
-    end
-
-    if not gui and h.is_empty(sub['text']) then
-        sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
-    end
-
-    encoder.set_output_dir(get_anki_media_dir_path())
-    local snapshot = encoder.snapshot.create_job(sub)
-    local audio = encoder.audio.create_job(sub, audio_padding())
-
-    snapshot.run_async()
-    audio.run_async()
-
-    local first_field = ankiconnect.get_first_field(config.model_name)
-    local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
-
-    if not h.is_empty(first_field) and h.is_empty(note_fields[first_field]) then
-        note_fields[first_field] = "[empty]"
-    end
-
-    ankiconnect.add_note(note_fields, substitute_fmt(config.note_tag), gui)
-    subs_observer.clear()
-end
-
-local function notify_user_on_finish(note_ids)
-    --- Run this callback once all notes are changed.
-
-    -- Construct a search query for the Anki Browser.
-    local queries = {}
-    for _, note_id in ipairs(note_ids) do
-        table.insert(queries, string.format("nid:%s", tostring(note_id)))
-    end
-    local query = table.concat(queries, " OR ")
-    ankiconnect.gui_browse(query)
-
-    local first_field = ankiconnect.get_first_field(config.model_name)
-
-    -- Notify the user.
-    if #note_ids > 1 then
-        h.notify(string.format("Updated %i notes.", #note_ids))
-    else
-        local field_data = ankiconnect.get_note_fields(note_ids[1])[first_field]
-        if not h.is_empty(field_data) then
-            local max_len = 20
-            if string.len(field_data) > max_len then
-                field_data = field_data:sub(1, max_len) .. "…"
-            end
-            h.notify(string.format("Updated note: %s.", field_data))
-        else
-            h.notify(string.format("Updated note #%s.", tostring(note_ids[1])))
-        end
-    end
-end
-
-local function make_new_note_data(stored_data, new_data, overwrite)
-    if stored_data then
-        new_data = forvo.append(new_data, stored_data)
-        new_data = update_sentence(new_data, stored_data)
-        if not overwrite then
-            if config.append_media then
-                new_data = join_fields(new_data, stored_data)
-            else
-                new_data = join_fields(stored_data, new_data)
-            end
-        end
-    end
-    -- If the text is still empty, put some dummy text to let the user know why
-    -- there's no text in the sentence field.
-    if h.is_empty(new_data[config.sentence_field]) then
-        new_data[config.sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
-    end
-    return new_data
-end
-
-local function change_fields(note_ids, new_data, overwrite)
-    --- Run this callback once audio and image files are created.
-    local change_notes_countdown = dec_counter.new(#note_ids).on_finish(h.as_callback(notify_user_on_finish, note_ids))
-    for _, note_id in pairs(note_ids) do
-        ankiconnect.append_media(
-                note_id,
-                make_new_note_data(ankiconnect.get_note_fields(note_id), h.deep_copy(new_data), overwrite),
-                substitute_fmt(config.note_tag),
-                change_notes_countdown.decrease
-        )
-    end
-end
-
-local function update_notes(note_ids, overwrite)
-    local sub
-    local n_lines = quick_creation_opts:get_lines()
-    if n_lines then
-        sub = subs_observer.collect_from_all_dialogues(n_lines)
-    else
-        sub = subs_observer.collect_from_current()
-    end
-
-    if not sub:is_valid() then
-        return h.notify("Nothing to export. Have you set the timings?", "warn", 2)
-    end
-
-    if h.is_empty(sub['text']) then
-        -- In this case, don't modify whatever existing text there is and just
-        -- modify the other fields we can. The user might be trying to add
-        -- audio to a card which they've manually transcribed (either the video
-        -- has no subtitles or it has image subtitles).
-        sub['text'] = nil
-    end
-
-    local anki_media_dir = get_anki_media_dir_path()
-    encoder.set_output_dir(anki_media_dir)
-    forvo.set_output_dir(anki_media_dir)
-
-    local snapshot = encoder.snapshot.create_job(sub)
-    local audio = encoder.audio.create_job(sub, audio_padding())
-    local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
-    local create_files_countdown = dec_counter.new(2).on_finish(h.as_callback(change_fields, note_ids, new_data, overwrite))
-
-    snapshot.on_finish(create_files_countdown.decrease).run_async()
-    audio.on_finish(create_files_countdown.decrease).run_async()
-
-    subs_observer.clear()
-    quick_creation_opts:clear_options()
-end
-
-local function update_last_note(overwrite)
-    local accept_notes_made_within_last_minutes = 10
-    maybe_reload_config()
-
-    local n_cards = quick_creation_opts:get_cards()
-    -- this now returns a table
-    local last_note_ids = ankiconnect.get_last_note_ids(n_cards)
-    n_cards = #last_note_ids
-
-    --first element is the earliest
-    if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(accept_notes_made_within_last_minutes) then
-        return h.notify("Couldn't find the target note.", "warn", 2)
-    end
-
-    update_notes(last_note_ids, overwrite)
-end
-
-local function update_selected_note(overwrite)
-    maybe_reload_config()
-
-    local selected_note_ids = ankiconnect.get_selected_note_ids()
-
-    if h.is_empty(selected_note_ids) then
-        return h.notify("Couldn't find the target note(s). Did you select the notes you want in Anki?", "warn", 3)
-    end
-
-    if #selected_note_ids > config.card_overwrite_safeguard then
-        return h.notify(string.format("More than %i notes selected\nnot recommended, but you can change the limit in your config", config.card_overwrite_safeguard), "warn", 4)
-    end
-
-    update_notes(selected_note_ids, overwrite)
-end
+local new_note_checker = make_new_note_checker.new()
+local note_exporter = make_note_exporter.new()
 
 ------------------------------------------------------------
 -- main menu
@@ -583,12 +250,12 @@ menu.keybindings = {
     { key = 'e', fn = menu:with_update { subs_observer.set_manual_timing, 'end' } },
     { key = 'c', fn = menu:with_update { subs_observer.set_to_current_sub } },
     { key = 'r', fn = menu:with_update { subs_observer.clear_and_notify } },
-    { key = 'g', fn = menu:with_update { export_to_anki, true } },
-    { key = 'n', fn = menu:with_update { export_to_anki, false } },
-    { key = 'b', fn = menu:with_update { update_selected_note, false } },
-    { key = 'B', fn = menu:with_update { update_selected_note, true } },
-    { key = 'm', fn = menu:with_update { update_last_note, false } },
-    { key = 'M', fn = menu:with_update { update_last_note, true } },
+    { key = 'g', fn = menu:with_update { note_exporter.export_to_anki, true } },
+    { key = 'n', fn = menu:with_update { note_exporter.export_to_anki, false } },
+    { key = 'b', fn = menu:with_update { note_exporter.update_selected_note, false } },
+    { key = 'B', fn = menu:with_update { note_exporter.update_selected_note, true } },
+    { key = 'm', fn = menu:with_update { note_exporter.update_last_note, false } },
+    { key = 'M', fn = menu:with_update { note_exporter.update_last_note, true } },
     { key = 'f', fn = menu:with_update { quick_creation_opts.increment_cards, quick_creation_opts } },
     { key = 'F', fn = menu:with_update { quick_creation_opts.decrement_cards, quick_creation_opts } },
     { key = 't', fn = menu:with_update { subs_observer.toggle_autocopy } },
@@ -711,7 +378,7 @@ local choose_cards = function(i)
 end
 local choose_lines = function(i)
     quick_creation_opts:set_lines(i)
-    update_last_note(true)
+    note_exporter.update_last_note(true)
     quick_menu:close()
 end
 
@@ -791,7 +458,7 @@ local function run_tests()
         SentKanji = "勝ちって何に？",
         SentEng = "What would we win, exactly?",
     }
-    local result = join_fields(new_note, old_note)
+    local result = note_exporter.join_fields(new_note, old_note)
     local expected = {
         SentKanji = "勝ちって何に？<br>それは…分からんよ",
         SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]<br>[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
@@ -805,7 +472,6 @@ end
 ------------------------------------------------------------
 -- main
 
-local new_note_checker_instance = new_note_checker.new()
 local main = (function()
     local main_executed = false
     return function()
@@ -830,7 +496,8 @@ local main = (function()
         secondary_sid.init(config)
         ensure_deck()
         subs_observer.init(menu, config)
-        new_note_checker_instance.init(ankiconnect, menu:with_update { update_notes }, config)
+        note_exporter.init(ankiconnect, quick_creation_opts, subs_observer, encoder, forvo, cfg_mgr)
+        new_note_checker.init(ankiconnect, menu:with_update { note_exporter.update_notes }, config)
 
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", subs_observer.copy_current_primary_to_clipboard)
@@ -847,13 +514,13 @@ local main = (function()
         mp.add_key_binding("a", "mpvacious-menu-open", _ { menu.open, menu })
 
         -- Add note
-        mp.add_forced_key_binding("Ctrl+n", "mpvacious-export-note", menu:with_update { export_to_anki, false })
+        mp.add_forced_key_binding("Ctrl+n", "mpvacious-export-note", menu:with_update { note_exporter.export_to_anki, false })
 
         -- Note updating
-        mp.add_key_binding("Ctrl+b", "mpvacious-update-selected-note", menu:with_update { update_selected_note, false })
-        mp.add_key_binding("Ctrl+B", "mpvacious-overwrite-selected-note", menu:with_update { update_selected_note, true })
-        mp.add_key_binding("Ctrl+m", "mpvacious-update-last-note", menu:with_update { update_last_note, false })
-        mp.add_key_binding("Ctrl+M", "mpvacious-overwrite-last-note", menu:with_update { update_last_note, true })
+        mp.add_key_binding("Ctrl+b", "mpvacious-update-selected-note", menu:with_update { note_exporter.update_selected_note, false })
+        mp.add_key_binding("Ctrl+B", "mpvacious-overwrite-selected-note", menu:with_update { note_exporter.update_selected_note, true })
+        mp.add_key_binding("Ctrl+m", "mpvacious-update-last-note", menu:with_update { note_exporter.update_last_note, false })
+        mp.add_key_binding("Ctrl+M", "mpvacious-overwrite-last-note", menu:with_update { note_exporter.update_last_note, true })
 
         mp.add_key_binding("g", "mpvacious-quick-card-menu-open", _ { quick_menu.open, quick_menu })
         mp.add_key_binding("Alt+g", "mpvacious-quick-card-sel-menu-open", _ { quick_menu_card.open, quick_menu_card })
@@ -872,7 +539,7 @@ local main = (function()
         mp.msg.warn("Press 'a' to open the mpvacious menu.")
 
         -- start timer
-        new_note_checker_instance.start_timer()
+        new_note_checker.start_timer()
     end
 end)()
 

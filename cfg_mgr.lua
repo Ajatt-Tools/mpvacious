@@ -235,6 +235,10 @@ local function init(config_table, profiles_table)
     self.config.init_done = true
 end
 
+local function get_config()
+    return self.config
+end
+
 return {
     reload_from_disk = reload_from_disk,
     init = init,

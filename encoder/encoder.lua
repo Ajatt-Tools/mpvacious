@@ -724,7 +724,6 @@ local create_job = function(job_type, sub, audio_padding)
     return job
 end
 
-
 return {
     init = init,
     set_output_dir = set_output_dir,
