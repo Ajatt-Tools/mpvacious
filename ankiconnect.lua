@@ -135,6 +135,15 @@ self.find_notes = function(query)
     end
 end
 
+self.get_last_note_ids = function(n_cards)
+    local note_ids = self.find_notes("added:1") -- find all notes added today
+    if not h.is_empty(note_ids) then
+        return h.get_last_n_added_notes(note_ids, n_cards)
+    else
+        return {}
+    end
+end
+
 self.get_selected_note_ids = function()
     local ret = self.execute {
         action = "guiSelectedNotes",
