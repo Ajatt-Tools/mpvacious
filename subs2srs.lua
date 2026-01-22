@@ -830,7 +830,7 @@ local main = (function()
         secondary_sid.init(config)
         ensure_deck()
         subs_observer.init(menu, config)
-        new_note_checker_instance.init(ankiconnect, update_notes, config)
+        new_note_checker_instance.init(ankiconnect, menu:with_update { update_notes }, config)
 
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", subs_observer.copy_current_primary_to_clipboard)
