@@ -357,6 +357,10 @@ self.init = function(menu, config)
     self.menu = menu
     self.config = config
 
+    if not self.config.init_done then
+        error("config not loaded")
+    end
+
     -- The autoclip state is copied as a local value
     -- to prevent it from being reset when the user reloads the config file.
     autoclip_enabled = self.config.autoclip

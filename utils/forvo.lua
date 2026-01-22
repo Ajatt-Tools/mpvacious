@@ -136,6 +136,9 @@ end
 local function init(config, platform)
     self.config = config
     self.platform = platform
+    if not self.config.init_done then
+        error("config not loaded")
+    end
 end
 
 return {

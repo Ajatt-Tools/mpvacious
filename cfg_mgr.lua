@@ -232,6 +232,7 @@ local function init(config_table, profiles_table)
         read_profile(self.profiles.active)
     end
     validate_config()
+    self.config.init_done = true
 end
 
 return {
@@ -240,4 +241,5 @@ return {
     next_profile = next_profile,
     default_height_px = default_height_px,
     preserve_aspect_ratio = preserve_aspect_ratio,
+    get_config=get_config,
 }

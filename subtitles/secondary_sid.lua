@@ -94,6 +94,9 @@ end
 local function init(config)
     self.config = config
     self.visibility = config.secondary_sub_visibility
+    if not self.config.init_done then
+        error("config not loaded")
+    end
     self.accepted_languages = get_accepted_sub_langs()
     mp.register_event('file-loaded', on_file_loaded)
     if config.secondary_sub_area > 0 then

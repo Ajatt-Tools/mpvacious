@@ -683,6 +683,9 @@ local init = function(config)
     -- Sets the module to its preconfigured status
     self.config = config
     self.encoder = config.use_ffmpeg and ffmpeg or mpv
+    if not self.config.init_done then
+        error("config not loaded")
+    end
 end
 
 local set_output_dir = function(dir_path)

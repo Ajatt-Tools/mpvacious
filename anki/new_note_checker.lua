@@ -102,6 +102,9 @@ local function make_anki_new_note_checker()
         self.ankiconnect = ankiconnect
         self.update_notes_fn = update_notes_fn
         self.config = config
+        if not self.config.init_done then
+            error("config not loaded")
+        end
     end
 
     return {
