@@ -34,12 +34,10 @@ local function make_anki_new_note_checker()
             if not is_note_ignored(note_id) then
                 -- Get note info to check if it matches the user's config
                 local note_fields = self.ankiconnect.get_note_fields(note_id)
-                if note_fields then
-                    -- Check if the note has the configured sentence field.
-                    if note_fields[self.config.sentence_field] ~= nil then
-                        -- Note matches our criteria, update it (just like pressing like Ctrl+m does)
-                        self.update_notes_fn({note_id}, false)
-                    end
+                -- Check if the note has the configured sentence field.
+                if not h.is_empty(note_fields) and note_fields[self.config.sentence_field] ~= nil then
+                    -- Note matches our criteria, update it (just like pressing Ctrl+M does).
+                    self.update_notes_fn({note_id}, false)
                 end
                 -- Add to ignore list regardless of whether we updated it or not.
                 -- This prevents the function from processing the same notes over and over.
@@ -58,7 +56,7 @@ local function make_anki_new_note_checker()
                 msg.info("new note checker disabled.")
                 return
             end
-            -- https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst#mp-functions
+            -- docs: https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst#mp-functions
             if self.timer == nil then
                 self.timer = mp.add_periodic_timer(self.config.new_note_timer_interval_seconds, check_for_new_notes)
             end
