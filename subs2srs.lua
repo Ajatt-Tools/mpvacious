@@ -589,22 +589,14 @@ menu.keybindings = {
     { key = 'B', fn = menu:with_update { update_selected_note, true } },
     { key = 'm', fn = menu:with_update { update_last_note, false } },
     { key = 'M', fn = menu:with_update { update_last_note, true } },
-    { key = 'f', fn = menu:with_update { function()
-        quick_creation_opts:increment_cards()
-    end } },
-    { key = 'F', fn = menu:with_update { function()
-        quick_creation_opts:decrement_cards()
-    end } },
+    { key = 'f', fn = menu:with_update { quick_creation_opts.increment_cards, quick_creation_opts } },
+    { key = 'F', fn = menu:with_update { quick_creation_opts.decrement_cards, quick_creation_opts } },
     { key = 't', fn = menu:with_update { subs_observer.toggle_autocopy } },
     { key = 'T', fn = menu:with_update { subs_observer.next_autoclip_method } },
     { key = 'i', fn = menu:with_update { menu.hints_state.bump } },
     { key = 'p', fn = menu:with_update { load_next_profile } },
-    { key = 'ESC', fn = function()
-        menu:close()
-    end },
-    { key = 'q', fn = function()
-        menu:close()
-    end },
+    { key = 'ESC', fn = _ { menu.close, menu } },
+    { key = 'q', fn = _ { menu.close, menu } },
 }
 
 function menu:print_header(osd)
@@ -762,12 +754,8 @@ for i = 1, 9 do
         choose_cards(i)
     end })
 end
-table.insert(quick_menu_card.keybindings, { key = 'ESC', fn = function()
-    quick_menu_card:close()
-end })
-table.insert(quick_menu_card.keybindings, { key = 'q', fn = function()
-    quick_menu_card:close()
-end })
+table.insert(quick_menu_card.keybindings, { key = 'ESC', fn = _ { quick_menu_card.close, quick_menu_card } })
+table.insert(quick_menu_card.keybindings, { key = 'q', fn = _ { quick_menu_card.close, quick_menu_card } })
 function quick_menu_card:print_header(osd)
     osd:submenu('quick card creation: card selection'):newline()
     osd:item('# cards: '):text('Enter 1-9'):newline()
@@ -856,9 +844,7 @@ local main = (function()
         mp.add_key_binding("Ctrl+j", "mpvacious-secondary-sid-next", secondary_sid.select_next)
 
         -- Open advanced menu
-        mp.add_key_binding("a", "mpvacious-menu-open", function()
-            menu:open()
-        end)
+        mp.add_key_binding("a", "mpvacious-menu-open", _ { menu.open, menu })
 
         -- Add note
         mp.add_forced_key_binding("Ctrl+n", "mpvacious-export-note", menu:with_update { export_to_anki, false })
@@ -869,12 +855,8 @@ local main = (function()
         mp.add_key_binding("Ctrl+m", "mpvacious-update-last-note", menu:with_update { update_last_note, false })
         mp.add_key_binding("Ctrl+M", "mpvacious-overwrite-last-note", menu:with_update { update_last_note, true })
 
-        mp.add_key_binding("g", "mpvacious-quick-card-menu-open", function()
-            quick_menu:open()
-        end)
-        mp.add_key_binding("Alt+g", "mpvacious-quick-card-sel-menu-open", function()
-            quick_menu_card:open()
-        end)
+        mp.add_key_binding("g", "mpvacious-quick-card-menu-open", _ { quick_menu.open, quick_menu })
+        mp.add_key_binding("Alt+g", "mpvacious-quick-card-sel-menu-open", _ { quick_menu_card.open, quick_menu_card })
 
         -- Vim-like seeking between subtitle lines
         mp.add_key_binding("H", "mpvacious-sub-seek-back", _ { play_control.sub_seek, 'backward' })
