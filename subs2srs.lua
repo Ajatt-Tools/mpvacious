@@ -361,7 +361,7 @@ end
 local function update_sentence(new_data, stored_data)
     -- adds support for TSCs
     -- https://tatsumoto-ren.github.io/blog/discussing-various-card-templates.html#targeted-sentence-cards
-    -- if the target word was marked by yomichan, this function makes sure that the highlighting doesn't get erased.
+    -- if the target word was marked by Rikaitan, this function makes sure that the highlighting doesn't get erased.
 
     if h.is_empty(stored_data[config.sentence_field]) then
         -- sentence field is empty. can't continue.
