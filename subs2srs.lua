@@ -50,6 +50,7 @@ local platform = require('platform.init')
 local forvo = require('utils.forvo')
 local subs_observer = require('subtitles.observer')
 local codec_support = require('encoder.codec_support')
+local new_note_checker = require('anki.new_note_checker')
 
 local menu, quick_menu, quick_menu_card
 local quick_creation_opts = {
@@ -190,7 +191,11 @@ local config = {
     -- Custom Sub Filter
     custom_sub_filter_enabled = false, -- True to enable custom sub preprocessing be default
     custom_sub_filter_notification = "Custom Sub Filter", -- Notification prefix for toggle
-    use_custom_trim = false  -- True to use a custom trim instead of the built in one
+    use_custom_trim = false,  -- True to use a custom trim instead of the built in one
+
+    -- New note timer
+    enable_new_note_timer = true, -- Start the new note checker when mpv starts.
+    new_note_timer_interval_seconds = 2, -- Check for new notes every N seconds.
 }
 
 -- Defines config profiles
@@ -807,6 +812,7 @@ end
 ------------------------------------------------------------
 -- main
 
+local new_note_checker_instance = new_note_checker.new()
 local main = (function()
     local main_executed = false
     return function()
@@ -831,6 +837,7 @@ local main = (function()
         secondary_sid.init(config)
         ensure_deck()
         subs_observer.init(menu, config)
+        new_note_checker_instance.init(ankiconnect, update_notes, config)
 
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", subs_observer.copy_current_primary_to_clipboard)
@@ -876,6 +883,9 @@ local main = (function()
         mp.add_key_binding("Ctrl+L", "mpvacious-sub-play-up-to-next", _ { play_control.play_till_next_sub_end })
 
         mp.msg.warn("Press 'a' to open the mpvacious menu.")
+
+        -- start timer
+        new_note_checker_instance.start_timer()
     end
 end)()
 
