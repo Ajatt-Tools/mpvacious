@@ -24,7 +24,7 @@ end
 
 function Menu:with_update(params)
     return function(...)
-        local to_call = h.combine_lists(params, {...})
+        local to_call = h.combine_lists(params, { ... })
         local status, error = pcall(h.unpack(to_call))
         if not status then
             msg['error'](error)
@@ -38,7 +38,9 @@ function Menu:make_osd()
 end
 
 function Menu:update()
-    if self.active == false then return end
+    if self.active == false then
+        return
+    end
     self.overlay.data = self:make_osd():get_text()
     self.overlay:update()
 end

@@ -392,10 +392,14 @@ this.maybe_require = function(module_name)
     package.path = original_package_path
 
     if not ok then
-        error(string.format("Failed to load module '%s' from '%s'. Error: %s",
-        module_name,
-        module_path,
-        tostring(loaded_module)))
+        error(
+                string.format(
+                        "Failed to load module '%s' from '%s'. Error: %s",
+                        module_name,
+                        module_path,
+                        tostring(loaded_module)
+                )
+        )
     end
 
     return loaded_module
@@ -404,7 +408,7 @@ end
 this.combine_lists = function(...)
     -- take many lists and output one list.
     local output = {}
-    for _, list in ipairs({...}) do
+    for _, list in ipairs({ ... }) do
         for _, item in ipairs(list) do
             table.insert(output, item)
         end

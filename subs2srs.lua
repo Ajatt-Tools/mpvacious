@@ -191,7 +191,7 @@ local config = {
     -- Custom Sub Filter
     custom_sub_filter_enabled = false, -- True to enable custom sub preprocessing be default
     custom_sub_filter_notification = "Custom Sub Filter", -- Notification prefix for toggle
-    use_custom_trim = false,  -- True to use a custom trim instead of the built in one
+    use_custom_trim = false, -- True to use a custom trim instead of the built in one
 
     -- New note timer
     enable_new_note_timer = true, -- Start the new note checker when mpv starts.
@@ -455,13 +455,13 @@ local function notify_user_on_finish(note_ids)
     else
         local field_data = ankiconnect.get_note_fields(note_ids[1])[first_field]
         if not h.is_empty(field_data) then
-          local max_len = 20
-          if string.len(field_data) > max_len then
-            field_data = field_data:sub(1, max_len) .. "…"
-          end
-          h.notify(string.format("Updated note: %s.", field_data))
+            local max_len = 20
+            if string.len(field_data) > max_len then
+                field_data = field_data:sub(1, max_len) .. "…"
+            end
+            h.notify(string.format("Updated note: %s.", field_data))
         else
-          h.notify(string.format("Updated note #%s.", tostring(note_ids[1])))
+            h.notify(string.format("Updated note #%s.", tostring(note_ids[1])))
         end
     end
 end
@@ -710,7 +710,8 @@ function menu:make_osd()
 end
 
 ------------------------------------------------------------
---quick_menu line selection
+-- quick_menu line selection
+
 local choose_cards = function(i)
     quick_creation_opts:set_cards(i)
     quick_menu_card:close()
@@ -781,6 +782,9 @@ function quick_menu_card:make_osd()
     self:print_legend(osd)
     return osd
 end
+
+------------------------------------------------------------
+-- tests
 
 local function run_tests()
     h.run_tests()
