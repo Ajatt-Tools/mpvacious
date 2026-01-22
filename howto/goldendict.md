@@ -31,7 +31,10 @@ they will be immediately sent to GoldenDict instead of the system clipboard.
    select the definition text,
    right-click and select "send word to anki" to make a card,
    or press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd>.
-4) Go back to mpv and add an image and an audio clip
+4) If you have the [new note timer](../README.md#new-note-timer) enabled,
+   mpvacious will automatically add media to your card.
+
+   Otherwise, go back to mpv and add an image and an audio clip
    to the card you've just made by pressing <kbd>m</kbd> while the `advanced menu` is open.
    Pressing <kbd>Shift+m</kbd> will overwrite any existing data in media fields.
 
