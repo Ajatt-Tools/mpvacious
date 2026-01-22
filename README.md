@@ -363,6 +363,19 @@ Alternatively:
 **Tip**: change playback speed by pressing <kbd>[</kbd> and <kbd>]</kbd>
 to precisely mark start and end of the phrase.
 
+### New Note Timer
+
+The new note timer feature allows mpvacious to automatically detect and update new Anki notes
+without manual intervention. When enabled, mpvacious will periodically check for new notes
+and automatically add media (audio and images) to them if they match your configured note type.
+
+To enable this feature, set `enable_new_note_timer=yes` in your [config file](.github/RELEASE/subs2srs.conf).
+You can adjust how often mpvacious checks for new notes with the `new_note_timer_interval_seconds` setting.
+
+When this feature is enabled, you no longer need to manually press "m" to update notes
+that were created externally (e.g., with GoldenDict or Rikaitan). The process happens automatically
+in the background.
+
 ### My subtitles are not in sync
 
 If subs are badly timed, first, you could try to re-time them.
@@ -421,6 +434,7 @@ You can use any html page as long as it has \<body\>\</body\> in it.
 ### Additional mpv key bindings
 
 I recommend adding these lines to your [input.conf](#key-bindings) for smoother experience.
+
 ```
 # vim-like seeking
 l seek 5
@@ -440,6 +454,8 @@ z add sub-delay -0.05
 X sub-step 1
 x sub-step -1
 ```
+
+For example, check out [my input.conf file](https://github.com/tatsumoto-ren/dotfiles/blob/main/.config/mpv/input.conf).
 
 ## Profiles
 
