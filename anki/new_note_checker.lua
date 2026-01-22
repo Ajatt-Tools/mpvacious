@@ -31,13 +31,25 @@ local function make_anki_new_note_checker()
         return note_id >= h.minutes_ago(accept_notes_made_within_last_minutes)
     end
 
+    local function find_notes_added_today()
+        return self.ankiconnect.find_notes(string.format("added:1 \"note:%s\" \"deck:%s\"", self.config.model_name, self.config.deck_name))
+    end
+
+    local function ignore_all_cards_added_today()
+        -- initially, ignore all existing cards.
+        local note_ids = find_notes_added_today()
+        for _, note_id in ipairs(note_ids) do
+            add_to_ignore_list(note_id)
+        end
+    end
+
     local function check_for_new_notes()
-        -- Find notes added today.
-        local note_ids = self.ankiconnect.find_notes(string.format("added:1 \"note:%s\" \"deck:%s\"", self.config.model_name, self.config.deck_name))
+        local note_ids = find_notes_added_today()
         if h.is_empty(note_ids) then
             msg.info("no new notes added today yet.")
             return
         end
+        local to_update = {}
         for _, note_id in ipairs(note_ids) do
             if not is_note_ignored(note_id) then
                 -- Get note info to check if it matches the user's config
@@ -45,43 +57,53 @@ local function make_anki_new_note_checker()
                 -- Check if the note has the configured sentence field.
                 if not h.is_empty(note_fields) and note_fields[self.config.sentence_field] ~= nil and is_note_recent(note_id) then
                     -- Note matches our criteria, update it (just like pressing Ctrl+M does).
-                    self.update_notes_fn({note_id}, false)
+                    table.insert(to_update, note_id)
                 end
                 -- Add to ignore list regardless of whether we updated it or not.
                 -- This prevents the function from processing the same notes over and over.
                 add_to_ignore_list(note_id)
             end
         end
+        if not h.is_empty(to_update) then
+            self.update_notes_fn(to_update, false)
+        end
+    end
+
+    local function start_timer()
+        if h.is_empty(self.config) then
+            msg.error("attempt to start new note checker before init.")
+            return
+        end
+        if not self.config.enable_new_note_timer then
+            msg.info("new note checker disabled.")
+            return
+        end
+        ignore_all_cards_added_today()
+        -- docs: https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst#mp-functions
+        if self.timer == nil then
+            self.timer = mp.add_periodic_timer(self.config.new_note_timer_interval_seconds, check_for_new_notes)
+        end
+        msg.info("new note checker started.")
+    end
+
+    local function stop_timer()
+        if self.timer ~= nil then
+            self.timer:kill()
+            self.timer = nil
+        end
+        msg.info("new note checker stopped.")
+    end
+
+    local function init(ankiconnect, update_notes_fn, config)
+        self.ankiconnect = ankiconnect
+        self.update_notes_fn = update_notes_fn
+        self.config = config
     end
 
     return {
-        start_timer = function()
-            if h.is_empty(self.config) then
-                msg.error("attempt to start new note checker before init.")
-                return
-            end
-            if not self.config.enable_new_note_timer then
-                msg.info("new note checker disabled.")
-                return
-            end
-            -- docs: https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst#mp-functions
-            if self.timer == nil then
-                self.timer = mp.add_periodic_timer(self.config.new_note_timer_interval_seconds, check_for_new_notes)
-            end
-            msg.info("new note checker started.")
-        end,
-        stop_timer = function()
-            if self.timer ~= nil then
-                self.timer:kill()
-                self.timer = nil
-            end
-            msg.info("new note checker stopped.")
-        end,
-        init = function(ankiconnect, update_notes_fn, config)
-            self.ankiconnect = ankiconnect
-            self.update_notes_fn = update_notes_fn
-            self.config = config
-        end
+        start_timer = start_timer,
+        stop_timer = stop_timer,
+        init = init,
     }
 end
 
