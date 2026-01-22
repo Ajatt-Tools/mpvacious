@@ -1,6 +1,10 @@
 --[[
 Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
+
+The new note timer feature allows mpvacious to automatically detect and update new Anki notes.
+When enabled, mpvacious will periodically check for new notes
+and automatically add media (audio and images) to them if they match your configured note type.
 ]]
 
 local mp = require('mp')
