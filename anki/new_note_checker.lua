@@ -16,6 +16,7 @@ local function make_anki_new_note_checker()
     -- If it matches, update the note and add its note_id to a local ignore list because we don't want to update it again.
 
     local ignore_note_ids = {}
+    local accept_notes_made_within_last_minutes = 2
     local self = {}
 
     local function is_note_ignored(note_id)
@@ -24,6 +25,10 @@ local function make_anki_new_note_checker()
 
     local function add_to_ignore_list(note_id)
         ignore_note_ids[note_id] = true
+    end
+
+    local function is_note_recent(note_id)
+        return note_id >= h.minutes_ago(accept_notes_made_within_last_minutes)
     end
 
     local function check_for_new_notes()
@@ -38,7 +43,7 @@ local function make_anki_new_note_checker()
                 -- Get note info to check if it matches the user's config
                 local note_fields = self.ankiconnect.get_note_fields(note_id)
                 -- Check if the note has the configured sentence field.
-                if not h.is_empty(note_fields) and note_fields[self.config.sentence_field] ~= nil then
+                if not h.is_empty(note_fields) and note_fields[self.config.sentence_field] ~= nil and is_note_recent(note_id) then
                     -- Note matches our criteria, update it (just like pressing Ctrl+M does).
                     self.update_notes_fn({note_id}, false)
                 end
