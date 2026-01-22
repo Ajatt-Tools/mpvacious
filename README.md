@@ -181,7 +181,7 @@ in the config file, the default value will be used.
 mpv doesn't tolerate spaces before and after `=`.
 
 <p align="center">
-  <a href="https://github.com/Ajatt-Tools/mpvacious/blob/master/.github/RELEASE/subs2srs.conf">Example configuration file</a>
+  <a href=".github/RELEASE/subs2srs.conf">Example configuration file</a>
 </p>
 
 If the first field is empty, it will be set contain the string `[empty]`.
