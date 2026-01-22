@@ -23,8 +23,9 @@ function Menu:new(o)
 end
 
 function Menu:with_update(params)
-    return function()
-        local status, error = pcall(h.unpack(params))
+    return function(...)
+        local to_call = h.combine_lists(params, {...})
+        local status, error = pcall(h.unpack(to_call))
         if not status then
             msg['error'](error)
         end
