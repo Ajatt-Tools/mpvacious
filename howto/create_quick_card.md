@@ -3,6 +3,7 @@
 The goal of the quick card creation menu is to streamline a specific flow for media with **well-timed subtitles**:
 
 1) Add a new note to Anki via
+   [GoldenDict](https://tatsumoto.neocities.org/blog/setting-up-goldendict.html),
    [Rikaitan](https://tatsumoto.neocities.org/blog/setting-up-yomichan.html)
    or any other tool that works with AnkiConnect.
 2) Update the note via mpvacious.
