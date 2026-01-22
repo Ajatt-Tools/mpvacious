@@ -4,7 +4,7 @@ This is particularly useful if you want to update a card
 that you created some time ago and has some reviews on it already.
 
 You might run into a situation when you see a better fit, whether it's media
-or new subs that make make it easier to understand.
+or new subs that make it easier to understand.
 
 To update a card from the currently visible subtitle line:
 
