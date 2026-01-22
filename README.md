@@ -365,7 +365,7 @@ to precisely mark start and end of the phrase.
 
 ### New Note Timer
 
-The new note timer feature allows mpvacious to automatically detect and update new Anki notes
+The **new note timer** feature allows mpvacious to automatically detect and update new Anki notes
 without manual intervention. When enabled, mpvacious will periodically check for new notes
 and automatically add media (audio and images) to them if they match your configured note type.
 
