@@ -29,7 +29,10 @@ local function make_anki_new_note_checker()
     local function check_for_new_notes()
         -- Find notes added today.
         local note_ids = self.ankiconnect.find_notes(string.format("added:1 \"note:%s\" \"deck:%s\"", self.config.model_name, self.config.deck_name))
-
+        if h.is_empty(note_ids) then
+            msg.info("no new notes added today yet.")
+            return
+        end
         for _, note_id in ipairs(note_ids) do
             if not is_note_ignored(note_id) then
                 -- Get note info to check if it matches the user's config
