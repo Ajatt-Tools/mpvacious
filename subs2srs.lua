@@ -537,6 +537,7 @@ local function update_notes(note_ids, overwrite)
 end
 
 local function update_last_note(overwrite)
+    local accept_notes_made_within_last_minutes = 10
     maybe_reload_config()
 
     local n_cards = quick_creation_opts:get_cards()
@@ -545,7 +546,7 @@ local function update_last_note(overwrite)
     n_cards = #last_note_ids
 
     --first element is the earliest
-    if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(10) then
+    if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(accept_notes_made_within_last_minutes) then
         return h.notify("Couldn't find the target note.", "warn", 2)
     end
 
