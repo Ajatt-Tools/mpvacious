@@ -1,5 +1,5 @@
 --[[
-Copyright: Ren Tatsumoto and contributors
+Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
 AnkiConnect requests
@@ -8,6 +8,7 @@ AnkiConnect requests
 local utils = require('mp.utils')
 local msg = require('mp.msg')
 local h = require('helpers')
+local platform = require('platform.init')
 local self = {}
 
 self.execute = function(request, completion_fn)
@@ -22,7 +23,7 @@ self.execute = function(request, completion_fn)
     if error ~= nil or request_json == "null" then
         return completion_fn and completion_fn()
     else
-        return self.platform.curl_request(self.config.ankiconnect_url, request_json, completion_fn)
+        return platform.curl_request(self.config.ankiconnect_url, request_json, completion_fn)
     end
 end
 
@@ -255,12 +256,9 @@ self.append_media = function(note_id, fields, tag, on_finish_fn)
     self.execute(args, on_finish_wrap)
 end
 
-self.init = function(config, platform)
-    self.config = config
-    self.platform = platform
-    if not self.config.init_done then
-        error("config not loaded")
-    end
+self.init = function(cfg_mgr)
+    cfg_mgr.fail_if_not_ready()
+    self.config = cfg_mgr.config()
 end
 
 return self

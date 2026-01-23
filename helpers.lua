@@ -1,5 +1,5 @@
 --[[
-Copyright: Ren Tatsumoto and contributors
+Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
 Various helper functions.
@@ -342,6 +342,17 @@ this.deep_copy = function(obj, seen)
     return setmetatable(res, getmetatable(obj))
 end
 
+this.shallow_copy = function(from, to)
+    if type(from) ~= 'table' then
+        return from
+    end
+    to = to or {}
+    for key, value in pairs(from) do
+        to[key] = value
+    end
+    return to
+end
+
 this.maybe_require = function(module_name)
     -- ~/.config/mpv/scripts/ and the mpvacious dir
     local parent, child = utils.split_path(mp.get_script_directory())
@@ -416,6 +427,11 @@ this.run_tests = function()
     end
 
     this.assert_equals(this.combine_lists({ 1, 2 }, { 3 }, {}, { 4, 5 }), { 1, 2, 3, 4, 5 })
+
+    local t1 = {1,2,3}
+    local t2 = {3,4,5}
+    this.shallow_copy(t1, t2)
+    this.assert_equals(t2, t1)
 end
 
 return this

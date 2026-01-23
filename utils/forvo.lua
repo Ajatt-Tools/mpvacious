@@ -1,5 +1,5 @@
 --[[
-Copyright: Ren Tatsumoto and contributors
+Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
 Utils for downloading pronunciations from Forvo
@@ -9,6 +9,7 @@ local utils = require('mp.utils')
 local msg = require('mp.msg')
 local h = require('helpers')
 local base64 = require('utils.base64')
+local platform = require('platform.init')
 local self = {
     output_dir_path = nil,
 }
@@ -73,7 +74,7 @@ local function get_pronunciation_url(word)
 end
 
 local function make_forvo_filename(word)
-    return string.format('forvo_%s%s', self.platform.windows and os.time() or word, self.config.audio_extension)
+    return string.format('forvo_%s%s', platform.windows and os.time() or word, self.config.audio_extension)
 end
 
 local function get_forvo_pronunciation(word)
@@ -85,7 +86,7 @@ local function get_forvo_pronunciation(word)
     end
 
     local filename = make_forvo_filename(word)
-    local tmp_filepath = utils.join_path(self.platform.tmp_dir(), filename)
+    local tmp_filepath = utils.join_path(platform.tmp_dir(), filename)
 
     local result
     if curl_save(audio_url, tmp_filepath) and reencode_and_store(tmp_filepath, filename) then
@@ -133,12 +134,9 @@ local set_output_dir = function(dir_path)
     self.output_dir_path = dir_path
 end
 
-local function init(config, platform)
-    self.config = config
-    self.platform = platform
-    if not self.config.init_done then
-        error("config not loaded")
-    end
+local function init(cfg_mgr)
+    cfg_mgr.fail_if_not_ready()
+    self.config = cfg_mgr.config()
 end
 
 return {

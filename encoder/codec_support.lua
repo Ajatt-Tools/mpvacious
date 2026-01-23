@@ -1,5 +1,5 @@
 --[[
-Copyright: Ajatt-Tools and contributors
+Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
 Check what codecs are supported by mpv.

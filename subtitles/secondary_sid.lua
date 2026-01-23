@@ -1,5 +1,5 @@
 --[[
-Copyright: Ren Tatsumoto and contributors
+Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
 This module automatically finds and sets secondary sid if it's not already set.
@@ -91,15 +91,13 @@ local function update_visibility()
     mp.set_property_bool('secondary-sub-visibility', self.visibility == 'always')
 end
 
-local function init(config)
-    self.config = config
-    self.visibility = config.secondary_sub_visibility
-    if not self.config.init_done then
-        error("config not loaded")
-    end
+local function init(cfg_mgr)
+    cfg_mgr.fail_if_not_ready()
+    self.config = cfg_mgr.config()
+    self.visibility = self.config.secondary_sub_visibility
     self.accepted_languages = get_accepted_sub_langs()
     mp.register_event('file-loaded', on_file_loaded)
-    if config.secondary_sub_area > 0 then
+    if self.config.secondary_sub_area > 0 then
         mp.observe_property('mouse-pos', 'native', on_mouse_move)
     end
     update_visibility()

@@ -192,7 +192,14 @@ local function make_exporter()
         return string.format("%s%s%s", old_text, separator, new_text)
     end
 
+    local function fail_if_not_ready()
+        if h.is_empty(self.config) then
+            error("config not assigned")
+        end
+    end
+
     local function join_fields(new_data, stored_data)
+        fail_if_not_ready()
         for _, field in pairs { self.config.audio_field, self.config.image_field, self.config.miscinfo_field, self.config.sentence_field, self.config.secondary_field } do
             if not h.is_empty(field) then
                 new_data[field] = join_field_content(h.table_get(new_data, field, ""), h.table_get(stored_data, field, ""))
@@ -348,16 +355,14 @@ local function make_exporter()
     end
 
     local function init(ankiconnect, quick_creation_opts, subs_observer, encoder, forvo, cfg_mgr)
-        self.config = cfg_mgr.get_config()
+        cfg_mgr.fail_if_not_ready()
+        self.config = cfg_mgr.config()
         self.cfg_mgr = cfg_mgr
         self.ankiconnect = ankiconnect
         self.quick_creation_opts = quick_creation_opts
         self.subs_observer = subs_observer
         self.encoder = encoder
         self.forvo = forvo
-        if not self.config.init_done then
-            error("config not loaded")
-        end
     end
 
     return {

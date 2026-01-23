@@ -1,5 +1,5 @@
 --[[
-Copyright: Ren Tatsumoto and contributors
+Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
 Encoder creates audio clips and snapshots, both animated and static.
@@ -303,7 +303,7 @@ ffmpeg.make_audio_args = function(
         source_path, output_path, start_timestamp, end_timestamp, args_consumer
 )
     local audio_track = h.get_active_track('audio')
-    local audio_track_id = audio_track['ff-index']
+    local audio_track_id = audio_track and audio_track['ff-index'] or 'a'
 
     if audio_track and audio_track.external == true then
         source_path = audio_track['external-filename']
@@ -679,13 +679,11 @@ local toggle_animation = function()
     h.notify("Animation " .. (self.config.animated_snapshot_enabled and "enabled" or "disabled"), "info", 2)
 end
 
-local init = function(config)
+local init = function(cfg_mgr)
     -- Sets the module to its preconfigured status
-    self.config = config
-    self.encoder = config.use_ffmpeg and ffmpeg or mpv
-    if not self.config.init_done then
-        error("config not loaded")
-    end
+    cfg_mgr.fail_if_not_ready()
+    self.config = cfg_mgr.config()
+    self.encoder = self.config.use_ffmpeg and ffmpeg or mpv
 end
 
 local set_output_dir = function(dir_path)

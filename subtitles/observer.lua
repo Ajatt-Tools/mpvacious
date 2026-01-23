@@ -1,5 +1,5 @@
 --[[
-Copyright: Ren Tatsumoto and contributors
+Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
 Observer waits for subtitles to appear on the screen and adds them to a list.
@@ -353,13 +353,10 @@ self.next_autoclip_method = function()
     notify_autocopy()
 end
 
-self.init = function(menu, config)
+self.init = function(menu, cfg_mgr)
+    cfg_mgr.fail_if_not_ready()
     self.menu = menu
-    self.config = config
-
-    if not self.config.init_done then
-        error("config not loaded")
-    end
+    self.config = cfg_mgr.config()
 
     -- The autoclip state is copied as a local value
     -- to prevent it from being reset when the user reloads the config file.

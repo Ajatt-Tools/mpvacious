@@ -47,6 +47,12 @@ local function make_anki_new_note_checker()
         end
     end
 
+    local function has_no_media(note_fields)
+        -- Mpvacious will try to update every new note, including the ones added by Mpvacious itself.
+        -- To avoid updating notes added by mpvacious, check if the note already has media.
+        return h.is_empty(note_fields[self.config.audio_field]) and h.is_empty(note_fields[self.config.image_field])
+    end
+
     local function check_for_new_notes()
         local note_ids = find_notes_added_today()
         if h.is_empty(note_ids) then
@@ -59,7 +65,7 @@ local function make_anki_new_note_checker()
                 -- Get note info to check if it matches the user's config
                 local note_fields = self.ankiconnect.get_note_fields(note_id)
                 -- Check if the note has the configured sentence field.
-                if not h.is_empty(note_fields) and note_fields[self.config.sentence_field] ~= nil and is_note_recent(note_id) then
+                if not h.is_empty(note_fields) and note_fields[self.config.sentence_field] ~= nil and is_note_recent(note_id) and has_no_media(note_fields) then
                     -- Note matches our criteria, update it (just like pressing Ctrl+M does).
                     table.insert(to_update, note_id)
                 end
@@ -98,13 +104,11 @@ local function make_anki_new_note_checker()
         msg.info("new note checker stopped.")
     end
 
-    local function init(ankiconnect, update_notes_fn, config)
+    local function init(ankiconnect, update_notes_fn, cfg_mgr)
+        cfg_mgr.fail_if_not_ready()
         self.ankiconnect = ankiconnect
         self.update_notes_fn = update_notes_fn
-        self.config = config
-        if not self.config.init_done then
-            error("config not loaded")
-        end
+        self.config = cfg_mgr.config()
     end
 
     return {

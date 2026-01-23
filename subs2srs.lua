@@ -1,5 +1,5 @@
 --[[
-Copyright (C) 2020-2022 Ren Tatsumoto and contributors
+Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 
 local mp = require('mp')
 local OSD = require('osd_styler')
-local cfg_mgr = require('cfg_mgr')
+local make_cfg_mgr = require('config.cfg_mgr')
 local encoder = require('encoder.encoder')
 local h = require('helpers')
 local Menu = require('menu')
@@ -79,139 +79,19 @@ local quick_creation_opts = {
         self._n_cards = 1
     end
 }
-------------------------------------------------------------
--- default config
-
-local config = {
-    -- The user should not modify anything below.
-
-    -- Common
-    nuke_spaces = false, -- remove all spaces from the primary subtitles on exported anki cards and when copying text to clipboard.
-    clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
-    use_ffmpeg = false, -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
-    reload_config_before_card_creation = true, -- for convenience, read config file from disk before a card is made.
-    card_overwrite_safeguard = 1, -- a safeguard for accidentally overwriting more cards than intended.
-
-    -- Clipboard and external communication
-    autoclip = false, -- enable copying subs to the clipboard when mpv starts
-    autoclip_method = "clipboard", -- one of the methods
-    autoclip_custom_args = "", -- command to run when autoclip is triggered and autoclip_method and set to "custom_command".
-
-    -- Secondary subtitle
-    secondary_sub_auto_load = true, -- Automatically load secondary subtitle track when a video file is opened.
-    secondary_sub_lang = 'eng,en,rus,ru,jp,jpn,ja', -- Language of secondary subs that should be automatically loaded.
-    secondary_sub_area = 0.15, -- Hover area. Fraction of the window from the top.
-    secondary_sub_visibility = 'auto', -- One of: 'auto', 'never', 'always'. Controls secondary_sid visibility. Ctrl+V to cycle.
-
-    -- Snapshots
-    snapshot_format = "avif", -- avif, webp or jpg
-    snapshot_quality = 15, -- from 0=lowest to 100=highest
-    snapshot_width = cfg_mgr.preserve_aspect_ratio, -- a positive integer or -2 for auto
-    snapshot_height = cfg_mgr.default_height_px, -- same
-    screenshot = false, -- create a screenshot instead of a snapshot; see example config.
-
-    -- Animations
-    animated_snapshot_enabled = false, -- if enabled captures the selected segment of the video, instead of just a frame
-    animated_snapshot_format = "avif", -- avif or webp
-    animated_snapshot_fps = 10, -- positive integer between 0 and 30 (30 included)
-    animated_snapshot_width = cfg_mgr.preserve_aspect_ratio, -- positive integer or -2 to scale it maintaining ratio (height must not be -2 in that case)
-    animated_snapshot_height = cfg_mgr.default_height_px, -- positive integer or -2 to scale it maintaining ratio (width must not be -2 in that case)
-    animated_snapshot_quality = 5, -- positive integer between 0 and 100 (100 included)
-
-    -- Audio clips
-    audio_format = "opus", -- opus or mp3
-    opus_container = "ogg", -- ogg, opus, m4a, webm or caf
-    audio_bitrate = "18k", -- from 16k to 32k
-    audio_padding = 0.12, -- Set a pad to the dialog timings. 0.5 = audio is padded by .5 seconds. 0 = disable.
-    tie_volumes = false, -- if set to true, the volume of the outputted audio file depends on the volume of the player at the time of export
-    preview_audio = false, -- play created audio clips in background.
-
-    -- Menu
-    menu_font_name = "Noto Sans CJK JP",
-    menu_font_size = 25,
-    show_selected_text = true,
-
-    -- Make sure to remove loudnorm from ffmpeg_audio_args and mpv_audio_args before enabling.
-    loudnorm = false,
-    loudnorm_target = -16,
-    loudnorm_range = 11,
-    loudnorm_peak = -1.5,
-
-    -- Custom encoding args
-    -- Defaults are for backward compatibility, in case someone
-    -- updates mpvacious without updating their config.
-    -- Better to remove loudnorm from custom args and enable two-pass loudnorm.
-    -- Enabling loudnorm both through the separate switch and through custom args
-    -- can lead to unpredictable results.
-    ffmpeg_audio_args = '-af loudnorm=I=-16:TP=-1.5:LRA=11:dual_mono=true',
-    mpv_audio_args = '--af-append=loudnorm=I=-16:TP=-1.5:LRA=11:dual_mono=true',
-
-    -- Anki
-    create_deck = false, -- automatically create a deck for new cards
-    allow_duplicates = false, -- allow making notes with the same sentence field
-    deck_name = "Learning", -- name of the deck for new cards
-    model_name = "Japanese sentences", -- Tools -> Manage note types
-    sentence_field = "SentKanji",
-    secondary_field = "SentEng",
-    audio_field = "SentAudio",
-    audio_template = '[sound:%s]',
-    image_field = "Image",
-    image_template = '<img alt="snapshot" src="%s">',
-    append_media = true, -- True to append video media after existing data, false to insert media before
-    disable_gui_browse = false, -- Lets you disable anki browser manipulation by mpvacious.
-    ankiconnect_url = '127.0.0.1:8765',
-    ankiconnect_api_key = '',
-
-    -- Note tagging
-    -- The tag(s) added to new notes. Spaces separate multiple tags.
-    -- Change to "" to disable tagging completely.
-    -- The following substitutions are supported:
-    --   %n - the name of the video
-    --   %t - timestamp
-    --   %d - episode number (if none found, returns nothing)
-    --   %e - SUBS2SRS_TAGS environment variable
-    --   %f - full file path of the video
-    note_tag = "subs2srs %n",
-    tag_nuke_brackets = true, -- delete all text inside brackets before substituting filename into tag
-    tag_nuke_parentheses = false, -- delete all text inside parentheses before substituting filename into tag
-    tag_del_episode_num = true, -- delete the episode number if found
-    tag_del_after_episode_num = true, -- delete everything after the found episode number (does nothing if tag_del_episode_num is disabled)
-    tag_filename_lowercase = false, -- convert filename to lowercase for tagging.
-
-    -- Misc info
-    miscinfo_enable = true,
-    miscinfo_field = "Notes", -- misc notes and source information field
-    miscinfo_format = "%n EP%d (%t)", -- format string to use for the miscinfo_field, accepts note_tag-style format strings
-
-    -- Forvo support
-    use_forvo = "yes", -- 'yes', 'no', 'always'
-    vocab_field = "VocabKanji", -- target word field
-    vocab_audio_field = "VocabAudio", -- target word audio
-
-    -- Custom Sub Filter
-    custom_sub_filter_enabled = false, -- True to enable custom sub preprocessing be default
-    custom_sub_filter_notification = "Custom Sub Filter", -- Notification prefix for toggle
-    use_custom_trim = false, -- True to use a custom trim instead of the built in one
-
-    -- New note timer
-    enable_new_note_timer = true, -- Start the new note checker when mpv starts.
-    new_note_timer_interval_seconds = 2, -- Check for new notes every N seconds.
-}
-
--- Defines config profiles
--- Each name references a file in ~/.config/mpv/script-opts/*.conf
--- Profiles themselves are defined in ~/.config/mpv/script-opts/subs2srs_profiles.conf
-local profiles = {
-    profiles = "subs2srs,subs2srs_english",
-    active = "subs2srs",
-}
 
 ------------------------------------------------------------
 -- utility functions
+local new_note_checker = make_new_note_checker.new()
+local note_exporter = make_note_exporter.new()
+local cfg_mgr = make_cfg_mgr.new()
 
 local function _(params)
     return function()
-        return pcall(h.unpack(params))
+        local status, err = pcall(h.unpack(params))
+        if not status then
+            h.notify(err, "error", 5)
+        end
     end
 end
 
@@ -222,19 +102,16 @@ local function escape_for_osd(str)
 end
 
 local function ensure_deck()
-    if config.create_deck == true then
-        ankiconnect.create_deck(config.deck_name)
+    if cfg_mgr.config().create_deck == true then
+        ankiconnect.create_deck(cfg_mgr.config().deck_name)
     end
 end
 
 local function load_next_profile()
     cfg_mgr.next_profile()
     ensure_deck()
-    h.notify("Loaded profile " .. profiles.active)
+    h.notify("Loaded profile " .. cfg_mgr.profiles().active)
 end
-
-local new_note_checker = make_new_note_checker.new()
-local note_exporter = make_note_exporter.new()
 
 ------------------------------------------------------------
 -- main menu
@@ -274,8 +151,8 @@ function menu:print_header(osd)
     osd:item('Timings: '):text(h.human_readable_time(subs_observer.get_timing('start')))
     osd:item(' to '):text(h.human_readable_time(subs_observer.get_timing('end'))):newline()
     osd:item('Clipboard autocopy: '):text(subs_observer.autocopy_status_str()):newline()
-    osd:item('Active profile: '):text(profiles.active):newline()
-    osd:item('Deck: '):text(config.deck_name):newline()
+    osd:item('Active profile: '):text(cfg_mgr.profiles().active):newline()
+    osd:item('Deck: '):text(cfg_mgr.config().deck_name):newline()
     osd:item('# cards: '):text(quick_creation_opts:get_cards()):newline()
 end
 
@@ -315,12 +192,12 @@ function menu:print_bindings(osd)
 end
 
 function menu:warn_formats(osd)
-    if config.use_ffmpeg then
+    if cfg_mgr.config().use_ffmpeg then
         return
     end
     for type, codecs in pairs(codec_support) do
         for codec, supported in pairs(codecs) do
-            if not supported and config[type .. '_codec'] == codec then
+            if not supported and cfg_mgr.config()[type .. '_codec'] == codec then
                 osd:red('warning: '):newline()
                 osd:tab():text(string.format("your version of mpv does not support %s.", codec)):newline()
                 osd:tab():text(string.format("mpvacious won't be able to create %s files.", type)):newline()
@@ -336,7 +213,7 @@ function menu:warn_clipboard(osd)
 end
 
 function menu:print_legend(osd)
-    osd:new_layer():size(config.menu_font_size):font(config.menu_font_name):align(4)
+    osd:new_layer():size(cfg_mgr.config().menu_font_size):font(cfg_mgr.config().menu_font_name):align(4)
     self:print_header(osd)
     self:print_bindings(osd)
     self:warn_formats(osd)
@@ -344,13 +221,13 @@ function menu:print_legend(osd)
 end
 
 function menu:print_selection(osd)
-    if subs_observer.is_appending() and config.show_selected_text then
-        osd:new_layer():size(config.menu_font_size):font(config.menu_font_name):align(6)
+    if subs_observer.is_appending() and cfg_mgr.config().show_selected_text then
+        osd:new_layer():size(cfg_mgr.config().menu_font_size):font(cfg_mgr.config().menu_font_name):align(6)
         osd:submenu("Primary text"):newline()
         for _, s in ipairs(subs_observer.recorded_subs()) do
             osd:text(escape_for_osd(s['text'])):newline()
         end
-        if not h.is_empty(config.secondary_field) then
+        if not h.is_empty(cfg_mgr.config().secondary_field) then
             -- If the user wants to add secondary subs to Anki,
             -- it's okay to print them on the screen.
             osd:submenu("Secondary text"):newline()
@@ -403,7 +280,7 @@ function quick_menu:print_header(osd)
     osd:item('# lines: '):text('Enter 1-9'):newline()
 end
 function quick_menu:print_legend(osd)
-    osd:new_layer():size(config.menu_font_size):font(config.menu_font_name):align(4)
+    osd:new_layer():size(cfg_mgr.config().menu_font_size):font(cfg_mgr.config().menu_font_name):align(4)
     self:print_header(osd)
     menu:warn_formats(osd)
 end
@@ -428,7 +305,7 @@ function quick_menu_card:print_header(osd)
     osd:item('# cards: '):text('Enter 1-9'):newline()
 end
 function quick_menu_card:print_legend(osd)
-    osd:new_layer():size(config.menu_font_size):font(config.menu_font_name):align(4)
+    osd:new_layer():size(cfg_mgr.config().menu_font_size):font(cfg_mgr.config().menu_font_name):align(4)
     self:print_header(osd)
     menu:warn_formats(osd)
 end
@@ -469,6 +346,21 @@ local function run_tests()
     h.assert_equals(result, expected)
 end
 
+local function pcall_tests()
+    if os.getenv("MPVACIOUS_TEST") == "TRUE" then
+        -- at this point, other tests in submodules should have been finished.
+        mp.msg.warn("RUNNING TESTS")
+        local success, err = pcall(run_tests)
+        if not success then
+            mp.msg.error("TESTS FAILED")
+            mp.msg.error(err)
+        else
+            mp.msg.warn("TESTS PASSED")
+        end
+        mp.commandv("quit")
+    end
+end
+
 ------------------------------------------------------------
 -- main
 
@@ -481,23 +373,16 @@ local main = (function()
         else
             main_executed = true
         end
-        if os.getenv("MPVACIOUS_TEST") == "TRUE" then
-            -- at this point, other tests in submodules should have been finished.
-            mp.msg.warn("RUNNING TESTS")
-            run_tests()
-            mp.msg.warn("TESTS PASSED")
-            mp.commandv("quit")
-        end
-
-        cfg_mgr.init(config, profiles)
-        ankiconnect.init(config, platform)
-        forvo.init(config, platform)
-        encoder.init(config)
-        secondary_sid.init(config)
+        cfg_mgr.init()
+        ankiconnect.init(cfg_mgr)
+        forvo.init(cfg_mgr)
+        encoder.init(cfg_mgr)
+        secondary_sid.init(cfg_mgr)
         ensure_deck()
-        subs_observer.init(menu, config)
+        subs_observer.init(menu, cfg_mgr)
         note_exporter.init(ankiconnect, quick_creation_opts, subs_observer, encoder, forvo, cfg_mgr)
-        new_note_checker.init(ankiconnect, menu:with_update { note_exporter.update_notes }, config)
+        new_note_checker.init(ankiconnect, menu:with_update { note_exporter.update_notes }, cfg_mgr)
+        pcall_tests()
 
         -- Key bindings
         mp.add_forced_key_binding("Ctrl+c", "mpvacious-copy-sub-to-clipboard", subs_observer.copy_current_primary_to_clipboard)
