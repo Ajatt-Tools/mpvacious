@@ -19,6 +19,10 @@ end
 
 local function play_till_sub_end()
     local sub = Subtitle:now()
+    if sub == nil then
+        h.notify("No subtitle is currently playing", "error", 5)
+        return
+    end
     mp.commandv('seek', sub['start'], 'absolute')
     mp.set_property("pause", "no")
     stop_at_the_end(sub)
