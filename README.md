@@ -1,6 +1,4 @@
-<p align="center">
-<img src="https://user-images.githubusercontent.com/69171671/117440218-4ae26800-af23-11eb-87b4-1d9026fc953f.png"/>
-</p>
+https://github.com/user-attachments/assets/466d1aa7-c7d1-4ea2-a296-0835d3700962
 
 # mpvacious
 
