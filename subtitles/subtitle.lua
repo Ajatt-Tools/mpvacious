@@ -50,7 +50,11 @@ Subtitle.__eq = function(lhs, rhs)
 end
 
 Subtitle.__lt = function(lhs, rhs)
-    return lhs['start'] < rhs['start']
+    if lhs['start'] == rhs['start'] then
+        return lhs['end'] < rhs['end']
+    else
+        return lhs['start'] < rhs['start']
+    end
 end
 
 return Subtitle
