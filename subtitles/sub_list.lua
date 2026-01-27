@@ -10,14 +10,6 @@ local h = require('helpers')
 local new_sub_list = function()
     local subs_list = {}
 
-    local find_i = function(sub)
-        for i, v in ipairs(subs_list) do
-            if sub < v then
-                return i
-            end
-        end
-        return #subs_list + 1
-    end
     local get_time = function(position)
         local i = position == 'start' and 1 or #subs_list
         return subs_list[i][position]
@@ -44,11 +36,16 @@ local new_sub_list = function()
         return table.concat(speech, ' '), end_sub
     end
     local insert = function(sub)
-        if sub ~= nil and not h.contains(subs_list, sub) then
-            table.insert(subs_list, find_i(sub), sub)
-            return true
+        if sub == nil then
+            return false
         end
-        return false
+        local lookup_window_size = 25
+        local n_latest_subs = {h.unpack(subs_list, math.max(#subs_list - lookup_window_size, 1), #subs_list)}
+        if h.contains(n_latest_subs, sub) then
+            return false
+        end
+        table.insert(subs_list, h.find_insertion_point(n_latest_subs, sub), sub)
+        return true
     end
     local get_subs_list = function()
         local copy = {}

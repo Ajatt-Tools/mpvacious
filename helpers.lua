@@ -403,6 +403,20 @@ this.combine_lists = function(...)
     return output
 end
 
+this.find_insertion_point = function(list, new)
+    local low = 1
+    local high = #list + 1
+    while low < high do
+        local mid = math.floor((low + high) / 2)
+        if list[mid] > new then
+            high = mid
+        else
+            low = mid + 1
+        end
+    end
+    return low
+end
+
 this.run_tests = function()
     this.assert_equals(this.is_substr("abcd", "bc"), true)
     this.assert_equals(this.is_substr("abcd", "xyz"), false)
@@ -435,6 +449,32 @@ this.run_tests = function()
     local t2 = {3,4,5}
     this.shallow_copy(t1, t2)
     this.assert_equals(t2, t1)
+
+    local function find_insertion_point_linear(list, new)
+        for idx, value in ipairs(list) do
+            if new < value then
+                return idx
+            end
+        end
+        return #list + 1
+    end
+
+    local insertion_cases = {
+        {{1,2,4,5}, 3, 3},
+        {{1,2,4,5}, 99, 5},
+        {{1,2,4,5}, 0, 1},
+        {{1,2,4,5}, 2, 3},
+        {{1,2,4,5}, 5, 5},
+        {{}, 5, 1},
+        {{2,2,2,2,2,2}, 5, 7},
+    }
+    for _, case in ipairs(insertion_cases) do
+        local list, new_value, expected = this.unpack(case)
+        local r1 = find_insertion_point_linear(list, new_value)
+        local r2 = this.find_insertion_point(list, new_value)
+        this.assert_equals(r1, r2)
+        this.assert_equals(r2, expected)
+    end
 end
 
 return this
