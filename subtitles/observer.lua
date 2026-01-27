@@ -11,8 +11,8 @@ local sub_list = require('subtitles.sub_list')
 local Subtitle = require('subtitles.subtitle')
 local mp = require('mp')
 local platform = require('platform.init')
-local switch = require('utils.switch')
-local custom_sub_filter = h.maybe_require('subs2srs_sub_filter')
+local new_autoclip_method_selector = require('subtitles.autoclip_methods')
+local custom_sub_filter = pcall(h.maybe_require, 'subs2srs_sub_filter')
 
 local self = {}
 
@@ -21,18 +21,71 @@ local secondary_dialogs = sub_list.new()
 local all_dialogs = sub_list.new()
 local all_secondary_dialogs = sub_list.new()
 local user_timings = timings.new()
+local autoclip_method = new_autoclip_method_selector.new()
 
 local append_dialogue = false
 local autoclip_enabled = false
-local autoclip_method = {}
 
 
 ------------------------------------------------------------
 -- private
 
+local function on_external_finish(success, result, error)
+    if success ~= true or error ~= nil then
+        h.notify("Command failed: " .. table.concat(result))
+    end
+end
+
+local function external_command_args(cur_lines)
+    local args = {}
+    for arg in string.gmatch(self.config.autoclip_custom_args, "%S+") do
+        if arg == '%MPV_PRIMARY%' then
+            arg = cur_lines.primary
+        elseif arg == '%MPV_SECONDARY%' then
+            arg = cur_lines.secondary
+        end
+        table.insert(args, arg)
+    end
+    return args
+end
+
+autoclip_method.register_handler('clipboard', function(current_subtitle_lines)
+    self.copy_to_clipboard("autocopy action", current_subtitle_lines.primary)
+end)
+
+autoclip_method.register_handler('goldendict', function(current_subtitle_lines)
+    h.subprocess_detached({ 'goldendict', current_subtitle_lines.primary }, on_external_finish)
+end)
+
+autoclip_method.register_handler('custom_command', function(current_subtitle_lines)
+    if not h.is_empty(self.config.autoclip_custom_args) then
+        h.subprocess(external_command_args(current_subtitle_lines), on_external_finish)
+    end
+end)
+
+local function current_subtitle_lines()
+    local primary = dialogs.get_text()
+
+    if h.is_empty(primary) then
+        primary = mp.get_property("sub-text")
+    end
+
+    if h.is_empty(primary) then
+        return nil
+    end
+
+    local secondary = secondary_dialogs.get_text()
+
+    if h.is_empty(secondary) then
+        secondary = mp.get_property("secondary-sub-text") or ""
+    end
+
+    return { primary = self.clipboard_prepare(primary), secondary = secondary }
+end
+
 local function copy_primary_sub()
     if autoclip_enabled then
-        autoclip_method.call()
+        autoclip_method.call(current_subtitle_lines())
     end
 end
 
@@ -67,90 +120,8 @@ local function handle_secondary_sub()
     append_secondary_sub()
 end
 
-local function on_external_finish(success, result, error)
-    if success ~= true or error ~= nil then
-        h.notify("Command failed: " .. table.concat(result))
-    end
-end
-
-local function external_command_args(cur_lines)
-    local args = {}
-    for arg in string.gmatch(self.config.autoclip_custom_args, "%S+") do
-        if arg == '%MPV_PRIMARY%' then
-            arg = cur_lines.primary
-        elseif arg == '%MPV_SECONDARY%' then
-            arg = cur_lines.secondary
-        end
-        table.insert(args, arg)
-    end
-    return args
-end
-
-local function call_external_command(cur_lines)
-    if not h.is_empty(self.config.autoclip_custom_args) then
-        h.subprocess(external_command_args(cur_lines), on_external_finish)
-    end
-end
-
-local function current_subtitle_lines()
-    local primary = dialogs.get_text()
-
-    if h.is_empty(primary) then
-        primary = mp.get_property("sub-text")
-    end
-
-    if h.is_empty(primary) then
-        return nil
-    end
-
-    local secondary = secondary_dialogs.get_text()
-
-    if h.is_empty(secondary) then
-        secondary = mp.get_property("secondary-sub-text") or ""
-    end
-
-    return { primary = self.clipboard_prepare(primary), secondary = secondary }
-end
-
-local function ensure_goldendict_running()
-    --- Ensure that goldendict is running and is disowned by mpv.
-    --- Avoid goldendict getting killed when mpv exits.
-    if autoclip_enabled and self.autocopy_current_method() == "goldendict" then
-        os.execute("setsid -f goldendict")
-    end
-end
-
-------------------------------------------------------------
--- autoclip methods
-
-autoclip_method = (function()
-    local methods = { 'clipboard', 'goldendict', 'custom_command', }
-    local current_method = switch.new(methods)
-
-    local function call()
-        local cur_lines = current_subtitle_lines()
-        if h.is_empty(cur_lines) then
-            return
-        end
-
-        if current_method.get() == 'clipboard' then
-            self.copy_to_clipboard("autocopy action", cur_lines.primary)
-        elseif current_method.get() == 'goldendict' then
-            h.subprocess_detached({ 'goldendict', cur_lines.primary }, on_external_finish)
-        elseif current_method.get() == 'custom_command' then
-            call_external_command(cur_lines)
-        end
-    end
-
-    return {
-        call = call,
-        get = current_method.get,
-        bump = current_method.bump,
-        set = current_method.set,
-    }
-end)()
-
 local function copy_subtitle(subtitle_id)
+    -- subtitle_id = "secondary-sub-text" or "sub-text"
     self.copy_to_clipboard("copy-on-demand", mp.get_property(subtitle_id))
 end
 
