@@ -94,4 +94,8 @@ function OSD:red(text)
     return self:color('ff0000'):bold(text):color('ffffff')
 end
 
+function OSD:blue(text)
+    return self:color('0693e3'):bold(text):color('ffffff')
+end
+
 return OSD
