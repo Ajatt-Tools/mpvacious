@@ -505,10 +505,4 @@ these links may help.
 
 * https://mpv.io/manual/master/#lua-scripting
 * https://github.com/mpv-player/mpv/blob/master/player/lua/defaults.lua
-* https://github.com/SenneH/mpv2anki
-* https://github.com/kelciour/mpv-scripts/blob/master/subs2srs.lua
-* https://pastebin.com/M2gBksHT
-* https://pastebin.com/NBudhMUk
-* https://pastebin.com/W5YV1A9q
-* https://github.com/ayuryshev/subs2srs
 * https://github.com/erjiang/subs2srs
