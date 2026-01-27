@@ -48,8 +48,8 @@ this.get_last_n_added_notes = function(note_ids, n)
 end
 
 this.contains = function(table, element)
-    for _, value in pairs(table) do
-        if value == element then
+    for _, contained in pairs(table) do
+        if element == contained then
             return true
         end
     end
