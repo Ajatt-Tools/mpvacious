@@ -12,11 +12,11 @@ local this = {}
 
 this.unpack = unpack and unpack or table.unpack
 
-this.remove_all_spaces = function(str)
+function this.remove_all_spaces(str)
     return str:gsub('%s*', '')
 end
 
-this.as_callback = function(fn, ...)
+function this.as_callback(fn, ...)
     --- Convenience utility.
     local args = { ... }
     return function()
@@ -24,7 +24,7 @@ this.as_callback = function(fn, ...)
     end
 end
 
-this.table_get = function(table, key, default)
+function this.table_get(table, key, default)
     if table[key] == nil then
         return default or 'nil'
     else
@@ -32,7 +32,7 @@ this.table_get = function(table, key, default)
     end
 end
 
-this.max_num = function(table)
+function this.max_num(table)
     local max = table[1]
     for _, value in ipairs(table) do
         if value > max then
@@ -42,12 +42,12 @@ this.max_num = function(table)
     return max
 end
 
-this.get_last_n_added_notes = function(note_ids, n)
+function this.get_last_n_added_notes(note_ids, n)
     table.sort(note_ids)
     return { this.unpack(note_ids, math.max(#note_ids - n + 1, 1), #note_ids) }
 end
 
-this.contains = function(table, element)
+function this.contains(table, element)
     for _, contained in pairs(table) do
         if element == contained then
             return true
@@ -56,19 +56,19 @@ this.contains = function(table, element)
     return false
 end
 
-this.minutes_ago = function(m)
+function this.minutes_ago(m)
     return (os.time() - 60 * m) * 1000
 end
 
-this.is_wayland = function()
+function this.is_wayland()
     return os.getenv('WAYLAND_DISPLAY') ~= nil
 end
 
-this.is_win = function()
+function this.is_win()
     return mp.get_property('options/vo-mmcss-profile') ~= nil
 end
 
-this.is_mac = function()
+function this.is_mac()
     return mp.get_property('options/macos-force-dedicated-gpu') ~= nil
 end
 
@@ -87,7 +87,7 @@ local function args_as_str(args)
     return table.concat(map(args, single_quote), " ")
 end
 
-this.subprocess = function(args, completion_fn, override_settings)
+function this.subprocess(args, completion_fn, override_settings)
     -- if `completion_fn` is passed, the command is ran asynchronously,
     -- and upon completion, `completion_fn` is called to process the results.
     msg.info("Executing: " .. args_as_str(args))
@@ -107,7 +107,7 @@ this.subprocess = function(args, completion_fn, override_settings)
     return command_native(command_table, completion_fn)
 end
 
-this.subprocess_detached = function(args, completion_fn)
+function this.subprocess_detached(args, completion_fn)
     local overwrite_settings = {
         detach = true,
         capture_stdout = false,
@@ -116,27 +116,27 @@ this.subprocess_detached = function(args, completion_fn)
     return this.subprocess(args, completion_fn, overwrite_settings)
 end
 
-this.is_empty = function(var)
+function this.is_empty(var)
     return var == nil or var == '' or (type(var) == 'table' and next(var) == nil)
 end
 
-this.contains_non_latin_letters = function(str)
+function this.contains_non_latin_letters(str)
     return str:match("[^%c%p%s%w—]")
 end
 
-this.capitalize_first_letter = function(string)
+function this.capitalize_first_letter(string)
     return string:gsub("^%l", string.upper)
 end
 
-this.remove_leading_trailing_spaces = function(str)
+function this.remove_leading_trailing_spaces(str)
     return str:gsub('^%s*(.-)%s*$', '%1')
 end
 
-this.remove_leading_trailing_dashes = function(str)
+function this.remove_leading_trailing_dashes(str)
     return str:gsub('^[%-_]*(.-)[%-_]*$', '%1')
 end
 
-this.remove_text_in_parentheses = function(str)
+function this.remove_text_in_parentheses(str)
     -- Remove text like （泣き声） or （ドアの開く音）
     -- No deletion is performed if there's no text after the parentheses.
     -- Note: the modifier `-´ matches zero or more occurrences.
@@ -144,16 +144,16 @@ this.remove_text_in_parentheses = function(str)
     return str:gsub('(%b())(.)', '%2'):gsub('(（.-）)(.)', '%2')
 end
 
-this.remove_newlines = function(str)
+function this.remove_newlines(str)
     return str:gsub('[\n\r]+', ' ')
 end
 
-this.normalize_spaces = function(str)
+function this.normalize_spaces(str)
     -- replace sequences of ASCII spaces or full-width ideographic spaces with a single ASCII space
     return str:gsub('　+', ' '):gsub('  +', " ")
 end
 
-this.trim = function(str)
+function this.trim(str)
     str = this.remove_leading_trailing_spaces(str)
     str = this.remove_text_in_parentheses(str)
     str = this.remove_newlines(str)
@@ -174,28 +174,28 @@ this.escape_special_characters = (function()
     end
 end)()
 
-this.remove_extension = function(filename)
+function this.remove_extension(filename)
     return filename:gsub('%.%w+$', '')
 end
 
-this.remove_special_characters = function(str)
+function this.remove_special_characters(str)
     return str:gsub('[%c%p%s]', ''):gsub('　', '')
 end
 
-this.remove_text_in_brackets = function(str)
+function this.remove_text_in_brackets(str)
     return str:gsub('%b[]', ''):gsub('【.-】', '')
 end
 
-this.remove_filename_text_in_parentheses = function(str)
+function this.remove_filename_text_in_parentheses(str)
     return str:gsub('%b()', ''):gsub('（.-）', '')
 end
 
-this.remove_common_resolutions = function(str)
+function this.remove_common_resolutions(str)
     -- Also removes empty leftover parentheses and brackets.
     return str:gsub("2160p", ""):gsub("1080p", ""):gsub("720p", ""):gsub("576p", ""):gsub("480p", ""):gsub("%(%)", ""):gsub("%[%]", "")
 end
 
-this.human_readable_time = function(seconds)
+function this.human_readable_time(seconds)
     if type(seconds) ~= 'number' or seconds < 0 then
         return 'empty'
     end
@@ -216,7 +216,7 @@ this.human_readable_time = function(seconds)
     return ret
 end
 
-this.get_episode_number = function(filename)
+function this.get_episode_number(filename)
     -- Reverses the filename to start the search from the end as the media title might contain similar numbers.
     local filename_reversed = filename:reverse()
 
@@ -240,14 +240,14 @@ this.get_episode_number = function(filename)
     end
 end
 
-this.notify = function(message, level, duration)
+function this.notify(message, level, duration)
     level = level or 'info'
     duration = duration or 1
     msg[level](message)
     mp.osd_message(message, duration)
 end
 
-this.get_active_track = function(track_type)
+function this.get_active_track(track_type)
     -- track_type == audio|sub
     for _, track in pairs(mp.get_property_native('track-list')) do
         if track.type == track_type and track.selected == true then
@@ -257,29 +257,29 @@ this.get_active_track = function(track_type)
     return nil
 end
 
-this.has_video_track = function()
+function this.has_video_track()
     return mp.get_property_native('vid') ~= false
 end
 
-this.has_audio_track = function()
+function this.has_audio_track()
     return mp.get_property_native('aid') ~= false
 end
 
-this.str_contains = function(str, pattern, search_plain)
+function this.str_contains(str, pattern, search_plain)
     --- Return True if 'pattern' can be found in 'str'.
     --- Matching is case-insensitive.
     --- If 'search_plain' is True, turns off the pattern matching facilities.
     return not this.is_empty(str) and string.find(string.lower(str), string.lower(pattern), 1, search_plain) ~= nil
 end
 
-this.is_substr = function(str, substr)
+function this.is_substr(str, substr)
     --- Return True if 'substr' is a substring of 'str'.
     --- Matching is case-insensitive.
     --- Plain search is used == turns off the pattern matching facilities.
     return this.str_contains(str, substr, true)
 end
 
-this.filter = function(arr, func)
+function this.filter(arr, func)
     local filtered = {}
     for _, elem in ipairs(arr) do
         if func(elem) == true then
@@ -289,7 +289,7 @@ this.filter = function(arr, func)
     return filtered
 end
 
-this.file_exists = function(filepath)
+function this.file_exists(filepath)
     if not this.is_empty(filepath) then
         local info = utils.file_info(filepath)
         if info and info.is_file and info.size > 0 then
@@ -299,7 +299,7 @@ this.file_exists = function(filepath)
     return false
 end
 
-this.equal = function(first, last)
+function this.equal(first, last)
     --- Test whether two values are equal
     if type(last) == 'table' then
         return (utils.format_json(first) == utils.format_json(last))
@@ -308,7 +308,7 @@ this.equal = function(first, last)
     end
 end
 
-this.get_loaded_tracks = function(track_type)
+function this.get_loaded_tracks(track_type)
     --- Return all sub tracks, audio tracks, etc.
     local function tracks_equal(track)
         return track.type == track_type
@@ -316,14 +316,13 @@ this.get_loaded_tracks = function(track_type)
     return this.filter(mp.get_property_native('track-list'), tracks_equal)
 end
 
-this.assert_equals = function(actual, expected)
+function this.assert_equals(actual, expected)
     if this.equal(actual, expected) == false then
-        mp.commandv("quit")
         error(string.format("TEST FAILED: Expected '%s', got '%s'", expected, actual))
     end
 end
 
-this.deep_copy = function(obj, seen)
+function this.deep_copy(obj, seen)
     -- Handle non-tables and previously-seen tables.
     if type(obj) ~= 'table' then
         return obj
@@ -342,7 +341,7 @@ this.deep_copy = function(obj, seen)
     return setmetatable(res, getmetatable(obj))
 end
 
-this.shallow_copy = function(from, to)
+function this.shallow_copy(from, to)
     if type(from) ~= 'table' then
         return from
     end
@@ -353,7 +352,7 @@ this.shallow_copy = function(from, to)
     return to
 end
 
-this.maybe_require = function(module_name)
+function this.maybe_require(module_name)
     -- ~/.config/mpv/scripts/ and the mpvacious dir
     local parent, child = utils.split_path(mp.get_script_directory())
     -- ~/.config/mpv/ and "scripts"
@@ -392,7 +391,7 @@ this.maybe_require = function(module_name)
     return loaded_module
 end
 
-this.combine_lists = function(...)
+function this.combine_lists(...)
     -- take many lists and output one list.
     local output = {}
     for _, list in ipairs({ ... }) do
@@ -403,7 +402,7 @@ this.combine_lists = function(...)
     return output
 end
 
-this.find_insertion_point = function(list, new)
+function this.find_insertion_point(list, new)
     local low = 1
     local high = #list + 1
     while low < high do
@@ -417,7 +416,23 @@ this.find_insertion_point = function(list, new)
     return low
 end
 
-this.run_tests = function()
+function this.adjacent_items(list, index, before_count, after_count)
+    local ret = {}
+    local start_idx = index - before_count
+    local end_idx = index + after_count
+    if start_idx < 1 then
+        end_idx = end_idx + math.abs(1 - start_idx)
+    end
+    if end_idx > #list then
+        start_idx = start_idx - math.abs(#list - end_idx)
+    end
+    for idx = math.max(1, start_idx), math.min(end_idx, #list) do
+        table.insert(ret, { idx = idx, item = list[idx] })
+    end
+    return ret
+end
+
+function this.run_tests()
     this.assert_equals(this.is_substr("abcd", "bc"), true)
     this.assert_equals(this.is_substr("abcd", "xyz"), false)
     this.assert_equals(this.is_substr("abcd", "^.*d.*$"), false)
@@ -445,8 +460,8 @@ this.run_tests = function()
 
     this.assert_equals(this.combine_lists({ 1, 2 }, { 3 }, {}, { 4, 5 }), { 1, 2, 3, 4, 5 })
 
-    local t1 = {1,2,3}
-    local t2 = {3,4,5}
+    local t1 = { 1, 2, 3 }
+    local t2 = { 3, 4, 5 }
     this.shallow_copy(t1, t2)
     this.assert_equals(t2, t1)
 
@@ -460,13 +475,13 @@ this.run_tests = function()
     end
 
     local insertion_cases = {
-        {{1,2,4,5}, 3, 3},
-        {{1,2,4,5}, 99, 5},
-        {{1,2,4,5}, 0, 1},
-        {{1,2,4,5}, 2, 3},
-        {{1,2,4,5}, 5, 5},
-        {{}, 5, 1},
-        {{2,2,2,2,2,2}, 5, 7},
+        { { 1, 2, 4, 5 }, 3, 3 },
+        { { 1, 2, 4, 5 }, 99, 5 },
+        { { 1, 2, 4, 5 }, 0, 1 },
+        { { 1, 2, 4, 5 }, 2, 3 },
+        { { 1, 2, 4, 5 }, 5, 5 },
+        { {}, 5, 1 },
+        { { 2, 2, 2, 2, 2, 2 }, 5, 7 },
     }
     for _, case in ipairs(insertion_cases) do
         local list, new_value, expected = this.unpack(case)
@@ -475,6 +490,19 @@ this.run_tests = function()
         this.assert_equals(r1, r2)
         this.assert_equals(r2, expected)
     end
+
+    local function _items(items)
+        local ret = {}
+        for _, val in ipairs(items) do
+            table.insert(ret, val.item)
+        end
+        return ret
+    end
+    this.assert_equals(_items(this.adjacent_items({ 1, 2, 3 }, 2, 1, 1)), { 1, 2, 3 })
+    this.assert_equals(_items(this.adjacent_items({ 1, 2, 3 }, 2, 10, 10)), { 1, 2, 3 })
+    this.assert_equals(_items(this.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 10, 4, 4)), { 2, 3, 4, 5, 6, 7, 8, 9, 10 })
+    this.assert_equals(_items(this.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 9, 3, 3)), { 4, 5, 6, 7, 8, 9, 10 })
+    this.assert_equals(_items(this.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 1, 3, 3)), { 1, 2, 3, 4, 5, 6, 7 })
 end
 
 return this
