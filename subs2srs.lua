@@ -150,9 +150,8 @@ function menu:print_header(osd)
     osd:submenu('mpvacious options'):newline()
     osd:item('Timings: '):text(h.human_readable_time(subs_observer.get_timing('start')))
     osd:item(' to '):text(h.human_readable_time(subs_observer.get_timing('end'))):newline()
-    osd:item('Clipboard autocopy: '):text(subs_observer.autocopy_status_str()):newline()
-    osd:item('Active profile: '):text(cfg_mgr.profiles().active):newline()
-    osd:item('Deck: '):text(cfg_mgr.config().deck_name):newline()
+    osd:item('Autocopy: '):text(subs_observer.autocopy_is_enabled_str()):item(" ["):text(subs_observer.autocopy_current_method_str()):item("]"):newline()
+    osd:item('Active profile: '):text(cfg_mgr.profiles().active):item(" ["):text(cfg_mgr.config().deck_name):item("]"):newline()
     osd:item('# cards: '):text(quick_creation_opts:get_cards()):newline()
 end
 

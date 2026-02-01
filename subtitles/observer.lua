@@ -295,11 +295,19 @@ self.recorded_secondary_subs = function()
     return secondary_dialogs.get_subs_list()
 end
 
+self.autocopy_is_enabled_str = function()
+    return autoclip_enabled and 'enabled' or 'disabled'
+end
+
+self.autocopy_current_method_str = function()
+    return self.autocopy_current_method():gsub('_', ' ')
+end
+
 self.autocopy_status_str = function()
     return string.format(
             "%s (%s)",
-            (autoclip_enabled and 'enabled' or 'disabled'),
-            autoclip_method.get():gsub('_', ' ')
+            self.autocopy_is_enabled_str(),
+            self.autocopy_current_method_str()
     )
 end
 
@@ -311,7 +319,7 @@ local function notify_autocopy()
     if autoclip_enabled then
         copy_primary_sub()
     end
-    h.notify(string.format("Clipboard autocopy has been %s.", self.autocopy_status_str()))
+    h.notify(string.format("Autocopy has been %s.", self.autocopy_status_str()))
 end
 
 self.toggle_autocopy = function()
