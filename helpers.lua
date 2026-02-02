@@ -432,6 +432,10 @@ function this.adjacent_items(list, index, before_count, after_count)
     return ret
 end
 
+function this.is_lower(s)
+    return string.lower(s) == s
+end
+
 function this.run_tests()
     this.assert_equals(this.is_substr("abcd", "bc"), true)
     this.assert_equals(this.is_substr("abcd", "xyz"), false)
