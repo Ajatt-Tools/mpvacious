@@ -12,7 +12,7 @@ local Subtitle = require('subtitles.subtitle')
 local mp = require('mp')
 local platform = require('platform.init')
 local switch = require('utils.switch')
-local custom_sub_filter = pcall(h.maybe_require, 'subs2srs_sub_filter')
+local custom_sub_filter = h.maybe_require('subs2srs_sub_filter')
 
 local self = {}
 
