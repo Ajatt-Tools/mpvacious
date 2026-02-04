@@ -11,6 +11,9 @@ local make_switch = function(states)
         states = states,
         current_state = 1
     }
+    local function get()
+        return self.states[self.current_state]
+    end
     local function change_menu_item(step)
         --- step = -1 or +1
         self.current_state = self.current_state + step
@@ -19,12 +22,10 @@ local make_switch = function(states)
         elseif self.current_state > #self.states then
             self.current_state = 1
         end
+        return get()
     end
     local function bump()
         return change_menu_item(1)
-    end
-    local function get()
-        return self.states[self.current_state]
     end
     local function set(new_state)
         for idx, value in ipairs(self.states) do
