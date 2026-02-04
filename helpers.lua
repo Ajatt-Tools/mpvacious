@@ -72,6 +72,10 @@ function this.is_mac()
     return mp.get_property('options/macos-force-dedicated-gpu') ~= nil
 end
 
+function this.is_gnu()
+    return not this.is_win() and not this.is_mac()
+end
+
 local function map(tab, func)
     local t = {}
     for k, v in pairs(tab) do
@@ -352,14 +356,29 @@ function this.shallow_copy(from, to)
     return to
 end
 
-function this.maybe_require(module_name)
-    -- ~/.config/mpv/scripts/ and the mpvacious dir
-    local parent, child = utils.split_path(mp.get_script_directory())
-    -- ~/.config/mpv/ and "scripts"
-    parent, child = utils.split_path(parent:gsub("/$", ""))
-    -- ~/.config/mpv/subs2srs_sub_filter
-    local external_scripts_path = utils.join_path(parent, "subs2srs_sub_filter")
+function this.find_mpv_scripts_dir()
+    local this_dir = mp.get_script_directory() -- this_dir points to ~/.config/mpv/scripts/subs2srs (where mpvacious is installed)
+    local scripts_dir, _ = utils.split_path(this_dir) -- scripts_dir points to  ~/.config/mpv/scripts/
+    return scripts_dir:gsub("/$", "")
+end
 
+function this.find_mpv_config_directory()
+    --- Return the directory where mpv.conf and input.conf are saved.
+    local mpv_config_dir, _ = utils.split_path(this.find_mpv_scripts_dir()) -- mpv_config_dir points to ~/.config/mpv/
+    return mpv_config_dir:gsub("/$", "")
+end
+
+function this.find_mpv_script_opts_directory()
+    --- Return the directory where mpv user-scripts store their config files.
+    --- Example: ~/.config/mpv/script-opts
+    return utils.join_path(this.find_mpv_config_directory(), "script-opts")
+end
+
+function this.maybe_require(module_name)
+    --- Example: ~/.config/mpv/subs2srs_sub_filter/subs2srs_sub_filter.lua
+
+    -- Make path to directory ~/.config/mpv/subs2srs_sub_filter
+    local external_scripts_path = utils.join_path(this.find_mpv_config_directory(), module_name)
     local search_template = external_scripts_path .. "/?.lua;"
     local module_path = package.searchpath(module_name, search_template)
 
@@ -507,6 +526,12 @@ function this.run_tests()
     this.assert_equals(_items(this.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 10, 4, 4)), { 2, 3, 4, 5, 6, 7, 8, 9, 10 })
     this.assert_equals(_items(this.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 9, 3, 3)), { 4, 5, 6, 7, 8, 9, 10 })
     this.assert_equals(_items(this.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 1, 3, 3)), { 1, 2, 3, 4, 5, 6, 7 })
+
+    -- GNU only:
+    if this.is_gnu() then
+        this.assert_equals(this.find_mpv_scripts_dir(), utils.join_path(os.getenv("HOME") or "~", '.config/mpv/scripts'))
+        this.assert_equals(this.find_mpv_config_directory(), utils.join_path(os.getenv("HOME") or "~", '.config/mpv'))
+    end
 end
 
 return this

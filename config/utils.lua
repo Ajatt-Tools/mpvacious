@@ -10,14 +10,11 @@ local h = require('helpers')
 local utils = require('mp.utils')
 local defaults = require('config.defaults')
 
-local function create_config_file(default_profile_filename)
-    local name = default_profile_filename
-    -- ~/.config/mpv/scripts/ and the mpvacious dir
-    local parent, child = utils.split_path(mp.get_script_directory())
-    -- ~/.config/mpv/ and "scripts"
-    parent, child = utils.split_path(parent:gsub("/$", ""))
+local function create_config_file(default_profile_name)
+    -- default profile name is "subs2srs"
+    local name = default_profile_name
     -- ~/.config/mpv/script-opts/subs2srs.conf
-    local config_filepath = utils.join_path(utils.join_path(parent, "script-opts"), string.format('%s.conf', name))
+    local config_filepath = utils.join_path(h.find_mpv_script_opts_directory(), string.format('%s.conf', name))
     local example_config_filepath = utils.join_path(mp.get_script_directory(), ".github/RELEASE/subs2srs.conf")
 
     local file_info = utils.file_info(config_filepath)
