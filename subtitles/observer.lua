@@ -287,6 +287,12 @@ self.is_appending = function()
     return append_dialogue
 end
 
+self.all_subs_until_now = function()
+    all_dialogs.insert(Subtitle:now())
+    all_secondary_dialogs.insert(Subtitle:now('secondary'))
+    return all_dialogs.get_subs_list(), all_secondary_dialogs.get_subs_list()
+end
+
 self.recorded_subs = function()
     return dialogs.get_subs_list()
 end
@@ -330,6 +336,17 @@ end
 self.next_autoclip_method = function()
     autoclip_method.bump()
     notify_autocopy()
+end
+
+self.import_subs = function(subs)
+    self.clear()
+    for _, sub in ipairs(subs) do
+        dialogs.insert(sub)
+    end
+end
+
+self.has_recorded_dialogs = function()
+    return not dialogs.is_empty()
 end
 
 self.init = function(menu, cfg_mgr)
