@@ -30,23 +30,7 @@ local anki_compatible_length = (function()
             return str:sub(1, limit_bytes)
         end
 
-        -- NOTE: since MacOS's awk currently doesn't support split UTF-8 char correctly,
-        -- we should call gawk instead.
-        -- On GNU/Linux, awk is an alias for gawk.
-        local ret = h.subprocess {
-            'gawk',
-            '-v', string.format('str=%s', str),
-            '-v', string.format('limit=%d', limit_chars),
-            'BEGIN{print substr(str, 1, limit); exit}'
-        }
-
-        if ret.status == 0 then
-            ret.stdout = h.remove_newlines(ret.stdout)
-            ret.stdout = h.remove_leading_trailing_spaces(ret.stdout)
-            return ret.stdout
-        else
-            return 'subs2srs_' .. os.time()
-        end
+        return h.str_limit(str, limit_chars)
     end
 end)()
 
