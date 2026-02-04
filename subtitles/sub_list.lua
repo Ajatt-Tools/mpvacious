@@ -36,7 +36,7 @@ local new_sub_list = function()
         return table.concat(speech, ' '), end_sub
     end
     local insert = function(sub)
-        if sub == nil then
+        if sub == nil or h.is_empty(sub.text) then
             return false
         end
         local lookup_window_size = 25
@@ -44,7 +44,7 @@ local new_sub_list = function()
         if h.contains(n_latest_subs, sub) then
             return false
         end
-        table.insert(subs_list, h.find_insertion_point(n_latest_subs, sub), sub)
+        table.insert(subs_list, (#subs_list - #n_latest_subs) + h.find_insertion_point(n_latest_subs, sub), sub)
         return true
     end
     local get_subs_list = function()
