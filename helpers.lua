@@ -455,6 +455,55 @@ function this.is_lower(s)
     return string.lower(s) == s
 end
 
+--- Get byte count of utf-8 character at index i in str
+--- https://github.com/tomasklaen/uosc/blob/bc6cf419ba820a80df33960789813dad8e6f34a2/src/uosc/lib/text.lua#L52
+function this.utf8_char_bytes(str, i)
+	local char_byte = str:byte(i)
+	local max_bytes = #str - i + 1
+	if char_byte < 0xC0 then
+		return math.min(max_bytes, 1)
+	elseif char_byte < 0xE0 then
+		return math.min(max_bytes, 2)
+	elseif char_byte < 0xF0 then
+		return math.min(max_bytes, 3)
+	elseif char_byte < 0xF8 then
+		return math.min(max_bytes, 4)
+	else
+		return math.min(max_bytes, 1)
+	end
+end
+
+--- Creates an iterator for an utf-8 encoded string
+--- Iterates over utf-8 characters instead of bytes
+--- https://github.com/tomasklaen/uosc/blob/bc6cf419ba820a80df33960789813dad8e6f34a2/src/uosc/lib/text.lua#L72
+function this.utf8_iter(str)
+	local byte_start = 1
+	return function()
+		local start = byte_start
+		if #str < start then return nil end
+		local byte_count = this.utf8_char_bytes(str, start)
+		byte_start = start + byte_count
+		return start, str:sub(start, start + byte_count - 1)
+	end
+end
+
+--- Like str[:n_chars] in python, but adds "…" at the end if the string is longer than n_chars.
+function this.str_limit(str, n_chars)
+    local ret = {}
+    local size = 0
+    for idx, char in this.utf8_iter(str) do
+			table.insert(ret, char)
+            size = size + 1
+            if size >= n_chars then
+                if #str > (idx + #char) then
+                    table.insert(ret, "…")
+                end
+                break
+            end
+    end
+    return table.concat(ret)
+end
+
 function this.run_tests()
     this.assert_equals(this.is_substr("abcd", "bc"), true)
     this.assert_equals(this.is_substr("abcd", "xyz"), false)
@@ -532,6 +581,11 @@ function this.run_tests()
         this.assert_equals(this.find_mpv_scripts_dir(), utils.join_path(os.getenv("HOME") or "~", '.config/mpv/scripts'))
         this.assert_equals(this.find_mpv_config_directory(), utils.join_path(os.getenv("HOME") or "~", '.config/mpv'))
     end
+
+    this.assert_equals(this.str_limit("報連相", 3), "報連相")
+    this.assert_equals(this.str_limit("報連相", 2), "報連…")
+    this.assert_equals(this.str_limit("報連相", 1), "報…")
+    this.assert_equals(this.str_limit("報連相", 33), "報連相")
 end
 
 return this
