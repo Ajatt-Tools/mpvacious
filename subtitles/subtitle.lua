@@ -12,6 +12,7 @@ local Subtitle = {
     ['secondary'] = '',
     ['start'] = -1,
     ['end'] = -1,
+    ['is_secondary'] = false,
 }
 
 function Subtitle:new(o)
@@ -27,6 +28,7 @@ function Subtitle:now(secondary)
         ['text'] = mp.get_property(prefix .. "sub-text"),
         ['start'] = mp.get_property_number(prefix .. "sub-start"),
         ['end'] = mp.get_property_number(prefix .. "sub-end"),
+        ['is_secondary'] = (secondary and true or false),
     }
     if this:is_valid() then
         return this:delay(mp.get_property_native("sub-delay") - mp.get_property_native("audio-delay"))
