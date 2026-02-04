@@ -6,16 +6,29 @@ A helper class for styling OSD messages
 http://docs.aegisub.org/3.2/ASS_Tags/
 ]]
 
-local OSD = {}
-OSD.__index = OSD
+local h = require('helpers')
+local OSD = {
+    messages = {},
+    border_size = 2.5,
+    font_size = 30,
+    font_name = "Noto Sans CJK JP",
+}
 
-function OSD:new()
-    return setmetatable({ messages = {} }, self)
+function OSD:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    o.messages = {}
+    return o
 end
 
 function OSD:append(s)
     table.insert(self.messages, tostring(s))
     return self
+end
+
+function OSD:start_line()
+    return self:new_layer():border(self.border_size):fsize(self.font_size):font(self.font_name)
 end
 
 function OSD:newline()
@@ -26,12 +39,35 @@ function OSD:tab()
     return self:append([[\h\h\h\h]])
 end
 
-function OSD:size(size)
+function OSD:fsize(size)
+    if h.is_empty(size) then
+        error("invalid size")
+    end
+    self.font_size = size
     return self:append('{\\fs'):append(size):append('}')
 end
 
 function OSD:font(name)
+    if h.is_empty(name) then
+        error("invalid name")
+    end
+    self.font_name = name
     return self:append('{\\fn'):append(name):append('}')
+end
+
+function OSD:border(size)
+    if h.is_empty(size) then
+        error("invalid size")
+    end
+    self.border_size = size
+    return self:append(string.format("{\\bord%.3f}", size))
+end
+
+function OSD:pos(x, y)
+    if h.is_empty(x) or h.is_empty(y) then
+        error(string.format("invalid pos: %s,%s", tostring(x), tostring(y)))
+    end
+    return self:append(string.format('{\\pos(%d,%d)}', x, y))
 end
 
 function OSD:align(number)
@@ -74,7 +110,7 @@ function OSD:item(text)
     return self:color('fef6dd'):bold(text):color('ffffff')
 end
 
-function OSD:selected(text)
+function OSD:green(text)
     return self:color('48a868'):bold(text):color('ffffff')
 end
 
