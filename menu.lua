@@ -45,6 +45,10 @@ function Menu:update()
     self.overlay:update()
 end
 
+function Menu:make_key_bindings()
+    error("not implemented.")
+end
+
 function Menu:add_key_bindings(keybindings)
     for _, val in pairs(keybindings) do
         mp.add_forced_key_binding(val.key, val.key, val.fn)
@@ -62,6 +66,9 @@ function Menu:open()
         return
     end
 
+    if h.is_empty(self.keybindings) then
+        self.keybindings = self:make_key_bindings()
+    end
     self:add_key_bindings(self.keybindings)
     self.active = true
     self:update()
