@@ -159,10 +159,16 @@ load("subs2srs/subs2srs.lua")
 
 </details>
 
-**Note:** in [Celluloid](https://www.archlinux.org/packages/community/x86_64/celluloid/)
+<details>
+
+<summary>A note for Celluloid</summary>
+
+In [Celluloid](https://www.archlinux.org/packages/community/x86_64/celluloid/)
 user scripts are installed in `/.config/celluloid/scripts/`.
 When following the instructions above, replace `.config/mpv` with `.config/celluloid`
 and optionally `subs2srs` with the name of the folder mpvacious is cloned into.
+
+</details>
 
 ## Configuration
 
