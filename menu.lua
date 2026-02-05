@@ -45,6 +45,12 @@ function Menu:update()
     self.overlay:update()
 end
 
+function Menu:add_key_bindings(keybindings)
+    for _, val in pairs(keybindings) do
+        mp.add_forced_key_binding(val.key, val.key, val.fn)
+    end
+end
+
 function Menu:open()
     if self.overlay == nil then
         h.notify("OSD overlay is not supported in " .. mp.get_property("mpv-version"), "error", 5)
@@ -56,23 +62,22 @@ function Menu:open()
         return
     end
 
-    for _, val in pairs(self.keybindings) do
-        mp.add_forced_key_binding(val.key, val.key, val.fn)
-    end
-
+    self:add_key_bindings(self.keybindings)
     self.active = true
     self:update()
+end
+
+function Menu:remove_key_bindings(keybindings)
+    for _, val in pairs(keybindings) do
+        mp.remove_key_binding(val.key)
+    end
 end
 
 function Menu:close()
     if self.active == false then
         return
     end
-
-    for _, val in pairs(self.keybindings) do
-        mp.remove_key_binding(val.key)
-    end
-
+    self:remove_key_bindings(self.keybindings)
     self.overlay:remove()
     self.active = false
 end
