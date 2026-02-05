@@ -34,7 +34,7 @@ function Menu:with_update(params)
 end
 
 function Menu:make_osd()
-    return nil
+    error("not implemented.")
 end
 
 function Menu:update()
