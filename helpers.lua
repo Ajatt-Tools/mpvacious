@@ -376,14 +376,17 @@ this.maybe_require = function(module_name)
     package.path = original_package_path
 
     if not ok then
-        error(
+        this.notify(
                 string.format(
                         "Failed to load module '%s' from '%s'. Error: %s",
                         module_name,
                         module_path,
                         tostring(loaded_module)
-                )
+                ),
+                "error",
+                5
         )
+        return nil
     end
 
     return loaded_module
