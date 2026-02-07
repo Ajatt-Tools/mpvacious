@@ -95,33 +95,37 @@ local function args_as_str(args)
     return table.concat(map(args, single_quote), " ")
 end
 
-function this.subprocess(args, completion_fn, override_settings)
-    -- if `completion_fn` is passed, the command is ran asynchronously,
-    -- and upon completion, `completion_fn` is called to process the results.
-    msg.info("Executing: " .. args_as_str(args))
-    local command_native = type(completion_fn) == 'function' and mp.command_native_async or mp.command_native
+--- Parameters: args, completion_fn, override_settings, suppress_log
+--- if `completion_fn` is passed, the command is ran asynchronously,
+--- and upon completion, `completion_fn` is called to process the results.
+function this.subprocess(o)
+    if not o.suppress_log then
+        msg.info("Executing: " .. args_as_str(o.args))
+    end
+    local command_native = type(o.completion_fn) == 'function' and mp.command_native_async or mp.command_native
     local command_table = {
         name = "subprocess",
         playback_only = false,
         capture_stdout = true,
         capture_stderr = true,
-        args = args
+        args = o.args
     }
-    if not this.is_empty(override_settings) then
-        for k, v in pairs(override_settings) do
+    if not this.is_empty(o.override_settings) then
+        for k, v in pairs(o.override_settings) do
             command_table[k] = v
         end
     end
-    return command_native(command_table, completion_fn)
+    return command_native(command_table, o.completion_fn)
 end
 
-function this.subprocess_detached(args, completion_fn)
-    local overwrite_settings = {
+--- Parameters:, args, completion_fn, suppress_log
+function this.subprocess_detached(o)
+    o.overwrite_settings = {
         detach = true,
         capture_stdout = false,
         capture_stderr = false,
     }
-    return this.subprocess(args, completion_fn, overwrite_settings)
+    return this.subprocess(o)
 end
 
 function this.is_empty(var)
