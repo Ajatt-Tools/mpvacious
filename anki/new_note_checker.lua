@@ -36,7 +36,10 @@ local function make_anki_new_note_checker()
     end
 
     local function find_notes_added_today()
-        return self.ankiconnect.find_notes(string.format("added:1 \"note:%s\" \"deck:%s\"", self.config.model_name, self.config.deck_name))
+        return self.ankiconnect.find_notes(
+                string.format("added:1 \"note:%s\" \"deck:%s\"", self.config.model_name, self.config.deck_name),
+                true
+        )
     end
 
     local function ignore_all_cards_added_today()
@@ -56,7 +59,7 @@ local function make_anki_new_note_checker()
     local function check_for_new_notes()
         local note_ids = find_notes_added_today()
         if h.is_empty(note_ids) then
-            msg.info("no new notes added today yet.")
+            -- no new notes added today yet.
             return
         end
         local to_update = {}
