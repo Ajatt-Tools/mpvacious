@@ -12,7 +12,7 @@ local Subtitle = require('subtitles.subtitle')
 local mp = require('mp')
 local platform = require('platform.init')
 local new_autoclip_method_selector = require('subtitles.autoclip_methods')
-local custom_sub_filter = pcall(h.maybe_require, 'subs2srs_sub_filter')
+local custom_sub_filter = h.maybe_require('subs2srs_sub_filter')
 
 local self = {}
 
