@@ -524,6 +524,21 @@ function this.str_limit(str, n_chars)
     return table.concat(ret)
 end
 
+--- Like pathlib.Path.read_text() but doesn't throw.
+--- Returns tuple[text, error].
+function this.read_text(file_path)
+    local handle = io.open(file_path, 'r')
+    if this.is_empty(handle) then
+        return nil, "Couldn't open: " .. file_path
+    end
+    local text = handle:read('*all')
+    handle:close()
+    if this.is_empty(text) then
+        return nil, "Empty file: " .. file_path
+    end
+    return text, nil
+end
+
 function this.run_tests()
     this.assert_equals(this.is_substr("abcd", "bc"), true)
     this.assert_equals(this.is_substr("abcd", "xyz"), false)
