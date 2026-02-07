@@ -12,6 +12,10 @@ local this = {}
 
 this.unpack = unpack and unpack or table.unpack
 
+function this.noop()
+    return
+end
+
 function this.remove_all_spaces(str)
     return str:gsub('%s*', '')
 end
