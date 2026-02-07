@@ -9,256 +9,274 @@ local utils = require('mp.utils')
 local msg = require('mp.msg')
 local h = require('helpers')
 local platform = require('platform.init')
-local self = {}
 
-self.execute = function(request, completion_fn)
-    if not h.is_empty(self.config.ankiconnect_api_key) then
-        request.key = self.config.ankiconnect_api_key
-    end
+local function make_ankiconnect()
+    local self = {}
 
-    -- utils.format_json returns a string
-    -- On error, request_json will contain "null", not nil.
-    local request_json, error = utils.format_json(request)
+    --- Parameters: request, completion_fn, suppress_log
+    self.execute = function(o)
+        if not h.is_empty(self.config.ankiconnect_api_key) then
+            o.request.key = self.config.ankiconnect_api_key
+        end
 
-    if error ~= nil or request_json == "null" then
-        return completion_fn and completion_fn()
-    else
-        return platform.curl_request(self.config.ankiconnect_url, request_json, completion_fn)
-    end
-end
+        -- utils.format_json returns a string
+        -- On error, request_json will contain "null", not nil.
+        local request_json, error = utils.format_json(o.request)
 
-self.parse_result = function(curl_output)
-    -- there are two values that we actually care about: result and error
-    -- but we need to crawl inside to get them.
-
-    if curl_output == nil then
-        return nil, "Failed to format json or no args passed"
-    end
-
-    if curl_output.status ~= 0 then
-        return nil, "Ankiconnect isn't running"
-    end
-
-    local stdout_json = utils.parse_json(curl_output.stdout)
-
-    if stdout_json == nil then
-        return nil, "Fatal error from Ankiconnect"
-    end
-
-    if stdout_json.error ~= nil then
-        return nil, tostring(stdout_json.error)
-    end
-
-    return stdout_json.result, nil
-end
-
-self.get_media_dir_path = function()
-    -- Ask AnkiConnect where to store media files.
-    -- If AnkiConnect isn't running, returns nil.
-
-    local ret = self.execute({
-        action = "getMediaDirPath",
-        version = 6,
-    })
-    local dir_path, error = self.parse_result(ret)
-    if not error then
-        return dir_path
-    else
-        msg.error(string.format("Couldn't retrieve path to collection.media folder: %s", error))
-        return nil
-    end
-end
-
-self.create_deck = function(deck_name)
-    local args = {
-        action = "changeDeck",
-        version = 6,
-        params = {
-            cards = {},
-            deck = deck_name
-        }
-    }
-    local result_notify = function(_, result, _)
-        local _, error = self.parse_result(result)
-        if not error then
-            msg.info(string.format("Deck %s: check completed.", deck_name))
+        if error ~= nil or request_json == "null" then
+            return o.completion_fn and o.completion_fn()
         else
-            msg.warn(string.format("Deck %s: check failed. Reason: %s.", deck_name, error))
+            return platform.json_curl_request {
+                url = self.config.ankiconnect_url,
+                request_json = request_json,
+                completion_fn = o.completion_fn,
+                suppress_log = o.suppress_log,
+            }
         end
     end
-    self.execute(args, result_notify)
-end
 
-self.add_note = function(note_fields, tag, gui)
-    local action = gui and 'guiAddCards' or 'addNote'
-    local args = {
-        action = action,
-        version = 6,
-        params = {
-            note = {
-                deckName = self.config.deck_name,
-                modelName = self.config.model_name,
-                fields = note_fields,
-                options = {
-                    allowDuplicate = self.config.allow_duplicates,
-                    duplicateScope = "deck",
-                },
-                tags = h.is_empty(tag) and {} or { tag, },
+    self.parse_result = function(curl_output)
+        -- there are two values that we actually care about: result and error
+        -- but we need to crawl inside to get them.
+
+        if curl_output == nil then
+            return nil, "Failed to format json or no args passed"
+        end
+
+        if curl_output.status ~= 0 then
+            return nil, "Ankiconnect isn't running"
+        end
+
+        local stdout_json = utils.parse_json(curl_output.stdout)
+
+        if stdout_json == nil then
+            return nil, "Fatal error from Ankiconnect"
+        end
+
+        if stdout_json.error ~= nil then
+            return nil, tostring(stdout_json.error)
+        end
+
+        return stdout_json.result, nil
+    end
+
+    self.get_media_dir_path = function()
+        -- Ask AnkiConnect where to store media files.
+        -- If AnkiConnect isn't running, returns nil.
+        local request = {
+            action = "getMediaDirPath",
+            version = 6,
+        }
+        local ret = self.execute { request = request }
+        local dir_path, error = self.parse_result(ret)
+        if not error then
+            return dir_path
+        else
+            msg.error(string.format("Couldn't retrieve path to collection.media folder: %s", error))
+            return nil
+        end
+    end
+
+    self.create_deck = function(deck_name)
+        local args = {
+            action = "changeDeck",
+            version = 6,
+            params = {
+                cards = {},
+                deck = deck_name
             }
         }
-    }
-    local result_notify = function(_, result, _)
-        local note_id, error = self.parse_result(result)
-        if not error then
-            h.notify(string.format("Note added. ID = %s.", note_id))
-            self.gui_browse("nid:" .. note_id) -- show the added note
-        else
-            h.notify(string.format("Error: %s.", error), "error", 2)
-        end
-    end
-    self.execute(args, result_notify)
-end
-
-self.find_notes = function(query)
-    local ret = self.execute {
-        action = "findNotes",
-        version = 6,
-        params = {
-            query = query
-        }
-    }
-
-    local note_ids, _ = self.parse_result(ret)
-    if not h.is_empty(note_ids) then
-        return note_ids
-    else
-        return {}
-    end
-end
-
-self.get_last_note_ids = function(n_cards)
-    local note_ids = self.find_notes("added:1") -- find all notes added today
-    if not h.is_empty(note_ids) then
-        return h.get_last_n_added_notes(note_ids, n_cards)
-    else
-        return {}
-    end
-end
-
-self.get_selected_note_ids = function()
-    local ret = self.execute {
-        action = "guiSelectedNotes",
-        version = 6
-    }
-
-    local note_ids, _ = self.parse_result(ret)
-    return note_ids
-end
-
-self.get_note_fields = function(note_id)
-    local ret = self.execute {
-        action = "notesInfo",
-        version = 6,
-        params = {
-            notes = { note_id }
-        }
-    }
-
-    local result, error = self.parse_result(ret)
-
-    if error == nil then
-        result = result[1].fields
-        for key, value in pairs(result) do
-            result[key] = value.value
-        end
-        return result
-    else
-        return nil
-    end
-end
-
-self.get_first_field = function(model_name)
-    local ret = self.execute {
-        action = "findModelsByName",
-        version = 6,
-        params = {
-            modelNames = { model_name }
-        }
-    }
-
-    local result, error = self.parse_result(ret)
-
-    if error == nil then
-        for _, field in pairs(result[1].flds) do
-            if field.ord == 0 then
-                return field.name
+        local result_notify = function(_, result, _)
+            local _, error = self.parse_result(result)
+            if not error then
+                msg.info(string.format("Deck %s: check completed.", deck_name))
+            else
+                msg.warn(string.format("Deck %s: check failed. Reason: %s.", deck_name, error))
             end
         end
-    else
-        msg.error(string.format("Couldn't retrieve the first field's name of note type %s: %s", model_name, error))
-        return nil
+        self.execute { request = args, completion_fn = result_notify }
     end
-end
 
-self.gui_browse = function(query)
-    --- query is a string, e.g. "deck:current", "nid:12345"
-    if not self.config.disable_gui_browse then
-        self.execute {
-            action = 'guiBrowse',
+    self.add_note = function(note_fields, tag, gui)
+        local action = gui and 'guiAddCards' or 'addNote'
+        local args = {
+            action = action,
+            version = 6,
+            params = {
+                note = {
+                    deckName = self.config.deck_name,
+                    modelName = self.config.model_name,
+                    fields = note_fields,
+                    options = {
+                        allowDuplicate = self.config.allow_duplicates,
+                        duplicateScope = "deck",
+                    },
+                    tags = h.is_empty(tag) and {} or { tag, },
+                }
+            }
+        }
+        local result_notify = function(_, result, _)
+            local note_id, error = self.parse_result(result)
+            if not error then
+                h.notify(string.format("Note added. ID = %s.", note_id))
+                self.gui_browse("nid:" .. note_id) -- show the added note
+            else
+                h.notify(string.format("Error: %s.", error), "error", 2)
+            end
+        end
+        self.execute { request = args, completion_fn = result_notify }
+    end
+
+    self.find_notes = function(query, suppress_log)
+        local request = {
+            action = "findNotes",
             version = 6,
             params = {
                 query = query
             }
         }
-    end
-end
+        local ret = self.execute { request = request, suppress_log = suppress_log }
 
-self.add_tag = function(note_id, tag)
-    if not h.is_empty(tag) then
-        self.execute {
-            action = 'addTags',
+        local note_ids, _ = self.parse_result(ret)
+        if not h.is_empty(note_ids) then
+            return note_ids
+        else
+            return {}
+        end
+    end
+
+    self.get_last_note_ids = function(n_cards)
+        local note_ids = self.find_notes("added:1") -- find all notes added today
+        if not h.is_empty(note_ids) then
+            return h.get_last_n_added_notes(note_ids, n_cards)
+        else
+            return {}
+        end
+    end
+
+    self.get_selected_note_ids = function()
+        local request = {
+            action = "guiSelectedNotes",
+            version = 6
+        }
+        local ret = self.execute { request = request }
+
+        local note_ids, _ = self.parse_result(ret)
+        return note_ids
+    end
+
+    self.get_note_fields = function(note_id)
+        local request = {
+            action = "notesInfo",
             version = 6,
             params = {
-                notes = { note_id },
-                tags = tag
+                notes = { note_id }
             }
         }
-    end
-end
+        local ret = self.execute { request = request }
 
-self.append_media = function(note_id, fields, tag, on_finish_fn)
-    -- AnkiConnect will fail to update the note if it's selected in the Anki Browser.
-    -- https://github.com/FooSoft/anki-connect/issues/82
-    -- Switch focus from the current note to avoid it.
-    self.gui_browse("nid:1") -- impossible nid
+        local result, error = self.parse_result(ret)
 
-    local args = {
-        action = "updateNoteFields",
-        version = 6,
-        params = {
-            note = {
-                id = note_id,
-                fields = fields,
-            }
-        }
-    }
-
-    local on_finish_wrap = function(_, result, _)
-        local _, error = self.parse_result(result)
-        if not error then
-            self.add_tag(note_id, tag)
+        if error == nil then
+            result = result[1].fields
+            for key, value in pairs(result) do
+                result[key] = value.value
+            end
+            return result
         else
-            h.notify(string.format("Error: %s.", error), "error", 2)
+            return nil
         end
-        on_finish_fn(error)
     end
 
-    self.execute(args, on_finish_wrap)
+    self.get_first_field = function(model_name)
+        local request = {
+            action = "findModelsByName",
+            version = 6,
+            params = {
+                modelNames = { model_name }
+            }
+        }
+        local ret = self.execute { request = request }
+        local result, error = self.parse_result(ret)
+
+        if error == nil then
+            for _, field in pairs(result[1].flds) do
+                if field.ord == 0 then
+                    return field.name
+                end
+            end
+        else
+            msg.error(string.format("Couldn't retrieve the first field's name of note type %s: %s", model_name, error))
+            return nil
+        end
+    end
+
+    self.gui_browse = function(query)
+        --- query is a string, e.g. "deck:current", "nid:12345"
+        if not self.config.disable_gui_browse then
+            local request = {
+                action = 'guiBrowse',
+                version = 6,
+                params = {
+                    query = query
+                }
+            }
+            self.execute { request = request }
+        end
+    end
+
+    self.add_tag = function(note_id, tag)
+        if not h.is_empty(tag) then
+            local request = {
+                action = 'addTags',
+                version = 6,
+                params = {
+                    notes = { note_id },
+                    tags = tag
+                }
+            }
+            self.execute { request = request }
+        end
+    end
+
+    self.append_media = function(note_id, fields, tag, on_finish_fn)
+        -- AnkiConnect will fail to update the note if it's selected in the Anki Browser.
+        -- https://github.com/FooSoft/anki-connect/issues/82
+        -- Switch focus from the current note to avoid it.
+        self.gui_browse("nid:1") -- impossible nid
+
+        local request = {
+            action = "updateNoteFields",
+            version = 6,
+            params = {
+                note = {
+                    id = note_id,
+                    fields = fields,
+                }
+            }
+        }
+
+        local on_finish_wrap = function(_, result, _)
+            local _, error = self.parse_result(result)
+            if not error then
+                self.add_tag(note_id, tag)
+            else
+                h.notify(string.format("Error: %s.", error), "error", 2)
+            end
+            on_finish_fn(error)
+        end
+
+        self.execute { request = request, completion_fn = on_finish_wrap }
+    end
+
+    self.init = function(cfg_mgr)
+        cfg_mgr.fail_if_not_ready()
+        self.config = cfg_mgr.config()
+    end
+
+    return self
 end
 
-self.init = function(cfg_mgr)
-    cfg_mgr.fail_if_not_ready()
-    self.config = cfg_mgr.config()
-end
-
-return self
+return {
+    new = make_ankiconnect
+}
