@@ -23,6 +23,7 @@ end
 local inspection_result = {
     snapshot = {
         ['libaom-av1'] = is_image_supported('libaom-av1'),
+        av1_qsv = is_image_supported('av1_qsv'),
         libwebp = is_image_supported('libwebp'),
         mjpeg = is_image_supported('mjpeg'),
     },
