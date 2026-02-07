@@ -9,7 +9,13 @@ local mp = require('mp')
 local h = require('helpers')
 local utils = require('mp.utils')
 local base64 = require('utils.base64')
-local self = { windows = true, healthy = true, clip_util = "cmd", }
+local self = {
+    windows = true,
+    healthy = true,
+    clip_util = "cmd",
+    open_utility = "explorer.exe",
+}
+
 local tmp_files = {}
 
 mp.register_event('shutdown', function()

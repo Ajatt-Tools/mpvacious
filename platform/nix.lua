@@ -6,9 +6,15 @@ Platform-specific functions for *nix systems.
 ]]
 
 local h = require('helpers')
-local self = { healthy = true, clip_util = "", clip_cmd = "", }
+local self = {
+    healthy = true,
+    clip_util = "",
+    clip_cmd = "",
+    open_utility = "xdg-open",
+}
 
 if h.is_mac() then
+    self.open_utility = "open"
     self.clip_util = "pbcopy"
     self.clip_cmd = "LANG=en_US.UTF-8 " .. self.clip_util
 elseif h.is_wayland() then
