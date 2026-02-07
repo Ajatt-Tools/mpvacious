@@ -10,9 +10,11 @@ local msg = require('mp.msg')
 local h = require('helpers')
 
 local Menu = {
+    name = "base menu",
     active = false,
     keybindings = {},
     overlay = mp.create_osd_overlay and mp.create_osd_overlay('ass-events'),
+    menu_controller = nil,
 }
 
 function Menu:new(o)
@@ -65,6 +67,10 @@ function Menu:open()
     if self.active == true then
         self:close()
         return false
+    end
+
+    if self.menu_controller then
+        self.menu_controller.request_seat(self)
     end
 
     if h.is_empty(self.keybindings) then
