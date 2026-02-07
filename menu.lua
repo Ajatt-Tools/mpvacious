@@ -29,7 +29,7 @@ function Menu:with_update(params)
         if not status then
             msg['error'](error)
         end
-        self:update()
+        return self:update()
     end
 end
 
@@ -39,10 +39,11 @@ end
 
 function Menu:update()
     if self.active == false then
-        return
+        return false
     end
     self.overlay.data = self:make_osd():get_text()
     self.overlay:update()
+    return true
 end
 
 function Menu:make_key_bindings()
@@ -58,12 +59,12 @@ end
 function Menu:open()
     if self.overlay == nil then
         h.notify("OSD overlay is not supported in " .. mp.get_property("mpv-version"), "error", 5)
-        return
+        return false
     end
 
     if self.active == true then
         self:close()
-        return
+        return false
     end
 
     if h.is_empty(self.keybindings) then
@@ -72,6 +73,7 @@ function Menu:open()
     self:add_key_bindings(self.keybindings)
     self.active = true
     self:update()
+    return true
 end
 
 function Menu:remove_key_bindings(keybindings)
@@ -82,11 +84,12 @@ end
 
 function Menu:close()
     if self.active == false then
-        return
+        return false
     end
     self:remove_key_bindings(self.keybindings)
     self.overlay:remove()
     self.active = false
+    return true
 end
 
 return Menu
