@@ -20,26 +20,24 @@ local function create_config_file(default_profile_name)
 
     local file_info = utils.file_info(config_filepath)
     if file_info and file_info.is_file then
-        print("config already exists")
+        mp.msg.info("config already exists")
         return
     end
 
-    local handle = io.open(example_config_filepath, 'r')
-    if handle == nil then
+    local config_text, error = h.read_text(example_config_filepath)
+    if error then
+        mp.msg.error(error)
         return
     end
 
-    local content = handle:read("*a")
-    handle:close()
-
-    handle = io.open(config_filepath, 'w')
+    local handle = io.open(config_filepath, 'w')
     if handle == nil then
         h.notify(string.format("Warning: failed to write '%s.'", config_filepath), "warn", 5)
         return
     end
 
     handle:write(string.format("# Written by %s on %s.\n", name, os.date()))
-    handle:write(content)
+    handle:write(config_text)
     handle:close()
     h.notify("Settings saved.", "info", 2)
 end
