@@ -94,11 +94,64 @@ end
 local ffmpeg = {}
 
 ffmpeg.exec = find_exec("ffmpeg")
+ffmpeg.encoder_list = nil
 
 ffmpeg.prepend = function(...)
     return {
         ffmpeg.exec, "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet", "-sn",
         ...,
+    }
+end
+
+local function ffmpeg_encoder_list()
+    if ffmpeg.encoder_list == nil then
+        local result = h.subprocess { ffmpeg.exec, "-hide_banner", "-encoders" }
+        if result and result.status == 0 then
+            ffmpeg.encoder_list = (result.stdout or "") .. (result.stderr or "")
+        else
+            ffmpeg.encoder_list = ""
+        end
+    end
+    return ffmpeg.encoder_list
+end
+
+local function ffmpeg_has_encoder(name)
+    return ffmpeg_encoder_list():find(name, 1, true) ~= nil
+end
+
+local function make_avif_encoder_args(quality_value, is_still_picture)
+    if ffmpeg_has_encoder('libaom-av1') then
+        local args = {
+            '-c:v', 'libaom-av1',
+            -- cpu-used < 6 can take a lot of time to encode.
+            '-cpu-used', '6',
+            -- Avif quality can be controlled with crf.
+            '-crf', tostring(quality_to_crf_avif(quality_value)),
+        }
+        if is_still_picture then
+            table.insert(args, '-still-picture')
+            table.insert(args, '1')
+        end
+        return args
+    end
+    if ffmpeg_has_encoder('libsvtav1') then
+        return {
+            '-c:v', 'libsvtav1',
+            '-preset', '8',
+            -- Avif quality can be controlled with crf.
+            '-crf', tostring(quality_to_crf_avif(quality_value)),
+            '-svtav1-params', 'avif=1',
+        }
+    end
+    h.notify(
+        'AVIF requested but ffmpeg has no libaom-av1 or libsvtav1 encoder. ' ..
+        'Install one or use snapshot_format=webp/jpg.',
+        'error',
+        5
+    )
+    return {
+        '-c:v', 'libaom-av1',
+        '-crf', tostring(quality_to_crf_avif(quality_value)),
     }
 end
 
@@ -127,14 +180,7 @@ end
 ffmpeg.make_static_snapshot_args = function(source_path, output_path, timestamp)
     local encoder_args
     if self.config.snapshot_format == 'avif' then
-        encoder_args = {
-            '-c:v', 'libaom-av1',
-            -- cpu-used < 6 can take a lot of time to encode.
-            '-cpu-used', '6',
-            -- Avif quality can be controlled with crf.
-            '-crf', tostring(quality_to_crf_avif(self.config.snapshot_quality)),
-            '-still-picture', '1',
-        }
+        encoder_args = make_avif_encoder_args(self.config.snapshot_quality, true)
     elseif self.config.snapshot_format == 'webp' then
         encoder_args = {
             '-c:v', 'libwebp',
@@ -164,13 +210,7 @@ end
 ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
     local encoder_args
     if self.config.animated_snapshot_format == 'avif' then
-        encoder_args = {
-            '-c:v', 'libaom-av1',
-            -- cpu-used < 6 can take a lot of time to encode.
-            '-cpu-used', '6',
-            -- Avif quality can be controlled with crf.
-            '-crf', tostring(quality_to_crf_avif(self.config.animated_snapshot_quality)),
-        }
+        encoder_args = make_avif_encoder_args(self.config.animated_snapshot_quality, false)
     else
         -- Documentation: https://www.ffmpeg.org/ffmpeg-all.html#libwebp
         encoder_args = {
