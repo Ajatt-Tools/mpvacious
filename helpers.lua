@@ -539,6 +539,37 @@ function this.read_text(file_path)
     return text, nil
 end
 
+--- True if needs update, nil if versions are equal, false if installed version is newer.
+function this.version_needs_update(latest_version, installed_version)
+    -- Convert version strings to lists of numbers and compare them numerically
+    local function version_to_list(version)
+        -- Remove leading 'v' if present
+        version = version:gsub("^v", "")
+        local list = {}
+        for num in version:gmatch("%d+") do
+            table.insert(list, tonumber(num))
+        end
+        return list
+    end
+
+    local latest_ver_list = version_to_list(latest_version)
+    local installed_ver_list = version_to_list(installed_version)
+
+    -- Compare each component
+    for i = 1, math.max(#latest_ver_list, #installed_ver_list) do
+        local latest_part = latest_ver_list[i] or 0
+        local installed_part = installed_ver_list[i] or 0
+
+        if latest_part > installed_part then
+            return true -- needs update
+        elseif installed_part > latest_part then
+            return false -- doesn't need update
+        end
+    end
+
+    return nil  -- versions are equal
+end
+
 function this.run_tests()
     this.assert_equals(this.is_substr("abcd", "bc"), true)
     this.assert_equals(this.is_substr("abcd", "xyz"), false)
@@ -617,10 +648,21 @@ function this.run_tests()
         this.assert_equals(this.find_mpv_config_directory(), utils.join_path(os.getenv("HOME") or "~", '.config/mpv'))
     end
 
+    -- Test str limit
     this.assert_equals(this.str_limit("報連相", 3), "報連相")
     this.assert_equals(this.str_limit("報連相", 2), "報連…")
     this.assert_equals(this.str_limit("報連相", 1), "報…")
     this.assert_equals(this.str_limit("報連相", 33), "報連相")
+
+    -- Test version comparison
+    this.assert_equals(this.version_needs_update("v1.0.0", "v1.0.0"), nil)
+    this.assert_equals(this.version_needs_update("v1.0.0", "v1.0.1"), false)
+    this.assert_equals(this.version_needs_update("v1.0.1", "v1.0.0"), true)
+    this.assert_equals(this.version_needs_update("v1.10.0", "v1.9.0"), true)
+    this.assert_equals(this.version_needs_update("v2.0.0", "v1.99.99"), true)
+    this.assert_equals(this.version_needs_update("v1.0", "v1.0.0"), nil)
+    this.assert_equals(this.version_needs_update("v1", "v1.0.0"), nil)
+    this.assert_equals(this.version_needs_update("v26.1.30.0", "v26.1.30.1"), false)
 end
 
 return this
