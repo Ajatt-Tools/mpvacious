@@ -366,6 +366,10 @@ self.init = function(menu, cfg_mgr)
     self.menu = menu
     self.config = cfg_mgr.config()
 
+    if custom_sub_filter and custom_sub_filter.init then
+        custom_sub_filter.init()
+    end
+
     -- The autoclip state is copied as a local value
     -- to prevent it from being reset when the user reloads the config file.
     autoclip_enabled = self.config.autoclip
