@@ -91,6 +91,9 @@ local function make_release_checker()
     end
 
     function public.release_page_url()
+        if h.is_empty(private.latest_version) then
+            return nil
+        end
         return "https://github.com/" .. private.repo .. "/releases/tag/" .. private.latest_version
     end
 
