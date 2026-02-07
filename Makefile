@@ -23,7 +23,7 @@ $(DOCS):
 	git show "$(BRANCH):README.md" | $(MD2HTML) -o $@
 
 install:
-	find . -type f -iname '*.lua' | while read -r file; do \
+	find . -type f -regextype posix-extended -iregex '.*\.(lua|json|conf)$$' | while read -r file; do \
 		install -Dm644 "$$file" "$(PREFIX)/scripts/$(PROJECT)/$$file"; \
 	done
 	install -Dm644 $(RELEASE_DIR)/subs2srs.conf "$(PREFIX)/script-opts/subs2srs.conf"
