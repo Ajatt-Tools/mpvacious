@@ -21,6 +21,7 @@ local function make_config_mgr()
         initial_config = {},
         init_done = false,
     }
+    local public = {}
 
     local function remember_initial_config()
         if h.is_empty(self.initial_config) then
@@ -48,7 +49,7 @@ local function make_config_mgr()
         read_profile(default_profile_filename)
     end
 
-    local function reload_from_disk()
+    function public.reload_from_disk()
         --- Loads default config file (subs2srs.conf), then overwrites it with current profile.
         if not h.is_empty(self.config) and not h.is_empty(self.profiles) then
             restore_initial_config()
@@ -62,7 +63,7 @@ local function make_config_mgr()
         end
     end
 
-    local function next_profile()
+    function public.next_profile()
         local first, next, new
         for profile in string.gmatch(self.profiles.profiles, '[^,]+') do
             if not first then
@@ -79,10 +80,10 @@ local function make_config_mgr()
             new = first
         end
         self.profiles.active = new
-        reload_from_disk()
+        public.reload_from_disk()
     end
 
-    local function init()
+    function public.init()
         cfg_utils.create_config_file(default_profile_filename)
         self.config = h.shallow_copy(defaults.defaults)
         self.profiles = h.shallow_copy(defaults.profiles)
@@ -99,35 +100,35 @@ local function make_config_mgr()
         self.init_done = true
     end
 
-    local function is_init_done()
+    function public.is_init_done()
         return self.init_done
     end
 
-    local function fail_if_not_ready()
+    function public.fail_if_not_ready()
         if not self.init_done then
             error("config not loaded")
         end
     end
 
-    local function get_profiles()
-        fail_if_not_ready()
+    function public.profiles()
+        public.fail_if_not_ready()
         return self.profiles
     end
 
-    local function get_config()
-        fail_if_not_ready()
+    function public.config()
+        public.fail_if_not_ready()
         return self.config
     end
 
-    return {
-        init = init,
-        reload_from_disk = reload_from_disk,
-        next_profile = next_profile,
-        init_done = is_init_done,
-        config = get_config,
-        profiles = get_profiles,
-        fail_if_not_ready = fail_if_not_ready,
-    }
+    function public.query(name)
+        public.fail_if_not_ready()
+        if self.config[name] == nil then
+            error("config value is nil:" .. name)
+        end
+        return self.config[name]
+    end
+
+    return public
 end
 
 return {
