@@ -13,10 +13,23 @@ jobs:
       contents: write
 
     steps:
-      - name: "Checkout"
-        uses: actions/checkout@v4
+      - name: Check out the repository
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
+
+      - name: "Create version file"
+        shell: bash
+        run: |
+          printf -- '{"version": "%s"}' "${{github.ref_name}}" > version.json
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: Update version file
+          commit_user_name: GitHub Actions
+          commit_user_email: noreply@github.com
+          commit_author: GitHub <noreply@github.com>
 
       - name: "Create zip"
         run: |
