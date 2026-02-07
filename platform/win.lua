@@ -30,11 +30,7 @@ self.copy_to_clipboard = function(text)
                 base64.enc(text)
         )
     }
-    return h.subprocess_detached(
-            args,
-            function()
-            end
-    )
+    return h.subprocess_detached { args = args, completion_fn = h.noop }
 end
 
 self.gen_random_tmp_file_path = function()
@@ -49,16 +45,25 @@ self.gen_unique_tmp_file_path = function()
     return curl_tmpfile_path
 end
 
-self.curl_request = function(url, request_json, completion_fn)
+--- Parameters: args (args to curl), completion_fn, suppress_log
+self.curl_request = function(o)
+    return h.subprocess {
+        args = h.join_lists({ 'curl' }, o.args),
+        completion_fn = o.completion_fn,
+        suppress_log = o.suppress_log
+    }
+end
+
+--- Parameters: url, request_json, completion_fn, suppress_log
+self.json_curl_request = function(o)
     local curl_tmpfile_path = self.gen_unique_tmp_file_path()
     local handle = io.open(curl_tmpfile_path, "w")
-    handle:write(request_json)
+    handle:write(o.request_json)
     handle:close()
     table.insert(tmp_files, curl_tmpfile_path)
     local args = {
-        'curl',
         '-s',
-        url,
+        o.url,
         '-H',
         'Content-Type: application/json; charset=UTF-8',
         '-X',
@@ -66,7 +71,11 @@ self.curl_request = function(url, request_json, completion_fn)
         '--data-binary',
         table.concat { '@', curl_tmpfile_path }
     }
-    return h.subprocess(args, completion_fn)
+    return self.curl_request {
+        args = args,
+        completion_fn = o.completion_fn,
+        suppress_log = o.suppress_log
+    }
 end
 
 return self

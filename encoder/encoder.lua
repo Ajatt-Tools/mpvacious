@@ -371,17 +371,17 @@ ffmpeg.make_audio_args = function(
     table.insert(args, '-f')
     table.insert(args, 'null')
     table.insert(args, '-')
-    h.subprocess(
-            args,
-            parse_loudnorm(
-                    loudnorm_targets,
-                    function(stdout, stderr)
-                        local start, stop, json = string.find(stderr, '%[Parsed_loudnorm_0.-({.-})')
-                        return json
-                    end,
-                    make_encoding_args
-            )
-    )
+    h.subprocess {
+        args = args,
+        completion_fn = parse_loudnorm(
+                loudnorm_targets,
+                function(stdout, stderr)
+                    local start, stop, json = string.find(stderr, '%[Parsed_loudnorm_0.-({.-})')
+                    return json
+                end,
+                make_encoding_args
+        )
+    }
 end
 
 ------------------------------------------------------------
@@ -540,25 +540,25 @@ mpv.make_audio_args = function(source_path, output_path,
     end
 
     local loudnorm_targets = make_loudnorm_targets()
-    h.subprocess(
-            make_mpvargs(
-                    '-v',
-                    '--af-append=' .. loudnorm_targets .. ':print_format=json',
-                    '--ao=null',
-                    '--of=null'
-            ),
-            parse_loudnorm(
-                    loudnorm_targets,
-                    function(stdout, stderr)
-                        local start, stop, json = string.find(stdout, '%[ffmpeg%] ({.-})')
-                        if json then
-                            json = string.gsub(json, '%[ffmpeg%]', '')
-                        end
-                        return json
-                    end,
-                    make_encoding_args
-            )
-    )
+    h.subprocess {
+        args = make_mpvargs(
+                '-v',
+                '--af-append=' .. loudnorm_targets .. ':print_format=json',
+                '--ao=null',
+                '--of=null'
+        ),
+        completion_fn = parse_loudnorm(
+                loudnorm_targets,
+                function(stdout, stderr)
+                    local start, stop, json = string.find(stdout, '%[ffmpeg%] ({.-})')
+                    if json then
+                        json = string.gsub(json, '%[ffmpeg%]', '')
+                    end
+                    return json
+                end,
+                make_encoding_args
+        )
+    }
 end
 
 ------------------------------------------------------------
@@ -567,14 +567,14 @@ end
 local create_animated_snapshot = function(start_timestamp, end_timestamp, source_path, output_path, on_finish_fn)
     -- Creates the animated snapshot and then calls on_finish_fn
     local args = self.encoder.make_animated_snapshot_args(source_path, output_path, start_timestamp, end_timestamp)
-    h.subprocess(args, on_finish_fn)
+    h.subprocess { args = args, completion_fn = on_finish_fn }
 end
 
 local create_static_snapshot = function(timestamp, source_path, output_path, on_finish_fn)
     -- Creates a static snapshot, in other words an image, and then calls on_finish_fn
     if not self.config.screenshot then
         local args = self.encoder.make_static_snapshot_args(source_path, output_path, timestamp)
-        h.subprocess(args, on_finish_fn)
+        h.subprocess { args = args, completion_fn = on_finish_fn }
     else
         local args = { 'screenshot-to-file', output_path, 'video', }
         mp.command_native_async(args, on_finish_fn)
@@ -620,10 +620,10 @@ local create_snapshot = function(start_timestamp, end_timestamp, current_timesta
 end
 
 local background_play = function(file_path, on_finish)
-    return h.subprocess(
-            { mpv.exec, '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
-            on_finish
-    )
+    return h.subprocess {
+        args = { mpv.exec, '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
+        completion_fn = on_finish
+    }
 end
 
 local create_audio = function(start_timestamp, end_timestamp, filename, padding, on_finish_fn)
@@ -648,7 +648,7 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding,
                     end)
                 end
             end
-            h.subprocess(args, on_finish_wrap)
+            h.subprocess { args = args, completion_fn = on_finish_wrap }
         end
 
         self.encoder.make_audio_args(

@@ -9,8 +9,8 @@ If a desired codec is not supported, set the "use_ffmpeg" config option to "yes"
 local mp = require('mp')
 local h = require('helpers')
 
-local ovc_help = h.subprocess { 'mpv', '--ovc=help' }
-local oac_help = h.subprocess { 'mpv', '--oac=help' }
+local ovc_help = h.subprocess { args = { 'mpv', '--ovc=help' } }
+local oac_help = h.subprocess { args = { 'mpv', '--oac=help' } }
 
 local function is_audio_supported(codec)
     return oac_help.status == 0 and oac_help.stdout:find('--oac=' .. codec, 1, true) ~= nil

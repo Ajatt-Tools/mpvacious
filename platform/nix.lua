@@ -13,7 +13,7 @@ if h.is_mac() then
     self.clip_cmd = "LANG=en_US.UTF-8 " .. self.clip_util
 elseif h.is_wayland() then
     local function is_wl_copy_installed()
-        local handle = h.subprocess { 'wl-copy', '--version' }
+        local handle = h.subprocess { args = { 'wl-copy', '--version' } }
         return handle.status == 0 and handle.stdout:match("wl%-clipboard") ~= nil
     end
 
@@ -22,7 +22,7 @@ elseif h.is_wayland() then
     self.healthy = is_wl_copy_installed()
 else
     local function is_xclip_installed()
-        local handle = h.subprocess { 'xclip', '-version' }
+        local handle = h.subprocess { args = { 'xclip', '-version' } }
         return handle.status == 0 and handle.stderr:match("xclip version") ~= nil
     end
 
@@ -41,9 +41,16 @@ self.copy_to_clipboard = function(text)
     handle:close()
 end
 
-self.curl_request = function(url, request_json, completion_fn)
-    local args = { 'curl', '-s', url, '-X', 'POST', '-d', request_json }
-    return h.subprocess(args, completion_fn)
+--- Parameters: args (args to curl), completion_fn, suppress_log
+self.curl_request = function(o)
+    o.args = h.join_lists({ 'curl' }, o.args)
+    return h.subprocess(o)
+end
+
+--- Parameters: url, request_json, completion_fn, suppress_log
+self.json_curl_request = function(o)
+    local args = { '-s', o.url, '-X', 'POST', '-d', o.request_json }
+    return self.curl_request { args = args, completion_fn = o.completion_fn, suppress_log = o.suppress_log }
 end
 
 return self

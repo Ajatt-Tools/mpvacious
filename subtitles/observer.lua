@@ -54,12 +54,18 @@ autoclip_method.register_handler('clipboard', function(current_subtitle_lines)
 end)
 
 autoclip_method.register_handler('goldendict', function(current_subtitle_lines)
-    h.subprocess_detached({ 'goldendict', current_subtitle_lines.primary }, on_external_finish)
+    h.subprocess_detached {
+        args = { 'goldendict', current_subtitle_lines.primary },
+        completion_fn = on_external_finish
+    }
 end)
 
 autoclip_method.register_handler('custom_command', function(current_subtitle_lines)
     if not h.is_empty(self.config.autoclip_custom_args) then
-        h.subprocess(external_command_args(current_subtitle_lines), on_external_finish)
+        h.subprocess {
+            args = external_command_args(current_subtitle_lines),
+            completion_fn = on_external_finish
+        }
     end
 end)
 

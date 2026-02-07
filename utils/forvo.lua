@@ -47,7 +47,7 @@ local function reencode(source_path, dest_path)
         table.concat { '--oacopts-add=b=', self.config.audio_bitrate },
         table.concat { '-o=', dest_path }
     }
-    return h.subprocess(args)
+    return h.subprocess { args = args }
 end
 
 local function reencode_and_store(source_path, filename)
@@ -57,13 +57,14 @@ local function reencode_and_store(source_path, filename)
 end
 
 local function curl_save(source_url, save_location)
-    local curl_args = { 'curl', source_url, '-s', '-L', '-o', save_location }
-    return h.subprocess(curl_args).status == 0
+    local curl_args = { source_url, '-s', '-L', '-o', save_location }
+    return platform.curl_request { args = curl_args }.status == 0
 end
 
 local function get_pronunciation_url(word)
     local file_format = self.config.audio_extension:sub(2)
-    local forvo_page = h.subprocess { 'curl', '-s', string.format('https://forvo.com/search/%s/ja', url_encode(word)) }.stdout
+    local curl_args = { '-s', string.format('https://forvo.com/search/%s/ja', url_encode(word)) }
+    local forvo_page = platform.curl_request { args = curl_args }.stdout
     local play_params = string.match(forvo_page, "Play%((.-)%);")
 
     if play_params then
