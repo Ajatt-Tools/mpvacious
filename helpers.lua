@@ -364,6 +364,16 @@ function this.shallow_copy(from, to)
     return to
 end
 
+function this.join_lists(...)
+    local result = {}
+    for _, list in ipairs({ ... }) do
+        for _, item in ipairs(list) do
+            table.insert(result, item)
+        end
+    end
+    return result
+end
+
 function this.find_mpv_scripts_dir()
     local this_dir = mp.get_script_directory() -- this_dir points to ~/.config/mpv/scripts/subs2srs (where mpvacious is installed)
     local scripts_dir, _ = utils.split_path(this_dir) -- scripts_dir points to  ~/.config/mpv/scripts/
