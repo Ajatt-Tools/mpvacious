@@ -10,16 +10,18 @@ local h = require('helpers')
 local platform = require('platform.init')
 local utils = require('mp.utils')
 
-local function make_release_checker(o)
-    o = o or {}
-    o.repo = o.repo or "Ajatt-Tools/mpvacious"
-    o.max_time_sec = o.max_time_sec or 20
-    o.check_delay_sec = o.check_delay_sec or 5
-    local api_check_url = "https://api.github.com/repos/" .. o.repo .. "/releases/latest"
-    local curl_args = { "-sL", "--max-time", tostring(o.max_time_sec), api_check_url }
-    local is_new_version_available = false
-    local latest_version, installed_version
-    local self = {}
+local function make_release_checker()
+    local private = {}
+    local public = {}
+
+    private.repo="Ajatt-Tools/mpvacious"
+    private.max_time_sec=20
+    private.check_delay_sec=5
+    private.api_check_url = "https://api.github.com/repos/" .. private.repo .. "/releases/latest"
+    private.curl_args = { "-sL", "--max-time", tostring(private.max_time_sec), private.api_check_url }
+    private.is_new_version_available = false
+    private.latest_version = nil
+    private.installed_version = nil
 
     local function read_installed_version_file()
         local version_file_path = utils.join_path(mp.get_script_directory(), "version.json")
@@ -37,65 +39,70 @@ local function make_release_checker(o)
     end
 
     local function compare_versions()
-        if h.is_empty(latest_version) or h.is_empty(installed_version) then
+        if h.is_empty(private.latest_version) or h.is_empty(private.installed_version) then
             -- Couldn't get both versions. Can't compare
             return
         end
         -- Use numeric version comparison instead of string comparison
-        is_new_version_available = h.version_needs_update(latest_version, installed_version) == true
-        if is_new_version_available then
-            mp.msg.warning("New version is available: " .. latest_version)
+        private.is_new_version_available = h.version_needs_update(private.latest_version, private.installed_version) == true
+        if private.is_new_version_available then
+            mp.msg.warn("New version is available: " .. private.latest_version)
         else
-            mp.msg.info("Installed version is up to date: " .. installed_version)
+            mp.msg.info("Installed version is up to date: " .. private.installed_version)
         end
     end
 
     local function parse_json(stdout)
         local json = utils.parse_json(stdout)
         if h.is_empty(json) then
-            mp.msg.error("Couldn't parse JSON from " .. api_check_url .. ".")
+            mp.msg.error("Couldn't parse JSON from " .. private.api_check_url .. ".")
         else
-            latest_version = json.tag_name
-            installed_version = read_installed_version_file()
+            private.latest_version = json.tag_name
+            private.installed_version = read_installed_version_file()
             compare_versions()
         end
     end
 
     local function on_curl_request_finish(success, result, error)
         if success ~= true or error ~= nil then
-            mp.msg.error("Couldn't connect to " .. api_check_url .. ". Error: " .. error)
+            mp.msg.error("Couldn't connect to " .. private.api_check_url .. ". Error: " .. error)
         elseif h.is_empty(result) or result.status ~= 0 or h.is_empty(result.stdout) then
-            mp.msg.error("Empty result from " .. api_check_url .. ". Status: " .. result.status)
+            mp.msg.error("Empty result from " .. private.api_check_url .. ". Status: " .. result.status)
         else
             parse_json(result.stdout)
         end
     end
 
     local function check_new_version()
-        platform.curl_request { args = curl_args, completion_fn = on_curl_request_finish }
+        platform.curl_request { args = private.curl_args, completion_fn = on_curl_request_finish }
     end
 
-    function self.run()
-        mp.add_timeout(o.check_delay_sec, check_new_version)
+    function public.init(cfg_mgr)
+        -- Check if update checking is enabled in the config
+        if not cfg_mgr.query("check_for_updates") then
+            mp.msg.warn("Update checking is disabled in the configuration.")
+            return
+        end
+        mp.add_timeout(private.check_delay_sec, check_new_version)
     end
 
-    function self.has_update()
-        return is_new_version_available
+    function public.has_update()
+        return private.is_new_version_available
     end
 
-    function self.release_page_url()
-        return "https://github.com/" .. o.repo .. "/releases/tag/" .. latest_version
+    function public.release_page_url()
+        return "https://github.com/" .. private.repo .. "/releases/tag/" .. private.latest_version
     end
 
-    function self.get_latest_version()
-        return latest_version
+    function public.get_latest_version()
+        return private.latest_version
     end
 
-    function self.get_installed_version()
-        return installed_version
+    function public.get_installed_version()
+        return private.installed_version
     end
 
-    return self
+    return public
 end
 
 return {

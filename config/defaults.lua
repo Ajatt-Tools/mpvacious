@@ -33,6 +33,7 @@ this.defaults = {
     use_ffmpeg = false,                        -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
     reload_config_before_card_creation = true, -- for convenience, read config file from disk before a card is made.
     card_overwrite_safeguard = 1,              -- a safeguard for accidentally overwriting more cards than intended.
+    check_for_updates = true,                  -- enable or disable checking for updates
 
     -- Clipboard and external communication
     autoclip = false,              -- enable copying subs to the clipboard when mpv starts
