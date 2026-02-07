@@ -135,14 +135,14 @@ end
 -- custom sub filter method
 
 local function apply_custom_sub_filter(text)
-    if self.config.custom_sub_filter_enabled and custom_sub_filter and custom_sub_filter.preprocess then
+    if custom_sub_filter and custom_sub_filter.preprocess then
         return custom_sub_filter.preprocess(text)
     end
     return text
 end
 
 local function apply_custom_trim(text)
-    if self.config.use_custom_trim and custom_sub_filter and custom_sub_filter.trim then
+    if custom_sub_filter and custom_sub_filter.trim then
         return custom_sub_filter.trim(text)
     end
     return h.trim(text)
