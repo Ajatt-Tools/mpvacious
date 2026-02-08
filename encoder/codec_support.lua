@@ -18,16 +18,24 @@ self.avif_encoders = {
     'libsvtav1',
 }
 
+local function result_to_str(result)
+    if result and result.status == 0 then
+        return (result.stdout or "") .. (result.stderr or "")
+    else
+        return ""
+    end
+end
+
 local function query_mpv_codec_support()
-    local ovc_help = h.subprocess { args = { exec.mpv, '--ovc=help' } }
-    local oac_help = h.subprocess { args = { exec.mpv, '--oac=help' } }
+    local ovc_help = result_to_str(h.subprocess { args = { exec.mpv, '--ovc=help' } })
+    local oac_help = result_to_str(h.subprocess { args = { exec.mpv, '--oac=help' } })
 
     local function is_audio_supported(codec)
-        return oac_help.status == 0 and oac_help.stdout:find('--oac=' .. codec, 1, true) ~= nil
+        return h.is_substr(oac_help, '--oac=' .. codec)
     end
 
     local function is_image_supported(codec)
-        return ovc_help.status == 0 and ovc_help.stdout:find('--ovc=' .. codec, 1, true) ~= nil
+        return h.is_substr(ovc_help, '--ovc=' .. codec)
     end
 
     local results = {
@@ -48,20 +56,22 @@ local function query_mpv_codec_support()
 end
 
 local function query_ffmpeg_codec_support()
-    local encoders_list = (function()
-        local result = h.subprocess { args = { exec.ffmpeg, "-hide_banner", "-encoders" } }
-        if result and result.status == 0 then
-            return (result.stdout or "") .. (result.stderr or "")
-        else
-            return ""
-        end
-    end)()
+    local encoders_list = result_to_str(h.subprocess { args = { exec.ffmpeg, "-hide_banner", "-encoders" } })
 
     local function has_ffmpeg_encoder(codec_name)
-        return encoders_list:find(codec_name, 1, true) ~= nil
+        return h.is_substr(encoders_list, codec_name)
     end
 
-    local results = { snapshot = {} }
+    local results = {
+        snapshot = {
+            libwebp = has_ffmpeg_encoder('libwebp'),
+            mjpeg = has_ffmpeg_encoder('mjpeg'),
+        },
+        audio = {
+            libmp3lame = has_ffmpeg_encoder('libmp3lame'),
+            libopus = has_ffmpeg_encoder('libopus'),
+        },
+    }
     for _, avif_codec in ipairs(self.avif_encoders) do
         results['snapshot'][avif_codec] = has_ffmpeg_encoder(avif_codec)
     end
