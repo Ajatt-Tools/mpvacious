@@ -36,11 +36,11 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 ]]
 
 local mp = require('mp')
-local OSD = require('osd_styler')
+local OSD = require('menu.osd_styler')
 local make_cfg_mgr = require('config.cfg_mgr')
 local encoder = require('encoder.encoder')
 local h = require('helpers')
-local Menu = require('menu')
+local Menu = require('menu.menu')
 local ankiconnect = require('anki.ankiconnect')
 local switch = require('utils.switch')
 local play_control = require('utils.play_control')
