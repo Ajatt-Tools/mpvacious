@@ -13,7 +13,7 @@ local exec = require('encoder.executables')
 local self = {}
 
 self.avif_encoders = {
-    'av1_qsv',
+    --'av1_qsv',
     'libaom-av1',
     'libsvtav1',
 }
