@@ -10,6 +10,8 @@ local utils = require('mp.utils')
 local h = require('helpers')
 local filename_factory = require('utils.filename_factory')
 local msg = require('mp.msg')
+local codec_support = require('encoder.codec_support')
+local exec = require('encoder.executables')
 
 --Contains the state of the module
 local self = {
@@ -39,26 +41,6 @@ local function pad_timings(padding, start_time, end_time)
     end
 
     return start_time, end_time
-end
-
-local function alt_path_dirs()
-    return {
-        '/opt/homebrew/bin',
-        '/usr/local/bin',
-        utils.join_path(os.getenv("HOME") or "~", '.local/bin'),
-    }
-end
-
-local function find_exec(name)
-    local path, info
-    for _, alt_dir in pairs(alt_path_dirs()) do
-        path = utils.join_path(alt_dir, name)
-        info = utils.file_info(path)
-        if info and info.is_file then
-            return path
-        end
-    end
-    return name
 end
 
 local function toms(timestamp)
@@ -93,36 +75,55 @@ end
 
 local ffmpeg = {}
 
-ffmpeg.exec = find_exec("ffmpeg")
-ffmpeg.encoder_list = nil
-
 ffmpeg.prepend = function(...)
     return {
-        ffmpeg.exec, "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet", "-sn",
+        exec.ffmpeg, "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet", "-sn",
         ...,
     }
 end
 
-local function ffmpeg_encoder_list()
-    if ffmpeg.encoder_list == nil then
-        local result = h.subprocess { ffmpeg.exec, "-hide_banner", "-encoders" }
-        if result and result.status == 0 then
-            ffmpeg.encoder_list = (result.stdout or "") .. (result.stderr or "")
-        else
-            ffmpeg.encoder_list = ""
+ffmpeg.choose_avif_encoder = function()
+    for _, codec_name in ipairs(codec_support.avif_encoders) do
+        if codec_support.ffmpeg_support['snapshot'][codec_name] then
+            return codec_name
         end
     end
-    return ffmpeg.encoder_list
+    return nil
 end
 
-local function ffmpeg_has_encoder(name)
-    return ffmpeg_encoder_list():find(name, 1, true) ~= nil
+ffmpeg.set_avif_encoder = function()
+    local chosen = ffmpeg.choose_avif_encoder()
+    if h.is_empty(chosen) then
+        return
+    end
+    if self.config.snapshot_format == 'avif' then
+        self.config.snapshot_codec = chosen
+    end
+    if self.config.animated_snapshot_format == 'avif' then
+        self.config.animated_snapshot_codec = chosen
+    end
 end
 
 local function make_avif_encoder_args(quality_value, is_still_picture)
-    if ffmpeg_has_encoder('libaom-av1') then
+    local codec = (function()
+        if is_still_picture then
+            return self.config.snapshot_codec
+        else
+            return self.config.animated_snapshot_codec
+        end
+    end)()
+
+    if codec == 'libsvtav1' then
+        return {
+            '-c:v', codec,
+            '-preset', '8',
+            -- Avif quality can be controlled with crf.
+            '-crf', tostring(quality_to_crf_avif(quality_value)),
+            '-svtav1-params', 'avif=1',
+        }
+    else
         local args = {
-            '-c:v', 'libaom-av1',
+            '-c:v', codec,
             -- cpu-used < 6 can take a lot of time to encode.
             '-cpu-used', '6',
             -- Avif quality can be controlled with crf.
@@ -134,25 +135,6 @@ local function make_avif_encoder_args(quality_value, is_still_picture)
         end
         return args
     end
-    if ffmpeg_has_encoder('libsvtav1') then
-        return {
-            '-c:v', 'libsvtav1',
-            '-preset', '8',
-            -- Avif quality can be controlled with crf.
-            '-crf', tostring(quality_to_crf_avif(quality_value)),
-            '-svtav1-params', 'avif=1',
-        }
-    end
-    h.notify(
-        'AVIF requested but ffmpeg has no libaom-av1 or libsvtav1 encoder. ' ..
-        'Install one or use snapshot_format=webp/jpg.',
-        'error',
-        5
-    )
-    return {
-        '-c:v', 'libaom-av1',
-        '-crf', tostring(quality_to_crf_avif(quality_value)),
-    }
 end
 
 local function make_scale_filter(algorithm, width, height)
@@ -183,13 +165,13 @@ ffmpeg.make_static_snapshot_args = function(source_path, output_path, timestamp)
         encoder_args = make_avif_encoder_args(self.config.snapshot_quality, true)
     elseif self.config.snapshot_format == 'webp' then
         encoder_args = {
-            '-c:v', 'libwebp',
+            '-c:v', self.config.snapshot_codec,
             '-compression_level', '6',
             '-quality', tostring(self.config.snapshot_quality),
         }
     else
         encoder_args = {
-            '-c:v', 'mjpeg',
+            '-c:v', self.config.snapshot_codec,
             '-q:v', tostring(quality_to_jpeg_qscale(self.config.snapshot_quality)),
         }
     end
@@ -214,7 +196,7 @@ ffmpeg.make_animated_snapshot_args = function(source_path, output_path, start_ti
     else
         -- Documentation: https://www.ffmpeg.org/ffmpeg-all.html#libwebp
         encoder_args = {
-            '-c:v', 'libwebp',
+            '-c:v', self.config.animated_snapshot_codec,
             '-compression_level', '6',
             '-quality', tostring(self.config.animated_snapshot_quality),
         }
@@ -370,7 +352,7 @@ ffmpeg.make_audio_args = function(
         local encoder_args
         if self.config.audio_format == 'opus' then
             encoder_args = {
-                '-c:a', 'libopus',
+                '-c:a', self.config.audio_codec,
                 '-application', 'voip',
                 '-apply_phase_inv', '0', -- Improves mono audio.
             }
@@ -382,7 +364,7 @@ ffmpeg.make_audio_args = function(
             -- https://wiki.hydrogenaud.io/index.php?title=LAME#Recommended_encoder_settings:
             -- "For very low bitrates, up to 100kbps, ABR is most often the best solution."
             encoder_args = {
-                '-c:a', 'libmp3lame',
+                '-c:a', self.config.audio_codec,
                 '-compression_level', '0',
                 '-abr', '1',
             }
@@ -429,11 +411,31 @@ end
 
 local mpv = { }
 
-mpv.exec = find_exec("mpv")
+mpv.choose_avif_encoder = function()
+    for _, codec_name in ipairs(codec_support.avif_encoders) do
+        if codec_support.mpv_support['snapshot'][codec_name] then
+            return codec_name
+        end
+    end
+    return nil
+end
+
+mpv.set_avif_encoder = function()
+    local chosen = mpv.choose_avif_encoder()
+    if h.is_empty(chosen) then
+        return
+    end
+    if self.config.snapshot_format == 'avif' then
+        self.config.snapshot_codec = chosen
+    end
+    if self.config.animated_snapshot_format == 'avif' then
+        self.config.animated_snapshot_codec = chosen
+    end
+end
 
 mpv.prepend_common_args = function(source_path, ...)
     return {
-        mpv.exec,
+        exec.mpv,
         source_path,
         '--no-config',
         '--loop-file=no',
@@ -448,7 +450,7 @@ mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
     local encoder_args
     if self.config.snapshot_format == 'avif' then
         encoder_args = {
-            '--ovc=libaom-av1',
+            '--ovc=' .. self.config.snapshot_codec,
             -- cpu-used < 6 can take a lot of time to encode.
             '--ovcopts-add=cpu-used=6',
             string.format('--ovcopts-add=crf=%d', quality_to_crf_avif(self.config.snapshot_quality)),
@@ -456,13 +458,13 @@ mpv.make_static_snapshot_args = function(source_path, output_path, timestamp)
         }
     elseif self.config.snapshot_format == 'webp' then
         encoder_args = {
-            '--ovc=libwebp',
+            '--ovc=' .. self.config.snapshot_codec,
             '--ovcopts-add=compression_level=6',
             string.format('--ovcopts-add=quality=%d', self.config.snapshot_quality),
         }
     else
         encoder_args = {
-            '--ovc=mjpeg',
+            '--ovc=' .. self.config.snapshot_codec,
             '--vf-add=scale=out_range=jpeg',
             string.format(
                     '--ovcopts=global_quality=%d*QP2LAMBDA,flags=+qscale',
@@ -486,14 +488,14 @@ mpv.make_animated_snapshot_args = function(source_path, output_path, start_times
     local encoder_args
     if self.config.animated_snapshot_format == 'avif' then
         encoder_args = {
-            '--ovc=libaom-av1',
+            '--ovc=' .. self.config.animated_snapshot_codec,
             -- cpu-used < 6 can take a lot of time to encode.
             '--ovcopts-add=cpu-used=6',
             string.format('--ovcopts-add=crf=%d', quality_to_crf_avif(self.config.animated_snapshot_quality)),
         }
     else
         encoder_args = {
-            '--ovc=libwebp',
+            '--ovc=' .. self.config.animated_snapshot_codec,
             '--ovcopts-add=compression_level=6',
             string.format('--ovcopts-add=quality=%d', self.config.animated_snapshot_quality),
         }
@@ -546,7 +548,7 @@ mpv.make_audio_args = function(source_path, output_path,
         local encoder_args
         if self.config.audio_format == 'opus' then
             encoder_args = {
-                '--oac=libopus',
+                '--oac=' .. self.config.audio_codec,
                 '--oacopts-add=application=voip',
                 '--oacopts-add=apply_phase_inv=0', -- Improves mono audio.
             }
@@ -557,7 +559,7 @@ mpv.make_audio_args = function(source_path, output_path,
             -- https://wiki.hydrogenaud.io/index.php?title=LAME#Recommended_encoder_settings:
             -- "For very low bitrates, up to 100kbps, ABR is most often the best solution."
             encoder_args = {
-                '--oac=libmp3lame',
+                '--oac=' .. self.config.audio_codec,
                 '--oacopts-add=compression_level=0',
                 '--oacopts-add=abr=1',
             }
@@ -724,6 +726,7 @@ local init = function(cfg_mgr)
     cfg_mgr.fail_if_not_ready()
     self.config = cfg_mgr.config()
     self.encoder = self.config.use_ffmpeg and ffmpeg or mpv
+    self.encoder.set_avif_encoder()
 end
 
 local set_output_dir = function(dir_path)
