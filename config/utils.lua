@@ -9,7 +9,6 @@ local mp = require('mp')
 local h = require('helpers')
 local utils = require('mp.utils')
 local defaults = require('config.defaults')
-local codec_support = require('encoder.codec_support')
 
 local function create_config_file(default_profile_name)
     -- default profile name is "subs2srs"
@@ -74,11 +73,7 @@ local function validate_config(config)
     local function set_video_format()
         if config.snapshot_format == 'avif' then
             config.snapshot_extension = '.avif'
-            if codec_support['snapshot']['av1_qsv'] then
-                config.snapshot_codec = 'av1_qsv'
-            else
-                config.snapshot_codec = 'libaom-av1'
-            end
+            config.snapshot_codec = 'libaom-av1'
         elseif config.snapshot_format == 'webp' then
             config.snapshot_extension = '.webp'
             config.snapshot_codec = 'libwebp'
