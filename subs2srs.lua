@@ -283,14 +283,13 @@ function menu:print_header(osd)
 end
 
 function menu:warn_formats(osd)
-    if cfg_mgr.query("use_ffmpeg") then
-        return
-    end
-    for type, codecs in pairs(codec_support) do
+    local prog_name = (cfg_mgr.query("use_ffmpeg") and "ffmpeg" or "mpv")
+    for type, codecs in pairs(codec_support[prog_name .. "_support"]) do
+        -- type is one of snapshot, audio
         for codec, supported in pairs(codecs) do
             if not supported and cfg_mgr.query(type .. '_codec') == codec then
                 osd:red('Warning: '):newline()
-                osd:tab():text(string.format("your version of mpv does not support %s.", codec)):newline()
+                osd:tab():text(string.format("your version of %s does not support %s.", prog_name, codec)):newline()
                 osd:tab():text(string.format("mpvacious won't be able to create %s files.", type)):newline()
             end
         end
