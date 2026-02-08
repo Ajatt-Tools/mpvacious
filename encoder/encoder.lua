@@ -96,6 +96,7 @@ ffmpeg.set_avif_encoder = function()
     if h.is_empty(chosen) then
         return
     end
+
     if self.config.snapshot_format == 'avif' then
         self.config.snapshot_codec = chosen
     end
@@ -766,6 +767,9 @@ local create_job = function(job_type, sub, audio_padding)
 end
 
 return {
+    encoder = function()
+        return self.encoder
+    end,
     init = init,
     set_output_dir = set_output_dir,
     snapshot = {

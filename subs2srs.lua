@@ -614,7 +614,7 @@ local main = (function()
         else
             main_executed = true
         end
-        cfg_mgr.init()
+        cfg_mgr.init(encoder)
         ankiconnect.init(cfg_mgr)
         forvo.init(cfg_mgr)
         encoder.init(cfg_mgr)

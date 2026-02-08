@@ -17,6 +17,7 @@ local profiles_filename = 'subs2srs_profiles'
 local function make_config_mgr()
     local self = {
         config = nil,
+        encoder = nil,
         profiles = nil,
         initial_config = {},
         init_done = false,
@@ -58,6 +59,10 @@ local function make_config_mgr()
                 read_profile(self.profiles.active)
             end
             cfg_utils.validate_config(self.config)
+            if h.is_empty(self.encoder.encoder()) then
+                error("encoder is not initialized.")
+            end
+            self.encoder.encoder().set_avif_encoder()
         else
             msg.fatal("Attempt to load config when init hasn't been done.")
         end
@@ -83,7 +88,8 @@ local function make_config_mgr()
         public.reload_from_disk()
     end
 
-    function public.init()
+    function public.init(encoder)
+        self.encoder = encoder
         cfg_utils.create_config_file(default_profile_filename)
         self.config = h.shallow_copy(defaults.defaults)
         self.profiles = h.shallow_copy(defaults.profiles)
