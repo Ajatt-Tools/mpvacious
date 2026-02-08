@@ -344,10 +344,16 @@ self.next_autoclip_method = function()
     notify_autocopy()
 end
 
-self.import_subs = function(subs)
+self.import_subs = function(subs_list)
     self.clear()
-    for _, sub in ipairs(subs) do
-        dialogs.insert(sub)
+    if not h.is_empty(subs_list) then
+        for _, sub in ipairs(subs_list) do
+            if sub.is_secondary then
+                secondary_dialogs.insert(sub)
+            else
+                dialogs.insert(sub)
+            end
+        end
     end
 end
 
