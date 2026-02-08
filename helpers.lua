@@ -365,12 +365,44 @@ function this.shallow_copy(from, to)
 end
 
 function this.join_lists(...)
+    -- take many lists and output one list.
     local result = {}
     for _, list in ipairs({ ... }) do
         for _, item in ipairs(list) do
             table.insert(result, item)
         end
     end
+    return result
+end
+
+function this.join_two_sorted_lists(a1, a2)
+    -- take two sorted lists and output one sorted list.
+    local result = {}
+    local idx1, idx2 = 1, 1
+
+    -- Merge elements while both lists have elements
+    while idx1 <= #a1 and idx2 <= #a2 do
+        if a1[idx1] < a2[idx2] then
+            table.insert(result, a1[idx1])
+            idx1 = idx1 + 1
+        else
+            table.insert(result, a2[idx2])
+            idx2 = idx2 + 1
+        end
+    end
+
+    -- Add remaining elements from a1, if any
+    while idx1 <= #a1 do
+        table.insert(result, a1[idx1])
+        idx1 = idx1 + 1
+    end
+
+    -- Add remaining elements from a2, if any
+    while idx2 <= #a2 do
+        table.insert(result, a2[idx2])
+        idx2 = idx2 + 1
+    end
+
     return result
 end
 
@@ -426,17 +458,6 @@ function this.maybe_require(module_name)
     end
 
     return loaded_module
-end
-
-function this.combine_lists(...)
-    -- take many lists and output one list.
-    local output = {}
-    for _, list in ipairs({ ... }) do
-        for _, item in ipairs(list) do
-            table.insert(output, item)
-        end
-    end
-    return output
 end
 
 function this.find_insertion_point(list, new)
@@ -596,7 +617,7 @@ function this.run_tests()
         this.assert_equals(episode_num, expected)
     end
 
-    this.assert_equals(this.combine_lists({ 1, 2 }, { 3 }, {}, { 4, 5 }), { 1, 2, 3, 4, 5 })
+    this.assert_equals(this.join_lists({ 1, 2 }, { 3 }, {}, { 4, 5 }), { 1, 2, 3, 4, 5 })
 
     local t1 = { 1, 2, 3 }
     local t2 = { 3, 4, 5 }
@@ -663,6 +684,16 @@ function this.run_tests()
     this.assert_equals(this.version_needs_update("v1.0", "v1.0.0"), nil)
     this.assert_equals(this.version_needs_update("v1", "v1.0.0"), nil)
     this.assert_equals(this.version_needs_update("v26.1.30.0", "v26.1.30.1"), false)
+
+    -- Test join_two_sorted_lists
+    this.assert_equals(this.join_two_sorted_lists({ 1, 3, 5 }, { 2, 4, 6 }), { 1, 2, 3, 4, 5, 6 })
+    this.assert_equals(this.join_two_sorted_lists({ 1, 2, 3 }, { 4, 5, 6 }), { 1, 2, 3, 4, 5, 6 })
+    this.assert_equals(this.join_two_sorted_lists({ 4, 5, 6 }, { 1, 2, 3 }), { 1, 2, 3, 4, 5, 6 })
+    this.assert_equals(this.join_two_sorted_lists({ 1, 3, 5 }, {}), { 1, 3, 5 })
+    this.assert_equals(this.join_two_sorted_lists({}, { 2, 4, 6 }), { 2, 4, 6 })
+    this.assert_equals(this.join_two_sorted_lists({}, {}), {})
+    this.assert_equals(this.join_two_sorted_lists({ 1 }, { 2 }), { 1, 2 })
+    this.assert_equals(this.join_two_sorted_lists({ 1, 1, 2 }, { 1, 3, 3 }), { 1, 1, 1, 2, 3, 3 })
 end
 
 return this
