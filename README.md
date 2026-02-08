@@ -14,6 +14,8 @@ while watching your favorite TV show.
 
 ## Requirements
 
+You need to install some third-party programs before you install mpvacious.
+
 <table>
 <tr>
     <th><a href="https://www.gnu.org/gnu/about-gnu.html">GNU/Linux</a></th>
@@ -25,7 +27,7 @@ while watching your favorite TV show.
     <td><a href="https://wiki.archlinux.org/index.php/Mpv">mpv</a></td>
     <td><a href="https://sourceforge.net/projects/mpv-player-windows/files">mpv</a></td>
     <td><a href="https://mpv.io/installation/">mpv</a></td>
-    <td>v0.32.0 or newer.</td>
+    <td>mpvacious is a user-script for mpv. Get mpv v0.41.0 or newer.</td>
 </tr>
 <tr>
     <td><a href="https://wiki.archlinux.org/index.php/Anki">Anki</a></td>
@@ -53,7 +55,8 @@ Install all dependencies at once (on [Arch-based](https://www.parabola.nu/)
 [distros](https://www.gnu.org/distros/free-distros.en.html)):
 
 ```
-$ sudo pacman -Syu mpv anki curl xclip --needed
+sudo pacman -Syu mpv curl xclip --needed
+trizen -S anki
 ```
 
 ## Prerequisites
@@ -62,7 +65,6 @@ $ sudo pacman -Syu mpv anki curl xclip --needed
 * If you're on a [Windows](https://www.fsf.org/windows) or a [Windows-like](https://reactos.org/) machine,
   a mpv build by `shinchiro` is recommended.
 * **macOS** users are advised to use [homebrew](https://brew.sh/) or manually add `mpv` to `PATH`.
-* **macOS** users are advised to install `gawk` to correctly split the filename.
 * Note that it is not recommended to use FlatPak or similar containers.
   If you still want to, [read this](howto/flatpak.md).
 * Make sure that your build of mpv supports encoding of audio and images.
@@ -96,6 +98,7 @@ but we acknowledge that some people haven't switched to GNU/Linux yet.
 ### Using git
 
 Clone the repo to the `scripts` directory.
+Commands for GNU/Linux:
 
 ```
 mkdir -p ~/.config/mpv/scripts/
@@ -115,14 +118,12 @@ cd ~/.config/mpv/scripts/subs2srs && git pull
 ### Manually
 
 This way is not recommended because it's easy to make a mistake during the process
-and end up with a broken install.
+and end up with a broken installation.
 
 Download
-[the repository](https://github.com/Ajatt-Tools/mpvacious/archive/refs/heads/master.zip)
-or
 [the latest release](https://github.com/Ajatt-Tools/mpvacious/releases)
-and extract the folder containing
-[subs2srs.lua](https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/master/subs2srs.lua)
+or [the master branch](https://github.com/Ajatt-Tools/mpvacious/archive/refs/heads/master.zip)
+for a development version, and extract the folder
 to your [mpv scripts](https://github.com/mpv-player/mpv/wiki/User-Scripts) directory.
 
 <details>
@@ -178,7 +179,7 @@ The config file should be created by the user, if needed.
 |--------------------|-------------------------------------------------------------------|
 | GNU/Linux          | `~/.config/mpv/script-opts/subs2srs.conf`                         |
 | Windows            | `C:/Users/Username/AppData/Roaming/mpv/script-opts/subs2srs.conf` |
-| Windows (portable) | `mpv.exeフォルダ/portable_config/script-opts/subs2srs.conf`           |
+| Windows (portable) | `mpv.exe folder/portable_config/script-opts/subs2srs.conf`        |
 
 If a parameter is not specified
 in the config file, the default value will be used.
@@ -205,7 +206,7 @@ as they greatly reduce the size of the generated files.
 
 If you still use AnkiMobile (the [proprietary](https://www.gnu.org/proprietary/) Anki app),
 set `opus_container` to `m4a` or `webm`. I'll allow iOS to play Opus files, while still maintaining
-compatibility with non-Apple devices. For really old iOS devices, set `opus_container` to
+compatibility with non-Apple devices. For ancient iOS devices, set `opus_container` to
 [`caf`](https://en.wikipedia.org/wiki/Core_Audio_Format). CAF plays only on Anki Desktop,
 AnkiWeb in Safari and AnkiMobile, and is really not recommended. (Please note that
 [Lockdown Mode](https://support.apple.com/en-us/105120) completely disables Opus and AVIF support,
@@ -214,7 +215,7 @@ though you may try to add an exception for AnkiMobile.)
 If no matter what mpvacious fails to create audio clips and/or snapshots,
 change `use_ffmpeg` to `yes`.
 By using ffmpeg instead of the encoder built in mpv you can work around most encoder issues.
-You need to have ffmpeg installed for this to work.
+You need to have `ffmpeg` installed for this to work.
 
 ### Key bindings
 
@@ -265,7 +266,7 @@ Ctrl+j       script-binding mpvacious-secondary-sid-next
 
 **Note:** A capital letter means that you need to press Shift in order to activate the corresponding binding.
 For example, <kbd>Ctrl+M</kbd> actually means <kbd>Ctrl+Shift+m</kbd>.
-mpv accepts both variants in `input.conf`.
+`mpv` accepts both variants in `input.conf`.
 
 ## Usage
 
@@ -333,16 +334,23 @@ and the target sentence doesn't span multiple subs.
 
 Advanced menu has the following options:
 
-* <kbd>f</kbd> - Increment number of cards to update. Only affects note updating, including quick card creation. The number of cards to update is reset to 1 upon updating a note.
+* <kbd>i</kbd> - Cycle between display modes.
+* <kbd>v</kbd> - Open subtitle selection menu. Upon exit, this menu exports selected subtitles into Advanced menu.
+
+* <kbd>f</kbd> - Increment number of cards to update.
+  Only affects note updating, including quick card creation.
+  The number of cards to update is reset to 1 upon updating a note.
 * <kbd>shift+f</kbd> - Decrement number of cards to update.
 
 * <kbd>c</kbd> - Interactive subtitle selection.
   The range of the currently displayed subtitle line is selected. The selection then grows both ways based on the following displayed lines.
   It does nothing if there are no subs on screen.
 
-* <kbd>shift+s</kbd> - Set the start time to the current sub. The selection then grows forward based on the following displayed lines.
+* <kbd>shift+s</kbd> - Set the start time to the current sub.
+  The selection then grows forward based on the following displayed lines.
   The default selection spans across the range of the currently displayed subtitle line.
-* <kbd>shift+e</kbd> - Set the end time to the current sub. The selection then grows backward based on the following displayed lines.
+* <kbd>shift+e</kbd> - Set the end time to the current sub.
+  The selection then grows backward based on the following displayed lines.
   The default selection spans across the range of the currently displayed subtitle line.
 
 Then seek with <kbd>Shift+h</kbd> and <kbd>Shift+l</kbd> to the previous/next line that you want to add.
@@ -353,14 +361,18 @@ Press <kbd>n</kbd> to make the card.
 * <kbd>z</kbd> and <kbd>Shift+z</kbd> - Adjust subtitle delay.
 
 If above fails, you have to manually set timings.
-* <kbd>s</kbd> - Set the start time. The selection then grows forward based on the following displayed lines.
-The default selection spans across the selected start point and the end of the subtitle line.
-* <kbd>e</kbd> - Set the end time. The selection then grows backward based on the following displayed lines.
-The default selection spans across the selected end point and the start of the subtitle line.
+
+* <kbd>s</kbd> - Set the start time.
+  The selection then grows forward based on the following displayed lines.
+  The default selection spans across the selected start point and the end of the subtitle line.
+* <kbd>e</kbd> - Set the end time.
+  The selection then grows backward based on the following displayed lines.
+  The default selection spans across the selected end point and the start of the subtitle line.
 
 Then, as earlier, press <kbd>n</kbd> to make the card.
 
 Alternatively:
+
 * <kbd>m</kbd> to update the last card(s). (<kbd>Shift+m</kbd> to overwrite)
 * <kbd>b</kbd> to update the selected card(s). (<kbd>Shift+b</kbd> to overwrite)
 
@@ -382,13 +394,15 @@ in the background.
 
 ### My subtitles are not in sync
 
-If subs are badly timed, first, you could try to re-time them.
-Read [Retiming subtitles](https://tatsumoto.neocities.org/blog/retiming-subtitles).
-Or shift timings using key bindings provided by mpv (usually <kbd>z</kbd> and <kbd>Shift+z</kbd>).
+If subs are badly timed, first, you can shift timings
+using key bindings provided by mpv (usually <kbd>z</kbd> and <kbd>Shift+z</kbd>).
+
+Alternatively, try to re-time subtitles.
+Read [Retiming subtitles](https://tatsumoto.neocities.org/blog/retiming-subtitles) for details.
 
 ### Example sentence card
 
-With the addon you can make cards like this in just a few seconds.
+With mpvacious you can make cards like this in just a few seconds.
 
 ![card-example](https://user-images.githubusercontent.com/69171671/92900057-e102d480-f40e-11ea-8cfc-b00848ca66ff.png)
 
@@ -425,15 +439,16 @@ By pressing <kbd>Ctrl</kbd>+<kbd>v</kbd> you can control secondary sid visibilit
 
 ### Other tools
 
-If you don't like the default Rikaitan Search tool, try:
+If you don't like the default *Rikaitan Search* tool, try:
 
+* [GoldenDict](howto/goldendict.md)
 * Clipboard Inserter browser add-on
 ([chrome](https://chrome.google.com/webstore/detail/clipboard-inserter/deahejllghicakhplliloeheabddjajm))
 ([firefox](https://addons.mozilla.org/ja/firefox/addon/clipboard-inserter/))
-* A html page ([1](https://pastebin.com/zDY6s3NK)) ([2](https://pastebin.com/hZ4sawL4))
+* An HTML page ([1](https://pastebin.com/zDY6s3NK)) ([2](https://pastebin.com/hZ4sawL4))
 to paste the contents of your clipboard to
 
-You can use any html page as long as it has \<body\>\</body\> in it.
+You can use any HTML page as long as it has \<body\>\</body\> in it.
 
 ### Additional mpv key bindings
 
