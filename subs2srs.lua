@@ -254,7 +254,9 @@ end
 function menu:make_key_bindings()
     return h.join_lists(
             MainMenu.make_key_bindings(self),
-            { key = 'o', fn = _run { menu.open_release_page, menu } }
+            {
+                { key = 'o', fn = _run { menu.open_release_page, menu } },
+            }
     )
 end
 

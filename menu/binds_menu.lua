@@ -58,7 +58,9 @@ function BindsMenu:make_key_bindings()
     return h.join_lists(
             MainMenu.make_key_bindings(self),
             self:_make_selection_bindings(),
-            { key = 'a', fn = self:with_update { h.noop } } -- occupy 'a' to prevent surprises
+            {
+                { key = 'a', fn = self:with_update { h.noop } }, -- occupy 'a' to prevent surprises
+            }
     )
 end
 
