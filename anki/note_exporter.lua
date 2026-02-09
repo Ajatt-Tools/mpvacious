@@ -141,7 +141,7 @@ local function make_exporter()
             if not h.is_empty(field_data) then
                 local max_len = 20
                 if string.len(field_data) > max_len then
-                    field_data = h.str_limit(max_len)
+                    field_data = h.str_limit(field_data, max_len)
                 end
                 h.notify(string.format("Updated note: %s.", field_data))
             else
