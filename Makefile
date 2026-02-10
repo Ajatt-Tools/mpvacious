@@ -1,7 +1,9 @@
 PROJECT     := mpvacious
 PACKAGE     := subs2srs
-PREFIX      ?= /etc/mpv/
-BRANCH      ?= remotes/origin/master
+# PREFIX is a path to the mpv config directory,
+# e.g. ~/.config/mpv/ or $pkgdir/etc/mpv when using PKGBUILD
+PREFIX      ?= ~/.config/mpv
+BRANCH      ?= master
 VERSION     := $(shell git describe --tags $(BRANCH))
 RELEASE_DIR := .github/RELEASE
 ZIP         := $(RELEASE_DIR)/$(PROJECT)_$(VERSION).zip
@@ -17,16 +19,17 @@ $(ZIP):
 	git archive \
 	--prefix=$(PROJECT)/ \
 	--format=zip \
-	-o $@ \
-	$(BRANCH) \
+	--output $@ \
+	"$(BRANCH):$(PROJECT)" \
 
 $(DOCS):
 	git show "$(BRANCH):README.md" | $(MD2HTML) -o $@
 
 install:
-	find . -type f -regextype posix-extended -iregex '.*\.(lua|json|conf)$$' | while read -r file; do \
-		install -Dm644 "$$file" "$(PREFIX)/scripts/$(PROJECT)/$$file"; \
-	done
+	@echo "Installing $(PROJECT) to $(PREFIX)/scripts/$(PROJECT)/"
+	install -d "$(PREFIX)/scripts/$(PROJECT)/"
+	# Copy directory contents preserving attributes
+	cp -a -- "./$(PROJECT)" "$(PREFIX)/scripts/"
 	install -Dm644 "$(RELEASE_DIR)/$(PACKAGE).conf" "$(PREFIX)/script-opts/$(PACKAGE).conf"
 
 uninstall:
