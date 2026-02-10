@@ -9,7 +9,7 @@ https://github.com/user-attachments/assets/466d1aa7-c7d1-4ea2-a296-0835d3700962
 mpvacious is your semi-automatic subs2srs for mpv.
 It supports multiple workflows and allows you to quickly create Anki cards
 while watching your favorite TV show.
-Watch a <a target="_blank" href="https://redirect.invidious.io/watch?v=vU85ramvyo4">video demonstration on <img alt="YouTube" src="https://user-images.githubusercontent.com/69171671/115097010-4bd13c80-9f17-11eb-83e9-2583658f73bc.png" width="80px"></a>.
+Watch a [📽️ video demonstration](https://ajatt.top/blog/vid/sentence_mining_with_mpvacious.mp4).
 
 ## Requirements
 
