@@ -2,7 +2,7 @@ PROJECT     := mpvacious
 PACKAGE     := subs2srs
 # PREFIX is a path to the mpv config directory,
 # e.g. ~/.config/mpv/ or $pkgdir/etc/mpv when using PKGBUILD
-PREFIX      ?= ~/.config/mpv
+PREFIX      ?= $(HOME)/.config/mpv
 BRANCH      ?= master
 VERSION     := $(shell git describe --tags $(BRANCH))
 RELEASE_DIR := .github/RELEASE
@@ -30,11 +30,12 @@ install:
 	install -d "$(PREFIX)/scripts/$(PROJECT)/"
 	# Copy directory contents preserving attributes
 	cp -a -- "./$(PROJECT)" "$(PREFIX)/scripts/"
-	install -Dm644 "$(RELEASE_DIR)/$(PACKAGE).conf" "$(PREFIX)/script-opts/$(PACKAGE).conf"
+	if [ ! -f "$(PREFIX)/script-opts/$(PACKAGE).conf" ]; then \
+		install -Dm644 "$(RELEASE_DIR)/$(PACKAGE).conf" "$(PREFIX)/script-opts/$(PACKAGE).conf"; \
+	fi
 
 uninstall:
 	rm -rf -- "$(PREFIX)/scripts/$(PROJECT)"
-	rm -- "$(PREFIX)/script-opts/$(PACKAGE).conf"
 
 clean:
-	rm -- $(ZIP) $(DOCS)
+	rm -- "$(ZIP)" "$(DOCS)"
