@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Install mpvacious using Bash on GNU/Linux or macOS.
+# Based on: https://github.com/tomasklaen/uosc/tree/b77c1f95a877979bd5acef63bad84b03275a18af/installers
+
 # Exit immediately if a command exits with a non-zero status
 set -euo pipefail
 
@@ -96,7 +99,7 @@ set_mpv_config_dir() {
 		mpv_config_dir=~/.config/mpv
 		echo "Installing into Config location: $mpv_config_dir"
 	else
-		die "This install script works only on Linux and macOS."
+		die "This install script works only on GNU/Linux and macOS."
 	fi
 }
 

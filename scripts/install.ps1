@@ -1,3 +1,6 @@
+# Install mpvacious using Powershell on Windows.
+# Based on: https://github.com/tomasklaen/uosc/tree/b77c1f95a877979bd5acef63bad84b03275a18af/installers
+
 # Fetch the latest version from GitHub API
 try {
     $LatestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/Ajatt-Tools/mpvacious/releases/latest" -ErrorAction Stop
