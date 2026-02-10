@@ -1,98 +1,156 @@
 --- See: https://github.com/Ajatt-Tools/mpvacious/pull/151
-
+--- mpvacious Custom Subtitle Filter Example
+--- This script filters bilingual (JP/CN) subtitles to extract only the Japanese lines.
+--- Based on Kana detection, as both languages share Kanji.
+---
+--- To enable this feature:
+--- 1. Rename this file to 'subs2srs_sub_filter.lua'.
+--- 2. Place it in '~/.config/mpv/scripts/subs2srs_sub_filter/'.
+--- 3. Create a dummy 'main.lua' in the same folder (it can be empty).
+--- Note: This file is a custom plugin for mpvacious, not a standalone mpv script.
 local M = {}
 
-local isKana = function(char)
-    local byte1, byte2, byte3 = string.byte(char, 1, 3)
-    -- 平假名范围: ぁ (U+3041) 到 ゖ (U+3096)
-    if byte1 == 227 and byte2 == 129 and (byte3 >= 128 and byte3 <= 191) then
+-- Plugin State
+local enabled = true
+
+--- Toggle the filter status via OSD.
+local function toggle_filter()
+    enabled = not enabled
+    local status = enabled and "ON" or "OFF"
+    mp.osd_message("Bilingual Filter: " .. status)
+    mp.msg.info("Custom sub filter set to " .. status)
+end
+
+-------------------------------------------------------------------------------
+-- UTF-8 / Language Utilities
+-------------------------------------------------------------------------------
+
+--- Checks if a 3-byte sequence represents a Japanese Kana character.
+--- @param b1, b2, b3 number: The three bytes of a UTF-8 character.
+--- @return boolean
+local function is_kana_bytes(b1, b2, b3)
+    -- Hiragana: U+3041(ぁ) - U+309F(ゟ) 
+    -- (UTF-8: E3 81 81 to E3 82 9F)
+    if b1 == 0xE3 and b2 == 0x81 and (b3 >= 0x81 and b3 <= 0xBF) then
         return true
     end
-    -- 片假名范围: ァ (U+30A1) 到 ヶ (U+30F6)
-    if byte1 == 227 and byte2 == 130 and (byte3 >= 128 and byte3 <= 191) then
+    if b1 == 0xE3 and b2 == 0x82 and (b3 >= 0x80 and b3 <= 0x9F) then
         return true
     end
-    -- 片假名扩展范围: ㇰ (U+31F0) 到 ㇿ (U+31FF)
-    if byte1 == 227 and byte2 == 131 and (byte3 >= 128 and byte3 <= 191) then
+
+    -- Katakana: U+30A0(゠) - U+30FF(ヿ)
+    -- (UTF-8: E3 82 A0 to E3 83 BF)
+    if b1 == 0xE3 and b2 == 0x82 and (b3 >= 0xA0 and b3 <= 0xBF) then
         return true
     end
+    if b1 == 0xE3 and b2 == 0x83 and (b3 >= 0x80 and b3 <= 0xBF) then
+        return true
+    end
+
     return false
 end
 
--- 检查字符串是否包含假名
-local containsKana = function(str)
-    for i = 1, #str do
-        local char = str:sub(i, i + 2)
-        if isKana(char) then
-            return true
+--- Scans a string to see if it contains any Japanese Kana.
+--- @param str string
+--- @return boolean
+local function contains_kana(str)
+    if not str then
+        return false
+    end
+    local i = 1
+    local len = #str
+    while i <= len do
+        local b1 = string.byte(str, i)
+
+        -- UTF-8 Prefix Patterns:
+        if b1 < 0x80 then
+            -- 1-byte (0xxxxxxx): ASCII
+            i = i + 1
+        elseif b1 < 0xE0 then
+            -- 2-byte (110xxxxx): 0xC2 to 0xDF
+            i = i + 2
+        elseif b1 < 0xF0 then
+            -- 3-byte (1110xxxx): 0xE0 to 0xEF
+            -- This is where most CJK characters (including Kana) reside.
+            if i + 2 <= len then
+                local b2 = string.byte(str, i + 1)
+                local b3 = string.byte(str, i + 2)
+                if is_kana_bytes(b1, b2, b3) then
+                    return true
+                end
+            end
+            i = i + 3
+        elseif b1 < 0xF8 then
+            -- 4-byte (11110xxx): 0xF0 to 0xF7 (Emoji/Rare chars)
+            i = i + 4
+        else
+            -- Invalid UTF-8 start byte or rare 5/6 byte sequences
+            i = i + 1
         end
     end
     return false
 end
 
--- 判断字符串是否包含非简体的汉字（根据实际需要可调整范围）
-local containsNonSimplifiedChinese = function(str)
-    -- 简单判断是否包含日文汉字的范围，例如，常用日文汉字 (这个范围可能需要根据需求进一步细化)
-    return str:match("[\228\184\128-\233\191\191]")
-end
+-------------------------------------------------------------------------------
+-- Processing Logic
+-------------------------------------------------------------------------------
 
-local contains_non_latin_letters = function(str)
-    return str:match("[^%c%p%s%w—]")
-end
-
-local capitalize_first_letter = function(string)
-    return string:gsub("^%l", string.upper)
-end
-
-local remove_leading_trailing_spaces = function(str)
-    return str:gsub('^%s*(.-)%s*$', '%1')
-end
-
-local remove_leading_trailing_dashes = function(str)
-    return str:gsub('^[%-_]*(.-)[%-_]*$', '%1')
-end
-
-
-local get_japanese = function(str1, str2)
-    if containsKana(str1) then
-        return str1
-    elseif containsKana(str2) then
-        return str2
-    elseif containsNonSimplifiedChinese(str1) then
-        return str1
-    elseif containsNonSimplifiedChinese(str2) then
-        return str2
-    else
-        return str1
+--- Extracts Japanese lines from the provided text.
+--- If the filter is disabled or no Japanese is detected, it returns the original.
+--- @param text string: Raw subtitle text
+--- @return string: Filtered text
+local function extract_japanese_only(text)
+    if not enabled or not text or text == "" then
+        return text
     end
-end
 
-local get_last_two_parts = function(input)
     local lines = {}
-    -- 使用 string.gmatch 分割字符串并存入表
-    for line in string.gmatch(input, "[^\n]+") do
+    for line in string.gmatch(text, "[^\r\n]+") do
         table.insert(lines, line)
     end
 
-    -- 获取最后两段，如果不足两段，则根据情况返回
-    local count = #lines
-    if count >= 2 then
-        return lines[count - 1], lines[count]
-    elseif count == 1 then
-        return lines[1], ""  -- 如果只有一段，返回该段和空字符串
-    else
-        return "", ""  -- 如果没有段落，返回两个空字符串
-    end
-end
-
-local get_japanese_from_subtext = function(text)
-    if text == nil or text == "" then
-        return ""
+    if #lines <= 1 then
+        return text
     end
 
-    return get_japanese(get_last_two_parts(text))
+    local jp_lines = {}
+    for _, line in ipairs(lines) do
+        if contains_kana(line) then
+            table.insert(jp_lines, line)
+        end
+    end
+
+    -- If we found specific Japanese lines, return them joined.
+    -- Otherwise, return the original text (fallback).
+    if #jp_lines > 0 then
+        return table.concat(jp_lines, "\n")
+    end
+
+    return text
 end
 
-M.preprocess = get_japanese_from_subtext
+-------------------------------------------------------------------------------
+-- Exported Functions (Plugin Interface)
+-------------------------------------------------------------------------------
+
+--- Main preprocessing function called by mpvacious.
+M.preprocess = function(text)
+    return extract_japanese_only(text)
+end
+
+--- Custom trim function.
+--- Overrides the internal mpvacious trimmer if uncommented.
+--- The internal trimmer is controlled by `clipboard_trim_enabled=yes` 
+--- in your `subs2srs.conf`.
+-- M.trim = function(text)
+--     -- Example: return text:gsub("^%s*(.-)%s*$", "%1")
+--     return text
+-- end
+
+--- Initialization function called when the extension is loaded.
+M.init = function()
+    -- Keybind to toggle the filter manually
+    mp.add_key_binding("alt+m", "toggle_custom_sub_filter", toggle_filter)
+end
 
 return M
