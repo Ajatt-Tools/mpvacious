@@ -131,11 +131,6 @@ this.defaults = {
     vocab_field = "VocabKanji",       -- target word field
     vocab_audio_field = "VocabAudio", -- target word audio
 
-    -- Custom Sub Filter
-    custom_sub_filter_enabled = false,                    -- True to enable custom sub preprocessing be default
-    custom_sub_filter_notification = "Custom Sub Filter", -- Notification prefix for toggle
-    use_custom_trim = false,                              -- True to use a custom trim instead of the built in one
-
     -- New note timer
     enable_new_note_timer = true,        -- Start the new note checker when mpv starts.
     new_note_timer_interval_seconds = 2, -- Check for new notes every N seconds.
