@@ -83,48 +83,95 @@ trizen -S anki
 ## Installation
 
 There are multiple ways you can install `mpvacious`.
-I recommend installing with `git` so that you can easily update on demand.
 
-`mpvacious` is a user-script for mpv,
-so it has to be installed in the directory `mpv` reads its user-scripts from.
-
-| OS        | Location                                         |
-|-----------|--------------------------------------------------|
-| GNU/Linux | `~/.config/mpv/scripts/`                         |
-| Windows   | `C:/Users/Username/AppData/Roaming/mpv/scripts/` |
-
+We recommend using GNU/Linux.
 Windows is not recommended,
 but we acknowledge that some people haven't switched to GNU/Linux yet.
-
-### Using git
-
-Clone the repo to the `scripts` directory.
-Commands for GNU/Linux:
-
-```
-mkdir -p ~/.config/mpv/scripts/
-git clone 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/mpvacious
-```
-
-To update, run the following command.
-
-```
-cd ~/.config/mpv/scripts/mpvacious && git pull
-```
 
 ### From the AUR
 
 `mpvacious` can be installed with the [mpv-mpvacious](https://aur.archlinux.org/packages/mpv-mpvacious/) package.
+This method will install mpvacious to `/etc/mpv`.
+
+### Using Bash on GNU/Linux and macOS
+
+*Requires `curl` and `unzip`.*
+
+Run [install.sh](scripts/install.sh) with this command:
+
+```sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/HEAD/scripts/install.sh)"
+```
+
+On GNU/Linux, we try to detect what package manager variant of the config location you're using, with precedent being:
+
+```
+~/.var/app/io.mpv.Mpv     (flatpak)
+~/snap/mpv
+~/snap/mpv-wayland
+~/.config/mpv
+```
+
+To install into any of these locations, make sure the ones above it don't exist.
+
+### Using Powershell on Windows
+
+Open [Powershell](https://learn.microsoft.com/en-us/powershell/).
+
+*Optional, needed to run a remote script the first time if not enabled already:*
+
+```powershell
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+Run [install.ps1](scripts/install.ps1) with this command:
+
+```powershell
+irm https://raw.githubusercontent.com/Ajatt-Tools/mpvacious/HEAD/scripts/install.ps1 | iex
+```
+
+**NOTE**: If this command is run in an mpv installation directory with `portable_config`,
+it'll install there instead of `AppData`.
+
+### Development mode - Using git
+
+Installing Mpvacious in development mode allows contributors to easily test their changes.
+With this setup, any changes made to the *.lua files will be applied immediately after restarting mpv.
+
+Clone the repository, then create a symlink from the `mpvacious` directory to the mpv config directory.
+
+Commands for GNU/Linux:
+
+```
+git clone 'https://github.com/Ajatt-Tools/mpvacious.git'
+mkdir -p ~/.config/mpv/scripts/
+cd mpvacious
+bash scripts/symlink.sh
+```
+
+To update existing installation, use `git`.
+
+```
+git pull
+```
 
 ### Manually
 
 This way is not recommended because it's easy to make a mistake during the process
 and end up with a broken installation.
 
+`mpvacious` is a user-script for mpv,
+so it has to be installed in the directory `mpv` reads its user-scripts from.
+
+| OS                 | Location                                         |
+|--------------------|--------------------------------------------------|
+| GNU/Linux or macos | `~/.config/mpv/scripts/`                         |
+| Windows            | `C:/Users/Username/AppData/Roaming/mpv/scripts/` |
+
 Download
 [the latest release](https://github.com/Ajatt-Tools/mpvacious/releases)
 or [the master branch](https://github.com/Ajatt-Tools/mpvacious/archive/refs/heads/master.zip)
-for a development version, and extract the folder
+for a development version, and extract the "mpvacious" folder
 to your [mpv scripts](https://github.com/mpv-player/mpv/wiki/User-Scripts) directory.
 
 <details>
