@@ -21,7 +21,7 @@ jobs:
       - name: "Create version file"
         shell: bash
         run: |
-          printf -- '{"version": "%s"}' "${{github.ref_name}}" > version.json
+          printf -- '{"version": "%s"}' "${{github.ref_name}}" > mpvacious/version.json
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v7
