@@ -53,7 +53,9 @@ set_mpv_config_dir() {
 }
 
 delete_existing_installation() {
-	if [[ -e "$install_dest" ]] && [[ ! -L "$install_dest" ]]; then
+	if [[ -L $install_dest ]]; then
+		rm -f -- "$install_dest"
+	elif [[ -e "$install_dest" ]]; then
 		gio trash -- "$install_dest" ||
 			trash-put -- "$install_dest" ||
 			die "Couldn't delete directory: $install_dest"
