@@ -10,9 +10,12 @@ ZIP         := $(RELEASE_DIR)/$(PROJECT)_$(VERSION).zip
 DOCS        := $(RELEASE_DIR)/README_$(VERSION).html
 MD2HTML      = md2html --github --full-html
 
+EXAMPLE_CONFIG      := $(PROJECT)/config/default_config.conf
+EXAMPLE_CONFIG_COPY := $(RELEASE_DIR)/$(PACKAGE).conf
+
 .PHONY: all docs install uninstall clean
 
-all: $(ZIP)
+all: $(ZIP) $(EXAMPLE_CONFIG_COPY)
 docs: $(DOCS)
 
 $(ZIP):
@@ -20,7 +23,10 @@ $(ZIP):
 	--prefix=$(PROJECT)/ \
 	--format=zip \
 	--output $@ \
-	"$(BRANCH):$(PROJECT)" \
+	"$(BRANCH):$(PROJECT)"
+
+$(EXAMPLE_CONFIG_COPY): $(EXAMPLE_CONFIG)
+	cp -- "$<" "$@"
 
 $(DOCS):
 	git show "$(BRANCH):README.md" | $(MD2HTML) -o $@
@@ -31,7 +37,7 @@ install:
 	# Copy directory contents preserving attributes
 	cp -a -- "./$(PROJECT)" "$(PREFIX)/scripts/"
 	if [ ! -f "$(PREFIX)/script-opts/$(PACKAGE).conf" ]; then \
-		install -Dm644 "$(RELEASE_DIR)/$(PACKAGE).conf" "$(PREFIX)/script-opts/$(PACKAGE).conf"; \
+		install -Dm644 "$(EXAMPLE_CONFIG)" "$(PREFIX)/script-opts/$(PACKAGE).conf"; \
 	fi
 
 uninstall:

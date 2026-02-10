@@ -3,3 +3,5 @@
 *.zip
 *.html
 *TODO*
+
+.github/RELEASE/*.conf

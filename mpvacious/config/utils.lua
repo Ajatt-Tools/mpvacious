@@ -15,7 +15,7 @@ local function create_config_file(default_profile_name)
     local name = default_profile_name
     -- ~/.config/mpv/script-opts/subs2srs.conf
     local config_filepath = utils.join_path(h.find_mpv_script_opts_directory(), string.format('%s.conf', name))
-    local example_config_filepath = utils.join_path(mp.get_script_directory(), ".github/RELEASE/subs2srs.conf")
+    local example_config_filepath = utils.join_path(mp.get_script_directory(), "mpvacious/config/default_config.conf")
 
     local file_info = utils.file_info(config_filepath)
     if file_info and file_info.is_file then

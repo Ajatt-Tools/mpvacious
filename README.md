@@ -187,7 +187,7 @@ in the config file, the default value will be used.
 mpv doesn't tolerate spaces before and after `=`.
 
 <p align="center">
-  <a href=".github/RELEASE/subs2srs.conf">Example configuration file</a>
+  <a href="mpvacious/config/default_config.conf">Example configuration file</a>
 </p>
 
 If the first field is empty, it will be set contain the string `[empty]`.
@@ -386,7 +386,7 @@ The **new note timer** feature allows mpvacious to automatically detect and upda
 without manual intervention. When enabled, mpvacious will periodically check for new notes
 and automatically add media (audio and images) to them if they match your configured note type.
 
-To enable this feature, set `enable_new_note_timer=yes` in your [config file](.github/RELEASE/subs2srs.conf).
+To enable this feature, set `enable_new_note_timer=yes` in your [config file](mpvacious/config/default_config.conf).
 You can adjust how often mpvacious checks for new notes with the `new_note_timer_interval_seconds` setting.
 
 When this feature is enabled, you no longer need to manually press "m" to update notes
