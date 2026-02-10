@@ -15,6 +15,8 @@ local function alt_path_dirs()
     }
 end
 
+--- Try to find name in alternative locations.
+--- If not found, return name as is to use executable in PATH.
 function self.find_exec(name)
     local path, info
     for _, alt_dir in pairs(alt_path_dirs()) do
