@@ -15,7 +15,7 @@ docs: $(DOCS)
 
 $(ZIP):
 	git archive \
-	--prefix=$(PACKAGE)/ \
+	--prefix=$(PROJECT)/ \
 	--format=zip \
 	-o $@ \
 	$(BRANCH) \
@@ -27,7 +27,7 @@ install:
 	find . -type f -regextype posix-extended -iregex '.*\.(lua|json|conf)$$' | while read -r file; do \
 		install -Dm644 "$$file" "$(PREFIX)/scripts/$(PROJECT)/$$file"; \
 	done
-	install -Dm644 $(RELEASE_DIR)/$(PACKAGE).conf "$(PREFIX)/script-opts/$(PACKAGE).conf"
+	install -Dm644 "$(RELEASE_DIR)/$(PACKAGE).conf" "$(PREFIX)/script-opts/$(PACKAGE).conf"
 
 uninstall:
 	rm -rf -- "$(PREFIX)/scripts/$(PROJECT)"
