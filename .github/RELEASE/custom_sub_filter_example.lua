@@ -40,8 +40,12 @@ local function is_kana_bytes(b1, b2, b3)
 
     -- Katakana: U+30A0(゠) - U+30FF(ヿ)
     -- (UTF-8: E3 82 A0 to E3 83 BF)
-    if b1 == 0xE3 and b2 == 0x82 and (b3 >= 0xA0 and b3 <= 0xBF) then
-        return true
+    -- Note: U+30FB (E3 82 BB) is '・', which is also used in Chinese.
+    -- We split the 0x82 block to exclude 0xBB.
+    if b1 == 0xE3 and b2 == 0x82 then
+        if (b3 >= 0xA0 and b3 <= 0xBA) or (b3 >= 0xBC and b3 <= 0xBF) then
+            return true
+        end
     end
     if b1 == 0xE3 and b2 == 0x83 and (b3 >= 0x80 and b3 <= 0xBF) then
         return true
