@@ -6,9 +6,11 @@ https://github.com/user-attachments/assets/466d1aa7-c7d1-4ea2-a296-0835d3700962
 
 # mpvacious
 
-mpvacious is your semi-automatic subs2srs for mpv.
-It supports multiple workflows and allows you to quickly create Anki cards
-while watching your favorite TV show.
+Mpvacious is a user script for [mpv](https://wiki.archlinux.org/title/Mpv)
+that offers utilities for creating and modifying Anki flashcards from movies and TV shows.
+It allows you to select subtitle lines, create audio clips and images, and send them to Anki.
+The script supports secondary subtitles, configurable media formats, and customizable keyboard bindings.
+Mpvacious works best with [Goldendict-ng](https://xiaoyifang.github.io/goldendict-ng/) or [Rikaitan](https://rikaitan.ajatt.top/).
 Watch a [📽️ video demonstration](https://ajatt.top/blog/vid/sentence_mining_with_mpvacious.mp4).
 
 ## Requirements
@@ -101,13 +103,13 @@ Commands for GNU/Linux:
 
 ```
 mkdir -p ~/.config/mpv/scripts/
-git clone 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/subs2srs
+git clone 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/mpvacious
 ```
 
 To update, run the following command.
 
 ```
-cd ~/.config/mpv/scripts/subs2srs && git pull
+cd ~/.config/mpv/scripts/mpvacious && git pull
 ```
 
 ### From the AUR
@@ -133,9 +135,9 @@ to your [mpv scripts](https://github.com/mpv-player/mpv/wiki/User-Scripts) direc
 ~/.config/mpv/scripts
 |-- other script 1
 |-- other script 2
-|-- subs2srs
+|-- mpvacious
 |   |-- main.lua
-|   |-- subs2srs.lua
+|   |-- helpers.lua
 |   `-- other files
 `-- other script 3
 ```
@@ -152,9 +154,9 @@ You need to tell mpv where to look for `mpvacious`.
 Open or create  `~/.config/mpv/scripts/modules.lua` and add these lines:
 ```
 local mpv_scripts_dir_path = os.getenv("HOME") ..  "/.config/mpv/scripts/"
-package.path = package.path .. ';' .. os.getenv("HOME") .. '/.config/mpv/scripts/subs2srs/?.lua'
+package.path = package.path .. ';' .. os.getenv("HOME") .. '/.config/mpv/scripts/mpvacious/?.lua'
 function load(relative_path) dofile(mpv_scripts_dir_path .. relative_path) end
-load("subs2srs/subs2srs.lua")
+load("mpvacious/main.lua")
 ```
 
 </details>
@@ -166,7 +168,7 @@ load("subs2srs/subs2srs.lua")
 In [Celluloid](https://www.archlinux.org/packages/community/x86_64/celluloid/)
 user scripts are installed in `/.config/celluloid/scripts/`.
 When following the instructions above, replace `.config/mpv` with `.config/celluloid`
-and optionally `subs2srs` with the name of the folder mpvacious is cloned into.
+and optionally `mpvacious` with the name of the folder mpvacious is cloned into.
 
 </details>
 
