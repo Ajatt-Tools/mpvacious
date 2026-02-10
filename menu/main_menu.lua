@@ -11,7 +11,7 @@ local h = require('helpers')
 
 -- create MainMenu object by extending Menu class
 local MainMenu = Menu:new()
-MainMenu.subs2srs = nil -- pass sub2srs object to main menu
+MainMenu.subs2srs = nil -- pass subs2srs object to main menu
 
 -- Derived class method new
 function MainMenu:new(o)
