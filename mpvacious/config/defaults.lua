@@ -91,7 +91,7 @@ this.defaults = {
 
     -- Anki
     create_deck = false,               -- automatically create a deck for new cards
-    allow_duplicates = false,          -- allow making notes with the same sentence field
+    allow_duplicates = true,           -- allow making notes with the same sentence field
     deck_name = "Learning",            -- name of the deck for new cards
     model_name = "Japanese sentences", -- Tools -> Manage note types
     sentence_field = "SentKanji",
