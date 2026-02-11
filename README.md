@@ -526,11 +526,11 @@ While the default subtitle processing in `mpvacious` is sufficient for most user
 
 To use this feature, create the following directory and an **empty `main.lua**` file (required to prevent `mpv` from reporting a plugin error):
 
-| OS                     | Plugin Location                                                           |
-| :--------------------- | :------------------------------------------------------------------------ |
-| **GNU/Linux**          | `~/.config/mpv/scripts/subs2srs_subtitle_filter/`                         |
-| **Windows**            | `C:/Users/Username/AppData/Roaming/mpv/scripts/subs2srs_subtitle_filter/` |
-| **Windows (portable)** | `mpv.exe folder/portable_config/scripts/subs2srs_subtitle_filter/`        |
+| OS                 | Plugin Location                                                           |
+| ------------------ | ------------------------------------------------------------------------- |
+| GNU/Linux          | `~/.config/mpv/scripts/subs2srs_subtitle_filter/`                         |
+| Windows            | `C:/Users/Username/AppData/Roaming/mpv/scripts/subs2srs_subtitle_filter/` |
+| Windows (portable) | `mpv.exe folder/portable_config/scripts/subs2srs_subtitle_filter/`        |
 
 **Structure:**
 
