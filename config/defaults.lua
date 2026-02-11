@@ -131,6 +131,9 @@ this.defaults = {
     vocab_field = "VocabKanji",       -- target word field
     vocab_audio_field = "VocabAudio", -- target word audio
 
+    --  Custom Subtitle Filter
+    custom_subtitle_filter_mode = "japanese", -- A custom string passed to the custom filter script
+
     -- New note timer
     enable_new_note_timer = true,        -- Start the new note checker when mpv starts.
     new_note_timer_interval_seconds = 2, -- Check for new notes every N seconds.

@@ -11,6 +11,9 @@ local M = {}
 
 -- Plugin State
 local enabled = true
+local get_current_mode = function()
+    return nil
+end
 
 --- Toggle the filter status via OSD.
 local function toggle_filter()
@@ -107,6 +110,10 @@ local function extract_japanese_only(text)
         return text
     end
 
+    if get_current_mode() ~= "japanese" then
+        return text
+    end
+
     local lines = {}
     for line in string.gmatch(text, "[^\r\n]+") do
         table.insert(lines, line)
@@ -151,7 +158,11 @@ end
 -- end
 
 --- Initialization function called when the extension is loaded.
-M.init = function()
+M.init = function(get_config_mode)
+    if type(get_config_mode) == "function" then
+        get_current_mode = get_config_mode
+    end
+
     -- Keybind to toggle the filter manually
     mp.add_key_binding("alt+m", "toggle_custom_subtitle_filter", toggle_filter)
 end
