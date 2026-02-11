@@ -62,6 +62,25 @@ local function make_ankiconnect()
         return stdout_json.result, nil
     end
 
+    --- Note: h.subprocess() accepts completion_fn with args (success, result, error)
+    --- But this function accepts completion_fn with args (parsed_json, error)
+    self.make_result_parser_async = function(on_completed)
+        if on_completed == nil then
+            on_completed = function(_, _) -- parsed_json, error
+                msg.warn("Ignoring Ankiconnect result")
+            end
+        end
+        return function(success, result, error)
+            local parsed_json
+            if success and not error then
+                parsed_json, error = self.parse_result(result)
+                on_completed(parsed_json, error)
+            else
+                on_completed(nil, tostring(error))
+            end
+        end
+    end
+
     self.get_media_dir_path = function()
         -- Ask AnkiConnect where to store media files.
         -- If AnkiConnect isn't running, returns nil.
