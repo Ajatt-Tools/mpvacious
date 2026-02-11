@@ -158,9 +158,9 @@ end
 -- end
 
 --- Initialization function called when the extension is loaded.
-M.init = function(get_config_mode)
-    if type(get_config_mode) == "function" then
-        get_current_mode = get_config_mode
+M.init = function(config)
+    if type(config.get_mode) == "function" then
+        get_current_mode = config.get_mode
     end
 
     -- Keybind to toggle the filter manually

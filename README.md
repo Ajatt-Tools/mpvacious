@@ -546,13 +546,14 @@ subs2srs_subtitle_filter/
 
 * **`preprocess(text)`**: The primary function for filtering or reformatting raw subtitles.
 * **`trim(text)`**: Overrides the internal trimmer. Note that internal trimming must be enabled via `clipboard_trim_enabled=yes` in `subs2srs.conf`.
-* **`init(get_config_mode)`**: Called on load to setup keybindings or initialize custom logic. It receives a **getter function** that returns the current `custom_subtitle_filter_mode`, ensuring your script stay in sync with profile switches.
+* **`init(config)`**: Called on load to setup keybindings or initialize custom logic. It receives a **configuration table** containing:
+  * **`get_mode`**: A **getter function** that returns the current `custom_subtitle_filter_mode`, ensuring your script stay in sync with profile switches.
 
 ### Configuration
 
 You can control the filter's behavior via `subs2srs.conf` and its profiles:
 
-* **`custom_subtitle_filter_mode`**: A string accessible via the getter function in `init`. Use this to dynamically toggle or change filtering logic when switching profiles—for example, set it to `japanese` in your JP profile and `none` in others.
+* **`custom_subtitle_filter_mode`**: A string accessible via `config.get_mode()` in `init`. Use this to dynamically toggle or change filtering logic when switching profiles—for example, set it to `japanese` in your JP profile and `none` in others.
 
 ### Using the Example Script
 

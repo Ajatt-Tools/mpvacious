@@ -367,9 +367,11 @@ self.init = function(menu, cfg_mgr)
     self.config = cfg_mgr.config()
 
     if custom_subtitle_filter and custom_subtitle_filter.init then
-        custom_subtitle_filter.init(function()
-            return self.config.custom_subtitle_filter_mode
-        end)
+        custom_subtitle_filter.init({
+            get_mode = function()
+                return self.config.custom_subtitle_filter_mode
+            end
+        })
     end
 
     -- The autoclip state is copied as a local value
