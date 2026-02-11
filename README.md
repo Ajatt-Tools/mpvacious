@@ -13,6 +13,8 @@ The script supports secondary subtitles, configurable media formats, and customi
 Mpvacious works best with [Goldendict-ng](https://xiaoyifang.github.io/goldendict-ng/) or [Rikaitan](https://rikaitan.ajatt.top/).
 Watch a [📽️ video demonstration](https://ajatt.top/blog/vid/sentence_mining_with_mpvacious.mp4).
 
+✨ Ajatt-Tools is looking for **[new contributors](#contributing)**!
+
 ## Requirements
 
 You need to install some third-party programs before you install mpvacious.
@@ -557,6 +559,20 @@ Specify only the ones you want to be different from the default.
 
 To cycle profiles, open the advanced menu by pressing <kbd>a</kbd> and then press <kbd>p</kbd>.
 At any time you can see what profile is active in the menu's status bar.
+
+## Contributing
+
+Since Ajatt-Tools is a distributed effort, we **highly welcome new contributors**!
+
+Install the project in development mode to easily test and commit your changes.
+
+Try these libre code editors with [lua](https://wiki.archlinux.org/title/Lua) support:
+
+- [pycharm-community-edition](https://archlinux.org/packages/?name=pycharm-community-edition) with [emmylua](https://emmylua.github.io/installation.html)
+- [vscodium](https://aur.archlinux.org/packages/vscodium) with [sumneko.lua](https://open-vsx.org/extension/sumneko/lua)
+
+Make sure to use an automatic code formatter.
+Also see: [Running tests](#running-tests).
 
 ## Running tests
 
