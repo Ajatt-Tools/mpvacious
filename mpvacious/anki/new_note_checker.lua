@@ -35,19 +35,28 @@ local function make_anki_new_note_checker()
         return note_id >= h.minutes_ago(accept_notes_made_within_last_minutes)
     end
 
-    local function find_notes_added_today()
-        return self.ankiconnect.find_notes(
-                string.format("added:1 \"note:%s\" \"deck:%s\"", self.config.model_name, self.config.deck_name),
-                true
-        )
+    --- on_completed = fn(note_ids, error)
+    local function find_notes_added_today(on_completed)
+        return self.ankiconnect.find_notes {
+            query = string.format("added:1 \"note:%s\" \"deck:%s\"", self.config.model_name, self.config.deck_name),
+            suppress_log = true,
+            completion_fn = on_completed,
+        }
     end
 
     local function ignore_all_cards_added_today()
         -- initially, ignore all existing cards.
-        local note_ids = find_notes_added_today()
-        for _, note_id in ipairs(note_ids) do
-            add_to_ignore_list(note_id)
+        local function on_completed(note_ids, error)
+            if not h.is_empty(error) then
+                mp.msg.error(error)
+            end
+            if not h.is_empty(note_ids) then
+                for _, note_id in ipairs(note_ids) do
+                    add_to_ignore_list(note_id)
+                end
+            end
         end
+        return find_notes_added_today(on_completed)
     end
 
     local function has_no_media(note_fields)
@@ -56,8 +65,10 @@ local function make_anki_new_note_checker()
         return h.is_empty(note_fields[self.config.audio_field]) and h.is_empty(note_fields[self.config.image_field])
     end
 
-    local function check_for_new_notes()
-        local note_ids = find_notes_added_today()
+    local function process_new_notes(note_ids, error)
+        if not h.is_empty(error) then
+            mp.msg.error(error)
+        end
         if h.is_empty(note_ids) then
             -- no new notes added today yet.
             return
@@ -80,6 +91,10 @@ local function make_anki_new_note_checker()
         if not h.is_empty(to_update) then
             self.update_notes_fn(to_update, false)
         end
+    end
+
+    local function check_for_new_notes()
+        return find_notes_added_today(process_new_notes)
     end
 
     local function start_timer()

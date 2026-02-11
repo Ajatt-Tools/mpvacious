@@ -149,26 +149,33 @@ local function make_ankiconnect()
         self.execute { request = args, completion_fn = self.make_result_parser_async(result_notify) }
     end
 
-    self.find_notes = function(query, suppress_log)
+    --- Parameters; query, completion_fn, suppress_log
+    --- completion_fn = fn(note_ids, error) where note_ids is None | list
+    --- https://git.sr.ht/~foosoft/anki-connect#codefindnotescode
+    self.find_notes = function(o)
         local request = {
             action = "findNotes",
             version = 6,
             params = {
-                query = query
+                query = o.query
             }
         }
-        local ret = self.execute { request = request, suppress_log = suppress_log }
-
-        local note_ids, _ = self.parse_result(ret)
-        if not h.is_empty(note_ids) then
-            return note_ids
+        if o.completion_fn then
+            return self.execute {
+                request = request,
+                suppress_log = (not not o.suppress_log),
+                completion_fn = self.make_result_parser_async(o.completion_fn)
+            }
         else
-            return {}
+            return self.parse_result(self.execute {
+                request = request,
+                suppress_log = (not not o.suppress_log)
+            })
         end
     end
 
     self.get_last_note_ids = function(n_cards)
-        local note_ids = self.find_notes("added:1") -- find all notes added today
+        local note_ids = self.find_notes { query = "added:1" } -- find all notes added today
         if not h.is_empty(note_ids) then
             return h.get_last_n_added_notes(note_ids, n_cards)
         else
