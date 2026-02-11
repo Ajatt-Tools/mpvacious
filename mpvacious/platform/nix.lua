@@ -19,8 +19,8 @@ if h.is_mac() then
     self.clip_cmd = "LANG=en_US.UTF-8 " .. self.clip_util
 elseif h.is_wayland() then
     local function is_wl_copy_installed()
-        local handle = h.subprocess { args = { 'wl-copy', '--version' } }
-        return handle.status == 0 and handle.stdout:match("wl%-clipboard") ~= nil
+        local result = h.subprocess { args = { 'wl-copy', '--version' } }
+        return result.status == 0 and result.stdout:match("wl%-clipboard") ~= nil
     end
 
     self.clip_util = "wl-copy"
@@ -28,8 +28,8 @@ elseif h.is_wayland() then
     self.healthy = is_wl_copy_installed()
 else
     local function is_xclip_installed()
-        local handle = h.subprocess { args = { 'xclip', '-version' } }
-        return handle.status == 0 and handle.stderr:match("xclip version") ~= nil
+        local result = h.subprocess { args = { 'xclip', '-version' } }
+        return result.status == 0 and result.stderr:match("xclip version") ~= nil
     end
 
     self.clip_util = "xclip"
