@@ -75,7 +75,7 @@ function this.parse_loudnorm(loudnorm_targets, json_extractor, loudnorm_consumer
 
     return function(success, result)
         local json
-        if success and result.status == 0 then
+        if success and result and result.status == 0 then
             json = json_extractor(result.stdout, result.stderr)
         end
 
