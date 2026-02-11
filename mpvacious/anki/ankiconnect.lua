@@ -66,7 +66,8 @@ local function make_ankiconnect()
     --- But this function accepts completion_fn with args (parsed_json, error)
     self.make_result_parser_async = function(on_completed)
         if on_completed == nil then
-            on_completed = function(_, _) -- parsed_json, error
+            on_completed = function(_, _)
+                -- parsed_json, error
                 msg.warn("Ignoring Ankiconnect result")
             end
         end
