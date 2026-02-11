@@ -1,4 +1,3 @@
---- See: https://github.com/Ajatt-Tools/mpvacious/pull/151
 --- mpvacious Custom Subtitle Filter Example
 --- This script filters bilingual (JP/CN) subtitles to extract only the Japanese lines.
 --- Based on Kana detection, as both languages share Kanji.
