@@ -3,8 +3,8 @@
 --- Based on Kana detection, as both languages share Kanji.
 ---
 --- To enable this feature:
---- 1. Rename this file to 'subs2srs_sub_filter.lua'.
---- 2. Place it in '~/.config/mpv/scripts/subs2srs_sub_filter/'.
+--- 1. Rename this file to 'subs2srs_subtitle_filter.lua'.
+--- 2. Place it in '~/.config/mpv/scripts/subs2srs_subtitle_filter/'.
 --- 3. Create a dummy 'main.lua' in the same folder (it can be empty).
 --- Note: This file is a custom plugin for mpvacious, not a standalone mpv script.
 local M = {}
@@ -17,7 +17,7 @@ local function toggle_filter()
     enabled = not enabled
     local status = enabled and "ON" or "OFF"
     mp.osd_message("Bilingual Filter: " .. status)
-    mp.msg.info("Custom sub filter set to " .. status)
+    mp.msg.info("Custom subtitle filter set to " .. status)
 end
 
 -------------------------------------------------------------------------------
@@ -153,7 +153,7 @@ end
 --- Initialization function called when the extension is loaded.
 M.init = function()
     -- Keybind to toggle the filter manually
-    mp.add_key_binding("alt+m", "toggle_custom_sub_filter", toggle_filter)
+    mp.add_key_binding("alt+m", "toggle_custom_subtitle_filter", toggle_filter)
 end
 
 return M

@@ -526,23 +526,23 @@ While the default subtitle processing in `mpvacious` is sufficient for most user
 
 To use this feature, create the following directory and an **empty `main.lua**` file (required to prevent `mpv` from reporting a plugin error):
 
-| OS                     | Plugin Location                                                      |
-| :--------------------- | :------------------------------------------------------------------- |
-| **GNU/Linux**          | `~/.config/mpv/scripts/subs2srs_sub_filter/`                         |
-| **Windows**            | `C:/Users/Username/AppData/Roaming/mpv/scripts/subs2srs_sub_filter/` |
-| **Windows (portable)** | `mpv.exe folder/portable_config/scripts/subs2srs_sub_filter/`        |
+| OS                     | Plugin Location                                                           |
+| :--------------------- | :------------------------------------------------------------------------ |
+| **GNU/Linux**          | `~/.config/mpv/scripts/subs2srs_subtitle_filter/`                         |
+| **Windows**            | `C:/Users/Username/AppData/Roaming/mpv/scripts/subs2srs_subtitle_filter/` |
+| **Windows (portable)** | `mpv.exe folder/portable_config/scripts/subs2srs_subtitle_filter/`        |
 
 **Structure:**
 
 ```text
-subs2srs_sub_filter/
-├── main.lua               # Empty file to satisfy mpv
-└── subs2srs_sub_filter.lua # Your custom logic
+subs2srs_subtitle_filter/
+├── main.lua                     # Empty file to satisfy mpv
+└── subs2srs_subtitle_filter.lua # Your custom logic
 ```
 
 ### How it Works
 
-`mpvacious` will automatically load `subs2srs_sub_filter.lua` and look for these exported functions:
+`mpvacious` will automatically load `subs2srs_subtitle_filter.lua` and look for these exported functions:
 
 * **`preprocess(text)`**: The primary function for filtering or reformatting raw subtitles.
 * **`trim(text)`**: Overrides the internal trimmer. Note that internal trimming must be enabled via `clipboard_trim_enabled=yes` in `subs2srs.conf`.
@@ -551,11 +551,11 @@ subs2srs_sub_filter/
 ### Using the Example Script
 
 An example script is available within the repository at:
-`scripts/subs2srs/.github/RELEASE/custom_sub_filter_example.lua`
+`scripts/subs2srs/.github/RELEASE/custom_subtitle_filter_example.lua`
 
 This script is designed to extract Japanese lines from bilingual subtitles. While originally tailored for **Japanese/Chinese** pairs, it works for any language combined with Japanese because it identifies lines based on the presence of **Kana**.
 
-To use it, copy the example's logic into your `subs2srs_sub_filter.lua` and modify it to suit your workflow.
+To use it, copy the example's logic into your `subs2srs_subtitle_filter.lua` and modify it to suit your workflow.
 
 ## Hacking
 
