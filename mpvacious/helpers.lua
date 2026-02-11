@@ -98,6 +98,7 @@ end
 --- Parameters: args, completion_fn, override_settings, suppress_log
 --- if `completion_fn` is passed, the command is ran asynchronously,
 --- and upon completion, `completion_fn` is called to process the results.
+--- https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst#mp-functions
 function this.subprocess(o)
     if not o.suppress_log then
         msg.info("Executing: " .. args_as_str(o.args))

@@ -14,6 +14,8 @@ local function make_ankiconnect()
     local self = {}
 
     --- Parameters: request, completion_fn, suppress_log
+    --- completion_fn = fn(success, result, error)
+    --- https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst#mp-functions
     self.execute = function(o)
         if not h.is_empty(self.config.ankiconnect_api_key) then
             o.request.key = self.config.ankiconnect_api_key
