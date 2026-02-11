@@ -425,10 +425,10 @@ function this.find_mpv_script_opts_directory()
 end
 
 function this.maybe_require(module_name)
-    --- Example: ~/.config/mpv/subs2srs_sub_filter/subs2srs_sub_filter.lua
+    --- Example: ~/.config/mpv/subs2srs_subtitle_filter/subs2srs_subtitle_filter.lua
 
-    -- Make path to directory ~/.config/mpv/subs2srs_sub_filter
-    local external_scripts_path = utils.join_path(this.find_mpv_config_directory(), module_name)
+    -- Make path to directory ~/.config/mpv/scripts/subs2srs_subtitle_filter
+    local external_scripts_path = utils.join_path(this.find_mpv_scripts_dir(), module_name)
     local search_template = external_scripts_path .. "/?.lua;"
     local module_path = package.searchpath(module_name, search_template)
 

@@ -517,6 +517,52 @@ MPVACIOUS_TEST=TRUE mpv 'path/to/some/file.mkv'
 
 The results will be printed to the console.
 
+## Custom Subtitle Filtering
+
+While the default subtitle processing in `mpvacious` is sufficient for most users, you can define custom logic to handle specific needs, such as filtering bilingual subtitles.
+
+### Setup
+
+To use this feature, create the following directory and an **empty `main.lua**` file (required to prevent `mpv` from reporting a plugin error):
+
+| OS                 | Plugin Location                                                           |
+| ------------------ | ------------------------------------------------------------------------- |
+| GNU/Linux          | `~/.config/mpv/scripts/subs2srs_subtitle_filter/`                         |
+| Windows            | `C:/Users/Username/AppData/Roaming/mpv/scripts/subs2srs_subtitle_filter/` |
+| Windows (portable) | `mpv.exe folder/portable_config/scripts/subs2srs_subtitle_filter/`        |
+
+**Structure:**
+
+```text
+subs2srs_subtitle_filter/
+├── main.lua                     # Empty file to satisfy mpv
+└── subs2srs_subtitle_filter.lua # Your custom logic
+```
+
+### How it Works
+
+`mpvacious` will automatically load `subs2srs_subtitle_filter.lua` and look for these exported functions:
+
+* **`preprocess(text)`**: The primary function for filtering or reformatting raw subtitles.
+* **`trim(text)`**: Overrides the internal trimmer. Note that internal trimming must be enabled via `clipboard_trim_enabled=yes` in `subs2srs.conf`.
+* **`init(config)`**: Called on load to setup keybindings or initialize custom logic. It receives a **configuration table** containing:
+  * **`get_mode`**: A **getter function** that returns the current `custom_subtitle_filter_mode`, ensuring your script stay in sync with profile switches.
+
+### Configuration
+
+You can control the filter's behavior via `subs2srs.conf` and its profiles:
+
+* **`custom_subtitle_filter_mode`**: A string accessible via `config.get_mode()` in `init`. Use this to dynamically toggle or change filtering logic when switching profiles—for example, set it to `japanese` in your JP profile and `none` in others.
+
+### Using the Example Script
+
+An example script is available within the repository at:
+`scripts/subs2srs/.github/RELEASE/custom_subtitle_filter_example.lua`
+
+This script is designed to extract Japanese lines from bilingual subtitles. While originally tailored for **Japanese/Chinese** pairs, it works for any language combined with Japanese because it identifies lines based on the presence of **Kana**.
+
+To use it, copy the example's logic into your `subs2srs_subtitle_filter.lua` and modify it to suit your workflow.
+
 ## Hacking
 
 If you want to modify this script
