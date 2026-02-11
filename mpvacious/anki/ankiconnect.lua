@@ -108,15 +108,14 @@ local function make_ankiconnect()
                 deck = deck_name
             }
         }
-        local result_notify = function(_, result, _)
-            local _, error = self.parse_result(result)
+        local result_notify = function(_, error)
             if not error then
                 msg.info(string.format("Deck %s: check completed.", deck_name))
             else
                 msg.warn(string.format("Deck %s: check failed. Reason: %s.", deck_name, error))
             end
         end
-        self.execute { request = args, completion_fn = result_notify }
+        self.execute { request = args, completion_fn = self.make_result_parser_async(result_notify) }
     end
 
     self.add_note = function(note_fields, tag, gui)
@@ -139,8 +138,7 @@ local function make_ankiconnect()
                 }
             }
         }
-        local result_notify = function(_, result, _)
-            local note_id, error = self.parse_result(result)
+        local result_notify = function(note_id, error)
             if not error then
                 h.notify(string.format("Note added. ID = %s.", note_id))
                 self.gui_browse("nid:" .. note_id) -- show the added note
@@ -148,7 +146,7 @@ local function make_ankiconnect()
                 h.notify(string.format("Error: %s.", error), "error", 2)
             end
         end
-        self.execute { request = args, completion_fn = result_notify }
+        self.execute { request = args, completion_fn = self.make_result_parser_async(result_notify) }
     end
 
     self.find_notes = function(query, suppress_log)
@@ -280,8 +278,7 @@ local function make_ankiconnect()
             }
         }
 
-        local on_finish_wrap = function(_, result, _)
-            local _, error = self.parse_result(result)
+        local on_finish_wrap = function(_, error)
             if not error then
                 self.add_tag(note_id, tag)
             else
@@ -290,7 +287,7 @@ local function make_ankiconnect()
             on_finish_fn(error)
         end
 
-        self.execute { request = request, completion_fn = on_finish_wrap }
+        self.execute { request = request, completion_fn = self.make_result_parser_async(on_finish_wrap) }
     end
 
     self.init = function(cfg_mgr)
