@@ -119,6 +119,8 @@ local function make_ankiconnect()
     end
 
     self.add_note = function(note_fields, tag, gui)
+        -- https://git.sr.ht/~foosoft/anki-connect#codeaddnotecode
+        -- "result" is integer
         local action = gui and 'guiAddCards' or 'addNote'
         local args = {
             action = action,
