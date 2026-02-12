@@ -12,11 +12,16 @@ MD2HTML      = md2html --github --full-html
 
 EXAMPLE_CONFIG      := $(PROJECT)/config/default_config.conf
 EXAMPLE_CONFIG_COPY := $(RELEASE_DIR)/$(PACKAGE).conf
+VERSION_FILE        := $(PROJECT)/version.json
 
-.PHONY: all docs install uninstall clean
+.PHONY: all docs install uninstall clean version
 
 all: $(ZIP) $(EXAMPLE_CONFIG_COPY)
 docs: $(DOCS)
+
+version:
+	[ -n "$(VERSION)" ] || exit 1
+	printf -- '{"version": "%s"}' "$(VERSION)" > "$(VERSION_FILE)"
 
 $(ZIP):
 	git archive \
@@ -31,7 +36,7 @@ $(EXAMPLE_CONFIG_COPY): $(EXAMPLE_CONFIG)
 $(DOCS):
 	git show "$(BRANCH):README.md" | $(MD2HTML) -o $@
 
-install:
+install: version
 	@echo "Installing $(PROJECT) to $(PREFIX)/scripts/$(PROJECT)/"
 	install -d "$(PREFIX)/scripts/$(PROJECT)/"
 	# Copy directory contents preserving attributes
