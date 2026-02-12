@@ -24,9 +24,13 @@ elseif (Test-Path "$PWD/portable_config") {
 	Write-Output "Installing into (portable config):"
 	$ConfigDir = "$PWD/portable_config"
 }
-elseif ((Get-Item -Path $PWD).BaseName -eq "portable_config") {
+elseif ($PWD.Path.Split('\/') -contains "portable_config") {
+    $Current = Get-Item $PWD
+    while ($Current -ne $null -and $Current.Name -ne "portable_config") {
+        $Current = $Current.Parent
+    }
 	Write-Output "Installing into (portable config):"
-	$ConfigDir = "$PWD"
+    $ConfigDir = $Current.FullName
 }
 else {
 	Write-Output "Installing into (current user config):"
