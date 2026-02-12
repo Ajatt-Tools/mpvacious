@@ -408,7 +408,7 @@ function this.join_two_sorted_lists(a1, a2)
 end
 
 function this.find_mpv_scripts_dir()
-    local this_dir = mp.get_script_directory() -- this_dir points to ~/.config/mpv/scripts/subs2srs (where mpvacious is installed)
+    local this_dir = mp.get_script_directory() -- this_dir points to ~/.config/mpv/scripts/mpvacious (where mpvacious is installed)
     local scripts_dir, _ = utils.split_path(this_dir) -- scripts_dir points to  ~/.config/mpv/scripts/
     return scripts_dir:gsub("/$", "")
 end
