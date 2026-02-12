@@ -14,9 +14,9 @@ local function make_release_checker()
     local private = {}
     local public = {}
 
-    private.repo="Ajatt-Tools/mpvacious"
-    private.max_time_sec=20
-    private.check_delay_sec=5
+    private.repo = "Ajatt-Tools/mpvacious"
+    private.max_time_sec = 20
+    private.check_delay_sec = 5
     private.api_check_url = "https://api.github.com/repos/" .. private.repo .. "/releases/latest"
     private.curl_args = { "-sL", "--max-time", tostring(private.max_time_sec), private.api_check_url }
     private.is_new_version_available = false
@@ -24,7 +24,7 @@ local function make_release_checker()
     private.installed_version = nil
 
     local function read_installed_version_file()
-        local version_file_path = utils.join_path(mp.get_script_directory(), "version.json")
+        local version_file_path = utils.join_path(h.find_mpvacious_dir(), "version.json")
         local version_text, error = h.read_text(version_file_path)
         if error then
             mp.msg.error(error)

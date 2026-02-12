@@ -546,6 +546,20 @@ function this.str_limit(str, n_chars)
     return table.concat(ret)
 end
 
+function this.find_mpvacious_dir()
+    -- The fallback path will be valid if the project folder is placed
+    -- in mpv's scripts directory (e.g. ~/.config/mpv/scripts).
+    -- This does not apply to normal installations of mpvacious.
+    -- https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst#mputils-functions
+    local default_path = mp.get_script_directory()
+    -- test if version file is present
+    local info = utils.file_info(utils.join_path(default_path, "version.json"))
+    if info and info.is_file then
+        return default_path
+    end
+    return utils.join_path(mp.get_script_directory(), "mpvacious")
+end
+
 --- Like pathlib.Path.read_text() but doesn't throw.
 --- Returns tuple[text, error].
 function this.read_text(file_path)

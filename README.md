@@ -140,21 +140,40 @@ it'll install there instead of `AppData`.
 Installing Mpvacious in development mode allows contributors to easily test their changes.
 With this setup, any changes made to the *.lua files will be applied immediately after restarting mpv.
 
+#### First approach
+
 Clone the repository, then create a symlink from the `mpvacious` directory to the mpv config directory.
 
 Commands for GNU/Linux:
 
-```
+```bash
 git clone 'https://github.com/Ajatt-Tools/mpvacious.git'
 mkdir -p ~/.config/mpv/scripts/
 cd mpvacious
 bash scripts/symlink.sh
 ```
 
-To update existing installation, use `git`.
+To update an existing installation, use `git` in the project folder.
+
+```bash
+git pull
+```
+
+#### Second approach
+
+Clone the repo directly into the `mpv/scripts` directory.
+
+Commands for GNU/Linux:
+
+```bash
+mkdir -p ~/.config/mpv/scripts/
+git clone 'https://github.com/Ajatt-Tools/mpvacious.git' ~/.config/mpv/scripts/mpvacious
+```
+
+To update an existing installation, use `git`.
 
 ```
-git pull
+cd ~/.config/mpv/scripts/mpvacious && git pull
 ```
 
 ### Manually
