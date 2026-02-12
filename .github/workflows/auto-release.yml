@@ -13,6 +13,7 @@ jobs:
       contents: write
 
     steps:
+      # This checks out the new tag, not the master branch. E.g. 'refs/tags/v26.2.12.0'
       - name: Check out the repository
         uses: actions/checkout@v6
         with:
@@ -26,14 +27,16 @@ jobs:
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
+          branch: master
           commit_message: Update version file
           commit_user_name: GitHub Actions
           commit_user_email: noreply@github.com
           commit_author: GitHub <noreply@github.com>
 
       - name: "Create zip"
+        shell: bash
         run: |
-          make BRANCH=HEAD
+          make BRANCH=HEAD VERSION="${{github.ref_name}}"
 
       - name: "Create release"
         uses: softprops/action-gh-release@v2

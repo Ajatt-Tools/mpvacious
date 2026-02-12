@@ -4,7 +4,7 @@ PACKAGE     := subs2srs
 # e.g. ~/.config/mpv/ or $pkgdir/etc/mpv when using PKGBUILD
 PREFIX      ?= $(HOME)/.config/mpv
 BRANCH      ?= master
-VERSION     := $(shell git describe --tags $(BRANCH))
+VERSION     ?= $(shell git describe --tags $(BRANCH))
 RELEASE_DIR := .github/RELEASE
 ZIP         := $(RELEASE_DIR)/$(PROJECT)_$(VERSION).zip
 DOCS        := $(RELEASE_DIR)/README_$(VERSION).html
