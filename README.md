@@ -640,8 +640,7 @@ You can control the filter's behavior via `subs2srs.conf` and its profiles:
 
 ### Using the Example Script
 
-An example script is available within the repository at:
-`scripts/subs2srs/.github/RELEASE/custom_subtitle_filter_example.lua`
+An [example script](./.github/RELEASE/custom_subtitle_filter_example.lua) is available within the repository.
 
 This script is designed to extract Japanese lines from bilingual subtitles. While originally tailored for **Japanese/Chinese** pairs, it works for any language combined with Japanese because it identifies lines based on the presence of **Kana**.
 
