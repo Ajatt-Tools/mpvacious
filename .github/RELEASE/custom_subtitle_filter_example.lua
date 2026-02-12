@@ -69,8 +69,9 @@ local function contains_kana(str)
         local b1 = string.byte(str, i)
 
         -- UTF-8 Prefix Patterns:
-        if b1 < 0x80 then
+        if b1 < 0xC0 then
             -- 1-byte (0xxxxxxx): ASCII
+            -- Continuation byte (10xxxxxx): 0x80 to 0xBF
             i = i + 1
         elseif b1 < 0xE0 then
             -- 2-byte (110xxxxx): 0xC2 to 0xDF
