@@ -47,7 +47,7 @@ if (!(Test-Path $MpvScriptsDir)) {
 	New-Item -ItemType Directory -Force -Path $MpvScriptsDir > $null
 }
 
-Write-Output "→ $ConfigDir"
+Write-Output "-> $ConfigDir"
 
 $BackupDir = "$ConfigDir/.mpvacious-backup"
 $ZipFile = "$ConfigDir/mpvacious_tmp.zip"
