@@ -3,8 +3,8 @@
 --- Based on Kana detection, as both languages share Kanji.
 ---
 --- To enable this feature:
---- 1. Rename this file to 'subs2srs_subtitle_filter.lua'.
---- 2. Place it in '~/.config/mpv/scripts/subs2srs_subtitle_filter/'.
+--- 1. Rename this file to 'custom_subtitle_filter.lua'.
+--- 2. Place it in '~/.config/mpv/scripts/mpvacious_custom_subtitle_filter/'.
 --- 3. Create a dummy 'main.lua' in the same folder (it can be empty).
 --- Note: This file is a custom plugin for mpvacious, not a standalone mpv script.
 local M = {}
