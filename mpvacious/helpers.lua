@@ -121,7 +121,7 @@ end
 
 --- Parameters:, args, completion_fn, suppress_log
 function this.subprocess_detached(o)
-    o.overwrite_settings = {
+    o.override_settings = {
         detach = true,
         capture_stdout = false,
         capture_stderr = false,
