@@ -21,7 +21,19 @@ local function new_autoclip_method_selector()
     end
 
     function self.call(current_subtitle_lines)
-        -- current_subtitle_lines = { primary="some text", secondary="some text" }
+        -- current_subtitle_lines = {
+        --     get_prepared = function()
+        --         return {
+        --             primary = "some text",
+        --             secondary = "some text"
+        --         }
+        --     end,
+        --     raw = {
+        --         primary = "some text",
+        --         secondary = "some text"
+        --     }
+        -- }
+
         if h.is_empty(current_subtitle_lines) then
             return
         else
