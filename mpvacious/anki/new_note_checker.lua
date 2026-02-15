@@ -66,8 +66,8 @@ local function make_anki_new_note_checker()
     end
 
     local function process_new_notes(note_ids, error)
-        if not h.is_empty(error) then
-            mp.msg.error(error)
+        if not h.is_empty(error) and not h.is_substr(error, "isn't running") then
+            mp.msg.error("failed to check new notes: " .. error)
         end
         if h.is_empty(note_ids) then
             -- no new notes added today yet.
