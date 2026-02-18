@@ -50,12 +50,12 @@ local function external_command_args(cur_lines)
 end
 
 autoclip_method.register_handler('clipboard', function(current_subtitle_lines)
-    self.copy_to_clipboard("autocopy action", current_subtitle_lines.primary)
+    self.copy_to_clipboard("autocopy action", current_subtitle_lines.raw.primary)
 end)
 
 autoclip_method.register_handler('goldendict', function(current_subtitle_lines)
     h.subprocess_detached {
-        args = { 'goldendict', current_subtitle_lines.primary },
+        args = {'goldendict', current_subtitle_lines.get_prepared().primary},
         completion_fn = on_external_finish
     }
 end)
@@ -63,7 +63,7 @@ end)
 autoclip_method.register_handler('custom_command', function(current_subtitle_lines)
     if not h.is_empty(self.config.autoclip_custom_args) then
         h.subprocess {
-            args = external_command_args(current_subtitle_lines),
+            args = external_command_args(current_subtitle_lines.get_prepared()),
             completion_fn = on_external_finish
         }
     end
@@ -86,7 +86,18 @@ local function current_subtitle_lines()
         secondary = mp.get_property("secondary-sub-text") or ""
     end
 
-    return { primary = self.clipboard_prepare(primary), secondary = secondary }
+    return {
+        get_prepared = function()
+            return {
+                primary = self.clipboard_prepare(primary),
+                secondary = secondary
+            }
+        end,
+        raw = {
+            primary = primary,
+            secondary = secondary
+        }
+    }
 end
 
 local function copy_primary_sub()
