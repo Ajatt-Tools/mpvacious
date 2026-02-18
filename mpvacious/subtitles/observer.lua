@@ -38,14 +38,29 @@ end
 
 local function external_command_args(cur_lines)
     local args = {}
-    for arg in string.gmatch(self.config.autoclip_custom_args, "%S+") do
-        if arg == '%MPV_PRIMARY%' then
-            arg = cur_lines.primary
-        elseif arg == '%MPV_SECONDARY%' then
-            arg = cur_lines.secondary
+
+    -- Append a trailing space to ensure the last argument is captured by the %s+ pattern.
+    local config_str = self.config.autoclip_custom_args .. " "
+
+    -- PATTERN EXPLANATION: [=[(["']?)(.-)%1%s+]=]
+    -- 1. (["']?)  : Capture group 1. Matches an optional single or double quote.
+    -- 2. (.-)     : Capture group 2. Non-greedy match of any character (the actual content).
+    -- 3. %1       : Back-reference. Ensures the closing quote matches the opening quote.
+    -- 4. %s+      : Matches one or more trailing whitespace characters to delimit arguments.
+    local pattern = [=[(["']?)(.-)%1%s+]=]
+
+    for _, arg in config_str:gmatch(pattern) do
+        if arg ~= "" then
+            if arg == '%MPV_PRIMARY%' then
+                arg = cur_lines.primary
+            elseif arg == '%MPV_SECONDARY%' then
+                arg = cur_lines.secondary
+            end
+
+            table.insert(args, arg)
         end
-        table.insert(args, arg)
     end
+
     return args
 end
 
