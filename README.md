@@ -454,7 +454,9 @@ The **new note timer** feature allows mpvacious to automatically detect and upda
 without manual intervention. When enabled, mpvacious will periodically check for new notes
 and automatically add media (audio and images) to them if they match your configured note type.
 
-To enable this feature, set `enable_new_note_timer=yes` in your [config file](mpvacious/config/default_config.conf).
+To enable this feature, set `enable_new_note_timer=yes`,
+and assign `model_name` and `deck_name`
+in your [config file](mpvacious/config/default_config.conf).
 You can adjust how often mpvacious checks for new notes with the `new_note_timer_interval_seconds` setting.
 
 When this feature is enabled, you no longer need to manually press "m" to update notes
