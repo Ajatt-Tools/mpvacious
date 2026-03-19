@@ -431,7 +431,30 @@ function this.maybe_require(module_name)
     -- Make path to directory ~/.config/mpv/scripts/mpvacious_custom_subtitle_filter
     local external_scripts_path = utils.join_path(this.find_mpv_scripts_dir(), "mpvacious_" .. module_name)
     local search_template = external_scripts_path .. "/?.lua;"
-    local module_path = package.searchpath(module_name, search_template)
+    local searchpath = package.searchpath
+
+    -- mpv may embed Lua 5.1/LuaJIT, where package.searchpath is unavailable.
+    -- This affects common builds such as Homebrew mpv on macOS, which links
+    -- against a Lua 5.1-compatible runtime.
+    if searchpath == nil then
+        searchpath = function(name, path)
+            local module_file = name:gsub("%.", "/")
+
+            for template in path:gmatch("[^;]+") do
+                local candidate = template:gsub("%?", module_file)
+                local file = io.open(candidate, "r")
+
+                if file ~= nil then
+                    file:close()
+                    return candidate
+                end
+            end
+
+            return nil
+        end
+    end
+
+    local module_path = searchpath(module_name, search_template)
 
     if not module_path then
         return nil
