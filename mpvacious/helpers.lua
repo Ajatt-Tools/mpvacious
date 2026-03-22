@@ -655,6 +655,7 @@ function this.run_tests()
     this.assert_equals(this.str_contains("abcd", "^.*z.*$"), false)
     this.assert_equals(this.unescape_special_characters("that&apos;s"), "that's")
     this.assert_equals(this.unescape_special_characters("that&#39;s &amp; &quot;ok&quot;"), "that's & \"ok\"")
+    this.assert_equals(this.unescape_special_characters("&lt;tag&gt;"), "<tag>")
 
     local ep_num_to_filename = {
         { nil, "A Whisker Away.mkv" },
