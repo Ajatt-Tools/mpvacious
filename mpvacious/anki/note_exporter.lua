@@ -174,6 +174,19 @@ local function make_exporter()
         return new_data
     end
 
+    local function make_cmp_values(new_text, old_text, cfg)
+        -- Avoid duplicate sentence/media content when equivalent HTML entities differ,
+        -- e.g. "'" versus "&apos;".
+        new_text, old_text = h.unescape_special_characters(new_text), h.unescape_special_characters(old_text)
+
+        -- Primary and secondary subtitles are compared without html tags.
+        if cfg.plaintext_compare then
+            return h.remove_html_tags(new_text), h.remove_html_tags(old_text)
+        else
+            return new_text, old_text
+        end
+    end
+
     --- expected cfg fields: str separator, bool plaintext_compare
     local function join_field_content(new_text, old_text, cfg)
         cfg = cfg or {}
@@ -181,14 +194,7 @@ local function make_exporter()
         -- By default, join fields with a HTML newline.
         cfg.separator = cfg.separator or "<br>"
 
-        local cmp_new_text, cmp_old_text = (function()
-            -- Primary and secondary subtitles are compared without html tags.
-            if cfg.plaintext_compare then
-                return h.remove_html_tags(new_text), h.remove_html_tags(old_text)
-            else
-                return new_text, old_text
-            end
-        end)()
+        local cmp_new_text, cmp_old_text = make_cmp_values(new_text, old_text, cfg)
 
         if h.is_empty(cmp_old_text) then
             -- If 'old_text' is empty, there's no need to join content with the separator.
@@ -425,6 +431,19 @@ local function make_exporter()
             Notes = "",
         }
         h.assert_equals(join_fields(new_note, old_note), expected)
+
+        -- HTML escaping
+        old_note = {
+            SentKanji = "Well, that's the knighthood in the bag.",
+        }
+        new_note = {
+            SentKanji = "Well, that&apos;s the knighthood in the bag.",
+        }
+        h.assert_equals(join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+        new_note =  {
+            SentKanji = "Well, that&#39;s the knighthood in the bag.",
+        }
+        h.assert_equals(join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
 
         -- Test make_new_note_data
         old_note = {
