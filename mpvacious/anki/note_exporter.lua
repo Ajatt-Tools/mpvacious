@@ -189,6 +189,12 @@ local function make_exporter()
             return old_text
         end
 
+        if h.is_substr(h.unescape_special_characters(old_text), h.unescape_special_characters(new_text)) then
+            -- Avoid duplicate sentence/media content when equivalent HTML entities differ,
+            -- e.g. "'" versus "&apos;".
+            return old_text
+        end
+
         return string.format("%s%s%s", old_text, separator, new_text)
     end
 

@@ -587,6 +587,15 @@ local function run_tests()
         Notes = "",
     }
     h.assert_equals(result, expected)
+
+    local old_note_same_sentence = {
+        SentKanji = "Well, that's the knighthood in the bag.",
+    }
+    local new_note_same_sentence = {
+        SentKanji = "Well, that&apos;s the knighthood in the bag.",
+    }
+    local result_same_sentence = note_exporter.join_fields(new_note_same_sentence, old_note_same_sentence)
+    h.assert_equals(result_same_sentence, old_note_same_sentence)
 end
 
 local function pcall_tests()
