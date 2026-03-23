@@ -174,6 +174,7 @@ local function make_exporter()
         return new_data
     end
 
+    --- expected cfg fields: str separator, bool plaintext_compare
     local function join_field_content(new_text, old_text, cfg)
         cfg = cfg or {}
 
@@ -233,6 +234,7 @@ local function make_exporter()
         return new_data
     end
 
+    --- expected cfg fields: bool disable_forvo, bool overwrite
     local function make_new_note_data(stored_data, new_data, cfg)
         cfg = cfg or {}
 
