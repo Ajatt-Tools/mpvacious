@@ -200,7 +200,9 @@ local function make_exporter()
 
     local function join_fields(new_data, stored_data)
         fail_if_not_ready()
-        for _, field in pairs { self.config.audio_field, self.config.image_field, self.config.miscinfo_field, self.config.sentence_field, self.config.secondary_field } do
+        -- sentence_field is handled separately by update_sentence() so target-word
+        -- markup can be preserved without duplicating the full sentence contents.
+        for _, field in pairs { self.config.audio_field, self.config.image_field, self.config.miscinfo_field, self.config.secondary_field } do
             if not h.is_empty(field) then
                 new_data[field] = join_field_content(h.table_get(new_data, field, ""), h.table_get(stored_data, field, ""))
             end
