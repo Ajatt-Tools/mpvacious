@@ -174,6 +174,37 @@ function this.trim(str)
     return str
 end
 
+function this.str_replace(s, old, new, max_repl)
+    if this.is_empty(old) then
+        return s
+    end
+
+    local out = {}
+    local search_from = 1
+    local replaced_count = 0
+
+    while true do
+        -- returns the indices of s where this occurrence starts and ends. nil otherwise
+        local occurrence_start, occurrence_end = string.find(s, old, search_from, true) -- plain=true for literal search
+        if not occurrence_start then
+            table.insert(out, s:sub(search_from))
+            break
+        end
+        -- insert everything until the found occurrence
+        table.insert(out, s:sub(search_from, occurrence_start - 1))
+        -- insert the found occurrence
+        table.insert(out, new)
+        -- move the pointer past the found occurrence
+        search_from = occurrence_end + 1
+        replaced_count = replaced_count + 1
+        if max_repl and replaced_count >= max_repl then
+            table.insert(out, s:sub(search_from))
+            break
+        end
+    end
+    return table.concat(out)
+end
+
 this.escape_special_characters = (function()
     local entities = {
         ['&'] = '&amp;',
@@ -743,6 +774,12 @@ function this.run_tests()
     this.assert_equals(this.remove_html_tags("ヤツらの声に<span>現実味</span>が…"), "ヤツらの声に現実味が…")
     this.assert_equals(this.remove_html_tags("<b><b><b><b>"), "")
     this.assert_equals(this.remove_html_tags("<a href=\"test\">test</a>"), "test")
+
+    -- Test str_replace
+    this.assert_equals(this.str_replace("a.b.a", ".", "-"), "a-b-a")
+    this.assert_equals(this.str_replace("ababab", "ab", "x", 2), "xxab")
+    this.assert_equals(this.str_replace("%w%w%w", "%w", "_"), "___")
+    this.assert_equals(this.str_replace("abcdef", "%w", "_"), "abcdef")
 end
 
 return this
