@@ -174,22 +174,39 @@ local function make_exporter()
         return new_data
     end
 
-    local function join_field_content(new_text, old_text, separator)
-        -- By default, join fields with a HTML newline.
-        separator = separator or "<br>"
+    local function join_field_content(new_text, old_text, cfg)
+        cfg = cfg or {}
 
-        if h.is_empty(old_text) then
+        -- By default, join fields with a HTML newline.
+        cfg.separator = cfg.separator or "<br>"
+
+        local cmp_new_text, cmp_old_text = (function()
+            -- Primary and secondary subtitles are compared without html tags.
+            if cfg.plaintext_compare then
+                return h.remove_html_tags(new_text), h.remove_html_tags(old_text)
+            else
+                return new_text, old_text
+            end
+        end)()
+
+        if h.is_empty(cmp_old_text) then
             -- If 'old_text' is empty, there's no need to join content with the separator.
             return new_text
         end
 
-        if h.is_substr(old_text, new_text) then
+        if h.is_substr(cmp_old_text, cmp_new_text) then
             -- If 'old_text' (field) already contains new_text (sentence, image, audio, etc.),
             -- there's no need to add 'new_text' to 'old_text'.
             return old_text
         end
 
-        return string.format("%s%s%s", old_text, separator, new_text)
+        if h.is_substr(cmp_new_text, cmp_old_text) then
+            -- If 'new_text' (field) already contains old_text (sentence, image, audio, etc.),
+            -- there's no need to add 'new_text' to 'old_text'.
+            return new_text
+        end
+
+        return string.format("%s%s%s", old_text, cfg.separator, new_text)
     end
 
     local function fail_if_not_ready()
@@ -200,21 +217,31 @@ local function make_exporter()
 
     local function join_fields(new_data, stored_data)
         fail_if_not_ready()
-        -- sentence_field is handled separately by update_sentence() so target-word
-        -- markup can be preserved without duplicating the full sentence contents.
-        for _, field in pairs { self.config.audio_field, self.config.image_field, self.config.miscinfo_field, self.config.secondary_field } do
+        for _, field in pairs { self.config.audio_field, self.config.image_field, self.config.miscinfo_field } do
             if not h.is_empty(field) then
                 new_data[field] = join_field_content(h.table_get(new_data, field, ""), h.table_get(stored_data, field, ""))
             end
         end
+
+        for _, field in pairs { self.config.sentence_field, self.config.secondary_field } do
+            if not h.is_empty(field) then
+                -- Strip html tags to compare text only.
+                new_data[field] = join_field_content(h.table_get(new_data, field, ""), h.table_get(stored_data, field, ""), { plaintext_compare = true })
+            end
+        end
+
         return new_data
     end
 
-    local function make_new_note_data(stored_data, new_data, overwrite)
+    local function make_new_note_data(stored_data, new_data, cfg)
+        cfg = cfg or {}
+
         if stored_data then
-            new_data = self.forvo.append(new_data, stored_data)
+            if not cfg.disable_forvo then
+                new_data = self.forvo.append(new_data, stored_data)
+            end
             new_data = update_sentence(new_data, stored_data)
-            if not overwrite then
+            if not cfg.overwrite then
                 if self.config.append_media then
                     new_data = join_fields(new_data, stored_data)
                 else
@@ -236,7 +263,7 @@ local function make_exporter()
         for _, note_id in pairs(note_ids) do
             self.ankiconnect.append_media(
                     note_id,
-                    make_new_note_data(self.ankiconnect.get_note_fields(note_id), h.deep_copy(new_data), overwrite),
+                    make_new_note_data(self.ankiconnect.get_note_fields(note_id), h.deep_copy(new_data), { overwrite = overwrite }),
                     substitute_fmt(self.config.note_tag),
                     change_notes_countdown.decrease
             )
@@ -367,6 +394,49 @@ local function make_exporter()
         self.forvo = forvo
     end
 
+    local function run_tests()
+        -- Test join_field_content
+        h.assert_equals(join_field_content("ヤツらの声に現実味が…", "あの遠さはヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
+        h.assert_equals(join_field_content("あの遠さはヤツらの声に現実味が…", "ヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
+
+        -- Test join_fields
+        local new_note = {
+            SentKanji = "それは…分からんよ",
+            SentAudio = "[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
+            SentEng = "Well...",
+            Image = '<img alt="snapshot" src="s01e13_02m25s561ms.avif">'
+        }
+        local old_note = {
+            SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]",
+            Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif">',
+            VocabAudio = "",
+            Notes = "",
+            VocabDef = "",
+            SentKanji = "勝ちって何に？",
+            SentEng = "What would we win, exactly?",
+        }
+        local expected = {
+            SentKanji = "勝ちって何に？<br>それは…分からんよ",
+            SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]<br>[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
+            SentEng = "What would we win, exactly?<br>Well...",
+            Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif"><br><img alt="snapshot" src="s01e13_02m25s561ms.avif">',
+            Notes = "",
+        }
+        h.assert_equals(join_fields(new_note, old_note), expected)
+
+        -- Test make_new_note_data
+        old_note = {
+            SentKanji = "ヤツらの声に<b>現実味</b>が…",
+        }
+        new_note = {
+            SentKanji = "あの遠さはヤツらの声に現実味が…",
+        }
+        expected = {
+            SentKanji = "あの遠さはヤツらの声に<b>現実味</b>が…",
+        }
+        h.assert_equals(make_new_note_data(old_note, new_note, { overwrite = false, disable_forvo = true }).SentKanji, expected.SentKanji)
+    end
+
     return {
         init = init,
         update_notes = update_notes,
@@ -375,6 +445,7 @@ local function make_exporter()
         join_fields = join_fields,
         update_last_note = update_last_note,
         update_selected_note = update_selected_note,
+        run_tests = run_tests,
     }
 end
 

@@ -563,30 +563,7 @@ end
 
 local function run_tests()
     h.run_tests()
-    local new_note = {
-        SentKanji = "それは…分からんよ",
-        SentAudio = "[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
-        SentEng = "Well...",
-        Image = '<img alt="snapshot" src="s01e13_02m25s561ms.avif">'
-    }
-    local old_note = {
-        SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]",
-        Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif">',
-        VocabAudio = "",
-        Notes = "",
-        VocabDef = "",
-        SentKanji = "勝ちって何に？",
-        SentEng = "What would we win, exactly?",
-    }
-    local result = note_exporter.join_fields(new_note, old_note)
-    local expected = {
-        SentKanji = "勝ちって何に？<br>それは…分からんよ",
-        SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]<br>[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
-        SentEng = "What would we win, exactly?<br>Well...",
-        Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif"><br><img alt="snapshot" src="s01e13_02m25s561ms.avif">',
-        Notes = "",
-    }
-    h.assert_equals(result, expected)
+    note_exporter.run_tests()
 end
 
 local function pcall_tests()

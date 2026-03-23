@@ -203,6 +203,10 @@ function this.remove_filename_text_in_parentheses(str)
     return str:gsub('%b()', ''):gsub('（.-）', '')
 end
 
+function this.remove_html_tags(str)
+    return str:gsub('<[^<>]+>', '')
+end
+
 function this.remove_common_resolutions(str)
     -- Also removes empty leftover parentheses and brackets.
     return str:gsub("2160p", ""):gsub("1080p", ""):gsub("720p", ""):gsub("576p", ""):gsub("480p", ""):gsub("%(%)", ""):gsub("%[%]", "")
@@ -312,13 +316,17 @@ function this.file_exists(filepath)
     return false
 end
 
+function this.repr(value)
+    if type(value) == 'table' then
+        return utils.format_json(value)
+    else
+        return value
+    end
+end
+
 function this.equal(first, last)
     --- Test whether two values are equal
-    if type(last) == 'table' then
-        return (utils.format_json(first) == utils.format_json(last))
-    else
-        return (first == last)
-    end
+    return this.repr(first) == this.repr(last)
 end
 
 function this.get_loaded_tracks(track_type)
@@ -331,7 +339,7 @@ end
 
 function this.assert_equals(actual, expected)
     if this.equal(actual, expected) == false then
-        error(string.format("TEST FAILED: Expected '%s', got '%s'", expected, actual))
+        error(string.format("TEST FAILED: Expected '%s', got '%s'", this.repr(expected), this.repr(actual)))
     end
 end
 
@@ -729,6 +737,12 @@ function this.run_tests()
     this.assert_equals(this.join_two_sorted_lists({}, {}), {})
     this.assert_equals(this.join_two_sorted_lists({ 1 }, { 2 }), { 1, 2 })
     this.assert_equals(this.join_two_sorted_lists({ 1, 1, 2 }, { 1, 3, 3 }), { 1, 1, 1, 2, 3, 3 })
+
+    -- Test this.remove_html_tags(str)
+    this.assert_equals(this.remove_html_tags("ヤツらの声に<b>現実味</b>が…"), "ヤツらの声に現実味が…")
+    this.assert_equals(this.remove_html_tags("ヤツらの声に<span>現実味</span>が…"), "ヤツらの声に現実味が…")
+    this.assert_equals(this.remove_html_tags("<b><b><b><b>"), "")
+    this.assert_equals(this.remove_html_tags("<a href=\"test\">test</a>"), "test")
 end
 
 return this
