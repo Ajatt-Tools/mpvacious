@@ -127,6 +127,49 @@ local function make_exporter()
         return str:gsub('&apos;', "'"):gsub('&#39;', "'")
     end
 
+    local function normalize_apostrophe_entities_with_map(str)
+        if h.is_empty(str) then
+            return str, {}
+        end
+
+        local normalized = {}
+        local normalized_to_raw = {}
+        local raw_idx = 1
+
+        while raw_idx <= #str do
+            local raw_end = raw_idx
+            local normalized_char = str:sub(raw_idx, raw_idx)
+
+            if str:sub(raw_idx, raw_idx + 5) == '&apos;' then
+                raw_end = raw_idx + 5
+                normalized_char = "'"
+            elseif str:sub(raw_idx, raw_idx + 4) == '&#39;' then
+                raw_end = raw_idx + 4
+                normalized_char = "'"
+            end
+
+            table.insert(normalized, normalized_char)
+            normalized_to_raw[#normalized] = { raw_idx, raw_end }
+            raw_idx = raw_end + 1
+        end
+
+        return table.concat(normalized), normalized_to_raw
+    end
+
+    local function find_normalized_apostrophe_range(str, substr)
+        if h.is_empty(str) or h.is_empty(substr) then
+            return nil
+        end
+
+        local normalized_str, normalized_to_raw = normalize_apostrophe_entities_with_map(str)
+        local normalized_substr = normalize_apostrophe_entities(substr)
+        local normalized_start, normalized_end = string.find(normalized_str, normalized_substr, 1, true)
+
+        if normalized_start and normalized_end then
+            return normalized_to_raw[normalized_start][1], normalized_to_raw[normalized_end][2]
+        end
+    end
+
     local function notify_user_on_finish(note_ids)
         --- Run this callback once all notes are changed.
 
@@ -173,9 +216,12 @@ local function make_exporter()
 
         local _, opentag, target, closetag, _ = stored_data[self.config.sentence_field]:match('^(.-)(<[^>]+>)(.-)(</[^>]+>)(.-)$')
         if target then
-            local prefix, _, suffix = new_data[self.config.sentence_field]:match(table.concat { '^(.-)(', target, ')(.-)$' })
-            if prefix and suffix then
-                new_data[self.config.sentence_field] = table.concat { prefix, opentag, target, closetag, suffix }
+            local target_start, target_end = find_normalized_apostrophe_range(new_data[self.config.sentence_field], target)
+            if target_start and target_end then
+                local prefix = new_data[self.config.sentence_field]:sub(1, target_start - 1)
+                local matched_target = new_data[self.config.sentence_field]:sub(target_start, target_end)
+                local suffix = new_data[self.config.sentence_field]:sub(target_end + 1)
+                new_data[self.config.sentence_field] = table.concat { prefix, opentag, matched_target, closetag, suffix }
             end
         end
         return new_data
@@ -215,6 +261,10 @@ local function make_exporter()
             return new_text
         end
 
+        if cfg.prepend then
+            return string.format("%s%s%s", new_text, cfg.separator, old_text)
+        end
+
         return string.format("%s%s%s", old_text, cfg.separator, new_text)
     end
 
@@ -224,18 +274,27 @@ local function make_exporter()
         end
     end
 
-    local function join_fields(new_data, stored_data)
+    local function join_fields(new_data, stored_data, cfg)
+        cfg = cfg or {}
         fail_if_not_ready()
         for _, field in pairs { self.config.audio_field, self.config.image_field, self.config.miscinfo_field } do
             if not h.is_empty(field) then
-                new_data[field] = join_field_content(h.table_get(new_data, field, ""), h.table_get(stored_data, field, ""))
+                new_data[field] = join_field_content(
+                        h.table_get(new_data, field, ""),
+                        h.table_get(stored_data, field, ""),
+                        { prepend = cfg.prepend }
+                )
             end
         end
 
         for _, field in pairs { self.config.sentence_field, self.config.secondary_field } do
             if not h.is_empty(field) then
                 -- Strip html tags to compare text only.
-                new_data[field] = join_field_content(h.table_get(new_data, field, ""), h.table_get(stored_data, field, ""), { plaintext_compare = true })
+                new_data[field] = join_field_content(
+                        h.table_get(new_data, field, ""),
+                        h.table_get(stored_data, field, ""),
+                        { plaintext_compare = true, prepend = cfg.prepend }
+                )
             end
         end
 
@@ -252,11 +311,7 @@ local function make_exporter()
             end
             new_data = update_sentence(new_data, stored_data)
             if not cfg.overwrite then
-                if self.config.append_media then
-                    new_data = join_fields(new_data, stored_data)
-                else
-                    new_data = join_fields(stored_data, new_data)
-                end
+                new_data = join_fields(new_data, stored_data, { prepend = not self.config.append_media })
             end
         end
         -- If the text is still empty, put some dummy text to let the user know why
@@ -458,6 +513,33 @@ local function make_exporter()
             SentKanji = "Well, that&#39;s the knighthood in the bag.",
         }
         h.assert_equals(join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+
+        old_note = {
+            SentKanji = "I <b>don't</b> know",
+        }
+        new_note = {
+            SentKanji = "Well, I don&apos;t know",
+        }
+        expected = {
+            SentKanji = "Well, I <b>don&apos;t</b> know",
+        }
+        h.assert_equals(make_new_note_data(old_note, new_note, { overwrite = false, disable_forvo = true }).SentKanji, expected.SentKanji)
+
+        old_note = {
+            SentEng = "<i>Well, that's the knighthood in the bag.</i>",
+        }
+        new_note = {
+            SentEng = "Well, that&apos;s the knighthood in the bag.",
+        }
+        h.assert_equals(join_fields(new_note, old_note, { prepend = true }).SentEng, old_note.SentEng)
+
+        old_note = {
+            SentEng = "What would we win, exactly?",
+        }
+        new_note = {
+            SentEng = "Well...",
+        }
+        h.assert_equals(join_fields(new_note, old_note, { prepend = true }).SentEng, "Well...<br>What would we win, exactly?")
     end
 
     return {
