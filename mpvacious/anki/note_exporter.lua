@@ -120,6 +120,13 @@ local function make_exporter()
         return ret
     end
 
+    local function normalize_apostrophe_entities(str)
+        if h.is_empty(str) then
+            return str
+        end
+        return str:gsub('&apos;', "'"):gsub('&#39;', "'")
+    end
+
     local function notify_user_on_finish(note_ids)
         --- Run this callback once all notes are changed.
 
@@ -184,7 +191,8 @@ local function make_exporter()
         local cmp_new_text, cmp_old_text = (function()
             -- Primary and secondary subtitles are compared without html tags.
             if cfg.plaintext_compare then
-                return h.remove_html_tags(new_text), h.remove_html_tags(old_text)
+                return normalize_apostrophe_entities(h.remove_html_tags(new_text)),
+                        normalize_apostrophe_entities(h.remove_html_tags(old_text))
             else
                 return new_text, old_text
             end
@@ -437,6 +445,19 @@ local function make_exporter()
             SentKanji = "あの遠さはヤツらの声に<b>現実味</b>が…",
         }
         h.assert_equals(make_new_note_data(old_note, new_note, { overwrite = false, disable_forvo = true }).SentKanji, expected.SentKanji)
+
+        old_note = {
+            SentKanji = "Well, that's the knighthood in the bag.",
+        }
+        new_note = {
+            SentKanji = "Well, that&apos;s the knighthood in the bag.",
+        }
+        h.assert_equals(join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+
+        new_note = {
+            SentKanji = "Well, that&#39;s the knighthood in the bag.",
+        }
+        h.assert_equals(join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
     end
 
     return {
