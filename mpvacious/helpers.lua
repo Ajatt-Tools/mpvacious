@@ -687,15 +687,21 @@ function this.version_needs_update(latest_version, installed_version)
 end
 
 function this.run_tests()
+    -- Test is_substr
     this.assert_equals(this.is_substr("abcd", "bc"), true)
     this.assert_equals(this.is_substr("abcd", "xyz"), false)
     this.assert_equals(this.is_substr("abcd", "^.*d.*$"), false)
+
+    -- Test str_contains
     this.assert_equals(this.str_contains("abcd", "^.*d.*$"), true)
     this.assert_equals(this.str_contains("abcd", "^.*z.*$"), false)
+
+    -- Test unescape_special_characters
     this.assert_equals(this.unescape_special_characters("that&apos;s"), "that's")
     this.assert_equals(this.unescape_special_characters("that&#39;s &amp; &quot;ok&quot;"), "that's & \"ok\"")
     this.assert_equals(this.unescape_special_characters("&lt;tag&gt;"), "<tag>")
 
+    -- Test get_episode_number
     local ep_num_to_filename = {
         { nil, "A Whisker Away.mkv" },
         { nil, "[Placeholder] Gekijouban SHIROBAKO [Ma10p_1080p][x265_flac]" },
