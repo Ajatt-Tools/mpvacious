@@ -205,6 +205,16 @@ function this.str_replace(s, old, new, max_repl)
     return table.concat(out)
 end
 
+function this.replace_key_value_pairs(text, entities)
+    if this.is_empty(text) then
+        return text
+    end
+    for entity, replacement in pairs(entities) do
+        text = this.str_replace(text, entity, replacement)
+    end
+    return text
+end
+
 this.escape_special_characters = (function()
     local entities = {
         ['&'] = '&amp;',
@@ -213,8 +223,8 @@ this.escape_special_characters = (function()
         ['<'] = '&lt;',
         ['>'] = '&gt;',
     }
-    return function(s)
-        return s:gsub('[&"\'<>]', entities)
+    return function(text)
+        return this.replace_key_value_pairs(text, entities)
     end
 end)()
 
@@ -227,15 +237,8 @@ this.unescape_special_characters = (function()
         ['&gt;'] = '>',
         ['&amp;'] = '&',
     }
-    local patterns = { '&apos;', '&#39;', '&quot;', '&lt;', '&gt;', '&amp;' }
-    return function(s)
-        if this.is_empty(s) then
-            return s
-        end
-        for _, pattern in ipairs(patterns) do
-            s = s:gsub(pattern, entities[pattern])
-        end
-        return s
+    return function(text)
+        return this.replace_key_value_pairs(text, entities)
     end
 end)()
 
@@ -700,6 +703,11 @@ function this.run_tests()
     this.assert_equals(this.unescape_special_characters("that&apos;s"), "that's")
     this.assert_equals(this.unescape_special_characters("that&#39;s &amp; &quot;ok&quot;"), "that's & \"ok\"")
     this.assert_equals(this.unescape_special_characters("&lt;tag&gt;"), "<tag>")
+
+    -- Test escape_special_characters
+    this.assert_equals(this.escape_special_characters("that's"), "that&apos;s")
+    this.assert_equals(this.escape_special_characters("that's & \"ok\""), "that&apos;s &amp; &quot;ok&quot;")
+    this.assert_equals(this.escape_special_characters("<tag>"), "&lt;tag&gt;")
 
     -- Test get_episode_number
     local ep_num_to_filename = {
