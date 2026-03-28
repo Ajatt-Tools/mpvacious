@@ -810,6 +810,7 @@ function this.run_tests()
     this.assert_equals(this.str_replace("ababab", "ab", "x", 2), "xxab")
     this.assert_equals(this.str_replace("%w%w%w", "%w", "_"), "___")
     this.assert_equals(this.str_replace("abcdef", "%w", "_"), "abcdef")
+    this.assert_equals(this.str_replace("メイド喫茶", "メイド", "冥土"), "冥土喫茶")
 end
 
 return this
