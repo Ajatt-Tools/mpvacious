@@ -174,7 +174,11 @@ local function make_exporter()
         return new_data
     end
 
-    local function make_cmp_values(new_text, old_text, cfg)
+    --- Instead of comparing fields literally, normalize them to match different representations.
+    local function normalize_field_content(new_text, old_text, cfg)
+        -- lowercase
+        new_text, old_text = new_text:lower(), old_text:lower()
+
         -- Avoid duplicate sentence/media content when equivalent HTML entities differ,
         -- e.g. "'" versus "&apos;".
         new_text, old_text = h.unescape_special_characters(new_text), h.unescape_special_characters(old_text)
@@ -194,7 +198,7 @@ local function make_exporter()
         -- By default, join fields with a HTML newline.
         cfg.separator = cfg.separator or "<br>"
 
-        local cmp_new_text, cmp_old_text = make_cmp_values(new_text, old_text, cfg)
+        local cmp_new_text, cmp_old_text = normalize_field_content(new_text, old_text, cfg)
 
         if h.is_empty(cmp_old_text) then
             -- If 'old_text' is empty, there's no need to join content with the separator.
