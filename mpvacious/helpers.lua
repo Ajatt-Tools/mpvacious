@@ -224,7 +224,9 @@ this.escape_special_characters = (function()
         ['>'] = '&gt;',
     }
     return function(text)
-        -- use gsub here to avoid double-replacing, resulting in: Expected 'that&apos;s', got 'that&amp;apos;s'
+        -- Unescape first to ensure idempotency. Calling escape on already-escaped text should be a no-op.
+        text = this.unescape_special_characters(text)
+        -- Use gsub here to avoid double-replacing, resulting in: Expected 'that&apos;s', got 'that&amp;apos;s'
         return text:gsub('[&"\'<>]', entities)
     end
 end)()
@@ -709,6 +711,15 @@ function this.run_tests()
     this.assert_equals(this.escape_special_characters("that's"), "that&apos;s")
     this.assert_equals(this.escape_special_characters("that's & \"ok\""), "that&apos;s &amp; &quot;ok&quot;")
     this.assert_equals(this.escape_special_characters("<tag>"), "&lt;tag&gt;")
+    this.assert_equals(this.escape_special_characters('&"\'<>'), "&amp;&quot;&apos;&lt;&gt;")
+    this.assert_equals(this.escape_special_characters("a<b&c"), "a&lt;b&amp;c")
+    this.assert_equals(this.escape_special_characters("&amp;"), "&amp;")
+    this.assert_equals(this.escape_special_characters("hello world"), "hello world")
+    this.assert_equals(this.escape_special_characters(""), "")
+    -- Round-trip: unescape(escape(text)) should return the original text.
+    this.assert_equals(this.unescape_special_characters(this.escape_special_characters("that's & \"ok\"")), "that's & \"ok\"")
+    -- Idempotency: escaping an already-escaped string should be a no-op.
+    this.assert_equals(this.escape_special_characters(this.escape_special_characters("that's & \"ok\"")), "that&apos;s &amp; &quot;ok&quot;")
 
     -- Test get_episode_number
     local ep_num_to_filename = {
