@@ -27,14 +27,29 @@ elseif h.is_wayland() then
     self.clip_cmd = self.clip_util
     self.healthy = is_wl_copy_installed()
 else
+    local function is_xsel_installed()
+        local result = h.subprocess { args = { 'xsel', '--version' } }
+        return result.status == 0 and result.stderr:match("xsel version") ~= nil
+    end
+
     local function is_xclip_installed()
         local result = h.subprocess { args = { 'xclip', '-version' } }
         return result.status == 0 and result.stderr:match("xclip version") ~= nil
     end
 
-    self.clip_util = "xclip"
-    self.clip_cmd = self.clip_util .. " -i -selection clipboard"
-    self.healthy = is_xclip_installed()
+    if is_xsel_installed() then
+        self.clip_util = "xsel"
+        self.clip_cmd = self.clip_util .. " --clipboard"
+        self.healthy = true
+    elseif is_xclip_installed() then
+        self.clip_util = "xclip"
+        self.clip_cmd = self.clip_util .. " -i -selection clipboard"
+        self.healthy = true
+    else
+        self.clip_util = "xclip/xsel"
+        self.clip_cmd = self.clip_util
+        self.healthy = false
+    end
 end
 
 self.tmp_dir = function()
