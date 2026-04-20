@@ -224,7 +224,8 @@ this.escape_special_characters = (function()
         ['>'] = '&gt;',
     }
     return function(text)
-        return this.replace_key_value_pairs(text, entities)
+        -- use gsub here to avoid double-replacing, resulting in: Expected 'that&apos;s', got 'that&amp;apos;s'
+        return text:gsub('[&"\'<>]', entities)
     end
 end)()
 
