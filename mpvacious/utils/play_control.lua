@@ -38,7 +38,12 @@ local function sub_seek(direction, pause)
 end
 
 local function sub_rewind()
-    mp.commandv('seek', Subtitle:now()['start'] + 0.015, 'absolute')
+    local sub = Subtitle:now()
+    if sub == nil then
+        h.notify("No subtitle is currently visible", "error", 5)
+        return
+    end
+    mp.commandv('seek', sub['start'] + 0.015, 'absolute')
     pause_timer.stop()
 end
 
