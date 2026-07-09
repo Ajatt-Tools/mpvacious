@@ -41,6 +41,18 @@ local function make_scale_filter(algorithm, width, height)
     -- algorithm is either "sinc" or "lanczos"
     -- Static image scaling uses "sinc", which is the best downscaling algorithm: https://stackoverflow.com/a/6171860
     -- Animated images use Lanczos, which is faster.
+    if width == -2 and height > 0 then
+        return string.format(
+                "scale='trunc(min(%d,ih)*dar/2+0.5)*2':'min(%d,ih)':flags=%s+accurate_rnd,setsar=1",
+                height, height, algorithm
+        )
+    end
+    if height == -2 and width > 0 then
+        return string.format(
+                "scale='trunc(min(%d,iw*sar)/2+0.5)*2':'trunc(min(%d,iw*sar)/dar/2+0.5)*2':flags=%s+accurate_rnd,setsar=1",
+                width, width, algorithm
+        )
+    end
     return string.format(
             "scale='min(%d,iw)':'min(%d,ih)':flags=%s+accurate_rnd",
             width, height, algorithm
