@@ -121,5 +121,33 @@ function this.parse_loudnorm(loudnorm_targets, json_extractor, loudnorm_consumer
     end
 end
 
+function this.run_tests()
+    h.assert_equals(
+            this.static_scale_filter({
+                snapshot_width = defaults.preserve_aspect_ratio,
+                snapshot_height = 350,
+            }),
+            "scale='trunc(min(350,ih)*dar/2+0.5)*2':'min(350,ih)':flags=sinc+accurate_rnd,setsar=1"
+    )
+    h.assert_equals(
+            this.static_scale_filter({
+                snapshot_width = 640,
+                snapshot_height = defaults.preserve_aspect_ratio,
+            }),
+            "scale='trunc(min(640,iw*sar)/2+0.5)*2':'trunc(min(640,iw*sar)/dar/2+0.5)*2':flags=sinc+accurate_rnd,setsar=1"
+    )
+    h.assert_equals(
+            this.static_scale_filter({ snapshot_width = 640, snapshot_height = 350 }),
+            "scale='min(640,iw)':'min(350,ih)':flags=sinc+accurate_rnd"
+    )
+    h.assert_equals(
+            this.animated_scale_filter({
+                animated_snapshot_width = defaults.preserve_aspect_ratio,
+                animated_snapshot_height = 350,
+            }),
+            "scale='trunc(min(350,ih)*dar/2+0.5)*2':'min(350,ih)':flags=lanczos+accurate_rnd,setsar=1"
+    )
+end
+
 
 return this
