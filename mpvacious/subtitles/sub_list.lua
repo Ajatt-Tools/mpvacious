@@ -6,6 +6,7 @@ Subtitle list remembers selected subtitle lines.
 ]]
 
 local h = require('helpers')
+local CONCAT_CHR = '\n' -- character used to concatenate subtitle lines
 
 local new_sub_list = function()
     local subs_list = {}
@@ -19,7 +20,7 @@ local new_sub_list = function()
         for _, sub in ipairs(subs_list) do
             table.insert(speech, sub['text'])
         end
-        return table.concat(speech, ' ')
+        return table.concat(speech, CONCAT_CHR)
     end
     local get_n_text = function(sub, n_lines)
         local speech = {}
@@ -33,7 +34,7 @@ local new_sub_list = function()
                 end_sub = v
             end
         end
-        return table.concat(speech, ' '), end_sub
+        return table.concat(speech, CONCAT_CHR), end_sub
     end
     local insert = function(sub)
         if sub == nil or h.is_empty(sub.text) then
