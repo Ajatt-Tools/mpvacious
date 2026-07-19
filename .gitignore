@@ -5,3 +5,6 @@
 *TODO*
 
 .github/RELEASE/*.conf
+
+/*.md
+!/README.md
