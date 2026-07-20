@@ -597,6 +597,14 @@ Also see: [Running tests](#running-tests).
 
 ## Running tests
 
+The fastest way to run tests is with `luajit` directly (no mpv or media file required):
+
+```bash
+luajit tests/run.lua
+```
+
+Alternatively, tests can be run inside mpv (requires a media file to trigger script loading):
+
 ```bash
 MPVACIOUS_TEST=TRUE mpv 'path/to/some/file.mkv'
 ```
