@@ -444,7 +444,7 @@ local function make_exporter()
             SentKanji = "Well, that&apos;s the knighthood in the bag.",
         }
         h.assert_equals(join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
-        new_note =  {
+        new_note = {
             SentKanji = "Well, that&#39;s the knighthood in the bag.",
         }
         h.assert_equals(join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
@@ -474,6 +474,33 @@ local function make_exporter()
     }
 end
 
+local function run_tests()
+    local test_exporter = make_exporter()
+    test_exporter.init(
+            nil, -- ankiconnect
+            nil, -- quick_creation_opts
+            nil, -- subs_observer
+            nil, -- encoder
+            nil, -- forvo
+            { -- cfg_mgr
+                fail_if_not_ready = function()
+                    return
+                end,
+                config = function()
+                    return {
+                        sentence_field = "SentKanji",
+                        secondary_field = "SentEng",
+                        audio_field = "SentAudio",
+                        image_field = "Image",
+                        miscinfo_field = "Notes",
+                        append_media = true,
+                    }
+                end,
+            })
+    test_exporter.run_tests()
+end
+
 return {
-    new = make_exporter
+    new = make_exporter,
+    run_tests = run_tests,
 }
