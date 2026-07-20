@@ -91,7 +91,7 @@ local function make_config_mgr()
     function public.init(encoder)
         self.encoder = encoder
         cfg_utils.create_config_file(default_profile_filename)
-        self.config = h.shallow_copy(defaults.defaults)
+        self.config = h.shallow_copy(defaults.get_default())
         self.profiles = h.shallow_copy(defaults.profiles)
 
         -- 'subs2srs' is the main profile, it is always loaded. 'active profile' overrides it afterwards.
