@@ -597,9 +597,10 @@ Also see: [Running tests](#running-tests).
 
 ## Running tests
 
-The fastest way to run tests is with `luajit` directly (no mpv or media file required):
+The fastest way to run tests is with Lua or `luajit` directly (no mpv or media file required):
 
 ```bash
+lua tests/run.lua
 luajit tests/run.lua
 ```
 
