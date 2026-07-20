@@ -10,7 +10,7 @@ local msg = require('mp.msg')
 local utils = require('mp.utils')
 local this = {}
 
-this.unpack = unpack and unpack or table.unpack
+this.unpack = unpack or table.unpack
 
 function this.noop()
     return
