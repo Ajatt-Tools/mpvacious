@@ -722,23 +722,25 @@ function this.run_tests()
     this.assert_equals(this.escape_special_characters(this.escape_special_characters("that's & \"ok\"")), "that&apos;s &amp; &quot;ok&quot;")
 
     -- Test get_episode_number
-    local ep_num_to_filename = {
-        { nil, "A Whisker Away.mkv" },
-        { nil, "[Placeholder] Gekijouban SHIROBAKO [Ma10p_1080p][x265_flac]" },
-        { "06", "[Placeholder] Sono Bisque Doll wa Koi wo Suru - 06 [54E495D0]" },
-        { "02", "(Hi10)_Kobayashi-san_Chi_no_Maid_Dragon_-_02_(BD_1080p)_(Placeholder)_(12C5D2B4)" },
-        { "01", "[Placeholder] Koi to Yobu ni wa Kimochi Warui - 01 (1080p) [D517C9F0]" },
-        { "01", "[Placeholder] Tsukimonogatari 01 [BD 1080p x264 10-bit FLAC] [5CD88145]" },
-        { "01", "[Placeholder] 86 - Eighty Six - 01 (1080p) [1B13598F]" },
-        { "00", "[Placeholder] Fate Stay Night - Unlimited Blade Works - 00 (BD 1080p Hi10 FLAC) [95590B7F]" },
-        { "01", "House, M.D. S01E01 Pilot - Everybody Lies (1080p x265 Placeholder)" },
-        { "165", "A Generic Episode-165" }
+    -- Use records instead of a filename → expected map because Lua table entries
+    -- with nil values do not exist. Keeping `expected = nil` inside a record lets
+    -- us test filenames where no episode number should be found.
+    local ep_num_cases = {
+        { filename = "A Whisker Away.mkv", expected = nil },
+        { filename = "[Placeholder] Gekijouban SHIROBAKO [Ma10p_1080p][x265_flac]", expected = nil },
+        { filename = "[Placeholder] Sono Bisque Doll wa Koi wo Suru - 06 [54E495D0]", expected = "06" },
+        { filename = "(Hi10)_Kobayashi-san_Chi_no_Maid_Dragon_-_02_(BD_1080p)_(Placeholder)_(12C5D2B4)", expected = "02" },
+        { filename = "[Placeholder] Koi to Yobu ni wa Kimochi Warui - 01 (1080p) [D517C9F0]", expected = "01" },
+        { filename = "[Placeholder] Tsukimonogatari 01 [BD 1080p x264 10-bit FLAC] [5CD88145]", expected = "01" },
+        { filename = "[Placeholder] 86 - Eighty Six - 01 (1080p) [1B13598F]", expected = "01" },
+        { filename = "[Placeholder] Fate Stay Night - Unlimited Blade Works - 00 (BD 1080p Hi10 FLAC) [95590B7F]", expected = "00" },
+        { filename = "House, M.D. S01E01 Pilot - Everybody Lies (1080p x265 Placeholder)", expected = "01" },
+        { filename = "A Generic Episode-165", expected = "165" },
     }
 
-    for _, case in pairs(ep_num_to_filename) do
-        local expected, filename = this.unpack(case)
-        local _, _, episode_num = this.get_episode_number(filename)
-        this.assert_equals(episode_num, expected)
+    for _, case in ipairs(ep_num_cases) do
+        local _, _, episode_num = this.get_episode_number(case.filename)
+        this.assert_equals(episode_num, case.expected)
     end
 
     this.assert_equals(this.join_lists({ 1, 2 }, { 3 }, {}, { 4, 5 }), { 1, 2, 3, 4, 5 })
