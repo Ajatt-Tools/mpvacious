@@ -9,7 +9,7 @@ Usage: luajit tests/run.lua
        (run from the project root directory)
 ]]
 
-local setup = require('tests.setup')
+require('tests.setup')
 
 ------------------------------------------------------------
 -- Run helpers tests
