@@ -7,8 +7,55 @@ local mp = require('mp')
 local h = require('helpers')
 local dec_counter = require('utils.dec_counter')
 
+--- Instead of comparing fields literally, normalize them to match different representations.
+local function normalize_field_content(new_text, old_text, cfg)
+    -- lowercase
+    new_text, old_text = new_text:lower(), old_text:lower()
+
+    -- Avoid duplicate sentence/media content when equivalent HTML entities differ,
+    -- e.g. "'" versus "&apos;".
+    new_text, old_text = h.unescape_special_characters(new_text), h.unescape_special_characters(old_text)
+
+    -- Primary and secondary subtitles are compared without html tags.
+    if cfg.plaintext_compare then
+        return h.remove_html_tags(new_text), h.remove_html_tags(old_text)
+    else
+        return new_text, old_text
+    end
+end
+
+--- expected cfg fields: str separator, bool plaintext_compare
+local function join_field_content(new_text, old_text, cfg)
+    cfg = cfg or {}
+
+    -- By default, join fields with a HTML newline.
+    cfg.separator = cfg.separator or "<br>"
+
+    local cmp_new_text, cmp_old_text = normalize_field_content(new_text, old_text, cfg)
+
+    if h.is_empty(cmp_old_text) then
+        -- If 'old_text' is empty, there's no need to join content with the separator.
+        return new_text
+    end
+
+    if h.is_substr(cmp_old_text, cmp_new_text) then
+        -- If 'old_text' (field) already contains new_text (sentence, image, audio, etc.),
+        -- there's no need to add 'new_text' to 'old_text'.
+        return old_text
+    end
+
+    if h.is_substr(cmp_new_text, cmp_old_text) then
+        -- If 'new_text' (field) already contains old_text (sentence, image, audio, etc.),
+        -- there's no need to add 'new_text' to 'old_text'.
+        return new_text
+    end
+
+    return string.format("%s%s%s", old_text, cfg.separator, new_text)
+end
+
 local function make_exporter()
     local self = {}
+    local pub = {}
 
     local substitute_fmt = (function()
         local function substitute_filename(tag, filename)
@@ -174,59 +221,13 @@ local function make_exporter()
         return new_data
     end
 
-    --- Instead of comparing fields literally, normalize them to match different representations.
-    local function normalize_field_content(new_text, old_text, cfg)
-        -- lowercase
-        new_text, old_text = new_text:lower(), old_text:lower()
-
-        -- Avoid duplicate sentence/media content when equivalent HTML entities differ,
-        -- e.g. "'" versus "&apos;".
-        new_text, old_text = h.unescape_special_characters(new_text), h.unescape_special_characters(old_text)
-
-        -- Primary and secondary subtitles are compared without html tags.
-        if cfg.plaintext_compare then
-            return h.remove_html_tags(new_text), h.remove_html_tags(old_text)
-        else
-            return new_text, old_text
-        end
-    end
-
-    --- expected cfg fields: str separator, bool plaintext_compare
-    local function join_field_content(new_text, old_text, cfg)
-        cfg = cfg or {}
-
-        -- By default, join fields with a HTML newline.
-        cfg.separator = cfg.separator or "<br>"
-
-        local cmp_new_text, cmp_old_text = normalize_field_content(new_text, old_text, cfg)
-
-        if h.is_empty(cmp_old_text) then
-            -- If 'old_text' is empty, there's no need to join content with the separator.
-            return new_text
-        end
-
-        if h.is_substr(cmp_old_text, cmp_new_text) then
-            -- If 'old_text' (field) already contains new_text (sentence, image, audio, etc.),
-            -- there's no need to add 'new_text' to 'old_text'.
-            return old_text
-        end
-
-        if h.is_substr(cmp_new_text, cmp_old_text) then
-            -- If 'new_text' (field) already contains old_text (sentence, image, audio, etc.),
-            -- there's no need to add 'new_text' to 'old_text'.
-            return new_text
-        end
-
-        return string.format("%s%s%s", old_text, cfg.separator, new_text)
-    end
-
     local function fail_if_not_ready()
         if h.is_empty(self.config) then
             error("config not assigned")
         end
     end
 
-    local function join_fields(new_data, stored_data)
+    function pub.join_fields(new_data, stored_data)
         fail_if_not_ready()
         for _, field in pairs { self.config.audio_field, self.config.image_field, self.config.miscinfo_field } do
             if not h.is_empty(field) then
@@ -255,9 +256,9 @@ local function make_exporter()
             new_data = update_sentence(new_data, stored_data)
             if not cfg.overwrite then
                 if self.config.append_media then
-                    new_data = join_fields(new_data, stored_data)
+                    new_data = pub.join_fields(new_data, stored_data)
                 else
-                    new_data = join_fields(stored_data, new_data)
+                    new_data = pub.join_fields(stored_data, new_data)
                 end
             end
         end
@@ -282,7 +283,7 @@ local function make_exporter()
         end
     end
 
-    local function update_notes(note_ids, overwrite)
+    function pub.update_notes(note_ids, overwrite)
         local sub
         local n_lines = self.quick_creation_opts:get_lines()
         if n_lines then
@@ -317,16 +318,18 @@ local function make_exporter()
 
         self.subs_observer.clear()
         self.quick_creation_opts:clear_options()
+        return pub
     end
 
-    local function maybe_reload_config()
+    function pub.maybe_reload_config()
         if self.config.reload_config_before_card_creation then
             self.cfg_mgr.reload_from_disk()
         end
+        return pub
     end
 
-    local function export_to_anki(gui)
-        maybe_reload_config()
+    function pub.export_to_anki(gui)
+        pub.maybe_reload_config()
         local sub = self.subs_observer.collect_from_current()
 
         if not sub:is_valid() then
@@ -353,11 +356,12 @@ local function make_exporter()
 
         self.ankiconnect.add_note(note_fields, substitute_fmt(self.config.note_tag), gui)
         self.subs_observer.clear()
+        return pub
     end
 
-    local function update_last_note(overwrite)
+    function pub.update_last_note(overwrite)
         local accept_notes_made_within_last_minutes = 10
-        maybe_reload_config()
+        pub.maybe_reload_config()
 
         local n_cards = self.quick_creation_opts:get_cards()
         -- this now returns a table
@@ -369,11 +373,12 @@ local function make_exporter()
             return h.notify("Couldn't find the target note.", "warn", 2)
         end
 
-        update_notes(last_note_ids, overwrite)
+        pub.update_notes(last_note_ids, overwrite)
+        return pub
     end
 
-    local function update_selected_note(overwrite)
-        maybe_reload_config()
+    function pub.update_selected_note(overwrite)
+        pub.maybe_reload_config()
 
         local selected_note_ids = self.ankiconnect.get_selected_note_ids()
 
@@ -392,10 +397,11 @@ local function make_exporter()
             )
         end
 
-        update_notes(selected_note_ids, overwrite)
+        pub.update_notes(selected_note_ids, overwrite)
+        return pub
     end
 
-    local function init(ankiconnect, quick_creation_opts, subs_observer, encoder, forvo, cfg_mgr)
+    function pub.init(ankiconnect, quick_creation_opts, subs_observer, encoder, forvo, cfg_mgr)
         cfg_mgr.fail_if_not_ready()
         self.config = cfg_mgr.config()
         self.cfg_mgr = cfg_mgr
@@ -404,13 +410,10 @@ local function make_exporter()
         self.subs_observer = subs_observer
         self.encoder = encoder
         self.forvo = forvo
+        return pub
     end
 
-    local function run_tests()
-        -- Test join_field_content
-        h.assert_equals(join_field_content("ヤツらの声に現実味が…", "あの遠さはヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
-        h.assert_equals(join_field_content("あの遠さはヤツらの声に現実味が…", "ヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
-
+    function pub.run_tests()
         -- Test join_fields
         local new_note = {
             SentKanji = "それは…分からんよ",
@@ -434,7 +437,7 @@ local function make_exporter()
             Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif"><br><img alt="snapshot" src="s01e13_02m25s561ms.avif">',
             Notes = "",
         }
-        h.assert_equals(join_fields(new_note, old_note), expected)
+        h.assert_equals(pub.join_fields(new_note, old_note), expected)
 
         -- HTML escaping
         old_note = {
@@ -443,11 +446,11 @@ local function make_exporter()
         new_note = {
             SentKanji = "Well, that&apos;s the knighthood in the bag.",
         }
-        h.assert_equals(join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+        h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
         new_note = {
             SentKanji = "Well, that&#39;s the knighthood in the bag.",
         }
-        h.assert_equals(join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+        h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
 
         -- Test make_new_note_data
         old_note = {
@@ -460,43 +463,41 @@ local function make_exporter()
             SentKanji = "あの遠さはヤツらの声に<b>現実味</b>が…",
         }
         h.assert_equals(make_new_note_data(old_note, new_note, { overwrite = false, disable_forvo = true }).SentKanji, expected.SentKanji)
+        return pub
     end
 
-    return {
-        init = init,
-        update_notes = update_notes,
-        export_to_anki = export_to_anki,
-        maybe_reload_config = maybe_reload_config,
-        join_fields = join_fields,
-        update_last_note = update_last_note,
-        update_selected_note = update_selected_note,
-        run_tests = run_tests,
-    }
+    return pub
 end
 
-local function run_tests()
-    local test_exporter = make_exporter()
-    test_exporter.init(
+local function run_tests(test_exporter)
+    -- Test join_field_content
+    h.assert_equals(join_field_content("ヤツらの声に現実味が…", "あの遠さはヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
+    h.assert_equals(join_field_content("あの遠さはヤツらの声に現実味が…", "ヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
+
+    local test_cfg_mgr = {
+        fail_if_not_ready = function()
+            return
+        end,
+        config = function()
+            return {
+                sentence_field = "SentKanji",
+                secondary_field = "SentEng",
+                audio_field = "SentAudio",
+                image_field = "Image",
+                miscinfo_field = "Notes",
+                append_media = true,
+            }
+        end,
+    }
+
+    test_exporter = test_exporter or make_exporter().init(
             nil, -- ankiconnect
             nil, -- quick_creation_opts
             nil, -- subs_observer
             nil, -- encoder
             nil, -- forvo
-            { -- cfg_mgr
-                fail_if_not_ready = function()
-                    return
-                end,
-                config = function()
-                    return {
-                        sentence_field = "SentKanji",
-                        secondary_field = "SentEng",
-                        audio_field = "SentAudio",
-                        image_field = "Image",
-                        miscinfo_field = "Notes",
-                        append_media = true,
-                    }
-                end,
-            })
+            test_cfg_mgr
+    )
     test_exporter.run_tests()
 end
 
