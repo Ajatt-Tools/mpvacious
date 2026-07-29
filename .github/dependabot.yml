@@ -1,0 +1,37 @@
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 20
+    labels:
+      - "area/dependencies"
+    groups:
+      # group minor/patch updates together
+      # Major updates are intentionally left ungrouped for individual review
+      minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # PyPi
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 20
+    labels:
+      - "area/dependencies"
+    groups:
+      # group minor/patch updates together
+      # Major updates are intentionally left ungrouped for individual review
+      minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
