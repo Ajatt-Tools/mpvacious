@@ -47,11 +47,37 @@ die() {
 	exit 1
 }
 
+is_installed() {
+	[[ -x "$(command -v "$1")" ]]
+}
+
+_grep() {
+	# Run ggrep (GNU grep) from Homebrew if it is installed.
+	# https://formulae.brew.sh/formula/grep
+	if is_installed ggrep; then
+		ggrep "$@"
+	else
+		grep "$@"
+	fi
+}
+
+check_macos_tools() {
+	if [[ "$(uname)" != "Darwin" ]]; then
+		return
+	fi
+
+	# ggrep supports Perl-compatible regular expressions.
+	if ! is_installed ggrep; then
+		echo "ggrep is not installed. install it with brew: https://formulae.brew.sh/formula/grep" >&2
+		exit 1
+	fi
+}
+
 set_latest_version() {
 	local -r api_url="https://api.github.com/repos/Ajatt-Tools/mpvacious/releases/latest"
 	latest_version=$(
 		curl -Ls "$api_url" |
-			grep -Po '"tag_name":\s*"\K[^"]+(?=")'
+			_grep -Po '"tag_name":\s*"\K[^"]+(?=")'
 	) || die "Failed to find the latest $prog version."
 	if [ -z "$latest_version" ]; then
 		die "Failed to find the latest $prog version."
@@ -61,7 +87,7 @@ set_latest_version() {
 check_missing_dependencies() {
 	local -a missing_dependencies=()
 	for name in "${dependencies[@]}"; do
-		if [ ! -x "$(command -v "$name")" ]; then
+		if ! is_installed "$name"; then
 			missing_dependencies+=("$name")
 		fi
 	done
@@ -131,6 +157,8 @@ download_default_config_file() {
 }
 
 main() {
+	check_macos_tools
+
 	# Check dependencies
 	check_missing_dependencies
 
