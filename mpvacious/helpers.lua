@@ -46,6 +46,11 @@ function this.max_num(table)
     return max
 end
 
+--- Return value clamped to the [min_value, max_value] range.
+function this.clamp(value, min_value, max_value)
+    return math.min(math.max(value, min_value), max_value)
+end
+
 function this.get_last_n_added_notes(note_ids, n)
     table.sort(note_ids)
     return { this.unpack(note_ids, math.max(#note_ids - n + 1, 1), #note_ids) }
@@ -800,6 +805,14 @@ function this.run_tests()
     this.assert_equals(this.str_limit("報連相", 2), "報連…")
     this.assert_equals(this.str_limit("報連相", 1), "報…")
     this.assert_equals(this.str_limit("報連相", 33), "報連相")
+
+    -- Test clamp
+    this.assert_equals(this.clamp(5, 1, 10), 5)
+    this.assert_equals(this.clamp(0, 1, 10), 1)
+    this.assert_equals(this.clamp(-100, 1, 10), 1)
+    this.assert_equals(this.clamp(11, 1, 10), 10)
+    this.assert_equals(this.clamp(1, 1, 10), 1)
+    this.assert_equals(this.clamp(10, 1, 10), 10)
 
     -- Test version comparison
     this.assert_equals(this.version_needs_update("v1.0.0", "v1.0.0"), nil)

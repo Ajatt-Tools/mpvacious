@@ -35,7 +35,7 @@ local make_switch = function(states)
         end
     end
     local function set_index(index)
-        self.current_state = math.max(1, math.min(index, #self.states))
+        self.current_state = h.clamp(index, 1, #self.states)
     end
     local function get_index()
         return self.current_state
