@@ -30,6 +30,15 @@ eutils.run_tests()
 print("encoder utility tests passed.")
 
 ------------------------------------------------------------
+-- Run config utility tests
+------------------------------------------------------------
+
+print("Running config utility tests...")
+local cfg_utils = require('config.utils')
+cfg_utils.run_tests()
+print("config utility tests passed.")
+
+------------------------------------------------------------
 -- Run note_exporter tests
 ------------------------------------------------------------
 
@@ -37,13 +46,6 @@ print("Running note_exporter tests...")
 local note_exporter = require('anki.note_exporter')
 note_exporter.run_tests()
 print("note_exporter tests passed.")
-
-------------------------------------------------------------
-
-print("Running config defaults tests...")
-local defaults = require('config.defaults')
-assert(defaults.get_default().menu_max_shown_line_length == 30)
-print("config defaults tests passed.")
 
 ------------------------------------------------------------
 

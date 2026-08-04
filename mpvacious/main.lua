@@ -52,6 +52,7 @@ local forvo = require('utils.forvo')
 local subs_observer = require('subtitles.observer')
 local codec_support = require('encoder.codec_support')
 local eutils = require('encoder.utils')
+local cfg_utils = require('config.utils')
 local make_new_note_checker = require('anki.new_note_checker')
 local make_note_exporter = require('anki.note_exporter')
 local Subtitle = require('subtitles.subtitle')
@@ -564,6 +565,7 @@ end
 local function run_tests()
     h.run_tests()
     eutils.run_tests()
+    cfg_utils.run_tests()
     make_note_exporter.run_tests(note_exporter)
 end
 
