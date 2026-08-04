@@ -110,6 +110,8 @@ local function _run(params)
     end
 end
 
+--- Trim, strip OSD-special characters, and limit the string
+--- to menu_max_shown_line_length characters for display in the menus.
 local function escape_for_osd(str)
     str = h.trim(str)
     str = str:gsub('[%[%]{}]', '')
