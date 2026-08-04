@@ -89,7 +89,6 @@ local menu_consts = {
     start_y = 55,
     start_x = 5,
     start_x_second_pane = 640,
-    max_shown_line_length = 30,
 }
 
 ------------------------------------------------------------
@@ -113,7 +112,7 @@ end
 local function escape_for_osd(str)
     str = h.trim(str)
     str = str:gsub('[%[%]{}]', '')
-    return h.str_limit(str, menu_consts.max_shown_line_length)
+    return h.str_limit(str, cfg_mgr.query("menu_max_shown_line_length"))
 end
 
 local function ensure_deck()

@@ -40,4 +40,11 @@ print("note_exporter tests passed.")
 
 ------------------------------------------------------------
 
+print("Running config defaults tests...")
+local defaults = require('config.defaults')
+assert(defaults.get_default().menu_max_shown_line_length == 30)
+print("config defaults tests passed.")
+
+------------------------------------------------------------
+
 print("ALL TESTS PASSED")
