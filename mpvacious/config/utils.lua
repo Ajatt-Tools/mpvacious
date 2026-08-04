@@ -134,16 +134,48 @@ local function validate_config(config)
         ensure_correct_fps()
     end
 
+    local function check_menu_settings()
+        config.menu_max_shown_line_length = h.clamp(
+                config.menu_max_shown_line_length,
+                defaults.min_menu_max_shown_line_length,
+                defaults.max_menu_max_shown_line_length
+        )
+    end
+
     local function main()
         set_audio_format()
         set_video_format()
         check_image_settings()
         check_animated_snapshot_settings()
+        check_menu_settings()
     end
     return main()
+end
+
+local function run_tests()
+    local function validate_menu_line_limit(value)
+        local config = defaults.get_default()
+        config.menu_max_shown_line_length = value
+        validate_config(config)
+        return config.menu_max_shown_line_length
+    end
+
+    local cases = {
+        { -10, defaults.min_menu_max_shown_line_length },
+        { defaults.min_menu_max_shown_line_length, defaults.min_menu_max_shown_line_length },
+        { defaults.default_menu_max_shown_line_length, defaults.default_menu_max_shown_line_length },
+        { defaults.max_menu_max_shown_line_length, defaults.max_menu_max_shown_line_length },
+        { 9999, defaults.max_menu_max_shown_line_length },
+    }
+
+    for _, case in ipairs(cases) do
+        local value, expected = h.unpack(case)
+        h.assert_equals(validate_menu_line_limit(value), expected)
+    end
 end
 
 return {
     create_config_file = create_config_file,
     validate_config = validate_config,
+    run_tests = run_tests,
 }

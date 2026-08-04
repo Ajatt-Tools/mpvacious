@@ -52,6 +52,7 @@ local forvo = require('utils.forvo')
 local subs_observer = require('subtitles.observer')
 local codec_support = require('encoder.codec_support')
 local eutils = require('encoder.utils')
+local cfg_utils = require('config.utils')
 local make_new_note_checker = require('anki.new_note_checker')
 local make_note_exporter = require('anki.note_exporter')
 local Subtitle = require('subtitles.subtitle')
@@ -89,7 +90,6 @@ local menu_consts = {
     start_y = 55,
     start_x = 5,
     start_x_second_pane = 640,
-    max_shown_line_length = 30,
 }
 
 ------------------------------------------------------------
@@ -110,10 +110,13 @@ local function _run(params)
     end
 end
 
+--- Trim, strip OSD-special characters, and limit the string
+--- to menu_max_shown_line_length characters for display in the menus.
+--- An ellipsis ("…") is appended when truncating.
 local function escape_for_osd(str)
     str = h.trim(str)
     str = str:gsub('[%[%]{}]', '')
-    return h.str_limit(str, menu_consts.max_shown_line_length)
+    return h.str_limit(str, cfg_mgr.query("menu_max_shown_line_length"))
 end
 
 local function ensure_deck()
@@ -565,6 +568,7 @@ end
 local function run_tests()
     h.run_tests()
     eutils.run_tests()
+    cfg_utils.run_tests()
     make_note_exporter.run_tests(note_exporter)
 end
 

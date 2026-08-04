@@ -30,6 +30,15 @@ eutils.run_tests()
 print("encoder utility tests passed.")
 
 ------------------------------------------------------------
+-- Run config utility tests
+------------------------------------------------------------
+
+print("Running config utility tests...")
+local cfg_utils = require('config.utils')
+cfg_utils.run_tests()
+print("config utility tests passed.")
+
+------------------------------------------------------------
 -- Run note_exporter tests
 ------------------------------------------------------------
 
