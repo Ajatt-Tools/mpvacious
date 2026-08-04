@@ -134,11 +134,20 @@ local function validate_config(config)
         ensure_correct_fps()
     end
 
+    local function check_menu_settings()
+        config.menu_max_shown_line_length = h.clamp(
+                config.menu_max_shown_line_length,
+                defaults.min_menu_max_shown_line_length,
+                defaults.max_menu_max_shown_line_length
+        )
+    end
+
     local function main()
         set_audio_format()
         set_video_format()
         check_image_settings()
         check_animated_snapshot_settings()
+        check_menu_settings()
     end
     return main()
 end
