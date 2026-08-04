@@ -112,6 +112,7 @@ end
 
 --- Trim, strip OSD-special characters, and limit the string
 --- to menu_max_shown_line_length characters for display in the menus.
+--- An ellipsis ("…") is appended when truncating.
 local function escape_for_osd(str)
     str = h.trim(str)
     str = str:gsub('[%[%]{}]', '')
