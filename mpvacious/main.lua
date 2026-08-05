@@ -569,6 +569,7 @@ local function run_tests()
     h.run_tests()
     eutils.run_tests()
     cfg_utils.run_tests()
+    Subtitle.run_tests()
     make_note_exporter.run_tests(note_exporter)
 end
 

@@ -6,6 +6,9 @@ Subtitle class provides methods for storing and comparing subtitle lines.
 ]]
 
 local mp = require('mp')
+local h = require('helpers')
+
+local SAME_EVENT_TIME_TOLERANCE_SECONDS = 0.5
 
 local Subtitle = {
     ['text'] = '',
@@ -20,6 +23,10 @@ function Subtitle:new(o)
     setmetatable(o, self)
     self.__index = self
     return o
+end
+
+function Subtitle:from_text(text, start_time, end_time)
+    return self:new { ['text'] = text, ['start'] = start_time, ['end'] = end_time }
 end
 
 function Subtitle:now(secondary)
@@ -45,6 +52,21 @@ end
 
 function Subtitle:is_valid()
     return self['start'] and self['end'] and self['start'] >= 0 and self['end'] > self['start']
+end
+
+local function is_near(first, second)
+    return math.abs(first - second) <= SAME_EVENT_TIME_TOLERANCE_SECONDS
+end
+
+function Subtitle:is_same_event(other)
+    return self['text'] == other['text'] and is_near(self['start'], other['start']) and is_near(self['end'], other['end'])
+end
+
+function Subtitle.run_tests()
+    h.assert_equals(Subtitle:from_text("Same line", 0, 2):is_same_event(Subtitle:from_text("Same line", 0, 2)), true)
+    h.assert_equals(Subtitle:from_text("Same line", 0, 2):is_same_event(Subtitle:from_text("Same line", 0.4, 2.4)), true)
+    h.assert_equals(Subtitle:from_text("Same line", 0, 2):is_same_event(Subtitle:from_text("Same line", 0.6, 2)), false)
+    h.assert_equals(Subtitle:from_text("Same line", 0, 2):is_same_event(Subtitle:from_text("Other line", 0, 2)), false)
 end
 
 Subtitle.__eq = function(lhs, rhs)
