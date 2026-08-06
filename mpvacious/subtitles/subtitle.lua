@@ -8,7 +8,7 @@ Subtitle class provides methods for storing and comparing subtitle lines.
 local mp = require('mp')
 local h = require('helpers')
 
-local SAME_EVENT_TIME_TOLERANCE_SECONDS = 0.5
+local SAME_EVENT_TIME_TOLERANCE_SECONDS = 0.05
 
 local Subtitle = {
     ['text'] = '',
