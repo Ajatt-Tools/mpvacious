@@ -67,10 +67,14 @@ function Subtitle.run_tests()
     h.assert_equals(Subtitle:from_text("Same line", 0, 2):is_same_event(Subtitle:from_text("Same line", 0.4, 2.4)), true)
     h.assert_equals(Subtitle:from_text("Same line", 0, 2):is_same_event(Subtitle:from_text("Same line", 0.6, 2)), false)
     h.assert_equals(Subtitle:from_text("Same line", 0, 2):is_same_event(Subtitle:from_text("Other line", 0, 2)), false)
+
+    -- __eq delegates to is_same_event: same text and timing within tolerance.
+    h.assert_equals(Subtitle:from_text("A", 0, 2) == Subtitle:from_text("A", 0.4, 2.4), true)
+    h.assert_equals(Subtitle:from_text("A", 0, 2) == Subtitle:from_text("A", 3, 4), false)
 end
 
 Subtitle.__eq = function(lhs, rhs)
-    return lhs['text'] == rhs['text']
+    return lhs:is_same_event(rhs)
 end
 
 Subtitle.__lt = function(lhs, rhs)
