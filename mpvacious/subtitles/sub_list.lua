@@ -130,6 +130,18 @@ local function test_insert_expands_touching_same_text_event()
     h.assert_equals(subs.get_text(), "Same line")
 end
 
+local function test_insert_chains_expansions()
+    -- Successive adjacent same-text events keep expanding the same stored sub.
+    local subs = new_sub_list()
+    h.assert_equals(subs.insert(Subtitle:from_text("A", 0, 1)), true)
+    h.assert_equals(subs.insert(Subtitle:from_text("A", 1, 2)), true)
+    h.assert_equals(subs.insert(Subtitle:from_text("A", 2, 3)), true)
+    local ordered_list = subs.get_subs_list()
+    h.assert_equals(#ordered_list, 1)
+    h.assert_equals(ordered_list[1]['start'], 0)
+    h.assert_equals(ordered_list[1]['end'], 3)
+end
+
 local function test_insert_keeps_same_text_event_after_real_gap()
     local subs = new_sub_list()
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 1)), true)
@@ -200,6 +212,7 @@ local function run_tests()
     test_insert_rejects_invalid_subs()
     test_insert_rejects_duplicate_event()
     test_insert_expands_touching_same_text_event()
+    test_insert_chains_expansions()
     test_insert_keeps_same_text_event_after_real_gap()
     test_insert_keeps_backward_arrival_unmerged_and_sorted()
     test_insert_does_not_expand_across_intervening_event()
