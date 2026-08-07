@@ -44,8 +44,14 @@ local new_sub_list = function()
             return false
         end
         local n_latest_subs = h.itable_slice(subs_list, -LOOKUP_WINDOW_SIZE)
-        if h.contains(n_latest_subs, sub) then
-            return false
+        for _, existing in ipairs(n_latest_subs) do
+            if existing:is_same_event(sub) then
+                return false
+            end
+            if existing:can_expand_with(sub) then
+                existing:expand_end_time(sub)
+                return true
+            end
         end
         table.insert(subs_list, (#subs_list - #n_latest_subs) + h.find_insertion_point(n_latest_subs, sub), sub)
         return true
@@ -110,6 +116,36 @@ local function test_insert_rejects_duplicate_event()
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0.04, 2.04)), false)
 end
 
+local function test_insert_expands_touching_same_text_event()
+    local subs = new_sub_list()
+    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 1)), true)
+    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 1, 2)), true)
+    local ordered_list = subs.get_subs_list()
+    h.assert_equals(#ordered_list, 1)
+    h.assert_equals(ordered_list[1]['start'], 0)
+    h.assert_equals(ordered_list[1]['end'], 2)
+    h.assert_equals(subs.get_text(), "Same line")
+end
+
+local function test_insert_keeps_same_text_event_after_real_gap()
+    local subs = new_sub_list()
+    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 1)), true)
+    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 1.01, 2)), true)
+    h.assert_equals(#subs.get_subs_list(), 2)
+    h.assert_equals(subs.get_text(), "Same line\nSame line")
+end
+
+local function test_insert_keeps_backward_arrival_unmerged_and_sorted()
+    local subs = new_sub_list()
+    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 1, 2)), true)
+    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 1)), true)
+    local ordered_list = subs.get_subs_list()
+    h.assert_equals(#ordered_list, 2)
+    h.assert_equals(ordered_list[1]['start'], 0)
+    h.assert_equals(ordered_list[2]['start'], 1)
+    assert_subs_sorted(ordered_list)
+end
+
 local function test_insert_uses_recent_lookup_window()
     local subs = make_numbered_sub_list(0, 29)
     h.assert_equals(#subs.get_subs_list(), 30)
@@ -146,6 +182,9 @@ end
 local function run_tests()
     test_insert_rejects_invalid_subs()
     test_insert_rejects_duplicate_event()
+    test_insert_expands_touching_same_text_event()
+    test_insert_keeps_same_text_event_after_real_gap()
+    test_insert_keeps_backward_arrival_unmerged_and_sorted()
     test_insert_uses_recent_lookup_window()
     test_insert_preserves_sorted_order()
     test_get_time_returns_boundary_times()
