@@ -87,15 +87,41 @@ Subtitle.__lt = function(lhs, rhs)
     end
 end
 
-function Subtitle.run_tests()
-    h.assert_equals(Subtitle:from_text("Same line", 0, 2):is_same_event(Subtitle:from_text("Same line", 0, 2)), true)
-    h.assert_equals(Subtitle:from_text("Same line", 0, 2):is_same_event(Subtitle:from_text("Same line", 0.04, 2.04)), true)
-    h.assert_equals(Subtitle:from_text("Same line", 0, 2):is_same_event(Subtitle:from_text("Same line", 0.06, 2)), false)
-    h.assert_equals(Subtitle:from_text("Same line", 0, 2):is_same_event(Subtitle:from_text("Other line", 0, 2)), false)
+local function sub(text, start_time, end_time)
+    return Subtitle:from_text(text, start_time, end_time)
+end
 
-    -- __eq delegates to is_same_event: same text and timing within tolerance.
-    h.assert_equals(Subtitle:from_text("A", 0, 2) == Subtitle:from_text("A", 0.04, 2.04), true)
-    h.assert_equals(Subtitle:from_text("A", 0, 2) == Subtitle:from_text("A", 3, 4), false)
+local function test_is_same_event()
+    h.assert_equals(sub("Same line", 0, 2):is_same_event(sub("Same line", 0, 2)), true)
+    h.assert_equals(sub("Same line", 0, 2):is_same_event(sub("Same line", 0.04, 2.04)), true)
+    h.assert_equals(sub("Same line", 0, 2):is_same_event(sub("Same line", 0.06, 2)), false)
+    h.assert_equals(sub("Same line", 0, 2):is_same_event(sub("Other line", 0, 2)), false)
+end
+
+local function test_eq_uses_same_event()
+    h.assert_equals(sub("A", 0, 2) == sub("A", 0.04, 2.04), true)
+    h.assert_equals(sub("A", 0, 2) == sub("A", 3, 4), false)
+end
+
+local function test_can_expand_with()
+    h.assert_equals(sub("A", 0, 1):can_expand_with(sub("A", 1, 2)), true)
+    h.assert_equals(sub("A", 0, 2):can_expand_with(sub("A", 1, 3)), true)
+    h.assert_equals(sub("A", 0, 1):can_expand_with(sub("A", 1.01, 2)), false)
+    h.assert_equals(sub("A", 1, 2):can_expand_with(sub("A", 0, 1)), false)
+    h.assert_equals(sub("A", 0, 1):can_expand_with(sub("B", 0.5, 2)), false)
+end
+
+local function test_expand_end_time()
+    local expanded = sub("A", 0, 1):expand_end_time(sub("A", 1, 3))
+    h.assert_equals(expanded['start'], 0)
+    h.assert_equals(expanded['end'], 3)
+end
+
+function Subtitle.run_tests()
+    test_is_same_event()
+    test_eq_uses_same_event()
+    test_can_expand_with()
+    test_expand_end_time()
 end
 
 return Subtitle
