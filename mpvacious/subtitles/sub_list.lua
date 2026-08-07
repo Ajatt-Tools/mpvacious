@@ -48,10 +48,13 @@ local new_sub_list = function()
             if existing:is_same_event(sub) then
                 return false
             end
-            if existing:can_expand_with(sub) then
-                existing:expand_end_time(sub)
-                return true
-            end
+        end
+        -- Expand only the last stored sub.
+        -- The last sub has no successor, so extending its end time cannot break sorted order.
+        local last_sub = subs_list[#subs_list]
+        if last_sub and last_sub:can_expand_with(sub) then
+            last_sub:expand_end_time(sub)
+            return true
         end
         table.insert(subs_list, (#subs_list - #n_latest_subs) + h.find_insertion_point(n_latest_subs, sub), sub)
         return true
@@ -146,6 +149,20 @@ local function test_insert_keeps_backward_arrival_unmerged_and_sorted()
     assert_subs_sorted(ordered_list)
 end
 
+local function test_insert_does_not_expand_across_intervening_event()
+    local subs = new_sub_list()
+    h.assert_equals(subs.insert(Subtitle:from_text("A", 1, 2)), true)
+    h.assert_equals(subs.insert(Subtitle:from_text("B", 1, 3)), true)
+    h.assert_equals(subs.insert(Subtitle:from_text("A", 2, 4)), true)
+    local ordered_list = subs.get_subs_list()
+    h.assert_equals(#ordered_list, 3)
+    h.assert_equals(ordered_list[1]['text'], "A")
+    h.assert_equals(ordered_list[1]['end'], 2)
+    h.assert_equals(ordered_list[2]['text'], "B")
+    h.assert_equals(ordered_list[3]['text'], "A")
+    assert_subs_sorted(ordered_list)
+end
+
 local function test_insert_uses_recent_lookup_window()
     local subs = make_numbered_sub_list(0, 29)
     h.assert_equals(#subs.get_subs_list(), 30)
@@ -185,6 +202,7 @@ local function run_tests()
     test_insert_expands_touching_same_text_event()
     test_insert_keeps_same_text_event_after_real_gap()
     test_insert_keeps_backward_arrival_unmerged_and_sorted()
+    test_insert_does_not_expand_across_intervening_event()
     test_insert_uses_recent_lookup_window()
     test_insert_preserves_sorted_order()
     test_get_time_returns_boundary_times()
