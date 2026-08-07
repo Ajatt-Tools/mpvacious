@@ -48,6 +48,8 @@ note_exporter.run_tests()
 print("note_exporter tests passed.")
 
 ------------------------------------------------------------
+-- Run Subtitle tests
+------------------------------------------------------------
 
 print("Running subtitle tests...")
 local Subtitle = require('subtitles.subtitle')
