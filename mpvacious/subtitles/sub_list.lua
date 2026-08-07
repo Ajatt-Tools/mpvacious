@@ -7,6 +7,8 @@ Subtitle list remembers selected subtitle lines.
 
 local h = require('helpers')
 local CONCAT_CHR = '\n' -- character used to concatenate subtitle lines
+local LOOKUP_WINDOW_SIZE = 25 -- how many recent subs to scan for duplicate events
+local MAX_SUB_GAP_SECONDS = 20 -- stop joining lines separated by a longer gap
 
 local new_sub_list = function()
     local subs_list = {}
@@ -26,7 +28,7 @@ local new_sub_list = function()
         local speech = {}
         local end_sub = sub
         for _, v in ipairs(subs_list) do
-            if v['start'] - end_sub['end'] >= 20 then
+            if v['start'] - end_sub['end'] >= MAX_SUB_GAP_SECONDS then
                 break
             end
             if v >= sub and #speech < n_lines then
@@ -40,8 +42,7 @@ local new_sub_list = function()
         if sub == nil or h.is_empty(sub.text) then
             return false
         end
-        local lookup_window_size = 25
-        local n_latest_subs = {h.unpack(subs_list, math.max(#subs_list - lookup_window_size, 1), #subs_list)}
+        local n_latest_subs = h.itable_slice(subs_list, -LOOKUP_WINDOW_SIZE)
         if h.contains(n_latest_subs, sub) then
             return false
         end
