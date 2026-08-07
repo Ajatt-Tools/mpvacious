@@ -18,7 +18,22 @@ local function normalize_field_content(new_text, old_text, cfg)
 
     -- Primary and secondary subtitles are compared without html tags.
     if cfg.plaintext_compare then
-        return h.remove_html_tags(new_text), h.remove_html_tags(old_text)
+        local function normalize_plaintext(text)
+            text = h.remove_html_tags(text)
+            -- Ideographic, non-breaking, and narrow non-breaking spaces.
+            for _, space in ipairs { '　', '\194\160', '\226\128\175' } do
+                text = text:gsub(space, ' ')
+            end
+            -- Zero-width space and byte-order mark.
+            for _, invisible in ipairs { '\226\128\139', '\239\187\191' } do
+                text = text:gsub(invisible, '')
+            end
+            for _, quote in ipairs { '『', '』', '「', '」', '“', '”', '〝', '〟', '＂' } do
+                text = text:gsub(quote, '"')
+            end
+            return text:gsub('%s+', ' '):match('^%s*(.-)%s*$')
+        end
+        return normalize_plaintext(new_text), normalize_plaintext(old_text)
     else
         return new_text, old_text
     end
@@ -451,6 +466,22 @@ local function make_exporter()
             SentKanji = "Well, that&#39;s the knighthood in the bag.",
         }
         h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+
+        -- Equivalent subtitle punctuation must not duplicate a dictionary sentence.
+        old_note = {
+            SentKanji = "女の子の <b>女性</b>の　『お』から始まる…",
+        }
+        new_note = {
+            SentKanji = "女の子の <b>女性</b>の “お”から始まる…",
+        }
+        h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+        for _, equivalent in ipairs {
+            "女の子の <b>女性</b>の\194\160〝お〟から始まる…\226\128\139",
+            "\239\187\191女の子の <b>女性</b>の\226\128\175＂お＂から始まる…",
+        } do
+            new_note.SentKanji = equivalent
+            h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+        end
 
         -- Test make_new_note_data
         old_note = {
