@@ -238,12 +238,7 @@ self.collect_from_all_dialogues = function(n_lines)
         return Subtitle:new() -- return a default empty new Subtitle to let consumer handle
     end
     local text, end_sub = all_dialogs.get_n_text(current_sub, n_lines)
-    local secondary_text, _
-    if current_secondary_sub == nil then
-        secondary_text = ''
-    else
-        secondary_text, _ = all_secondary_dialogs.get_n_text(current_secondary_sub, n_lines) -- we'll use main sub's timing
-    end
+    local secondary_text = all_secondary_dialogs.get_overlapping_text(current_sub['start'], end_sub['end'])
     return Subtitle:new {
         ['text'] = text,
         ['secondary'] = secondary_text,
@@ -261,11 +256,13 @@ self.collect_from_current = function()
     if secondary_dialogs.is_empty() then
         secondary_dialogs.insert(Subtitle:now('secondary'))
     end
+    local start_time = self.get_timing('start')
+    local end_time = self.get_timing('end')
     return Subtitle:new {
         ['text'] = dialogs.get_text(),
-        ['secondary'] = secondary_dialogs.get_text(),
-        ['start'] = self.get_timing('start'),
-        ['end'] = self.get_timing('end'),
+        ['secondary'] = secondary_dialogs.get_overlapping_text(start_time, end_time),
+        ['start'] = start_time,
+        ['end'] = end_time,
     }
 end
 

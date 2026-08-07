@@ -14,30 +14,73 @@ local MAX_SUB_GAP_SECONDS = 20 -- stop joining lines separated by a longer gap
 local new_sub_list = function()
     local subs_list = {}
 
+    local append_text = function(speech, previous_sub, sub)
+        local lines = {}
+        local text = sub['text']:gsub('\r\n', '\n'):gsub('\r', '\n')
+        for line in (text .. '\n'):gmatch('(.-)\n') do
+            table.insert(lines, line)
+        end
+
+        local overlap = previous_sub and sub['start'] <= previous_sub['end'] and math.min(#speech, #lines) or 0
+        while overlap > 0 do
+            local matches = true
+            for i = 1, overlap do
+                if speech[#speech - overlap + i] ~= lines[i] then
+                    matches = false
+                    break
+                end
+            end
+            if matches then
+                break
+            end
+            overlap = overlap - 1
+        end
+        for i = overlap + 1, #lines do
+            table.insert(speech, lines[i])
+        end
+    end
+
     local get_time = function(position)
         local i = position == 'start' and 1 or #subs_list
         return subs_list[i][position]
     end
     local get_text = function()
         local speech = {}
+        local previous_sub = nil
         for _, sub in ipairs(subs_list) do
-            table.insert(speech, sub['text'])
+            append_text(speech, previous_sub, sub)
+            previous_sub = sub
         end
         return table.concat(speech, CONCAT_CHR)
     end
     local get_n_text = function(sub, n_lines)
         local speech = {}
         local end_sub = sub
+        local previous_sub = nil
+        local n_subs = 0
         for _, v in ipairs(subs_list) do
             if v['start'] - end_sub['end'] >= MAX_SUB_GAP_SECONDS then
                 break
             end
-            if v >= sub and #speech < n_lines then
-                table.insert(speech, v['text'])
+            if v >= sub and n_subs < n_lines then
+                append_text(speech, previous_sub, v)
+                previous_sub = v
                 end_sub = v
+                n_subs = n_subs + 1
             end
         end
         return table.concat(speech, CONCAT_CHR), end_sub
+    end
+    local get_overlapping_text = function(start_time, end_time)
+        local speech = {}
+        local previous_sub = nil
+        for _, sub in ipairs(subs_list) do
+            if sub['start'] < end_time and sub['end'] > start_time then
+                append_text(speech, previous_sub, sub)
+                previous_sub = sub
+            end
+        end
+        return table.concat(speech, CONCAT_CHR):gsub('%s+', ' '):match('^%s*(.-)%s*$')
     end
     local insert = function(sub)
         if sub == nil or h.is_empty(sub.text) then
@@ -71,6 +114,7 @@ local new_sub_list = function()
         get_time = get_time,
         get_text = get_text,
         get_n_text = get_n_text,
+        get_overlapping_text = get_overlapping_text,
         insert = insert,
         is_empty = function()
             return h.is_empty(subs_list)
@@ -208,6 +252,31 @@ local function test_get_subs_list_returns_array_copy()
     h.assert_equals(subs.get_subs_list()[1]['text'], "First line")
 end
 
+local function test_text_collection_removes_only_consecutive_line_overlap()
+    local growing = new_sub_list()
+    local first = Subtitle:from_text("First line", 0, 1)
+    growing.insert(first)
+    growing.insert(Subtitle:from_text("First line\nSecond line", 1, 2))
+    h.assert_equals(growing.get_text(), "First line\nSecond line")
+    h.assert_equals(growing.get_n_text(first, 2), "First line\nSecond line")
+
+    local subs = new_sub_list()
+    subs.insert(Subtitle:from_text("Yes", 0, 1))
+    subs.insert(Subtitle:from_text("No", 1, 2))
+    subs.insert(Subtitle:from_text("Yes\nAgain", 2, 3))
+    h.assert_equals(subs.get_text(), "Yes\nNo\nYes\nAgain")
+    h.assert_equals(subs.get_n_text(subs.get_subs_list()[1], 3), "Yes\nNo\nYes\nAgain")
+end
+
+local function test_get_overlapping_text_uses_timing_and_removes_line_overlap()
+    local subs = new_sub_list()
+    subs.insert(Subtitle:from_text("Before", 0, 1))
+    subs.insert(Subtitle:from_text("First line", 1, 2))
+    subs.insert(Subtitle:from_text("First line\nSecond line", 2, 3))
+    subs.insert(Subtitle:from_text("After", 3, 4))
+    h.assert_equals(subs.get_overlapping_text(1, 3), "First line Second line")
+end
+
 local function run_tests()
     test_insert_rejects_invalid_subs()
     test_insert_rejects_duplicate_event()
@@ -220,6 +289,8 @@ local function run_tests()
     test_insert_preserves_sorted_order()
     test_get_time_returns_boundary_times()
     test_get_subs_list_returns_array_copy()
+    test_text_collection_removes_only_consecutive_line_overlap()
+    test_get_overlapping_text_uses_timing_and_removes_line_overlap()
 end
 
 return {
