@@ -57,5 +57,14 @@ Subtitle.run_tests()
 print("subtitle tests passed.")
 
 ------------------------------------------------------------
+-- Run subtitle list tests
+------------------------------------------------------------
+
+print("Running subtitle list tests...")
+local sub_list = require('subtitles.sub_list')
+sub_list.run_tests()
+print("subtitle list tests passed.")
+
+------------------------------------------------------------
 
 print("ALL TESTS PASSED")

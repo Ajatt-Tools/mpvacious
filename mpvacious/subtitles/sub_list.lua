@@ -6,6 +6,7 @@ Subtitle list remembers selected subtitle lines.
 ]]
 
 local h = require('helpers')
+local Subtitle = require('subtitles.subtitle')
 local CONCAT_CHR = '\n' -- character used to concatenate subtitle lines
 local LOOKUP_WINDOW_SIZE = 25 -- how many recent subs to scan for duplicate events
 local MAX_SUB_GAP_SECONDS = 20 -- stop joining lines separated by a longer gap
@@ -68,6 +69,90 @@ local new_sub_list = function()
     }
 end
 
+local function numbered_sub(index)
+    return Subtitle:from_text("Line " .. index, index, index + 1)
+end
+
+local function make_numbered_sub_list(first_index, last_index)
+    local subs = new_sub_list()
+    for i = first_index, last_index do
+        h.assert_equals(subs.insert(numbered_sub(i)), true)
+    end
+    return subs
+end
+
+local function assert_subs_sorted(subs)
+    local previous = nil
+    for _, sub in ipairs(subs) do
+        if previous and not (previous < sub) then
+            error("list is not sorted")
+        end
+        previous = sub
+    end
+end
+
+local function make_two_line_subs()
+    local subs = new_sub_list()
+    subs.insert(Subtitle:from_text("First line", 0, 2))
+    subs.insert(Subtitle:from_text("Second line", 3, 5))
+    return subs
+end
+
+local function test_insert_rejects_invalid_subs()
+    local subs = new_sub_list()
+    h.assert_equals(subs.insert(nil), false)
+    h.assert_equals(subs.insert(Subtitle:from_text("", 0, 2)), false)
+end
+
+local function test_insert_rejects_duplicate_event()
+    local subs = new_sub_list()
+    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 2)), true)
+    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0.04, 2.04)), false)
+end
+
+local function test_insert_uses_recent_lookup_window()
+    local subs = make_numbered_sub_list(0, 29)
+    h.assert_equals(#subs.get_subs_list(), 30)
+    h.assert_equals(subs.insert(Subtitle:from_text("Line 29", 29.04, 30.04)), false)
+    h.assert_equals(subs.insert(Subtitle:from_text("Line 4", 4.04, 5.04)), true)
+end
+
+local function test_insert_preserves_sorted_order()
+    local subs = make_numbered_sub_list(0, 29)
+    h.assert_equals(subs.insert(Subtitle:from_text("Line 5.5", 5.5, 6.5)), true)
+    local ordered_list = subs.get_subs_list()
+    h.assert_equals(#ordered_list, 31)
+    h.assert_equals(ordered_list[6]['text'], "Line 5")
+    h.assert_equals(ordered_list[7]['text'], "Line 5.5")
+    h.assert_equals(ordered_list[8]['text'], "Line 6")
+    assert_subs_sorted(ordered_list)
+end
+
+local function test_get_time_returns_boundary_times()
+    local subs = make_two_line_subs()
+    h.assert_equals(subs.get_time('start'), 0)
+    h.assert_equals(subs.get_time('end'), 5)
+end
+
+local function test_get_subs_list_returns_array_copy()
+    local subs = make_two_line_subs()
+    local copy = subs.get_subs_list()
+    table.remove(copy, 1)
+    h.assert_equals(#copy, 1)
+    h.assert_equals(subs.get_text(), "First line\nSecond line")
+    h.assert_equals(subs.get_subs_list()[1]['text'], "First line")
+end
+
+local function run_tests()
+    test_insert_rejects_invalid_subs()
+    test_insert_rejects_duplicate_event()
+    test_insert_uses_recent_lookup_window()
+    test_insert_preserves_sorted_order()
+    test_get_time_returns_boundary_times()
+    test_get_subs_list_returns_array_copy()
+end
+
 return {
     new = new_sub_list,
+    run_tests = run_tests,
 }
