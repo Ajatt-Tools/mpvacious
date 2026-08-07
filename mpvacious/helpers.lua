@@ -712,10 +712,10 @@ function this.itable_slice(itable, start_pos, end_pos)
     end
 
     local new_table = {}
-    for index, value in ipairs(itable) do
-        if index >= start_pos and index <= end_pos then
-            new_table[#new_table + 1] = value
-        end
+    local first_index = math.max(math.ceil(start_pos), 1)
+    local last_index = math.min(math.floor(end_pos), #itable)
+    for index = first_index, last_index do
+        new_table[#new_table + 1] = itable[index]
     end
     return new_table
 end
@@ -734,6 +734,9 @@ local function test_islice()
         { input = { 1, 2, 3 }, start_pos = -3, end_pos = -1, expected = { 1, 2, 3 } },
         { input = { 1, 2, 3 }, start_pos = -99, expected = { 1, 2, 3 } },
         { input = { 1, 2, 3 }, start_pos = 1, end_pos = -99, expected = {} },
+        { input = { 1, 2, 3 }, start_pos = 1.5, expected = { 2, 3 } },
+        { input = { 1, 2, 3 }, start_pos = 1, end_pos = 2.5, expected = { 1, 2 } },
+        { input = { 1, 2, 3 }, start_pos = 1.5, end_pos = 2.5, expected = { 2 } },
     }
     for _, case in ipairs(slice_cases) do
         this.assert_equals(this.itable_slice(case.input, case.start_pos, case.end_pos), case.expected)
