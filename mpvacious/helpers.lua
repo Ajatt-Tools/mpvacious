@@ -697,6 +697,49 @@ function this.version_needs_update(latest_version, installed_version)
     return nil  -- versions are equal
 end
 
+--- Return a shallow slice of an integer-indexed table.
+--- Negative indexes count backward from the end: -1 is the last item.
+--- Bounds outside the table are tolerated and simply produce fewer items.
+function this.itable_slice(itable, start_pos, end_pos)
+    start_pos = start_pos and start_pos or 1
+    end_pos = end_pos and end_pos or #itable
+
+    if end_pos < 0 then
+        end_pos = #itable + end_pos + 1
+    end
+    if start_pos < 0 then
+        start_pos = #itable + start_pos + 1
+    end
+
+    local new_table = {}
+    for index, value in ipairs(itable) do
+        if index >= start_pos and index <= end_pos then
+            new_table[#new_table + 1] = value
+        end
+    end
+    return new_table
+end
+
+local function test_islice()
+    local slice_cases = {
+        { input = { 1, 2, 3 }, expected = { 1, 2, 3 } },
+        { input = { 1, 2, 3 }, start_pos = 2, expected = { 2, 3 } },
+        { input = { 1, 2, 3 }, start_pos = 2, end_pos = 2, expected = { 2 } },
+        { input = { 1, 2, 3 }, start_pos = 2, end_pos = 99, expected = { 2, 3 } },
+        { input = { 1, 2, 3 }, start_pos = 99, expected = {} },
+        { input = { 1, 2, 3 }, start_pos = 1, end_pos = 0, expected = {} },
+        { input = { 1, 2, 3 }, start_pos = -2, expected = { 2, 3 } },
+        { input = { 1, 2, 3 }, start_pos = -1, expected = { 3 } },
+        { input = { 1, 2, 3 }, start_pos = 1, end_pos = -2, expected = { 1, 2 } },
+        { input = { 1, 2, 3 }, start_pos = -3, end_pos = -1, expected = { 1, 2, 3 } },
+        { input = { 1, 2, 3 }, start_pos = -99, expected = { 1, 2, 3 } },
+        { input = { 1, 2, 3 }, start_pos = 1, end_pos = -99, expected = {} },
+    }
+    for _, case in ipairs(slice_cases) do
+        this.assert_equals(this.itable_slice(case.input, case.start_pos, case.end_pos), case.expected)
+    end
+end
+
 function this.run_tests()
     -- Test is_substr
     this.assert_equals(this.is_substr("abcd", "bc"), true)
@@ -793,6 +836,9 @@ function this.run_tests()
     this.assert_equals(_items(this.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 10, 4, 4)), { 2, 3, 4, 5, 6, 7, 8, 9, 10 })
     this.assert_equals(_items(this.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 9, 3, 3)), { 4, 5, 6, 7, 8, 9, 10 })
     this.assert_equals(_items(this.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 1, 3, 3)), { 1, 2, 3, 4, 5, 6, 7 })
+
+    -- Test itable_slice
+    test_islice()
 
     -- GNU only:
     if this.is_gnu() then
