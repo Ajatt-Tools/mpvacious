@@ -62,6 +62,19 @@ function Subtitle:is_same_event(other)
     return self['text'] == other['text'] and is_near(self['start'], other['start']) and is_near(self['end'], other['end'])
 end
 
+-- Same text and overlapping (or touching) in time. Strict: a real gap is a real gap.
+-- Forward-only: other must not start before self, so expanding never
+-- decreases start and the recorded list stays sorted.
+function Subtitle:can_expand_with(other)
+    return self['text'] == other['text'] and other['start'] >= self['start'] and other['start'] <= self['end']
+end
+
+-- Expand this event's end time to cover other. Start is unchanged (forward expansion).
+function Subtitle:expand_end_time(other)
+    self['end'] = math.max(self['end'], other['end'])
+    return self
+end
+
 Subtitle.__eq = function(lhs, rhs)
     return lhs:is_same_event(rhs)
 end
