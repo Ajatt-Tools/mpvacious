@@ -58,6 +58,7 @@ local make_note_exporter = require('anki.note_exporter')
 local Subtitle = require('subtitles.subtitle')
 local sub_list = require('subtitles.sub_list')
 local make_release_checker = require('utils.release_checker')
+local speech_collector = require('subtitles.collector')
 
 local quick_creation_opts = {
     _n_lines = nil,
@@ -573,6 +574,7 @@ local function run_tests()
     Subtitle.run_tests()
     sub_list.run_tests()
     make_note_exporter.run_tests(note_exporter)
+    speech_collector.run_tests()
 end
 
 local function pcall_tests()

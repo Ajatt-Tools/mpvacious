@@ -99,6 +99,7 @@ local function test_is_same_event()
 end
 
 local function test_eq_uses_same_event()
+    -- __eq delegates to is_same_event: same text and timing within tolerance.
     h.assert_equals(sub("A", 0, 2) == sub("A", 0.04, 2.04), true)
     h.assert_equals(sub("A", 0, 2) == sub("A", 3, 4), false)
 end
