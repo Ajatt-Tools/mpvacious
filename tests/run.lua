@@ -67,4 +67,18 @@ print("subtitle list tests passed.")
 
 ------------------------------------------------------------
 
+print("Running full subtitle track tests...")
+local full_track = require('subtitles.full_track')
+full_track.run_tests()
+print("full subtitle track tests passed.")
+
+------------------------------------------------------------
+
+print("Running subtitle observer tests...")
+local observer = require('subtitles.observer')
+observer.run_tests()
+print("subtitle observer tests passed.")
+
+------------------------------------------------------------
+
 print("ALL TESTS PASSED")

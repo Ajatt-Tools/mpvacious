@@ -8,6 +8,7 @@ Observer waits for subtitles to appear on the screen and adds them to a list.
 local h = require('helpers')
 local timings = require('utils.timings')
 local sub_list = require('subtitles.sub_list')
+local full_track = require('subtitles.full_track')
 local Subtitle = require('subtitles.subtitle')
 local mp = require('mp')
 local platform = require('platform.init')
@@ -20,11 +21,13 @@ local dialogs = sub_list.new()
 local secondary_dialogs = sub_list.new()
 local all_dialogs = sub_list.new()
 local all_secondary_dialogs = sub_list.new()
+local full_secondary_track = full_track.new()
 local user_timings = timings.new()
 local autoclip_method = new_autoclip_method_selector.new()
 
 local append_dialogue = false
 local autoclip_enabled = false
+local select_secondary_text
 
 
 ------------------------------------------------------------
@@ -174,6 +177,18 @@ local function apply_custom_trim(text)
     return h.trim(text)
 end
 
+select_secondary_text = function(cache, observed, start_time, end_time, delay)
+    local text = cache.get_overlapping_text(start_time, end_time, delay)
+    if text ~= nil then
+        return text
+    end
+    return observed.get_overlapping_text(start_time, end_time)
+end
+
+local function get_subtitle_delay()
+    return mp.get_property_native('sub-delay') - mp.get_property_native('audio-delay')
+end
+
 ------------------------------------------------------------
 -- public
 
@@ -238,12 +253,13 @@ self.collect_from_all_dialogues = function(n_lines)
         return Subtitle:new() -- return a default empty new Subtitle to let consumer handle
     end
     local text, end_sub = all_dialogs.get_n_text(current_sub, n_lines)
-    local secondary_text, _
-    if current_secondary_sub == nil then
-        secondary_text = ''
-    else
-        secondary_text, _ = all_secondary_dialogs.get_n_text(current_secondary_sub, n_lines) -- we'll use main sub's timing
-    end
+    local secondary_text = select_secondary_text(
+            full_secondary_track,
+            all_secondary_dialogs,
+            current_sub['start'],
+            end_sub['end'],
+            get_subtitle_delay()
+    )
     return Subtitle:new {
         ['text'] = text,
         ['secondary'] = secondary_text,
@@ -261,11 +277,19 @@ self.collect_from_current = function()
     if secondary_dialogs.is_empty() then
         secondary_dialogs.insert(Subtitle:now('secondary'))
     end
+    local start_time = self.get_timing('start')
+    local end_time = self.get_timing('end')
     return Subtitle:new {
         ['text'] = dialogs.get_text(),
-        ['secondary'] = secondary_dialogs.get_text(),
-        ['start'] = self.get_timing('start'),
-        ['end'] = self.get_timing('end'),
+        ['secondary'] = select_secondary_text(
+                full_secondary_track,
+                secondary_dialogs,
+                start_time,
+                end_time,
+                get_subtitle_delay()
+        ),
+        ['start'] = start_time,
+        ['end'] = end_time,
     }
 end
 
@@ -387,6 +411,33 @@ self.has_recorded_dialogs = function()
     return not dialogs.is_empty()
 end
 
+local function test_full_track_precedes_observed_secondary_cues()
+    local observed = sub_list.new()
+    observed.insert(Subtitle:from_text('Current line', 1, 2))
+    local cache = {
+        get_overlapping_text = function()
+            return 'Current line Future line'
+        end,
+    }
+    h.assert_equals(select_secondary_text(cache, observed, 1, 5, 0), 'Current line Future line')
+end
+
+local function test_observed_secondary_cues_are_the_fallback()
+    local observed = sub_list.new()
+    observed.insert(Subtitle:from_text('Current line', 1, 2))
+    local cache = {
+        get_overlapping_text = function()
+            return nil
+        end,
+    }
+    h.assert_equals(select_secondary_text(cache, observed, 1, 5, 0), 'Current line')
+end
+
+function self.run_tests()
+    test_full_track_precedes_observed_secondary_cues()
+    test_observed_secondary_cues_are_the_fallback()
+end
+
 self.init = function(menu, cfg_mgr)
     cfg_mgr.fail_if_not_ready()
     self.menu = menu
@@ -407,6 +458,9 @@ self.init = function(menu, cfg_mgr)
 
     mp.observe_property("sub-text", "string", handle_primary_sub)
     mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
+    mp.observe_property('track-list', 'native', function(_, track_list)
+        full_secondary_track.refresh(track_list, mp.get_property('path'))
+    end)
 end
 
 return self
