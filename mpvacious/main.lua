@@ -57,6 +57,7 @@ local make_new_note_checker = require('anki.new_note_checker')
 local make_note_exporter = require('anki.note_exporter')
 local Subtitle = require('subtitles.subtitle')
 local sub_list = require('subtitles.sub_list')
+local full_track = require('subtitles.full_track')
 local make_release_checker = require('utils.release_checker')
 
 local quick_creation_opts = {
@@ -572,6 +573,8 @@ local function run_tests()
     cfg_utils.run_tests()
     Subtitle.run_tests()
     sub_list.run_tests()
+    full_track.run_tests()
+    subs_observer.run_tests()
     make_note_exporter.run_tests(note_exporter)
 end
 
