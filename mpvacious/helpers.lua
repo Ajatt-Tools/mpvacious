@@ -195,10 +195,12 @@ function this.collapse_whitespace(str)
 end
 
 function this.trim(str)
-    str = this.remove_leading_trailing_spaces(str)
     str = this.remove_text_in_parentheses(str)
     str = this.remove_newlines(str)
     str = this.normalize_spaces(str)
+    -- Trim after normalization so converted ideographic spaces and spaces left
+    -- by parenthetical text removal are removed from the edges too.
+    str = this.remove_leading_trailing_spaces(str)
     return str
 end
 
@@ -698,6 +700,7 @@ end
 --- Width is approximate: 1- and 2-byte characters count as 1, wider characters as 2.
 --- Input must be LF-normalized. Existing newlines become wrap points.
 --- A character wider than n_chars is placed on its own line.
+--- Whitespace at a wrap point is consumed.
 function this.str_wrap(str, n_chars, separator)
     local lines = {}
     local current_line = {}
@@ -712,14 +715,20 @@ function this.str_wrap(str, n_chars, separator)
         last_space = nil
     end
 
+    local function calc_char_width(char)
+        return #char <= 2 and 1 or 2
+    end
+
     local function flush_at_space()
-        table.insert(lines, table.concat(current_line, '', 1, last_space - 1))
+        if last_space > 1 then
+            table.insert(lines, table.concat(current_line, '', 1, last_space - 1))
+        end
         local remainder = {}
         current_line_length = 0
         for index = last_space + 1, #current_line do
             local char = current_line[index]
             table.insert(remainder, char)
-            current_line_length = current_line_length + (#char <= 2 and 1 or 2)
+            current_line_length = current_line_length + calc_char_width(char)
         end
         current_line = remainder
         last_space = nil
@@ -729,7 +738,7 @@ function this.str_wrap(str, n_chars, separator)
         if char == '\n' then
             flush_line()
         else
-            local char_width = #char <= 2 and 1 or 2
+            local char_width = calc_char_width(char)
             if current_line_length > 0 and current_line_length + char_width > n_chars then
                 if last_space then
                     flush_at_space()
@@ -891,6 +900,8 @@ local function test_str_wrap()
         { text = "abcdef", n_chars = 3, separator = [[\N]], expected = [[abc\Ndef]] },
         { text = "one two three", n_chars = 6, separator = [[\N]], expected = [[one\Ntwo\Nthree]] },
         { text = "like them.", n_chars = 9, separator = [[\N]], expected = [[like\Nthem.]] },
+        { text = " abc def", n_chars = 4, separator = [[\N]], expected = [[abc\Ndef]] },
+        { text = "ab cdefgh", n_chars = 3, separator = [[\N]], expected = [[ab\Ncde\Nfgh]] },
         { text = "一二三四五六", n_chars = 6, separator = [[\N]], expected = [[一二三\N四五六]] },
         { text = "ab一二cd", n_chars = 6, separator = [[\N]], expected = [[ab一二\Ncd]] },
         { text = "一二\n三四", n_chars = 6, separator = [[\N]], expected = [[一二\N三四]] },
@@ -904,6 +915,20 @@ local function test_str_wrap()
     }
     for _, case in ipairs(str_wrap_cases) do
         this.assert_equals(this.str_wrap(case.text, case.n_chars, case.separator), case.expected)
+    end
+end
+
+local function test_trim()
+    local trim_cases = {
+        { "  hello  ", "hello" },
+        { "　hello　", "hello" },
+        { " (note) hello ", "hello" },
+        { "a \n b", "a b" },
+        { "a  b", "a b" },
+    }
+    for _, case in ipairs(trim_cases) do
+        local text, expected = this.unpack(case)
+        this.assert_equals(this.trim(text), expected)
     end
 end
 
@@ -945,6 +970,9 @@ function this.run_tests()
     this.assert_equals(this.collapse_whitespace("a\nb"), "a b")
     this.assert_equals(this.collapse_whitespace("a\r\nb"), "a b")
     this.assert_equals(this.collapse_whitespace("a \t \n b"), "a b")
+
+    -- Test trim
+    test_trim()
 
     -- Test normalize_subtitle_text
     test_normalize_subtitle_text()
