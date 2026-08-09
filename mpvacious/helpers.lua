@@ -184,6 +184,16 @@ function this.normalize_newlines(str)
     return str:gsub('\r\n', '\n'):gsub('\r', '\n')
 end
 
+--- Split text into lines on LF. Input must be LF-normalized (see normalize_newlines).
+--- Trailing empty lines are kept: "a\n" splits into {"a", ""}.
+function this.split_lines(str)
+    local lines = {}
+    for line in (str .. '\n'):gmatch('(.-)\n') do
+        table.insert(lines, line)
+    end
+    return lines
+end
+
 function this.normalize_spaces(str)
     -- Replace sequences of ASCII spaces or full-width ideographic spaces with a single ASCII space.
     return str:gsub('　+', ' '):gsub('  +', " ")
@@ -894,6 +904,19 @@ local function test_normalize_newlines()
     end
 end
 
+local function test_split_lines()
+    local split_line_cases = {
+        { "a\nb", { "a", "b" } },
+        { "a\n", { "a", "" } },
+        { "", { "" } },
+        { "\n", { "", "" } },
+    }
+    for _, case in ipairs(split_line_cases) do
+        local text, expected = this.unpack(case)
+        this.assert_equals(this.split_lines(text), expected)
+    end
+end
+
 local function test_str_wrap()
     local str_wrap_cases = {
         { text = "short", n_chars = 25, separator = [[\N]], expected = "short" },
@@ -1084,6 +1107,9 @@ function this.run_tests()
 
     -- Test normalize_newlines
     test_normalize_newlines()
+
+    -- Test split_lines
+    test_split_lines()
 
     -- Test str wrap
     test_str_wrap()

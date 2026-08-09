@@ -13,13 +13,8 @@ local CONCAT_CHR = '\n' -- character used to concatenate subtitle lines
 --- Split text into individual lines, normalized to LF.
 --- Empty lines are preserved so intentional subtitle formatting survives joining.
 local function normalized_lines(text)
-    local lines = {}
     local normalized_text = h.normalize_newlines(text)
-    -- Matches zero or more characters followed by a newline.
-    -- Keep empty lines so intentional subtitle formatting survives joining.
-    for line in (normalized_text .. '\n'):gmatch('(.-)\n') do
-        table.insert(lines, line)
-    end
+    local lines = h.split_lines(normalized_text)
     -- Splitting works by appending a newline, so text that already ends with one
     -- would produce an extra empty line unless we remove it here.
     if normalized_text:sub(-1) == '\n' then
