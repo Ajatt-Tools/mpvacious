@@ -121,6 +121,19 @@ local function escape_for_osd(str)
     return h.str_limit(str, cfg_mgr.query("menu_max_shown_line_length"))
 end
 
+--- Wrap selected subtitle text for the OSD second pane.
+--- Newlines are protected with a placeholder so escape_for_osd (via h.trim)
+--- does not flatten them; they are restored before wrapping.
+--- Width heuristic: one display unit is approximately half an em;
+--- the right pane is 640 ASS pixels wide.
+local function wrap_selected_for_osd(str)
+    local newline_placeholder = '\1'
+    str = h.str_replace(h.normalize_newlines(str), '\n', newline_placeholder)
+    str = h.str_replace(escape_for_osd(str), newline_placeholder, '\n')
+    local wrap_width = math.floor(menu_consts.start_x_second_pane * 2 / cfg_mgr.query("menu_font_size"))
+    return h.str_wrap(str, wrap_width, [[\N]])
+end
+
 local function ensure_deck()
     if cfg_mgr.query("create_deck") == true then
         ankiconnect.create_deck(cfg_mgr.query("deck_name"))
@@ -322,14 +335,14 @@ function menu:print_selection(osd)
         osd:start_line():pos(menu_consts.start_x_second_pane, menu_consts.start_y)
         osd:submenu("Primary text"):newline()
         for _, s in ipairs(subs_observer.recorded_subs()) do
-            osd:text(escape_for_osd(s['text'])):newline()
+            osd:text(wrap_selected_for_osd(s['text'])):newline()
         end
         if not h.is_empty(cfg_mgr.query("secondary_field")) then
             -- If the user wants to add secondary subs to Anki,
             -- it's okay to print them on the screen.
             osd:submenu("Secondary text"):newline()
             for _, s in ipairs(subs_observer.recorded_secondary_subs()) do
-                osd:text(escape_for_osd(s['text'])):newline()
+                osd:text(wrap_selected_for_osd(s['text'])):newline()
             end
         end
     end
