@@ -179,6 +179,11 @@ function this.remove_newlines(str)
     return str:gsub('[\n\r]+', ' ')
 end
 
+--- Normalize CRLF and CR line endings to LF.
+function this.normalize_newlines(str)
+    return str:gsub('\r\n', '\n'):gsub('\r', '\n')
+end
+
 function this.normalize_spaces(str)
     -- Replace sequences of ASCII spaces or full-width ideographic spaces with a single ASCII space.
     return str:gsub('　+', ' '):gsub('  +', " ")
@@ -688,27 +693,36 @@ function this.str_limit(str, n_chars)
     return table.concat(ret)
 end
 
---- Wrap text at max_width display units, counting ASCII characters as one unit
---- and other UTF-8 characters as two. Existing newlines always start a new line.
-function this.str_wrap(str, max_width)
-    local ret = {}
-    local line_length = 0
+--- Wrap text at display-width boundaries, returning lines joined by separator.
+--- Width is approximate: 1- and 2-byte characters count as 1, wider characters as 2.
+--- Input must be LF-normalized. Existing newlines become wrap points.
+--- A character wider than n_chars is placed on its own line.
+function this.str_wrap(str, n_chars, separator)
+    local lines = {}
+    local current_line = {}
+    local current_line_length = 0
+    separator = separator or '\n'
+
+    local function flush_line()
+        table.insert(lines, table.concat(current_line))
+        current_line = {}
+        current_line_length = 0
+    end
 
     for _, char in this.utf8_iter(str) do
         if char == '\n' then
-            table.insert(ret, '\n')
-            line_length = 0
+            flush_line()
         else
-            local char_width = #char == 1 and 1 or 2
-            if line_length > 0 and line_length + char_width > max_width then
-                table.insert(ret, '\n')
-                line_length = 0
+            local char_width = #char <= 2 and 1 or 2
+            if current_line_length > 0 and current_line_length + char_width > n_chars then
+                flush_line()
             end
-            table.insert(ret, char)
-            line_length = line_length + char_width
+            table.insert(current_line, char)
+            current_line_length = current_line_length + char_width
         end
     end
-    return table.concat(ret)
+    flush_line()
+    return table.concat(lines, separator)
 end
 
 function this.find_mpvacious_dir()
@@ -831,6 +845,39 @@ local function test_list_equal()
     for _, case in ipairs(list_equal_cases) do
         local first, second, expected = this.unpack(case)
         this.assert_equals(this.list_equal(first, second), expected)
+    end
+end
+
+local function test_normalize_newlines()
+    local normalize_newline_cases = {
+        { "a\r\nb", "a\nb" },
+        { "a\rb", "a\nb" },
+        { "a\r\nb\rc", "a\nb\nc" },
+        { "a\nb", "a\nb" },
+    }
+    for _, case in ipairs(normalize_newline_cases) do
+        local text, expected = this.unpack(case)
+        this.assert_equals(this.normalize_newlines(text), expected)
+    end
+end
+
+local function test_str_wrap()
+    local str_wrap_cases = {
+        { text = "short", n_chars = 25, separator = [[\N]], expected = "short" },
+        { text = "abcdef", n_chars = 3, separator = [[\N]], expected = [[abc\Ndef]] },
+        { text = "一二三四五六", n_chars = 6, separator = [[\N]], expected = [[一二三\N四五六]] },
+        { text = "ab一二cd", n_chars = 6, separator = [[\N]], expected = [[ab一二\Ncd]] },
+        { text = "一二\n三四", n_chars = 6, separator = [[\N]], expected = [[一二\N三四]] },
+        { text = "Привет", n_chars = 3, separator = [[\N]], expected = [[При\Nвет]] },
+        { text = "", n_chars = 6, separator = [[\N]], expected = "" },
+        { text = "一", n_chars = 1, separator = [[\N]], expected = "一" },
+        { text = "a\n\nb", n_chars = 6, separator = [[\N]], expected = [[a\N\Nb]] },
+        { text = "a\n", n_chars = 6, separator = [[\N]], expected = [[a\N]] },
+        { text = "\na", n_chars = 6, separator = [[\N]], expected = [[\Na]] },
+        { text = "abcdef", n_chars = 3, expected = "abc\ndef" },
+    }
+    for _, case in ipairs(str_wrap_cases) do
+        this.assert_equals(this.str_wrap(case.text, case.n_chars, case.separator), case.expected)
     end
 end
 
@@ -981,17 +1028,11 @@ function this.run_tests()
     this.assert_equals(this.str_limit("報連相", 1), "報…")
     this.assert_equals(this.str_limit("報連相", 33), "報連相")
 
+    -- Test normalize_newlines
+    test_normalize_newlines()
+
     -- Test str wrap
-    for _, case in ipairs {
-        { "short", 25, "short" },
-        { "abcdef", 3, "abc\ndef" },
-        { "一二三四五六", 6, "一二三\n四五六" },
-        { "ab一二cd", 6, "ab一二\ncd" },
-        { "一二\n三四", 6, "一二\n三四" },
-    } do
-        local text, max_width, expected = this.unpack(case)
-        this.assert_equals(this.str_wrap(text, max_width), expected)
-    end
+    test_str_wrap()
 
     -- Test clamp
     this.assert_equals(this.clamp(5, 1, 10), 5)

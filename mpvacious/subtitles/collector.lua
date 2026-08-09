@@ -14,7 +14,7 @@ local CONCAT_CHR = '\n' -- character used to concatenate subtitle lines
 --- Empty lines are preserved so intentional subtitle formatting survives joining.
 local function normalized_lines(text)
     local lines = {}
-    local normalized_text = text:gsub('\r\n', '\n'):gsub('\r', '\n')
+    local normalized_text = h.normalize_newlines(text)
     -- Matches zero or more characters followed by a newline.
     -- Keep empty lines so intentional subtitle formatting survives joining.
     for line in (normalized_text .. '\n'):gmatch('(.-)\n') do

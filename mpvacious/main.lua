@@ -121,14 +121,17 @@ local function escape_for_osd(str)
     return h.str_limit(str, cfg_mgr.query("menu_max_shown_line_length"))
 end
 
+--- Wrap selected subtitle text for the OSD second pane.
+--- Newlines are protected with a placeholder so escape_for_osd (via h.trim)
+--- does not flatten them; they are restored before wrapping.
+--- Width heuristic: one display unit is approximately half an em;
+--- the right pane is 640 ASS pixels wide.
 local function wrap_selected_for_osd(str)
-    -- h.trim() flattens newlines, so protect them while applying the usual OSD cleanup.
     local newline_placeholder = '\1'
-    str = str:gsub('\r\n', '\n'):gsub('\r', '\n'):gsub('\n', newline_placeholder)
-    str = escape_for_osd(str):gsub(newline_placeholder, '\n')
-    -- A display-width unit is approximately half an em; the right pane is 640 ASS pixels wide.
+    str = h.str_replace(h.normalize_newlines(str), '\n', newline_placeholder)
+    str = h.str_replace(escape_for_osd(str), newline_placeholder, '\n')
     local wrap_width = math.floor(menu_consts.start_x_second_pane * 2 / cfg_mgr.query("menu_font_size"))
-    return h.str_wrap(str, wrap_width):gsub('\n', [[\N]])
+    return h.str_wrap(str, wrap_width, [[\N]])
 end
 
 local function ensure_deck()
