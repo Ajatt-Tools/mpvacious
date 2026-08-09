@@ -10,7 +10,9 @@ local Subtitle = require('subtitles.subtitle')
 local speech_collector = require('subtitles.collector')
 local LOOKUP_WINDOW_SIZE = 25 -- how many recent subs to scan for duplicate events
 local MAX_SUB_GAP_SECONDS = 20 -- stop joining lines separated by a longer gap
-local MIN_SUB_OVERLAP_RATIO = 0.5 -- intersection must cover half of the shorter cue
+local SHORT_SUB_SECONDS = 1
+local MIN_SUB_OVERLAP_RATIO = 0.5
+local MIN_SHORT_SUB_OVERLAP_RATIO = 0.75
 
 local function flatten_subtitle_text(text)
     return h.remove_leading_trailing_spaces(h.collapse_whitespace(text))
@@ -67,7 +69,9 @@ local new_sub_list = function()
         for _, sub in ipairs(subs_list) do
             local overlap = math.min(sub['end'], window['end']) - math.max(sub['start'], window['start'])
             local shorter_duration = math.min(sub['end'] - sub['start'], window['end'] - window['start'])
-            if shorter_duration > 0 and overlap >= shorter_duration * MIN_SUB_OVERLAP_RATIO then
+            local min_overlap_ratio = shorter_duration < SHORT_SUB_SECONDS
+                    and MIN_SHORT_SUB_OVERLAP_RATIO or MIN_SUB_OVERLAP_RATIO
+            if shorter_duration > 0 and overlap >= shorter_duration * min_overlap_ratio then
                 collector.append_sub(sub)
             end
         end
@@ -369,6 +373,20 @@ local function test_get_overlapping_text_uses_timing_and_removes_line_overlap()
     larger_timing_noise.insert(Subtitle:from_text("Unrelated", 763.00, 766.03))
     h.assert_equals(
             larger_timing_noise.get_overlapping_text(Subtitle:from_text('', 761.594, 763.179)),
+            "Relevant"
+    )
+
+    local short_timing_noise = new_sub_list()
+    short_timing_noise.insert(Subtitle:from_text("Unrelated", 776.65, 778.53))
+    h.assert_equals(
+            short_timing_noise.get_overlapping_text(Subtitle:from_text('', 776.358, 777.193)),
+            ""
+    )
+
+    local longer_partial_overlap = new_sub_list()
+    longer_partial_overlap.insert(Subtitle:from_text("Relevant", 0.8, 2.8))
+    h.assert_equals(
+            longer_partial_overlap.get_overlapping_text(Subtitle:from_text('', 0, 2)),
             "Relevant"
     )
 end
