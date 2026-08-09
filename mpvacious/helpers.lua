@@ -688,6 +688,29 @@ function this.str_limit(str, n_chars)
     return table.concat(ret)
 end
 
+--- Wrap text at max_width display units, counting ASCII characters as one unit
+--- and other UTF-8 characters as two. Existing newlines always start a new line.
+function this.str_wrap(str, max_width)
+    local ret = {}
+    local line_length = 0
+
+    for _, char in this.utf8_iter(str) do
+        if char == '\n' then
+            table.insert(ret, '\n')
+            line_length = 0
+        else
+            local char_width = #char == 1 and 1 or 2
+            if line_length > 0 and line_length + char_width > max_width then
+                table.insert(ret, '\n')
+                line_length = 0
+            end
+            table.insert(ret, char)
+            line_length = line_length + char_width
+        end
+    end
+    return table.concat(ret)
+end
+
 function this.find_mpvacious_dir()
     -- The fallback path will be valid if the project folder is placed
     -- in mpv's scripts directory (e.g. ~/.config/mpv/scripts).
@@ -957,6 +980,18 @@ function this.run_tests()
     this.assert_equals(this.str_limit("報連相", 2), "報連…")
     this.assert_equals(this.str_limit("報連相", 1), "報…")
     this.assert_equals(this.str_limit("報連相", 33), "報連相")
+
+    -- Test str wrap
+    for _, case in ipairs {
+        { "short", 25, "short" },
+        { "abcdef", 3, "abc\ndef" },
+        { "一二三四五六", 6, "一二三\n四五六" },
+        { "ab一二cd", 6, "ab一二\ncd" },
+        { "一二\n三四", 6, "一二\n三四" },
+    } do
+        local text, max_width, expected = this.unpack(case)
+        this.assert_equals(this.str_wrap(text, max_width), expected)
+    end
 
     -- Test clamp
     this.assert_equals(this.clamp(5, 1, 10), 5)
