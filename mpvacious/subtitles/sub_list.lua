@@ -11,6 +11,10 @@ local speech_collector = require('subtitles.collector')
 local LOOKUP_WINDOW_SIZE = 25 -- how many recent subs to scan for duplicate events
 local MAX_SUB_GAP_SECONDS = 20 -- stop joining lines separated by a longer gap
 
+local function flatten_subtitle_text(text)
+    return h.remove_leading_trailing_spaces(h.collapse_whitespace(text))
+end
+
 local new_sub_list = function()
     local subs_list = {}
 
@@ -64,7 +68,7 @@ local new_sub_list = function()
                 collector.append_sub(sub)
             end
         end
-        return collector.get_all_as_string():gsub('%s+', ' '):match('^%s*(.-)%s*$')
+        return flatten_subtitle_text(collector.get_all_as_string())
     end
 
     -- Event-level guard and expansion.
@@ -344,6 +348,10 @@ local function test_get_overlapping_text_uses_timing_and_removes_line_overlap()
     subs.insert(Subtitle:from_text("First line\nSecond line", 2, 3))
     subs.insert(Subtitle:from_text("After", 3, 4))
     h.assert_equals(subs.get_overlapping_text(Subtitle:from_text('', 1, 3)), "First line Second line")
+
+    local spaced_subs = new_sub_list()
+    spaced_subs.insert(Subtitle:from_text("  First\t line\nSecond  line  ", 1, 2))
+    h.assert_equals(spaced_subs.get_overlapping_text(Subtitle:from_text('', 1, 2)), "First line Second line")
 end
 
 local function run_tests()

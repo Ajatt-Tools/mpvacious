@@ -180,8 +180,13 @@ function this.remove_newlines(str)
 end
 
 function this.normalize_spaces(str)
-    -- replace sequences of ASCII spaces or full-width ideographic spaces with a single ASCII space
+    -- Replace sequences of ASCII spaces or full-width ideographic spaces with a single ASCII space.
     return str:gsub('　+', ' '):gsub('  +', " ")
+end
+
+function this.collapse_whitespace(str)
+    -- Replace sequences of any whitespace with a single ASCII space.
+    return str:gsub('%s+', ' ')
 end
 
 function this.trim(str)
@@ -782,6 +787,13 @@ function this.run_tests()
     -- Test str_contains
     this.assert_equals(this.str_contains("abcd", "^.*d.*$"), true)
     this.assert_equals(this.str_contains("abcd", "^.*z.*$"), false)
+
+    -- Test collapse_whitespace
+    this.assert_equals(this.collapse_whitespace("a  b"), "a b")
+    this.assert_equals(this.collapse_whitespace("a\tb"), "a b")
+    this.assert_equals(this.collapse_whitespace("a\nb"), "a b")
+    this.assert_equals(this.collapse_whitespace("a\r\nb"), "a b")
+    this.assert_equals(this.collapse_whitespace("a \t \n b"), "a b")
 
     -- Test unescape_special_characters
     this.assert_equals(this.unescape_special_characters("that&apos;s"), "that's")
