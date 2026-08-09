@@ -197,6 +197,39 @@ function this.trim(str)
     return str
 end
 
+-- Replacement rules for subtitle-text comparison. Each replacement is independent
+-- (no key appears in any replacement's output), so unordered iteration via replace_key_value_pairs is safe.
+local SUBTITLE_NORMALIZATION_REPLACEMENTS = {
+    -- Spaces that should compare equal to a regular space.
+    ['　'] = ' ', -- ideographic space
+    ['\194\160'] = ' ', -- non-breaking space
+    ['\226\128\175'] = ' ', -- narrow non-breaking space
+    -- Invisible characters that should not affect comparison.
+    ['\226\128\139'] = '', -- zero-width space
+    ['\239\187\191'] = '', -- byte-order mark
+    -- Quote-like punctuation normalized to a plain double quote.
+    ['『'] = '"',
+    ['』'] = '"',
+    ['「'] = '"',
+    ['」'] = '"',
+    ['“'] = '"',
+    ['”'] = '"',
+    ['〝'] = '"',
+    ['〟'] = '"',
+    ['＂'] = '"',
+}
+
+--- Normalize subtitle text for duplicate comparison.
+--- Strips HTML tags, maps equivalent spaces to a regular space, removes invisible
+--- characters (zero-width space, BOM), maps quote-like punctuation to a plain
+--- double quote, then collapses whitespace and trims. Two fields that differ only
+--- by these representations compare equal, preventing duplicate sentence content.
+function this.normalize_subtitle_text(text)
+    text = this.remove_html_tags(text)
+    text = this.replace_key_value_pairs(text, SUBTITLE_NORMALIZATION_REPLACEMENTS)
+    return this.remove_leading_trailing_spaces(this.collapse_whitespace(text))
+end
+
 function this.str_replace(s, old, new, max_repl)
     if this.is_empty(old) then
         return s
@@ -794,6 +827,27 @@ function this.run_tests()
     this.assert_equals(this.collapse_whitespace("a\nb"), "a b")
     this.assert_equals(this.collapse_whitespace("a\r\nb"), "a b")
     this.assert_equals(this.collapse_whitespace("a \t \n b"), "a b")
+
+    -- Test normalize_subtitle_text
+    local normalized_subtitle_text_cases = {
+        { "<b>現実味</b>", "現実味" },
+        { "a　b", "a b" },
+        { "a\194\160b", "a b" },
+        { "a\226\128\175b", "a b" },
+        { "a\226\128\139b", "ab" },
+        { "\239\187\191ab", "ab" },
+        { "『お』", '"お"' },
+        { "「お」", '"お"' },
+        { "“お”", '"お"' },
+        { "〝お〟", '"お"' },
+        { "＂お＂", '"お"' },
+        { "  a\t\nb  ", "a b" },
+        { "女の子の <b>女性</b>の　『お』から始まる…", "女の子の 女性の \"お\"から始まる…" },
+    }
+    for _, case in ipairs(normalized_subtitle_text_cases) do
+        local text, expected = this.unpack(case)
+        this.assert_equals(this.normalize_subtitle_text(text), expected)
+    end
 
     -- Test unescape_special_characters
     this.assert_equals(this.unescape_special_characters("that&apos;s"), "that's")
