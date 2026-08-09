@@ -413,7 +413,7 @@ local function make_exporter()
         return pub
     end
 
-    function pub.run_tests()
+    local function test_join_fields()
         -- Test join_fields
         local new_note = {
             SentKanji = "それは…分からんよ",
@@ -438,25 +438,14 @@ local function make_exporter()
             Notes = "",
         }
         h.assert_equals(pub.join_fields(new_note, old_note), expected)
+    end
 
-        -- HTML escaping
-        old_note = {
-            SentKanji = "Well, that's the knighthood in the bag.",
-        }
-        new_note = {
-            SentKanji = "Well, that&apos;s the knighthood in the bag.",
-        }
-        h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
-        new_note = {
-            SentKanji = "Well, that&#39;s the knighthood in the bag.",
-        }
-        h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
-
+    local function test_join_fields_duplicates()
         -- Equivalent subtitle punctuation must not duplicate a dictionary sentence.
-        old_note = {
+        local old_note = {
             SentKanji = "女の子の <b>女性</b>の　『お』から始まる…",
         }
-        new_note = {
+        local new_note = {
             SentKanji = "女の子の <b>女性</b>の “お”から始まる…",
         }
         h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
@@ -478,17 +467,42 @@ local function make_exporter()
         new_note = { SentKanji = "“お”から終わる" }
         h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, "『お』から始まる<br>“お”から終わる")
 
+    end
+
+    local function test_make_new_note_data()
         -- Test make_new_note_data
-        old_note = {
+        local old_note = {
             SentKanji = "ヤツらの声に<b>現実味</b>が…",
         }
-        new_note = {
+        local new_note = {
             SentKanji = "あの遠さはヤツらの声に現実味が…",
         }
-        expected = {
+        local expected = {
             SentKanji = "あの遠さはヤツらの声に<b>現実味</b>が…",
         }
         h.assert_equals(make_new_note_data(old_note, new_note, { overwrite = false, disable_forvo = true }).SentKanji, expected.SentKanji)
+    end
+
+    local function test_html_escaping()
+        -- HTML escaping
+        local old_note = {
+            SentKanji = "Well, that's the knighthood in the bag.",
+        }
+        local new_note = {
+            SentKanji = "Well, that&apos;s the knighthood in the bag.",
+        }
+        h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+        local new_note = {
+            SentKanji = "Well, that&#39;s the knighthood in the bag.",
+        }
+        h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+    end
+
+    function pub.run_tests()
+        test_join_fields()
+        test_html_escaping()
+        test_join_fields_duplicates()
+        test_make_new_note_data()
         return pub
     end
 

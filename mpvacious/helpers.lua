@@ -811,24 +811,7 @@ local function test_list_equal()
     end
 end
 
-function this.run_tests()
-    -- Test is_substr
-    this.assert_equals(this.is_substr("abcd", "bc"), true)
-    this.assert_equals(this.is_substr("abcd", "xyz"), false)
-    this.assert_equals(this.is_substr("abcd", "^.*d.*$"), false)
-
-    -- Test str_contains
-    this.assert_equals(this.str_contains("abcd", "^.*d.*$"), true)
-    this.assert_equals(this.str_contains("abcd", "^.*z.*$"), false)
-
-    -- Test collapse_whitespace
-    this.assert_equals(this.collapse_whitespace("a  b"), "a b")
-    this.assert_equals(this.collapse_whitespace("a\tb"), "a b")
-    this.assert_equals(this.collapse_whitespace("a\nb"), "a b")
-    this.assert_equals(this.collapse_whitespace("a\r\nb"), "a b")
-    this.assert_equals(this.collapse_whitespace("a \t \n b"), "a b")
-
-    -- Test normalize_subtitle_text
+local function test_normalize_subtitle_text()
     local normalized_subtitle_text_cases = {
         { "<b>現実味</b>", "現実味" },
         { "a　b", "a b" },
@@ -848,6 +831,27 @@ function this.run_tests()
         local text, expected = this.unpack(case)
         this.assert_equals(this.normalize_subtitle_text(text), expected)
     end
+end
+
+function this.run_tests()
+    -- Test is_substr
+    this.assert_equals(this.is_substr("abcd", "bc"), true)
+    this.assert_equals(this.is_substr("abcd", "xyz"), false)
+    this.assert_equals(this.is_substr("abcd", "^.*d.*$"), false)
+
+    -- Test str_contains
+    this.assert_equals(this.str_contains("abcd", "^.*d.*$"), true)
+    this.assert_equals(this.str_contains("abcd", "^.*z.*$"), false)
+
+    -- Test collapse_whitespace
+    this.assert_equals(this.collapse_whitespace("a  b"), "a b")
+    this.assert_equals(this.collapse_whitespace("a\tb"), "a b")
+    this.assert_equals(this.collapse_whitespace("a\nb"), "a b")
+    this.assert_equals(this.collapse_whitespace("a\r\nb"), "a b")
+    this.assert_equals(this.collapse_whitespace("a \t \n b"), "a b")
+
+    -- Test normalize_subtitle_text
+    test_normalize_subtitle_text()
 
     -- Test unescape_special_characters
     this.assert_equals(this.unescape_special_characters("that&apos;s"), "that's")
