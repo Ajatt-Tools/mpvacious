@@ -19,6 +19,7 @@ local modules = {
     'subtitles.subtitle',
     'subtitles.collector',
     'subtitles.sub_list',
+    'subtitles.full_track',
 }
 
 for _, module_name in ipairs(modules) do
