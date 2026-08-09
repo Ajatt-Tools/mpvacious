@@ -38,7 +38,8 @@ function Subtitle:now(secondary)
         ['is_secondary'] = (secondary and true or false),
     }
     if this:is_valid() then
-        return this:delay(mp.get_property_native("sub-delay") - mp.get_property_native("audio-delay"))
+        local delay_property = secondary and 'secondary-sub-delay' or 'sub-delay'
+        return this:delay(mp.get_property_native(delay_property) - mp.get_property_native('audio-delay'))
     else
         return nil
     end
@@ -143,12 +144,34 @@ local function test_expand_end_time()
     h.assert_equals(expanded['end'], 3)
 end
 
+local function test_secondary_subtitle_uses_secondary_delay()
+    local get_property = mp.get_property
+    local get_property_number = mp.get_property_number
+    local get_property_native = mp.get_property_native
+    mp.get_property = function()
+        return 'Secondary line'
+    end
+    mp.get_property_number = function(name)
+        return name == 'secondary-sub-start' and 1 or 2
+    end
+    mp.get_property_native = function(name)
+        return ({ ['sub-delay'] = 10, ['secondary-sub-delay'] = 3, ['audio-delay'] = 1 })[name]
+    end
+    local secondary = Subtitle:now('secondary')
+    mp.get_property = get_property
+    mp.get_property_number = get_property_number
+    mp.get_property_native = get_property_native
+    h.assert_equals(secondary['start'], 3)
+    h.assert_equals(secondary['end'], 4)
+end
+
 function Subtitle.run_tests()
     test_is_same_event()
     test_eq_uses_same_event()
     test_time_overlap()
     test_can_expand_with()
     test_expand_end_time()
+    test_secondary_subtitle_uses_secondary_delay()
 end
 
 return Subtitle

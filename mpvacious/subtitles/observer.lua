@@ -23,7 +23,11 @@ local all_dialogs = sub_list.new()
 local all_secondary_dialogs = sub_list.new()
 local user_timings = timings.new()
 local autoclip_method = new_autoclip_method_selector.new()
-local full_secondary_track = full_track.new()
+local full_secondary_track = full_track.new(nil, nil, function()
+    if self.menu then
+        self.menu:update()
+    end
+end)
 
 local append_dialogue = false
 local autoclip_enabled = false
@@ -160,7 +164,7 @@ local function resolve_secondary_text(cache, observed, window, delay)
 end
 
 local function get_subtitle_delay()
-    return (mp.get_property_native('sub-delay') or 0) - (mp.get_property_native('audio-delay') or 0)
+    return (mp.get_property_native('secondary-sub-delay') or 0) - (mp.get_property_native('audio-delay') or 0)
 end
 
 local function refresh_secondary_track(_, track_list)

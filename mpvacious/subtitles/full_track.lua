@@ -97,9 +97,10 @@ local function read_file(path)
     return contents
 end
 
-function this.new(run_subprocess, read_subtitle_file)
+function this.new(run_subprocess, read_subtitle_file, on_loaded)
     run_subprocess = run_subprocess or h.subprocess
     read_subtitle_file = read_subtitle_file or read_file
+    on_loaded = on_loaded or h.noop
     local active_key
     local generation = 0
     local loaded_subs
@@ -134,6 +135,7 @@ function this.new(run_subprocess, read_subtitle_file)
             local contents = parser and read_subtitle_file(external_filename)
             if contents then
                 loaded_subs = parser(contents)
+                on_loaded()
             end
             return
         end
@@ -151,6 +153,7 @@ function this.new(run_subprocess, read_subtitle_file)
                 end
                 if success == true and error == nil and result and result.status == 0 then
                     loaded_subs = this.parse_srt(result.stdout)
+                    on_loaded()
                 end
             end,
         }
@@ -224,8 +227,11 @@ end
 
 local function test_cache_loads_embedded_track_asynchronously()
     local request
+    local loaded = false
     local cache = this.new(function(options)
         request = options
+    end, nil, function()
+        loaded = true
     end)
     cache.refresh({ {
         type = 'sub',
@@ -234,11 +240,13 @@ local function test_cache_loads_embedded_track_asynchronously()
     } }, '/video.mkv')
     local window = Subtitle:from_text('', 1, 5)
     h.assert_equals(cache.get_overlapping_text(window, 0), nil)
+    h.assert_equals(loaded, false)
     request.completion_fn(true, {
         status = 0,
         stdout = '1\n00:00:01,000 --> 00:00:05,000\nEmbedded line\n',
     }, nil)
     h.assert_equals(cache.get_overlapping_text(window, 0), 'Embedded line')
+    h.assert_equals(loaded, true)
 end
 
 local function test_cache_applies_subtitle_delay()
