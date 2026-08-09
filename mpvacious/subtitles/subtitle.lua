@@ -62,6 +62,16 @@ function Subtitle:is_same_event(other)
     return self['text'] == other['text'] and is_near(self['start'], other['start']) and is_near(self['end'], other['end'])
 end
 
+--- Return true if this sub and other intersect in time. Touching boundaries do not count.
+function Subtitle:overlaps_in_time(other)
+    return self['start'] < other['end'] and self['end'] > other['start']
+end
+
+--- Return true if this sub and other intersect or merely touch in time.
+function Subtitle:overlaps_or_touches_in_time(other)
+    return self['start'] <= other['end'] and self['end'] >= other['start']
+end
+
 -- Same text and overlapping (or touching) in time. Strict: a real gap is a real gap.
 -- Forward-only: other must not start before self, so expanding never
 -- decreases start and the recorded list stays sorted.
@@ -99,8 +109,24 @@ local function test_is_same_event()
 end
 
 local function test_eq_uses_same_event()
+    -- __eq delegates to is_same_event: same text and timing within tolerance.
     h.assert_equals(sub("A", 0, 2) == sub("A", 0.04, 2.04), true)
     h.assert_equals(sub("A", 0, 2) == sub("A", 3, 4), false)
+end
+
+local function test_time_overlap()
+    local cases = {
+        -- {first, second, overlaps, overlaps_or_touches}
+        { sub("A", 0, 2), sub("B", 1, 3), true, true },
+        { sub("A", 0, 1), sub("B", 1, 2), false, true },
+        { sub("A", 0, 1), sub("B", 1.01, 2), false, false },
+        { sub("A", 0, 5), sub("B", 1, 2), true, true },
+    }
+    for _, case in ipairs(cases) do
+        local first, second, overlaps, overlaps_or_touches = h.unpack(case)
+        h.assert_equals(first:overlaps_in_time(second), overlaps)
+        h.assert_equals(first:overlaps_or_touches_in_time(second), overlaps_or_touches)
+    end
 end
 
 local function test_can_expand_with()
@@ -120,6 +146,7 @@ end
 function Subtitle.run_tests()
     test_is_same_event()
     test_eq_uses_same_event()
+    test_time_overlap()
     test_can_expand_with()
     test_expand_end_time()
 end

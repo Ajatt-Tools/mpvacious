@@ -65,6 +65,19 @@ function this.contains(table, element)
     return false
 end
 
+--- Return true if two array-like tables have the same length and equal elements.
+function this.list_equal(first, second)
+    if #first ~= #second then
+        return false
+    end
+    for i = 1, #first do
+        if first[i] ~= second[i] then
+            return false
+        end
+    end
+    return true
+end
+
 function this.minutes_ago(m)
     return (os.time() - 60 * m) * 1000
 end
@@ -743,6 +756,23 @@ local function test_islice()
     end
 end
 
+local function test_list_equal()
+    local list_equal_cases = {
+        { { 1, 2, 3 }, { 1, 2, 3 }, true }, -- identical lists
+        { { 1, 2 }, { 1, 2, 3 }, false }, -- different lengths
+        { { 1, 2, 3 }, { 1, 2 }, false }, -- different lengths, other direction
+        { { 1, 2, 3 }, { 1, 9, 3 }, false }, -- same length, different element
+        { {}, {}, true }, -- both empty
+        { { "a", "b" }, { "a", "b" }, true }, -- string elements
+        { { "a" }, { "A" }, false }, -- exact (case-sensitive) match
+        { { 1, 2 }, { 2, 1 }, false }, -- order matters
+    }
+    for _, case in ipairs(list_equal_cases) do
+        local first, second, expected = this.unpack(case)
+        this.assert_equals(this.list_equal(first, second), expected)
+    end
+end
+
 function this.run_tests()
     -- Test is_substr
     this.assert_equals(this.is_substr("abcd", "bc"), true)
@@ -795,6 +825,9 @@ function this.run_tests()
     end
 
     this.assert_equals(this.join_lists({ 1, 2 }, { 3 }, {}, { 4, 5 }), { 1, 2, 3, 4, 5 })
+
+    -- Test list_equal
+    test_list_equal()
 
     local t1 = { 1, 2, 3 }
     local t2 = { 3, 4, 5 }

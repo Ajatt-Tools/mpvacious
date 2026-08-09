@@ -11,59 +11,22 @@ Usage: luajit tests/run.lua
 
 require('tests.setup')
 
-------------------------------------------------------------
--- Run helpers tests
-------------------------------------------------------------
+local modules = {
+    'helpers',
+    'encoder.utils',
+    'config.utils',
+    'anki.note_exporter',
+    'subtitles.subtitle',
+    'subtitles.collector',
+    'subtitles.sub_list',
+}
 
-print("Running helpers tests...")
-local h = require('helpers')
-h.run_tests()
-print("helpers tests passed.")
-
-------------------------------------------------------------
--- Run encoder utility tests
-------------------------------------------------------------
-
-print("Running encoder utility tests...")
-local eutils = require('encoder.utils')
-eutils.run_tests()
-print("encoder utility tests passed.")
-
-------------------------------------------------------------
--- Run config utility tests
-------------------------------------------------------------
-
-print("Running config utility tests...")
-local cfg_utils = require('config.utils')
-cfg_utils.run_tests()
-print("config utility tests passed.")
-
-------------------------------------------------------------
--- Run note_exporter tests
-------------------------------------------------------------
-
-print("Running note_exporter tests...")
-local note_exporter = require('anki.note_exporter')
-note_exporter.run_tests()
-print("note_exporter tests passed.")
-
-------------------------------------------------------------
--- Run Subtitle tests
-------------------------------------------------------------
-
-print("Running subtitle tests...")
-local Subtitle = require('subtitles.subtitle')
-Subtitle.run_tests()
-print("subtitle tests passed.")
-
-------------------------------------------------------------
--- Run subtitle list tests
-------------------------------------------------------------
-
-print("Running subtitle list tests...")
-local sub_list = require('subtitles.sub_list')
-sub_list.run_tests()
-print("subtitle list tests passed.")
+for _, module_name in ipairs(modules) do
+    print(string.format("Running %s tests...", module_name))
+    local module = require(module_name)
+    module.run_tests()
+    print(string.format("%s tests passed.", module_name))
+end
 
 ------------------------------------------------------------
 
