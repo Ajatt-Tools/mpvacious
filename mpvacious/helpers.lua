@@ -693,7 +693,8 @@ function this.str_limit(str, n_chars)
     return table.concat(ret)
 end
 
---- Wrap text at display-width boundaries, returning lines joined by separator.
+--- Wrap text at whitespace when possible, otherwise at display-width boundaries.
+--- Return lines joined by separator.
 --- Width is approximate: 1- and 2-byte characters count as 1, wider characters as 2.
 --- Input must be LF-normalized. Existing newlines become wrap points.
 --- A character wider than n_chars is placed on its own line.
@@ -701,12 +702,27 @@ function this.str_wrap(str, n_chars, separator)
     local lines = {}
     local current_line = {}
     local current_line_length = 0
+    local last_space
     separator = separator or '\n'
 
     local function flush_line()
         table.insert(lines, table.concat(current_line))
         current_line = {}
         current_line_length = 0
+        last_space = nil
+    end
+
+    local function flush_at_space()
+        table.insert(lines, table.concat(current_line, '', 1, last_space - 1))
+        local remainder = {}
+        current_line_length = 0
+        for index = last_space + 1, #current_line do
+            local char = current_line[index]
+            table.insert(remainder, char)
+            current_line_length = current_line_length + (#char <= 2 and 1 or 2)
+        end
+        current_line = remainder
+        last_space = nil
     end
 
     for _, char in this.utf8_iter(str) do
@@ -715,10 +731,18 @@ function this.str_wrap(str, n_chars, separator)
         else
             local char_width = #char <= 2 and 1 or 2
             if current_line_length > 0 and current_line_length + char_width > n_chars then
-                flush_line()
+                if last_space then
+                    flush_at_space()
+                end
+                if current_line_length > 0 and current_line_length + char_width > n_chars then
+                    flush_line()
+                end
             end
             table.insert(current_line, char)
             current_line_length = current_line_length + char_width
+            if char:match('%s') then
+                last_space = #current_line
+            end
         end
     end
     flush_line()
@@ -865,6 +889,8 @@ local function test_str_wrap()
     local str_wrap_cases = {
         { text = "short", n_chars = 25, separator = [[\N]], expected = "short" },
         { text = "abcdef", n_chars = 3, separator = [[\N]], expected = [[abc\Ndef]] },
+        { text = "one two three", n_chars = 6, separator = [[\N]], expected = [[one\Ntwo\Nthree]] },
+        { text = "like them.", n_chars = 9, separator = [[\N]], expected = [[like\Nthem.]] },
         { text = "一二三四五六", n_chars = 6, separator = [[\N]], expected = [[一二三\N四五六]] },
         { text = "ab一二cd", n_chars = 6, separator = [[\N]], expected = [[ab一二\Ncd]] },
         { text = "一二\n三四", n_chars = 6, separator = [[\N]], expected = [[一二\N三四]] },
