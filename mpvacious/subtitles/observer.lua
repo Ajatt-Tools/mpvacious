@@ -8,6 +8,7 @@ Observer waits for subtitles to appear on the screen and adds them to a list.
 local h = require('helpers')
 local timings = require('utils.timings')
 local sub_list = require('subtitles.sub_list')
+local full_track = require('subtitles.full_track')
 local Subtitle = require('subtitles.subtitle')
 local mp = require('mp')
 local platform = require('platform.init')
@@ -22,6 +23,7 @@ local all_dialogs = sub_list.new()
 local all_secondary_dialogs = sub_list.new()
 local user_timings = timings.new()
 local autoclip_method = new_autoclip_method_selector.new()
+local full_secondary_track = full_track.new()
 
 local append_dialogue = false
 local autoclip_enabled = false
@@ -152,6 +154,19 @@ local function handle_secondary_sub()
     append_secondary_sub()
 end
 
+local function resolve_secondary_text(cache, observed, window, delay)
+    local cached = cache.get_overlapping_text(window, delay)
+    return cached ~= nil and cached or observed.get_overlapping_text(window)
+end
+
+local function get_subtitle_delay()
+    return (mp.get_property_native('sub-delay') or 0) - (mp.get_property_native('audio-delay') or 0)
+end
+
+local function refresh_secondary_track(_, track_list)
+    full_secondary_track.refresh(track_list, mp.get_property('path'))
+end
+
 local function copy_subtitle(subtitle_id)
     -- subtitle_id = "secondary-sub-text" or "sub-text"
     self.copy_to_clipboard("copy-on-demand", mp.get_property(subtitle_id))
@@ -238,7 +253,9 @@ self.collect_from_all_dialogues = function(n_lines)
         return Subtitle:new() -- return a default empty new Subtitle to let consumer handle
     end
     local combined = all_dialogs.collect_n_subs(current_sub, n_lines)
-    local secondary_text = all_secondary_dialogs.get_overlapping_text(combined)
+    local secondary_text = resolve_secondary_text(
+            full_secondary_track, all_secondary_dialogs, combined, get_subtitle_delay()
+    )
     return Subtitle:new {
         ['text'] = combined["text"],
         ['secondary'] = secondary_text,
@@ -259,10 +276,17 @@ self.collect_from_current = function()
     local combined = Subtitle:from_text(dialogs.get_text(), self.get_timing('start'), self.get_timing('end'))
     return Subtitle:new {
         ['text'] = combined['text'],
-        ['secondary'] = secondary_dialogs.get_overlapping_text(combined),
+        ['secondary'] = resolve_secondary_text(
+                full_secondary_track, secondary_dialogs, combined, get_subtitle_delay()
+        ),
         ['start'] = combined['start'],
         ['end'] = combined['end'],
     }
+end
+
+self.get_selected_secondary_text = function()
+    local window = Subtitle:from_text(dialogs.get_text(), self.get_timing('start'), self.get_timing('end'))
+    return resolve_secondary_text(full_secondary_track, secondary_dialogs, window, get_subtitle_delay())
 end
 
 self.set_manual_timing = function(position)
@@ -407,6 +431,22 @@ self.init = function(menu, cfg_mgr)
 
     mp.observe_property("sub-text", "string", handle_primary_sub)
     mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
+    mp.observe_property('track-list', 'native', refresh_secondary_track)
+end
+
+local function test_resolve_secondary_text_prefers_cache_and_falls_back()
+    local window = Subtitle:from_text('', 1, 2)
+    local function source(text)
+        return { get_overlapping_text = function()
+            return text
+        end }
+    end
+    h.assert_equals(resolve_secondary_text(source('cached'), source('observed'), window, 0), 'cached')
+    h.assert_equals(resolve_secondary_text(source(nil), source('observed'), window, 0), 'observed')
+end
+
+self.run_tests = function()
+    test_resolve_secondary_text_prefers_cache_and_falls_back()
 end
 
 return self
