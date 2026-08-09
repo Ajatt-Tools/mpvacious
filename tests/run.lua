@@ -19,7 +19,6 @@ local modules = {
     'subtitles.subtitle',
     'subtitles.collector',
     'subtitles.sub_list',
-    'subtitles.full_track',
     'subtitles.observer',
 }
 

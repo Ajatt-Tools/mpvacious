@@ -8,7 +8,6 @@ Observer waits for subtitles to appear on the screen and adds them to a list.
 local h = require('helpers')
 local timings = require('utils.timings')
 local sub_list = require('subtitles.sub_list')
-local full_track = require('subtitles.full_track')
 local Subtitle = require('subtitles.subtitle')
 local mp = require('mp')
 local platform = require('platform.init')
@@ -23,14 +22,10 @@ local all_dialogs = sub_list.new()
 local all_secondary_dialogs = sub_list.new()
 local user_timings = timings.new()
 local autoclip_method = new_autoclip_method_selector.new()
-local full_secondary_track = full_track.new(nil, nil, function()
-    if self.menu then
-        self.menu:update()
-    end
-end)
 
 local append_dialogue = false
 local autoclip_enabled = false
+local looking_ahead = false
 
 
 ------------------------------------------------------------
@@ -155,20 +150,49 @@ local function handle_primary_sub()
 end
 
 local function handle_secondary_sub()
-    append_secondary_sub()
+    if not looking_ahead then
+        append_secondary_sub()
+    end
 end
 
-local function resolve_secondary_text(cache, observed, window, delay)
-    local cached = cache.get_overlapping_text(window, delay)
-    return cached ~= nil and cached or observed.get_overlapping_text(window)
+local function secondary_sub_at_delay(delay)
+    local sub = Subtitle:new {
+        text = mp.get_property('secondary-sub-text'),
+        start = mp.get_property_number('secondary-sub-start'),
+        ['end'] = mp.get_property_number('secondary-sub-end'),
+        is_secondary = true,
+    }
+    return sub:is_valid() and sub:delay(delay) or nil
 end
 
-local function get_subtitle_delay()
-    return (mp.get_property_native('secondary-sub-delay') or 0) - (mp.get_property_native('audio-delay') or 0)
-end
+local function resolve_secondary_text(observed, window)
+    local initial_delay = mp.get_property_number('secondary-sub-delay', 0)
+    local audio_delay = mp.get_property_number('audio-delay', 0)
+    local normalized_delay = initial_delay - audio_delay
+    local previous_delay = initial_delay
 
-local function refresh_secondary_track(_, track_list)
-    full_secondary_track.refresh(track_list, mp.get_property('path'))
+    observed.insert(secondary_sub_at_delay(normalized_delay))
+    if window:is_valid() and window['end'] > mp.get_property_number('time-pos', 0) - audio_delay then
+        looking_ahead = true
+        pcall(function()
+            while true do
+                mp.commandv('no-osd', 'sub-step', 1, 'secondary')
+                local next_delay = mp.get_property_number('secondary-sub-delay', 0)
+                if next_delay >= previous_delay then
+                    break
+                end
+                previous_delay = next_delay
+                local next_sub = secondary_sub_at_delay(normalized_delay)
+                observed.insert(next_sub)
+                if next_sub and next_sub['start'] >= window['end'] then
+                    break
+                end
+            end
+        end)
+        mp.set_property_number('secondary-sub-delay', initial_delay)
+        looking_ahead = false
+    end
+    return observed.get_overlapping_text(window)
 end
 
 local function copy_subtitle(subtitle_id)
@@ -257,9 +281,7 @@ self.collect_from_all_dialogues = function(n_lines)
         return Subtitle:new() -- return a default empty new Subtitle to let consumer handle
     end
     local combined = all_dialogs.collect_n_subs(current_sub, n_lines)
-    local secondary_text = resolve_secondary_text(
-            full_secondary_track, all_secondary_dialogs, combined, get_subtitle_delay()
-    )
+    local secondary_text = resolve_secondary_text(all_secondary_dialogs, combined)
     return Subtitle:new {
         ['text'] = combined["text"],
         ['secondary'] = secondary_text,
@@ -280,9 +302,7 @@ self.collect_from_current = function()
     local combined = Subtitle:from_text(dialogs.get_text(), self.get_timing('start'), self.get_timing('end'))
     return Subtitle:new {
         ['text'] = combined['text'],
-        ['secondary'] = resolve_secondary_text(
-                full_secondary_track, secondary_dialogs, combined, get_subtitle_delay()
-        ),
+        ['secondary'] = resolve_secondary_text(secondary_dialogs, combined),
         ['start'] = combined['start'],
         ['end'] = combined['end'],
     }
@@ -290,7 +310,7 @@ end
 
 self.get_selected_secondary_text = function()
     local window = Subtitle:from_text(dialogs.get_text(), self.get_timing('start'), self.get_timing('end'))
-    return resolve_secondary_text(full_secondary_track, secondary_dialogs, window, get_subtitle_delay())
+    return resolve_secondary_text(secondary_dialogs, window)
 end
 
 self.set_manual_timing = function(position)
@@ -435,22 +455,62 @@ self.init = function(menu, cfg_mgr)
 
     mp.observe_property("sub-text", "string", handle_primary_sub)
     mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
-    mp.observe_property('track-list', 'native', refresh_secondary_track)
 end
 
-local function test_resolve_secondary_text_prefers_cache_and_falls_back()
-    local window = Subtitle:from_text('', 1, 2)
-    local function source(text)
-        return { get_overlapping_text = function()
-            return text
-        end }
+local function test_resolve_secondary_text_looks_ahead_and_restores_delay()
+    local originals = {
+        get_property = mp.get_property,
+        get_property_number = mp.get_property_number,
+        set_property_number = mp.set_property_number,
+        commandv = mp.commandv,
+    }
+    local cues = {
+        { text = 'Relevant', start = 10, ['end'] = 13 },
+        { text = 'Also relevant', start = 13, ['end'] = 15 },
+        { text = 'Past the window', start = 20, ['end'] = 22 },
+    }
+    local cue_index = 0
+    local delay = 2
+    local restored_delay
+    mp.get_property = function(name)
+        return name == 'secondary-sub-text' and cues[cue_index] and cues[cue_index].text or nil
     end
-    h.assert_equals(resolve_secondary_text(source('cached'), source('observed'), window, 0), 'cached')
-    h.assert_equals(resolve_secondary_text(source(nil), source('observed'), window, 0), 'observed')
+    mp.get_property_number = function(name, default)
+        if name == 'secondary-sub-delay' then
+            return delay
+        elseif name == 'audio-delay' then
+            return 0.5
+        elseif name == 'time-pos' then
+            return 10
+        elseif name == 'secondary-sub-start' then
+            return cues[cue_index] and cues[cue_index].start or default
+        elseif name == 'secondary-sub-end' then
+            return cues[cue_index] and cues[cue_index]['end'] or default
+        end
+        return default
+    end
+    mp.commandv = function(no_osd, command, skip, track)
+        h.assert_equals({ no_osd, command, skip, track }, { 'no-osd', 'sub-step', 1, 'secondary' })
+        cue_index = cue_index + 1
+        delay = ({ 0, -3, -10 })[cue_index] or delay
+    end
+    mp.set_property_number = function(name, value)
+        h.assert_equals(name, 'secondary-sub-delay')
+        restored_delay = value
+        delay = value
+    end
+    local observed = sub_list.new()
+    local text = resolve_secondary_text(observed, Subtitle:from_text('', 11.5, 16))
+    mp.get_property = originals.get_property
+    mp.get_property_number = originals.get_property_number
+    mp.set_property_number = originals.set_property_number
+    mp.commandv = originals.commandv
+    h.assert_equals(text, 'Relevant Also relevant')
+    h.assert_equals(restored_delay, 2)
 end
 
 self.run_tests = function()
-    test_resolve_secondary_text_prefers_cache_and_falls_back()
+    test_resolve_secondary_text_looks_ahead_and_restores_delay()
 end
 
 return self
