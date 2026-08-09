@@ -31,7 +31,7 @@ end
 --- Return true when two subtitle events overlap or touch in time.
 --- The collector assumes subtitles are appended in sorted order.
 local function do_subs_overlap_in_time(previous_sub, current_sub)
-    return previous_sub and current_sub and previous_sub['end'] >= current_sub['start']
+    return previous_sub and current_sub and previous_sub:overlaps_or_touches_in_time(current_sub)
 end
 
 --- Return how many lines at the end of recorded_lines are repeated at the start of lines_to_append.

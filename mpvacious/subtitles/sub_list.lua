@@ -27,38 +27,53 @@ local new_sub_list = function()
         end
         return collector.get_all_as_string()
     end
-    local get_n_text = function(sub, n_lines)
+    --- Collect up to n_subs cues starting from start_sub and return them as one Subtitle
+    --- spanning from start_sub's start to the last collected cue's end. Collection stops
+    --- early at the first gap of MAX_SUB_GAP_SECONDS or more between consecutive cues.
+    --- Text is joined by the speech collector, which removes boundary line overlap
+    --- between consecutive time-overlapping cues.
+    local collect_n_subs = function(start_sub, n_subs)
         local collector = speech_collector.make_speech_collector()
-        local end_sub = sub
-        local n_subs = 0
-        for _, v in ipairs(subs_list) do
-            if v['start'] - end_sub['end'] >= MAX_SUB_GAP_SECONDS then
+        local end_sub = start_sub
+        local collected_count = 0
+        for _, sub in ipairs(subs_list) do
+            if sub['start'] - end_sub['end'] >= MAX_SUB_GAP_SECONDS then
                 break
             end
-            if not (v < sub) and n_subs < n_lines then
-                collector.append_sub(v)
-                end_sub = v
-                n_subs = n_subs + 1
+            if not (sub < start_sub) and collected_count < n_subs then
+                collector.append_sub(sub)
+                end_sub = sub
+                collected_count = collected_count + 1
             end
         end
-        return collector.get_all_as_string(), end_sub
+        return Subtitle:from_text(collector.get_all_as_string(), start_sub['start'], end_sub['end'])
     end
-    local get_overlapping_text = function(start_time, end_time)
+
+    --- Return the text of all subs overlapping the given time window, as one line.
+    --- Used to align secondary (translation) text with the primary text's time span:
+    --- primary and secondary cues have independent timings, so collecting secondary
+    --- text by line count or by the currently visible cue would misalign it with the
+    --- primary text. Cues merely touching a window edge are excluded.
+    --- Boundary overlap between consecutive cues is removed by the speech collector,
+    --- and the result is flattened to a single whitespace-collapsed, trimmed line.
+    --- `window` is a Subtitle, e.g. the combined primary Subtitle from collect_n_subs.
+    local get_overlapping_text = function(window)
         local collector = speech_collector.make_speech_collector()
         for _, sub in ipairs(subs_list) do
-            if sub['start'] < end_time and sub['end'] > start_time then
+            if sub:overlaps_in_time(window) then
                 collector.append_sub(sub)
             end
         end
         return collector.get_all_as_string():gsub('%s+', ' '):match('^%s*(.-)%s*$')
     end
+
     -- Event-level guard and expansion.
     -- The same sub event is offered repeatedly (on every sub change and on
     -- every collect call); exact duplicates (same text and timing) are skipped.
     -- An adjacent same-text event (overlapping or touching in time) expands
     -- the last recorded sub's end time.
     -- Text-overlap cleanup for multiline expansion is intentionally delayed
-    -- until get_text()/get_n_text(), where the selected output window is known.
+    -- until get_text()/collect_n_subs(), where the selected output window is known.
     local insert = function(sub)
         if sub == nil or h.is_empty(sub.text) then
             return false
@@ -91,7 +106,7 @@ local new_sub_list = function()
         get_subs_list = get_subs_list,
         get_time = get_time,
         get_text = get_text,
-        get_n_text = get_n_text,
+        collect_n_subs = collect_n_subs,
         get_overlapping_text = get_overlapping_text,
         insert = insert,
         is_empty = function()
@@ -289,25 +304,25 @@ local function test_get_text()
     h.assert_equals(trailing_newline_subs.get_text(), "First line\nSecond line")
 end
 
-local function test_get_n_text()
+local function test_collect_n_subs()
     local first = Subtitle:from_text("First line", 0, 2)
     local subs = new_sub_list()
     subs.insert(first)
     subs.insert(Subtitle:from_text("First line\nSecond line", 1, 3))
-    h.assert_equals(subs.get_n_text(first, 2), "First line\nSecond line")
+    h.assert_equals(subs.collect_n_subs(first, 2).text, "First line\nSecond line")
 
     local limited_subs = new_sub_list()
     limited_subs.insert(Subtitle:from_text("First line", 0, 2))
     limited_subs.insert(Subtitle:from_text("First line\nSecond line", 1, 3))
     limited_subs.insert(Subtitle:from_text("Second line\nThird line", 2, 4))
-    h.assert_equals(limited_subs.get_n_text(first, 2), "First line\nSecond line")
+    h.assert_equals(limited_subs.collect_n_subs(first, 2).text, "First line\nSecond line")
 
-    -- Non-adjacent repeated lines are kept in get_n_text too.
+    -- Non-adjacent repeated lines are kept in collect_n_subs too.
     local repeated_subs = new_sub_list()
     repeated_subs.insert(Subtitle:from_text("Yes", 0, 1))
     repeated_subs.insert(Subtitle:from_text("No", 1, 2))
     repeated_subs.insert(Subtitle:from_text("Yes\nAgain", 2, 3))
-    h.assert_equals(repeated_subs.get_n_text(repeated_subs.get_subs_list()[1], 3), "Yes\nNo\nYes\nAgain")
+    h.assert_equals(repeated_subs.collect_n_subs(repeated_subs.get_subs_list()[1], 3).text, "Yes\nNo\nYes\nAgain")
 
     -- A sub fully covered by the previous suffix still counts toward n_lines,
     -- so end_sub (used for the card's end timing) advances past it.
@@ -316,9 +331,10 @@ local function test_get_n_text()
     covered_subs.insert(container)
     covered_subs.insert(Subtitle:from_text("B", 1, 3))
     covered_subs.insert(Subtitle:from_text("C", 2, 4))
-    local text, end_sub = covered_subs.get_n_text(container, 2)
-    h.assert_equals(text, "A\nB")
-    h.assert_equals(end_sub['end'], 3)
+    local combined = covered_subs.collect_n_subs(container, 2)
+    h.assert_equals(combined["text"], "A\nB")
+    h.assert_equals(combined['start'], 0)
+    h.assert_equals(combined['end'], 3)
 end
 
 local function test_get_overlapping_text_uses_timing_and_removes_line_overlap()
@@ -327,7 +343,7 @@ local function test_get_overlapping_text_uses_timing_and_removes_line_overlap()
     subs.insert(Subtitle:from_text("First line", 1, 2))
     subs.insert(Subtitle:from_text("First line\nSecond line", 2, 3))
     subs.insert(Subtitle:from_text("After", 3, 4))
-    h.assert_equals(subs.get_overlapping_text(1, 3), "First line Second line")
+    h.assert_equals(subs.get_overlapping_text(Subtitle:from_text('', 1, 3)), "First line Second line")
 end
 
 local function run_tests()
@@ -343,7 +359,7 @@ local function run_tests()
     test_get_time_returns_boundary_times()
     test_get_subs_list_returns_array_copy()
     test_get_text()
-    test_get_n_text()
+    test_collect_n_subs()
     test_get_overlapping_text_uses_timing_and_removes_line_overlap()
 end
 

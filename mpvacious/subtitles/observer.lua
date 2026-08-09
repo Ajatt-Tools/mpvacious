@@ -70,7 +70,7 @@ end)
 
 autoclip_method.register_handler('goldendict', function(current_subtitle_lines)
     h.subprocess_detached {
-        args = {'goldendict', current_subtitle_lines.get_prepared().primary},
+        args = { 'goldendict', current_subtitle_lines.get_prepared().primary },
         completion_fn = on_external_finish
     }
 end)
@@ -237,13 +237,13 @@ self.collect_from_all_dialogues = function(n_lines)
     if current_sub == nil then
         return Subtitle:new() -- return a default empty new Subtitle to let consumer handle
     end
-    local text, end_sub = all_dialogs.get_n_text(current_sub, n_lines)
-    local secondary_text = all_secondary_dialogs.get_overlapping_text(current_sub['start'], end_sub['end'])
+    local combined = all_dialogs.collect_n_subs(current_sub, n_lines)
+    local secondary_text = all_secondary_dialogs.get_overlapping_text(combined)
     return Subtitle:new {
-        ['text'] = text,
+        ['text'] = combined["text"],
         ['secondary'] = secondary_text,
-        ['start'] = current_sub['start'],
-        ['end'] = end_sub['end'],
+        ['start'] = combined['start'],
+        ['end'] = combined['end'],
     }
 end
 
@@ -256,13 +256,12 @@ self.collect_from_current = function()
     if secondary_dialogs.is_empty() then
         secondary_dialogs.insert(Subtitle:now('secondary'))
     end
-    local start_time = self.get_timing('start')
-    local end_time = self.get_timing('end')
+    local combined = Subtitle:from_text(dialogs.get_text(), self.get_timing('start'), self.get_timing('end'))
     return Subtitle:new {
-        ['text'] = dialogs.get_text(),
-        ['secondary'] = secondary_dialogs.get_overlapping_text(start_time, end_time),
-        ['start'] = start_time,
-        ['end'] = end_time,
+        ['text'] = combined['text'],
+        ['secondary'] = secondary_dialogs.get_overlapping_text(combined),
+        ['start'] = combined['start'],
+        ['end'] = combined['end'],
     }
 end
 
