@@ -705,6 +705,12 @@ function this.str_limit(str, n_chars)
     return table.concat(ret)
 end
 
+--- Return true if the UTF-8 character is wider than ASCII in the OSD font (e.g. CJK).
+--- A byte length of 3 or 4 means a wide character; everything else is narrow.
+local function is_cjk_heuristic(utf8_chr)
+    return #utf8_chr > 2
+end
+
 --- Wrap text at whitespace when possible, otherwise at display-width boundaries.
 --- Return lines joined by separator.
 --- Width is approximate: 1- and 2-byte characters count as 1, wider characters as 2.
@@ -726,7 +732,7 @@ function this.str_wrap(str, n_chars, separator)
     end
 
     local function calc_char_width(char)
-        return #char <= 2 and 1 or 2
+        return is_cjk_heuristic(char) and 2 or 1
     end
 
     local function flush_at_space()
