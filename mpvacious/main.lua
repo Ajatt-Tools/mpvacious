@@ -127,9 +127,7 @@ end
 --- Width heuristic: one display unit is approximately half an em;
 --- the right pane is 640 ASS pixels wide.
 local function wrap_selected_for_osd(str)
-    local newline_placeholder = '\1'
-    str = h.str_replace(h.normalize_newlines(str), '\n', newline_placeholder)
-    str = h.str_replace(escape_for_osd(str), newline_placeholder, '\n')
+    str = escape_for_osd(h.str_replace(h.normalize_newlines(str), "\n", " "))
     local wrap_width = math.floor(menu_consts.start_x_second_pane * 2 / cfg_mgr.query("menu_font_size"))
     return h.str_wrap(str, wrap_width, [[\N]])
 end
@@ -334,13 +332,15 @@ function menu:print_selection(osd)
     if (subs_observer.is_appending() or subs_observer.has_recorded_dialogs()) and cfg_mgr.query("show_selected_text") then
         osd:start_line():pos(menu_consts.start_x_second_pane, menu_consts.start_y)
         osd:submenu("Primary text"):newline()
-        osd:text(wrap_selected_for_osd(subs_observer.get_selected_primary_text())):newline()
+        for idx, s_line in ipairs(subs_observer.recorded_subs()) do
+            osd:item(string.format("%d. ", idx)):text(wrap_selected_for_osd(s_line['text'])):newline()
+        end
         if not h.is_empty(cfg_mgr.query("secondary_field")) then
             -- If the user wants to add secondary subs to Anki,
             -- it's okay to print them on the screen.
             osd:submenu("Secondary text"):newline()
-            for _, s in ipairs(subs_observer.recorded_secondary_subs()) do
-                osd:text(wrap_selected_for_osd(s['text'])):newline()
+            for idx, s_line in ipairs(subs_observer.recorded_secondary_subs()) do
+                osd:item(string.format("%d. ", idx)):text(wrap_selected_for_osd(s_line['text'])):newline()
             end
         end
     end
