@@ -409,6 +409,9 @@ Advanced menu has the following options:
 * <kbd>f</kbd> - Increment number of cards to update.
   Only affects note updating, including quick card creation.
   The number of cards to update is reset to 1 upon updating a note.
+  If the requested recent cards don't all share the same sentence field as the
+  newest card, mpvacious asks whether to update all of them anyway. Press
+  <kbd>y</kbd> to continue or <kbd>n</kbd> to cancel; unanswered prompts time out.
 * <kbd>shift+f</kbd> - Decrement number of cards to update.
 
 * <kbd>c</kbd> - Interactive subtitle selection.
