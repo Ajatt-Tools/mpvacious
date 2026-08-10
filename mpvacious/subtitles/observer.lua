@@ -325,6 +325,10 @@ self.recorded_subs = function()
     return dialogs.get_subs_list()
 end
 
+self.get_selected_primary_text = function()
+    return h.collapse_whitespace(dialogs.get_text())
+end
+
 self.recorded_secondary_subs = function()
     return secondary_dialogs.get_subs_list()
 end

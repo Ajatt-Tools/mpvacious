@@ -334,9 +334,7 @@ function menu:print_selection(osd)
     if (subs_observer.is_appending() or subs_observer.has_recorded_dialogs()) and cfg_mgr.query("show_selected_text") then
         osd:start_line():pos(menu_consts.start_x_second_pane, menu_consts.start_y)
         osd:submenu("Primary text"):newline()
-        for _, s in ipairs(subs_observer.recorded_subs()) do
-            osd:text(wrap_selected_for_osd(s['text'])):newline()
-        end
+        osd:text(wrap_selected_for_osd(subs_observer.get_selected_primary_text())):newline()
         if not h.is_empty(cfg_mgr.query("secondary_field")) then
             -- If the user wants to add secondary subs to Anki,
             -- it's okay to print them on the screen.
