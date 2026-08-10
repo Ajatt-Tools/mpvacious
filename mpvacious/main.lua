@@ -339,7 +339,9 @@ function menu:print_selection(osd)
             -- If the user wants to add secondary subs to Anki,
             -- it's okay to print them on the screen.
             osd:submenu("Secondary text"):newline()
-            osd:text(wrap_selected_for_osd(subs_observer.get_selected_secondary_text())):newline()
+            for idx, s_line in ipairs(subs_observer.get_selected_secondary_subs()) do
+                osd:item(string.format("%d. ", idx)):text(wrap_selected_for_osd(s_line['text'])):newline()
+            end
         end
     end
 end

@@ -25,7 +25,7 @@ local autoclip_method = new_autoclip_method_selector.new()
 
 local append_dialogue = false
 local autoclip_enabled = false
-local looking_ahead = false
+local stepping_secondary = false
 
 
 ------------------------------------------------------------
@@ -150,7 +150,7 @@ local function handle_primary_sub()
 end
 
 local function handle_secondary_sub()
-    if not looking_ahead then
+    if not stepping_secondary then
         append_secondary_sub()
     end
 end
@@ -165,34 +165,50 @@ local function secondary_sub_at_delay(delay)
     return sub:is_valid() and sub:delay(delay) or nil
 end
 
-local function resolve_secondary_text(observed, window)
+local function scan_secondary_forward(observed, window, initial_delay, normalized_delay)
+    local previous_delay = initial_delay
+    stepping_secondary = true
+    pcall(function()
+        while true do
+            mp.commandv('no-osd', 'sub-step', 1, 'secondary')
+            local next_delay = mp.get_property_number('secondary-sub-delay', 0)
+            if next_delay >= previous_delay then
+                break
+            end
+            previous_delay = next_delay
+            local next_sub = secondary_sub_at_delay(normalized_delay)
+            observed.insert(next_sub)
+            if next_sub and next_sub['start'] >= window['end'] then
+                break
+            end
+        end
+    end)
+    pcall(mp.set_property_number, 'secondary-sub-delay', initial_delay)
+    stepping_secondary = false
+end
+
+local function make_overlap_windows(window, primary_cues)
+    local windows = { window }
+    for _, cue in ipairs(primary_cues or {}) do
+        local clipped_start = math.max(cue['start'], window['start'])
+        local clipped_end = math.min(cue['end'], window['end'])
+        if clipped_end > clipped_start then
+            table.insert(windows, Subtitle:from_text('', clipped_start, clipped_end))
+        end
+    end
+    return windows
+end
+
+local function resolve_secondary_text(observed, window, primary_cues)
     local initial_delay = mp.get_property_number('secondary-sub-delay', 0)
     local audio_delay = mp.get_property_number('audio-delay', 0)
     local normalized_delay = initial_delay - audio_delay
-    local previous_delay = initial_delay
 
     observed.insert(secondary_sub_at_delay(normalized_delay))
     if window:is_valid() and window['end'] > mp.get_property_number('time-pos', 0) - audio_delay then
-        looking_ahead = true
-        pcall(function()
-            while true do
-                mp.commandv('no-osd', 'sub-step', 1, 'secondary')
-                local next_delay = mp.get_property_number('secondary-sub-delay', 0)
-                if next_delay >= previous_delay then
-                    break
-                end
-                previous_delay = next_delay
-                local next_sub = secondary_sub_at_delay(normalized_delay)
-                observed.insert(next_sub)
-                if next_sub and next_sub['start'] >= window['end'] then
-                    break
-                end
-            end
-        end)
-        mp.set_property_number('secondary-sub-delay', initial_delay)
-        looking_ahead = false
+        scan_secondary_forward(observed, window, initial_delay, normalized_delay)
     end
-    return observed.get_overlapping_text(window)
+    return observed.get_overlapping_text(make_overlap_windows(window, primary_cues))
 end
 
 local function copy_subtitle(subtitle_id)
@@ -280,8 +296,8 @@ self.collect_from_all_dialogues = function(n_lines)
     if current_sub == nil then
         return Subtitle:new() -- return a default empty new Subtitle to let consumer handle
     end
-    local combined = all_dialogs.collect_n_subs(current_sub, n_lines)
-    local secondary_text = resolve_secondary_text(all_secondary_dialogs, combined)
+    local combined, primary_cues = all_dialogs.collect_n_subs(current_sub, n_lines)
+    local secondary_text = resolve_secondary_text(all_secondary_dialogs, combined, primary_cues)
     return Subtitle:new {
         ['text'] = combined["text"],
         ['secondary'] = secondary_text,
@@ -302,7 +318,7 @@ self.collect_from_current = function()
     local combined = Subtitle:from_text(dialogs.get_text(), self.get_timing('start'), self.get_timing('end'))
     return Subtitle:new {
         ['text'] = combined['text'],
-        ['secondary'] = resolve_secondary_text(secondary_dialogs, combined),
+        ['secondary'] = resolve_secondary_text(secondary_dialogs, combined, dialogs.get_subs_list()),
         ['start'] = combined['start'],
         ['end'] = combined['end'],
     }
@@ -310,7 +326,13 @@ end
 
 self.get_selected_secondary_text = function()
     local window = Subtitle:from_text(dialogs.get_text(), self.get_timing('start'), self.get_timing('end'))
-    return resolve_secondary_text(secondary_dialogs, window)
+    return resolve_secondary_text(secondary_dialogs, window, dialogs.get_subs_list())
+end
+
+self.get_selected_secondary_subs = function()
+    local window = Subtitle:from_text(dialogs.get_text(), self.get_timing('start'), self.get_timing('end'))
+    local _, selected_subs = resolve_secondary_text(secondary_dialogs, window, dialogs.get_subs_list())
+    return selected_subs
 end
 
 self.set_manual_timing = function(position)
@@ -509,8 +531,146 @@ local function test_resolve_secondary_text_looks_ahead_and_restores_delay()
     h.assert_equals(restored_delay, 2)
 end
 
+local function test_resolve_secondary_text_only_scans_forward_after_direct_seek()
+    local originals = {
+        get_property = mp.get_property,
+        get_property_number = mp.get_property_number,
+        set_property_number = mp.set_property_number,
+        commandv = mp.commandv,
+    }
+    local command_count = 0
+    local restore_count = 0
+
+    local ok, error_message = pcall(function()
+        mp.get_property = function()
+            return nil
+        end
+        mp.get_property_number = function(name, default)
+            return ({
+                ['secondary-sub-delay'] = 0,
+                ['audio-delay'] = 0,
+                ['time-pos'] = 18,
+            })[name] or default
+        end
+        mp.commandv = function(no_osd, command, direction, track)
+            h.assert_equals(stepping_secondary, true)
+            h.assert_equals({ no_osd, command, direction, track }, { 'no-osd', 'sub-step', 1, 'secondary' })
+            command_count = command_count + 1
+        end
+        mp.set_property_number = function(name, value)
+            h.assert_equals({ name, value }, { 'secondary-sub-delay', 0 })
+            restore_count = restore_count + 1
+        end
+
+        resolve_secondary_text(sub_list.new(), Subtitle:from_text('', 10, 20))
+        h.assert_equals(command_count, 1)
+        h.assert_equals(restore_count, 1)
+        h.assert_equals(stepping_secondary, false)
+    end)
+
+    mp.get_property = originals.get_property
+    mp.get_property_number = originals.get_property_number
+    mp.set_property_number = originals.set_property_number
+    mp.commandv = originals.commandv
+    if not ok then
+        error(error_message)
+    end
+end
+
+local function test_secondary_scan_terminates_without_delay_progress()
+    local originals = {
+        get_property = mp.get_property,
+        get_property_number = mp.get_property_number,
+        set_property_number = mp.set_property_number,
+        commandv = mp.commandv,
+    }
+    local command_count = 0
+    local restore_count = 0
+
+    local ok, error_message = pcall(function()
+        mp.get_property = function()
+            return nil
+        end
+        mp.get_property_number = function(name, default)
+            return ({
+                ['secondary-sub-delay'] = 2,
+                ['audio-delay'] = 0,
+                ['time-pos'] = 0,
+            })[name] or default
+        end
+        mp.commandv = function()
+            command_count = command_count + 1
+        end
+        mp.set_property_number = function(name, value)
+            h.assert_equals({ name, value }, { 'secondary-sub-delay', 2 })
+            restore_count = restore_count + 1
+        end
+
+        resolve_secondary_text(sub_list.new(), Subtitle:from_text('', 0, 5))
+        h.assert_equals(command_count, 1)
+        h.assert_equals(restore_count, 1)
+        h.assert_equals(stepping_secondary, false)
+    end)
+
+    mp.get_property = originals.get_property
+    mp.get_property_number = originals.get_property_number
+    mp.set_property_number = originals.set_property_number
+    mp.commandv = originals.commandv
+    if not ok then
+        error(error_message)
+    end
+end
+
+local function test_secondary_scan_restores_delay_after_errors()
+    local originals = {
+        get_property = mp.get_property,
+        get_property_number = mp.get_property_number,
+        set_property_number = mp.set_property_number,
+        commandv = mp.commandv,
+    }
+    local command_count = 0
+    local restore_count = 0
+
+    local ok, error_message = pcall(function()
+        mp.get_property = function()
+            return nil
+        end
+        mp.get_property_number = function(name, default)
+            return ({
+                ['secondary-sub-delay'] = 4,
+                ['audio-delay'] = 0,
+                ['time-pos'] = 10,
+            })[name] or default
+        end
+        mp.commandv = function()
+            command_count = command_count + 1
+            error('simulated sub-step failure')
+        end
+        mp.set_property_number = function(name, value)
+            h.assert_equals({ name, value }, { 'secondary-sub-delay', 4 })
+            restore_count = restore_count + 1
+        end
+
+        resolve_secondary_text(sub_list.new(), Subtitle:from_text('', 0, 20))
+        h.assert_equals(command_count, 1)
+        h.assert_equals(restore_count, 1)
+        h.assert_equals(stepping_secondary, false)
+    end)
+
+    mp.get_property = originals.get_property
+    mp.get_property_number = originals.get_property_number
+    mp.set_property_number = originals.set_property_number
+    mp.commandv = originals.commandv
+    if not ok then
+        error(error_message)
+    end
+end
+
 self.run_tests = function()
     test_resolve_secondary_text_looks_ahead_and_restores_delay()
+    test_resolve_secondary_text_only_scans_forward_after_direct_seek()
+    test_secondary_scan_terminates_without_delay_progress()
+    test_secondary_scan_restores_delay_after_errors()
 end
 
 return self
