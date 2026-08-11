@@ -127,7 +127,7 @@ end
 --- Width heuristic: one display unit is approximately half an em;
 --- the right pane is 640 ASS pixels wide.
 local function wrap_selected_for_osd(str)
-    str = escape_for_osd(h.str_replace(h.normalize_newlines(str), "\n", " "))
+    str = escape_for_osd(h.remove_newlines(str))
     local wrap_width = math.floor(menu_consts.start_x_second_pane * 2 / cfg_mgr.query("menu_font_size"))
     return h.str_wrap(str, wrap_width, [[\N]])
 end
