@@ -731,12 +731,11 @@ end
 --- Input must be LF-normalized. Existing newlines become wrap points.
 --- A character wider than n_chars is placed on its own line.
 --- Whitespace at a wrap point is consumed.
-function this.str_wrap(str, n_chars, separator)
+function this.str_to_lines(str, n_chars)
     local lines = {}
     local current_line = {}
     local current_line_length = 0
     local last_space
-    separator = separator or '\n'
 
     local function flush_line()
         table.insert(lines, table.concat(current_line))
@@ -785,7 +784,12 @@ function this.str_wrap(str, n_chars, separator)
         end
     end
     flush_line()
-    return table.concat(lines, separator)
+    return lines
+end
+
+function this.str_wrap(str, n_chars, separator)
+    separator = separator or '\n'
+    return table.concat(this.str_to_lines(str, n_chars), separator)
 end
 
 function this.find_mpvacious_dir()
