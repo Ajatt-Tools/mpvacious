@@ -1120,10 +1120,24 @@ function this.run_tests()
     end
 
     -- Test str limit
+    this.assert_equals(this.str_limit("abc", 3), "abc")
+    this.assert_equals(this.str_limit("abcd", 3), "abc…")
     this.assert_equals(this.str_limit("報連相", 3), "報連相")
     this.assert_equals(this.str_limit("報連相", 2), "報連…")
     this.assert_equals(this.str_limit("報連相", 1), "報…")
     this.assert_equals(this.str_limit("報連相", 33), "報連相")
+
+    -- Test str_limit_width: CJK counts double, narrower chars count once.
+    this.assert_equals(this.str_limit_width("abc", 3), "abc")
+    this.assert_equals(this.str_limit_width("abcd", 3), "abc…")
+    this.assert_equals(this.str_limit_width("報連相", 3), "報…") -- 2 widths each, exceeds 3
+    this.assert_equals(this.str_limit_width("報連", 4), "報連")
+    this.assert_equals(this.str_limit_width("ab報", 4), "ab報")
+    this.assert_equals(this.str_limit_width("ab報c", 4), "ab報…")
+    this.assert_equals(this.str_limit_width("", 3), "")
+    this.assert_equals(this.str_limit("報連a", 2), "報連…") -- one narrow char remains after the cut
+    this.assert_equals(this.str_limit_width("報連相", 6, 3), "報連…") -- wide_char_width=3: two fit, third exceeds
+    this.assert_equals(this.str_limit_width("ЯЯЯЯ", 3), "ЯЯЯ…") -- 2-byte chars count as narrow
 
     -- Test normalize_newlines
     test_normalize_newlines()
