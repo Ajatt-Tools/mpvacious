@@ -12,6 +12,11 @@ local this = {}
 
 this.unpack = unpack or table.unpack
 
+local CharWidth = {
+    normal = 1,
+    wide = 2,
+}
+
 function this.noop()
     return
 end
@@ -691,7 +696,7 @@ end
 
 --- Like str[:n_chars] in python, but adds "…" at the end if the string is longer than n_chars.
 function this.str_limit(str, n_chars)
-    return this.str_limit_width(str, n_chars, 1)
+    return this.str_limit_width(str, n_chars, CharWidth.normal)
 end
 
 --- Truncate str so its display width is at most width_budget.
@@ -699,11 +704,11 @@ end
 --- An ellipsis ("…") is appended after the budget is exhausted when truncating,
 --- so the result can exceed width_budget by the ellipsis's width.
 function this.str_limit_width(str, width_budget, wide_char_width)
-    wide_char_width = wide_char_width or 2
+    wide_char_width = wide_char_width or CharWidth.wide
     local ret = {}
     local used_budget = 0
     for _, char in this.utf8_iter(str) do
-        local char_width = this.is_cjk_heuristic(char) and wide_char_width or 1
+        local char_width = this.is_cjk_heuristic(char) and wide_char_width or CharWidth.normal
         if used_budget + char_width > width_budget then
             table.insert(ret, "…")
             break
@@ -741,7 +746,7 @@ function this.str_wrap(str, n_chars, separator)
     end
 
     local function calc_char_width(char)
-        return this.is_cjk_heuristic(char) and 2 or 1
+        return this.is_cjk_heuristic(char) and CharWidth.wide or CharWidth.normal
     end
 
     local function flush_at_space()
