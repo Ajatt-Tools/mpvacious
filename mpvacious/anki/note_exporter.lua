@@ -4,8 +4,10 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 ]]
 
 local mp = require('mp')
+local msg = require('mp.msg')
 local h = require('helpers')
 local dec_counter = require('utils.dec_counter')
+local OSD = require('menu.osd_styler')
 
 --- Instead of comparing fields literally, normalize them to match different representations.
 local function normalize_field_content(new_text, old_text, cfg)
@@ -53,9 +55,138 @@ local function join_field_content(new_text, old_text, cfg)
     return string.format("%s%s%s", old_text, cfg.separator, new_text)
 end
 
+local function sentences_are_related(new_text, old_text)
+    local normalized_new, normalized_old = normalize_field_content(new_text, old_text, { plaintext_compare = true })
+    if h.is_empty(normalized_new) or h.is_empty(normalized_old) then
+        return false
+    end
+    return h.is_substr(normalized_new, normalized_old) or h.is_substr(normalized_old, normalized_new)
+end
+
 local function make_exporter()
     local self = {}
     local pub = {}
+    local pending_mismatch_timer = nil
+    local confirm_mismatch_yes = "mpvacious-confirm-mismatched-notes-yes"
+    local confirm_mismatch_no = "mpvacious-confirm-mismatched-notes-no"
+    local confirm_mismatch_enter = "mpvacious-confirm-mismatched-notes-enter"
+    local confirm_mismatch_left = "mpvacious-confirm-mismatched-notes-left"
+    local confirm_mismatch_right = "mpvacious-confirm-mismatched-notes-right"
+    local mismatch_selection = "no"
+    local mismatch_overlay = mp.create_osd_overlay and mp.create_osd_overlay('ass-events')
+    if mismatch_overlay then
+        mismatch_overlay.res_x = 1280
+        mismatch_overlay.res_y = 720
+        mismatch_overlay.z = 1000
+    end
+
+    local function clear_update_state()
+        self.subs_observer.clear()
+        self.quick_creation_opts:clear_options()
+        if self.subs_observer.menu and self.subs_observer.menu.update then
+            self.subs_observer.menu:update()
+        end
+    end
+
+    local function clear_mismatch_confirmation()
+        mp.remove_key_binding(confirm_mismatch_yes)
+        mp.remove_key_binding(confirm_mismatch_no)
+        mp.remove_key_binding(confirm_mismatch_enter)
+        mp.remove_key_binding(confirm_mismatch_left)
+        mp.remove_key_binding(confirm_mismatch_right)
+        if mismatch_overlay then
+            mismatch_overlay:remove()
+        end
+        if pending_mismatch_timer then
+            pending_mismatch_timer:kill()
+            pending_mismatch_timer = nil
+        end
+        mismatch_selection = "no"
+    end
+
+    local function confirm_mismatched_notes(note_ids, warning, proceed_with_update)
+        clear_mismatch_confirmation()
+
+        local function cancel_update()
+            clear_mismatch_confirmation()
+            clear_update_state()
+            h.notify("Card update cancelled.", "info", 2)
+        end
+
+        local function confirm_update()
+            clear_mismatch_confirmation()
+            proceed_with_update()
+        end
+
+        local question
+        if #note_ids == 1 then
+            question = "Update this note anyway?"
+        else
+            question = string.format("Update all %i anyway?", #note_ids)
+        end
+
+        local function update_confirmation_overlay()
+            if not mismatch_overlay then
+                return
+            end
+            local osd = OSD:new()
+                    :new_layer()
+                    :align(5)
+                    :pos(640, 360)
+                    :border(3)
+                    :fsize(32)
+                    :red("Warning")
+                    :newline()
+                    :text(warning)
+                    :newline()
+                    :text(question)
+                    :newline()
+            if mismatch_selection == "yes" then
+                osd:blue("[y] Yes")
+            else
+                osd:item("[y] Yes")
+            end
+            osd:text("      ")
+            if mismatch_selection == "no" then
+                osd:blue("[n] No")
+            else
+                osd:item("[n] No")
+            end
+            osd:newline():italics("←/→ select      Enter confirm")
+            mismatch_overlay.data = osd:get_text()
+            mismatch_overlay:update()
+        end
+
+        local function select_option(option)
+            mismatch_selection = option
+            update_confirmation_overlay()
+        end
+
+        local function confirm_selection()
+            if mismatch_selection == "yes" then
+                confirm_update()
+            else
+                cancel_update()
+            end
+        end
+
+        mp.add_forced_key_binding("y", confirm_mismatch_yes, confirm_update)
+        mp.add_forced_key_binding("n", confirm_mismatch_no, cancel_update)
+        mp.add_forced_key_binding("ENTER", confirm_mismatch_enter, confirm_selection)
+        mp.add_forced_key_binding("left", confirm_mismatch_left, function()
+            select_option("yes")
+        end)
+        mp.add_forced_key_binding("right", confirm_mismatch_right, function()
+            select_option("no")
+        end)
+        if mp.add_timeout then
+            pending_mismatch_timer = mp.add_timeout(10, cancel_update)
+        end
+        msg.warn(string.format("%s %s [y] Yes [n] No", warning, question))
+        if mismatch_overlay then
+            update_confirmation_overlay()
+        end
+    end
 
     local substitute_fmt = (function()
         local function substitute_filename(tag, filename)
@@ -283,7 +414,7 @@ local function make_exporter()
         end
     end
 
-    function pub.update_notes(note_ids, overwrite)
+    local function collect_update_subtitle()
         local sub
         local n_lines = self.quick_creation_opts:get_lines()
         if n_lines then
@@ -291,10 +422,46 @@ local function make_exporter()
         else
             sub = self.subs_observer.collect_from_current()
         end
+        return sub
+    end
 
-        if not sub:is_valid() then
-            return h.notify("Nothing to export. Have you set the timings?", "warn", 2)
+    local function current_subtitle_mismatch(note_ids, sub)
+        if h.is_empty(sub['text']) then
+            return nil
         end
+
+        local current_sentence = prepare_for_exporting(sub['text'])
+        local comparable_count = 0
+        local related_count = 0
+        for _, note_id in ipairs(note_ids) do
+            local fields = self.ankiconnect.get_note_fields(note_id) or {}
+            local stored_sentence = fields[self.config.sentence_field] or ""
+            if not h.is_empty(h.normalize_subtitle_text(stored_sentence)) then
+                comparable_count = comparable_count + 1
+                if sentences_are_related(current_sentence, stored_sentence) then
+                    related_count = related_count + 1
+                end
+            end
+        end
+
+        if comparable_count == 0 or related_count == comparable_count then
+            return nil
+        elseif #note_ids == 1 then
+            return string.format(
+                    "The target note's %s does not match the current subtitle.",
+                    self.config.sentence_field
+            )
+        else
+            return string.format(
+                    "Only %i of %i target notes have %s matching the current subtitle.",
+                    related_count,
+                    comparable_count,
+                    self.config.sentence_field
+            )
+        end
+    end
+
+    local function perform_update(note_ids, overwrite, sub)
 
         if h.is_empty(sub['text']) then
             -- In this case, don't modify whatever existing text there is and just
@@ -316,9 +483,26 @@ local function make_exporter()
         snapshot.on_finish(create_files_countdown.decrease).run_async()
         audio.on_finish(create_files_countdown.decrease).run_async()
 
-        self.subs_observer.clear()
-        self.quick_creation_opts:clear_options()
+        clear_update_state()
         return pub
+    end
+
+    function pub.update_notes(note_ids, overwrite)
+        local sub = collect_update_subtitle()
+
+        if not sub:is_valid() then
+            return h.notify("Nothing to export. Have you set the timings?", "warn", 2)
+        end
+
+        local warning = current_subtitle_mismatch(note_ids, sub)
+        if warning then
+            confirm_mismatched_notes(note_ids, warning, function()
+                perform_update(note_ids, overwrite, sub)
+            end)
+            return pub
+        end
+
+        return perform_update(note_ids, overwrite, sub)
     end
 
     function pub.maybe_reload_config()
@@ -361,6 +545,7 @@ local function make_exporter()
 
     function pub.update_last_note(overwrite)
         local accept_notes_made_within_last_minutes = 10
+        clear_mismatch_confirmation()
         pub.maybe_reload_config()
 
         local n_cards = self.quick_creation_opts:get_cards()
@@ -371,6 +556,41 @@ local function make_exporter()
         --first element is the earliest
         if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(accept_notes_made_within_last_minutes) then
             return h.notify("Couldn't find the target note.", "warn", 2)
+        end
+
+        if n_cards > 1 then
+            local newest_fields = self.ankiconnect.get_note_fields(last_note_ids[n_cards]) or {}
+            local newest_sentence = h.normalize_subtitle_text(newest_fields[self.config.sentence_field] or "")
+            if h.is_empty(newest_sentence) then
+                return h.notify(
+                        string.format("Couldn't verify related notes: newest note has an empty %s field.", self.config.sentence_field),
+                        "warn",
+                        4
+                )
+            end
+
+            local related_count = 1
+            for i = n_cards - 1, 1, -1 do
+                local fields = self.ankiconnect.get_note_fields(last_note_ids[i]) or {}
+                local sentence = h.normalize_subtitle_text(fields[self.config.sentence_field] or "")
+                if sentence ~= newest_sentence then
+                    break
+                end
+                related_count = related_count + 1
+            end
+
+            if related_count < n_cards then
+                local warning = string.format(
+                        "Only the newest %i of %i notes share %s.",
+                        related_count,
+                        #last_note_ids,
+                        self.config.sentence_field
+                )
+                confirm_mismatched_notes(last_note_ids, warning, function()
+                    pub.update_notes(last_note_ids, overwrite)
+                end)
+                return pub
+            end
         end
 
         pub.update_notes(last_note_ids, overwrite)
@@ -483,6 +703,216 @@ local function make_exporter()
         h.assert_equals(make_new_note_data(old_note, new_note, { overwrite = false, disable_forvo = true }).SentKanji, expected.SentKanji)
     end
 
+    local function test_update_last_note_confirms_unrelated_notes()
+        local now_ms = os.time() * 1000
+        local note_ids = { now_ms - 5, now_ms - 4, now_ms - 3, now_ms - 2, now_ms - 1 }
+        local sentences = { "unrelated one", "unrelated two", "target", "<b>target</b>", "target" }
+        local updated = false
+        local notification = nil
+        local original_notify = h.notify
+        local original_add_key_binding = mp.add_forced_key_binding
+        local original_remove_key_binding = mp.remove_key_binding
+        local original_create_osd_overlay = mp.create_osd_overlay
+        local confirmation_bindings = {}
+        local confirmation_overlay = { update = function() return end, remove = function() return end }
+        local cleared_state = 0
+        local refreshed_menu = 0
+        h.notify = function(message)
+            notification = message
+        end
+        mp.add_forced_key_binding = function(key, _, fn)
+            confirmation_bindings[key] = fn
+        end
+        mp.remove_key_binding = function()
+            return
+        end
+        mp.create_osd_overlay = function()
+            return confirmation_overlay
+        end
+
+        local test_exporter = make_exporter().init(
+                {
+                    get_last_note_ids = function()
+                        return note_ids
+                    end,
+                    get_note_fields = function(note_id)
+                        for i, id in ipairs(note_ids) do
+                            if id == note_id then
+                                return { SentKanji = sentences[i] }
+                            end
+                        end
+                    end,
+                },
+                {
+                    get_cards = function() return 5 end,
+                    clear_options = function() cleared_state = cleared_state + 1 end,
+                },
+                {
+                    clear = function() cleared_state = cleared_state + 1 end,
+                    menu = { update = function() refreshed_menu = refreshed_menu + 1 end },
+                },
+                nil,
+                nil,
+                {
+                    fail_if_not_ready = function() return end,
+                    config = function()
+                        return {
+                            sentence_field = "SentKanji",
+                            reload_config_before_card_creation = false,
+                        }
+                    end,
+                }
+        )
+        test_exporter.update_notes = function()
+            updated = true
+        end
+
+        test_exporter.update_last_note(false)
+        h.assert_equals(updated, false)
+        h.assert_equals(h.is_substr(confirmation_overlay.data, "Only the newest 3 of 5 notes share SentKanji."), true)
+        h.assert_equals(h.is_substr(confirmation_overlay.data, "Update all 5 anyway?"), true)
+        h.assert_equals(type(confirmation_bindings.y), "function")
+        h.assert_equals(type(confirmation_bindings.n), "function")
+        h.assert_equals(type(confirmation_bindings.ENTER), "function")
+        h.assert_equals(type(confirmation_bindings.left), "function")
+        h.assert_equals(type(confirmation_bindings.right), "function")
+        h.assert_equals(h.is_substr(confirmation_overlay.data, OSD:new():blue("[n] No"):get_text()), true)
+
+        confirmation_bindings.left()
+        h.assert_equals(h.is_substr(confirmation_overlay.data, OSD:new():blue("[y] Yes"):get_text()), true)
+        confirmation_bindings.right()
+        h.assert_equals(h.is_substr(confirmation_overlay.data, OSD:new():blue("[n] No"):get_text()), true)
+        confirmation_bindings.left()
+        confirmation_bindings.ENTER()
+        h.assert_equals(updated, true)
+
+        updated = false
+        test_exporter.update_last_note(false)
+        confirmation_bindings.y()
+        h.assert_equals(updated, true)
+
+        updated = false
+        test_exporter.update_last_note(false)
+        confirmation_bindings.n()
+        h.assert_equals(updated, false)
+        h.assert_equals(notification, "Card update cancelled.")
+        h.assert_equals(cleared_state, 2)
+        h.assert_equals(refreshed_menu, 1)
+
+        sentences[1], sentences[2] = "target", "target"
+        test_exporter.update_last_note(false)
+        h.assert_equals(updated, true)
+        h.notify = original_notify
+        mp.add_forced_key_binding = original_add_key_binding
+        mp.remove_key_binding = original_remove_key_binding
+        mp.create_osd_overlay = original_create_osd_overlay
+    end
+
+    local function test_update_notes_confirms_unrelated_single_note()
+        local note_id = os.time() * 1000
+        local notification = nil
+        local original_notify = h.notify
+        local original_add_key_binding = mp.add_forced_key_binding
+        local original_remove_key_binding = mp.remove_key_binding
+        local original_create_osd_overlay = mp.create_osd_overlay
+        local confirmation_bindings = {}
+        local confirmation_overlay = { update = function() return end, remove = function() return end }
+        local cleared_state = 0
+        local refreshed_menu = 0
+        h.notify = function(message)
+            notification = message
+        end
+        mp.add_forced_key_binding = function(key, _, fn)
+            confirmation_bindings[key] = fn
+        end
+        mp.remove_key_binding = function()
+            return
+        end
+        mp.create_osd_overlay = function()
+            return confirmation_overlay
+        end
+
+        local function make_media_job()
+            local job = { filename = nil, run_async = function() return end }
+            job.on_finish = function()
+                return job
+            end
+            return job
+        end
+
+        local current_sub = {
+            text = "無視された 小学生女子に シカトされた",
+            secondary = "I was ignored by an elementary school girl.",
+            is_valid = function()
+                return true
+            end,
+        }
+        local test_exporter = make_exporter().init(
+                {
+                    get_note_fields = function()
+                        return { SentKanji = "そのメモ ちょっと<b>貸して</b>みろよ" }
+                    end,
+                    get_media_dir_path = function() return "/tmp" end,
+                },
+                {
+                    get_lines = function() return nil end,
+                    clear_options = function() cleared_state = cleared_state + 1 end,
+                },
+                {
+                    collect_from_current = function()
+                        return current_sub
+                    end,
+                    clipboard_prepare = function(text)
+                        return text
+                    end,
+                    clear = function() cleared_state = cleared_state + 1 end,
+                    menu = { update = function() refreshed_menu = refreshed_menu + 1 end },
+                },
+                {
+                    set_output_dir = function() return end,
+                    snapshot = { create_job = make_media_job },
+                    audio = { create_job = make_media_job },
+                },
+                { set_output_dir = function() return end },
+                {
+                    fail_if_not_ready = function() return end,
+                    config = function()
+                        return {
+                            sentence_field = "SentKanji",
+                            reload_config_before_card_creation = false,
+                            audio_padding = 0,
+                            miscinfo_enable = false,
+                        }
+                    end,
+                }
+        )
+
+        test_exporter.update_notes({ note_id }, true)
+        h.assert_equals(
+                h.is_substr(confirmation_overlay.data, "The target note's SentKanji does not match the current subtitle."),
+                true
+        )
+        h.assert_equals(h.is_substr(confirmation_overlay.data, "Update this note anyway?"), true)
+        h.assert_equals(type(confirmation_bindings.y), "function")
+        h.assert_equals(type(confirmation_bindings.n), "function")
+        h.assert_equals(type(confirmation_bindings.ENTER), "function")
+        h.assert_equals(h.is_substr(confirmation_overlay.data, OSD:new():blue("[n] No"):get_text()), true)
+
+        confirmation_bindings.ENTER()
+        h.assert_equals(notification, "Card update cancelled.")
+        h.assert_equals(cleared_state, 2)
+        h.assert_equals(refreshed_menu, 1)
+
+        test_exporter.update_notes({ note_id }, true)
+        confirmation_bindings.y()
+        h.assert_equals(cleared_state, 4)
+        h.assert_equals(refreshed_menu, 2)
+        h.notify = original_notify
+        mp.add_forced_key_binding = original_add_key_binding
+        mp.remove_key_binding = original_remove_key_binding
+        mp.create_osd_overlay = original_create_osd_overlay
+    end
+
     local function test_html_escaping()
         -- HTML escaping
         local old_note = {
@@ -503,6 +933,8 @@ local function make_exporter()
         test_html_escaping()
         test_join_fields_duplicates()
         test_make_new_note_data()
+        test_update_last_note_confirms_unrelated_notes()
+        test_update_notes_confirms_unrelated_single_note()
         return pub
     end
 
@@ -513,6 +945,9 @@ local function run_tests(test_exporter)
     -- Test join_field_content
     h.assert_equals(join_field_content("ヤツらの声に現実味が…", "あの遠さはヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
     h.assert_equals(join_field_content("あの遠さはヤツらの声に現実味が…", "ヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
+    h.assert_equals(sentences_are_related("<b>target</b>", "target"), true)
+    h.assert_equals(sentences_are_related("a longer target sentence", "target"), true)
+    h.assert_equals(sentences_are_related("unrelated", "target"), false)
 
     local test_cfg_mgr = {
         fail_if_not_ready = function()
