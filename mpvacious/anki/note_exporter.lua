@@ -246,7 +246,7 @@ local function make_exporter()
     end
 
     --- expected cfg fields: bool disable_forvo, bool overwrite
-    local function make_new_note_data(stored_data, new_data, cfg)
+    function pub.make_new_note_data(stored_data, new_data, cfg)
         cfg = cfg or {}
 
         if stored_data then
@@ -413,111 +413,97 @@ local function make_exporter()
         return pub
     end
 
-    local function test_join_fields()
-        -- Test join_fields
-        local new_note = {
-            SentKanji = "それは…分からんよ",
-            SentAudio = "[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
-            SentEng = "Well...",
-            Image = '<img alt="snapshot" src="s01e13_02m25s561ms.avif">'
-        }
-        local old_note = {
-            SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]",
-            Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif">',
-            VocabAudio = "",
-            Notes = "",
-            VocabDef = "",
-            SentKanji = "勝ちって何に？",
-            SentEng = "What would we win, exactly?",
-        }
-        local expected = {
-            SentKanji = "勝ちって何に？<br>それは…分からんよ",
-            SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]<br>[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
-            SentEng = "What would we win, exactly?<br>Well...",
-            Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif"><br><img alt="snapshot" src="s01e13_02m25s561ms.avif">',
-            Notes = "",
-        }
-        h.assert_equals(pub.join_fields(new_note, old_note), expected)
-    end
-
-    local function test_join_fields_duplicates()
-        -- Equivalent subtitle punctuation must not duplicate a dictionary sentence.
-        local old_note = {
-            SentKanji = "女の子の <b>女性</b>の　『お』から始まる…",
-        }
-        local new_note = {
-            SentKanji = "女の子の <b>女性</b>の “お”から始まる…",
-        }
-        h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
-        for _, equivalent in ipairs {
-            "女の子の <b>女性</b>の\194\160〝お〟から始まる…\226\128\139",
-            "\239\187\191女の子の <b>女性</b>の\226\128\175＂お＂から始まる…",
-        } do
-            new_note.SentKanji = equivalent
-            h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
-        end
-
-        -- Distinct punctuation must still be appended, not treated as duplicates.
-        old_note = { SentKanji = "それは…分からんよ" }
-        new_note = { SentKanji = "それは！分からんよ" }
-        h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, "それは…分からんよ<br>それは！分からんよ")
-
-        -- Quote variants normalize, but differing surrounding text must still be appended.
-        old_note = { SentKanji = "『お』から始まる" }
-        new_note = { SentKanji = "“お”から終わる" }
-        h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, "『お』から始まる<br>“お”から終わる")
-
-    end
-
-    local function test_make_new_note_data()
-        -- Test make_new_note_data
-        local old_note = {
-            SentKanji = "ヤツらの声に<b>現実味</b>が…",
-        }
-        local new_note = {
-            SentKanji = "あの遠さはヤツらの声に現実味が…",
-        }
-        local expected = {
-            SentKanji = "あの遠さはヤツらの声に<b>現実味</b>が…",
-        }
-        h.assert_equals(make_new_note_data(old_note, new_note, { overwrite = false, disable_forvo = true }).SentKanji, expected.SentKanji)
-    end
-
-    local function test_html_escaping()
-        -- HTML escaping
-        local old_note = {
-            SentKanji = "Well, that's the knighthood in the bag.",
-        }
-        local new_note = {
-            SentKanji = "Well, that&apos;s the knighthood in the bag.",
-        }
-        h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
-        local new_note = {
-            SentKanji = "Well, that&#39;s the knighthood in the bag.",
-        }
-        h.assert_equals(pub.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
-    end
-
-    function pub.run_tests()
-        test_join_fields()
-        test_html_escaping()
-        test_join_fields_duplicates()
-        test_make_new_note_data()
-        return pub
-    end
-
     return pub
 end
 
-local function run_tests(test_exporter)
-    -- Test join_field_content
-    h.assert_equals(join_field_content("ヤツらの声に現実味が…", "あの遠さはヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
-    h.assert_equals(join_field_content("あの遠さはヤツらの声に現実味が…", "ヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
+local function test_join_fields(test_exporter)
+    -- Test join_fields
+    local new_note = {
+        SentKanji = "それは…分からんよ",
+        SentAudio = "[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
+        SentEng = "Well...",
+        Image = '<img alt="snapshot" src="s01e13_02m25s561ms.avif">'
+    }
+    local old_note = {
+        SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]",
+        Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif">',
+        VocabAudio = "",
+        Notes = "",
+        VocabDef = "",
+        SentKanji = "勝ちって何に？",
+        SentEng = "What would we win, exactly?",
+    }
+    local expected = {
+        SentKanji = "勝ちって何に？<br>それは…分からんよ",
+        SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]<br>[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
+        SentEng = "What would we win, exactly?<br>Well...",
+        Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif"><br><img alt="snapshot" src="s01e13_02m25s561ms.avif">',
+        Notes = "",
+    }
+    h.assert_equals(test_exporter.join_fields(new_note, old_note), expected)
+end
 
+local function test_html_escaping(test_exporter)
+    -- HTML escaping
+    local old_note = {
+        SentKanji = "Well, that's the knighthood in the bag.",
+    }
+    local new_note = {
+        SentKanji = "Well, that&apos;s the knighthood in the bag.",
+    }
+    h.assert_equals(test_exporter.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+    local new_note = {
+        SentKanji = "Well, that&#39;s the knighthood in the bag.",
+    }
+    h.assert_equals(test_exporter.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+end
+
+local function test_join_fields_duplicates(test_exporter)
+    -- Equivalent subtitle punctuation must not duplicate a dictionary sentence.
+    local old_note = {
+        SentKanji = "女の子の <b>女性</b>の　『お』から始まる…",
+    }
+    local new_note = {
+        SentKanji = "女の子の <b>女性</b>の “お”から始まる…",
+    }
+    h.assert_equals(test_exporter.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+    for _, equivalent in ipairs {
+        "女の子の <b>女性</b>の\194\160〝お〟から始まる…\226\128\139",
+        "\239\187\191女の子の <b>女性</b>の\226\128\175＂お＂から始まる…",
+    } do
+        new_note.SentKanji = equivalent
+        h.assert_equals(test_exporter.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+    end
+
+    -- Distinct punctuation must still be appended, not treated as duplicates.
+    old_note = { SentKanji = "それは…分からんよ" }
+    new_note = { SentKanji = "それは！分からんよ" }
+    h.assert_equals(test_exporter.join_fields(new_note, old_note).SentKanji, "それは…分からんよ<br>それは！分からんよ")
+
+    -- Quote variants normalize, but differing surrounding text must still be appended.
+    old_note = { SentKanji = "『お』から始まる" }
+    new_note = { SentKanji = "“お”から終わる" }
+    h.assert_equals(test_exporter.join_fields(new_note, old_note).SentKanji, "『お』から始まる<br>“お”から終わる")
+
+end
+
+local function test_make_new_note_data(test_exporter)
+    -- Test make_new_note_data
+    local old_note = {
+        SentKanji = "ヤツらの声に<b>現実味</b>が…",
+    }
+    local new_note = {
+        SentKanji = "あの遠さはヤツらの声に現実味が…",
+    }
+    local expected = {
+        SentKanji = "あの遠さはヤツらの声に<b>現実味</b>が…",
+    }
+    h.assert_equals(test_exporter.make_new_note_data(old_note, new_note, { overwrite = false, disable_forvo = true }).SentKanji, expected.SentKanji)
+end
+
+local function make_test_exporter()
     local test_cfg_mgr = {
-        fail_if_not_ready = function()
-            return
-        end,
+        fail_if_not_ready = h.noop,
         config = function()
             return {
                 sentence_field = "SentKanji",
@@ -529,8 +515,7 @@ local function run_tests(test_exporter)
             }
         end,
     }
-
-    test_exporter = test_exporter or make_exporter().init(
+    return make_exporter().init(
             nil, -- ankiconnect
             nil, -- quick_creation_opts
             nil, -- subs_observer
@@ -538,7 +523,20 @@ local function run_tests(test_exporter)
             nil, -- forvo
             test_cfg_mgr
     )
-    test_exporter.run_tests()
+end
+
+local function test_join_field_content()
+    h.assert_equals(join_field_content("ヤツらの声に現実味が…", "あの遠さはヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
+    h.assert_equals(join_field_content("あの遠さはヤツらの声に現実味が…", "ヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
+end
+
+local function run_tests(test_exporter)
+    test_exporter = test_exporter or make_test_exporter()
+    test_join_field_content()
+    test_join_fields(test_exporter)
+    test_html_escaping(test_exporter)
+    test_join_fields_duplicates(test_exporter)
+    test_make_new_note_data(test_exporter)
 end
 
 return {
