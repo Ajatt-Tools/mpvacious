@@ -23,10 +23,10 @@ this.default_height_px = 350
 -- Measure quality from 0 (worst/lowest) to 100 (best/highest)
 this.default_image_quality = 15
 
--- Menu line length limits (characters).
+-- Menu line length limits (display width units).
 -- Values outside this range are clamped during config validation.
 this.min_menu_max_shown_line_length = 5
-this.default_menu_max_shown_line_length = 30
+this.default_menu_max_shown_line_length = 60
 this.max_menu_max_shown_line_length = 200
 
 this.get_default = function()
