@@ -691,24 +691,32 @@ end
 
 --- Like str[:n_chars] in python, but adds "…" at the end if the string is longer than n_chars.
 function this.str_limit(str, n_chars)
+    return this.str_limit_width(str, n_chars, 1)
+end
+
+--- Truncate str so its display width is at most width_budget.
+--- CJK characters count as 2 by default; narrower characters count as 1.
+--- An ellipsis ("…") is appended after the budget is exhausted when truncating,
+--- so the result can exceed width_budget by the ellipsis's width.
+function this.str_limit_width(str, width_budget, wide_char_width)
+    wide_char_width = wide_char_width or 2
     local ret = {}
-    local size = 0
-    for idx, char in this.utf8_iter(str) do
-        table.insert(ret, char)
-        size = size + 1
-        if size >= n_chars then
-            if #str > (idx + #char) then
-                table.insert(ret, "…")
-            end
+    local used_budget = 0
+    for _, char in this.utf8_iter(str) do
+        local char_width = this.is_cjk_heuristic(char) and wide_char_width or 1
+        if used_budget + char_width > width_budget then
+            table.insert(ret, "…")
             break
         end
+        table.insert(ret, char)
+        used_budget = used_budget + char_width
     end
     return table.concat(ret)
 end
 
 --- Return true if the UTF-8 character is wider than ASCII in the OSD font (e.g. CJK).
 --- A byte length of 3 or 4 means a wide character; everything else is narrow.
-local function is_cjk_heuristic(utf8_chr)
+function this.is_cjk_heuristic(utf8_chr)
     return #utf8_chr > 2
 end
 
@@ -733,7 +741,7 @@ function this.str_wrap(str, n_chars, separator)
     end
 
     local function calc_char_width(char)
-        return is_cjk_heuristic(char) and 2 or 1
+        return this.is_cjk_heuristic(char) and 2 or 1
     end
 
     local function flush_at_space()
