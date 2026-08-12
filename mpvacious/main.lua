@@ -113,19 +113,18 @@ local function _run(params)
 end
 
 --- Trim, strip OSD-special characters, and limit the string
---- to menu_max_shown_line_length characters for display in the menus.
+--- to a display width of menu_max_shown_line_length for the menus.
+--- CJK characters count as 2 width units, narrower characters as 1.
 --- An ellipsis ("…") is appended when truncating.
 local function escape_for_osd(str)
     str = h.trim(str)
     str = str:gsub('[%[%]{}]', '')
-    return h.str_limit(str, cfg_mgr.query("menu_max_shown_line_length"))
+    return h.str_limit_width(str, cfg_mgr.query("menu_max_shown_line_length"))
 end
 
---- Wrap selected subtitle text for the OSD second pane.
---- Newlines are protected with a placeholder so escape_for_osd (via h.trim)
---- does not flatten them; they are restored before wrapping.
---- Width heuristic: one display unit is approximately half an em;
---- the right pane is 640 ASS pixels wide.
+--- Flatten subtitle text for the OSD second pane and wrap it to the pane width.
+--- Newlines are replaced with spaces so each recorded sub renders on one line;
+--- the flat string is then width-limited and wrapped to fit the pane.
 local function wrap_selected_for_osd(str)
     str = escape_for_osd(h.remove_newlines(str))
     local wrap_width = math.floor(menu_consts.start_x_second_pane * 2 / cfg_mgr.query("menu_font_size"))
