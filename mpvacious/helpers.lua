@@ -175,8 +175,9 @@ function this.remove_text_in_parentheses(str)
     return str:gsub('(%b())(.)', '%2'):gsub('(（.-）)(.)', '%2')
 end
 
-function this.remove_newlines(str)
-    return str:gsub('[\n\r]+', ' ')
+function this.remove_newlines(str, repl_char)
+    repl_char = repl_char or ' '
+    return str:gsub('[\n\r]+', repl_char)
 end
 
 --- Normalize CRLF and CR line endings to LF.
