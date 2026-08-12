@@ -80,6 +80,14 @@ local function make_exporter()
         mismatch_overlay.z = 1000
     end
 
+    local function clear_update_state()
+        self.subs_observer.clear()
+        self.quick_creation_opts:clear_options()
+        if self.subs_observer.menu and self.subs_observer.menu.update then
+            self.subs_observer.menu:update()
+        end
+    end
+
     local function clear_mismatch_confirmation()
         mp.remove_key_binding(confirm_mismatch_yes)
         mp.remove_key_binding(confirm_mismatch_no)
@@ -101,6 +109,7 @@ local function make_exporter()
 
         local function cancel_update()
             clear_mismatch_confirmation()
+            clear_update_state()
             h.notify("Card update cancelled.", "info", 2)
         end
 
@@ -474,8 +483,7 @@ local function make_exporter()
         snapshot.on_finish(create_files_countdown.decrease).run_async()
         audio.on_finish(create_files_countdown.decrease).run_async()
 
-        self.subs_observer.clear()
-        self.quick_creation_opts:clear_options()
+        clear_update_state()
         return pub
     end
 
@@ -707,6 +715,8 @@ local function make_exporter()
         local original_create_osd_overlay = mp.create_osd_overlay
         local confirmation_bindings = {}
         local confirmation_overlay = { update = function() return end, remove = function() return end }
+        local cleared_state = 0
+        local refreshed_menu = 0
         h.notify = function(message)
             notification = message
         end
@@ -733,8 +743,14 @@ local function make_exporter()
                         end
                     end,
                 },
-                { get_cards = function() return 5 end },
-                nil,
+                {
+                    get_cards = function() return 5 end,
+                    clear_options = function() cleared_state = cleared_state + 1 end,
+                },
+                {
+                    clear = function() cleared_state = cleared_state + 1 end,
+                    menu = { update = function() refreshed_menu = refreshed_menu + 1 end },
+                },
                 nil,
                 nil,
                 {
@@ -780,6 +796,8 @@ local function make_exporter()
         confirmation_bindings.n()
         h.assert_equals(updated, false)
         h.assert_equals(notification, "Card update cancelled.")
+        h.assert_equals(cleared_state, 2)
+        h.assert_equals(refreshed_menu, 1)
 
         sentences[1], sentences[2] = "target", "target"
         test_exporter.update_last_note(false)
@@ -799,6 +817,8 @@ local function make_exporter()
         local original_create_osd_overlay = mp.create_osd_overlay
         local confirmation_bindings = {}
         local confirmation_overlay = { update = function() return end, remove = function() return end }
+        local cleared_state = 0
+        local refreshed_menu = 0
         h.notify = function(message)
             notification = message
         end
@@ -810,6 +830,14 @@ local function make_exporter()
         end
         mp.create_osd_overlay = function()
             return confirmation_overlay
+        end
+
+        local function make_media_job()
+            local job = { filename = nil, run_async = function() return end }
+            job.on_finish = function()
+                return job
+            end
+            return job
         end
 
         local current_sub = {
@@ -824,8 +852,12 @@ local function make_exporter()
                     get_note_fields = function()
                         return { SentKanji = "そのメモ ちょっと<b>貸して</b>みろよ" }
                     end,
+                    get_media_dir_path = function() return "/tmp" end,
                 },
-                { get_lines = function() return nil end },
+                {
+                    get_lines = function() return nil end,
+                    clear_options = function() cleared_state = cleared_state + 1 end,
+                },
                 {
                     collect_from_current = function()
                         return current_sub
@@ -833,15 +865,23 @@ local function make_exporter()
                     clipboard_prepare = function(text)
                         return text
                     end,
+                    clear = function() cleared_state = cleared_state + 1 end,
+                    menu = { update = function() refreshed_menu = refreshed_menu + 1 end },
                 },
-                nil,
-                nil,
+                {
+                    set_output_dir = function() return end,
+                    snapshot = { create_job = make_media_job },
+                    audio = { create_job = make_media_job },
+                },
+                { set_output_dir = function() return end },
                 {
                     fail_if_not_ready = function() return end,
                     config = function()
                         return {
                             sentence_field = "SentKanji",
                             reload_config_before_card_creation = false,
+                            audio_padding = 0,
+                            miscinfo_enable = false,
                         }
                     end,
                 }
@@ -860,6 +900,13 @@ local function make_exporter()
 
         confirmation_bindings.ENTER()
         h.assert_equals(notification, "Card update cancelled.")
+        h.assert_equals(cleared_state, 2)
+        h.assert_equals(refreshed_menu, 1)
+
+        test_exporter.update_notes({ note_id }, true)
+        confirmation_bindings.y()
+        h.assert_equals(cleared_state, 4)
+        h.assert_equals(refreshed_menu, 2)
         h.notify = original_notify
         mp.add_forced_key_binding = original_add_key_binding
         mp.remove_key_binding = original_remove_key_binding
