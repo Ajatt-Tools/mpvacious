@@ -23,11 +23,11 @@ this.default_height_px = 350
 -- Measure quality from 0 (worst/lowest) to 100 (best/highest)
 this.default_image_quality = 15
 
--- Menu line length limits (display width units).
+-- Maximum number of wrapped lines shown per recorded subtitle in the menu's second pane.
 -- Values outside this range are clamped during config validation.
-this.min_menu_max_shown_line_length = 5
-this.default_menu_max_shown_line_length = 60
-this.max_menu_max_shown_line_length = 200
+this.min_menu_max_shown_lines = 1
+this.default_menu_max_shown_lines = 1
+this.max_menu_max_shown_lines = 20
 
 this.get_default = function()
     return {
@@ -79,7 +79,7 @@ this.get_default = function()
         -- Menu
         menu_font_name = "Noto Sans CJK JP",
         menu_font_size = 25,
-        menu_max_shown_line_length = this.default_menu_max_shown_line_length,
+        menu_max_shown_lines = this.default_menu_max_shown_lines,
         show_selected_text = true,
 
         -- Make sure to remove loudnorm from ffmpeg_audio_args and mpv_audio_args before enabling.

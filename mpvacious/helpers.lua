@@ -200,6 +200,16 @@ function this.split_lines(str)
     return lines
 end
 
+--- Keep at most max_lines lines, appending "…" to the last kept line if any were dropped.
+function this.limit_lines(lines, max_lines)
+    if #lines <= max_lines then
+        return lines
+    end
+    local kept = this.itable_slice(lines, 1, max_lines)
+    kept[#kept] = kept[#kept] .. "…"
+    return kept
+end
+
 function this.normalize_spaces(str)
     -- Replace sequences of ASCII spaces or full-width ideographic spaces with a single ASCII space.
     return str:gsub('　+', ' '):gsub('  +', " ")
@@ -941,6 +951,21 @@ local function test_split_lines()
     end
 end
 
+local function test_limit_lines()
+    local limit_lines_cases = {
+        -- {lines, max_lines, expected}
+        { { "a", "b" }, 3, { "a", "b" } }, -- under the limit: unchanged
+        { { "a", "b" }, 2, { "a", "b" } }, -- exactly at the limit: unchanged
+        { { "a", "b", "c" }, 2, { "a", "b…" } }, -- over the limit: capped, ellipsis on the last kept line
+        { { "a", "b", "c" }, 1, { "a…" } }, -- limit of one line
+        { {}, 2, {} }, -- empty input
+    }
+    for _, case in ipairs(limit_lines_cases) do
+        local lines, max_lines, expected = this.unpack(case)
+        this.assert_equals(this.limit_lines(lines, max_lines), expected)
+    end
+end
+
 local function test_str_wrap()
     local str_wrap_cases = {
         { text = "short", n_chars = 25, separator = [[\N]], expected = "short" },
@@ -1148,6 +1173,9 @@ function this.run_tests()
 
     -- Test split_lines
     test_split_lines()
+
+    -- Test limit_lines
+    test_limit_lines()
 
     -- Test str wrap
     test_str_wrap()
