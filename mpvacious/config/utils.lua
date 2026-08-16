@@ -135,10 +135,10 @@ local function validate_config(config)
     end
 
     local function check_menu_settings()
-        config.menu_max_shown_line_length = h.clamp(
-                config.menu_max_shown_line_length,
-                defaults.min_menu_max_shown_line_length,
-                defaults.max_menu_max_shown_line_length
+        config.menu_max_shown_lines = h.clamp(
+                config.menu_max_shown_lines,
+                defaults.min_menu_max_shown_lines,
+                defaults.max_menu_max_shown_lines
         )
     end
 
@@ -153,24 +153,24 @@ local function validate_config(config)
 end
 
 local function run_tests()
-    local function validate_menu_line_limit(value)
+    local function validate_menu_max_shown_lines(value)
         local config = defaults.get_default()
-        config.menu_max_shown_line_length = value
+        config.menu_max_shown_lines = value
         validate_config(config)
-        return config.menu_max_shown_line_length
+        return config.menu_max_shown_lines
     end
 
     local cases = {
-        { -10, defaults.min_menu_max_shown_line_length },
-        { defaults.min_menu_max_shown_line_length, defaults.min_menu_max_shown_line_length },
-        { defaults.default_menu_max_shown_line_length, defaults.default_menu_max_shown_line_length },
-        { defaults.max_menu_max_shown_line_length, defaults.max_menu_max_shown_line_length },
-        { 9999, defaults.max_menu_max_shown_line_length },
+        { -10, defaults.min_menu_max_shown_lines },
+        { defaults.min_menu_max_shown_lines, defaults.min_menu_max_shown_lines },
+        { defaults.default_menu_max_shown_lines, defaults.default_menu_max_shown_lines },
+        { defaults.max_menu_max_shown_lines, defaults.max_menu_max_shown_lines },
+        { 9999, defaults.max_menu_max_shown_lines },
     }
 
     for _, case in ipairs(cases) do
         local value, expected = h.unpack(case)
-        h.assert_equals(validate_menu_line_limit(value), expected)
+        h.assert_equals(validate_menu_max_shown_lines(value), expected)
     end
 end
 

@@ -112,23 +112,33 @@ local function _run(params)
     end
 end
 
---- Trim, strip OSD-special characters, and limit the string
---- to a display width of menu_max_shown_line_length for the menus.
---- CJK characters count as 2 width units, narrower characters as 1.
---- An ellipsis ("…") is appended when truncating.
+--- Number of display width units that fit in a menu pane at the current font size.
+--- One unit is approximately half an em; a pane is start_x_second_pane ASS pixels wide.
+local function menu_line_width()
+    return math.floor(menu_consts.start_x_second_pane * 2 / cfg_mgr.query("menu_font_size"))
+end
+
+--- Trim and strip OSD-special characters for display in the menus.
 local function escape_for_osd(str)
     str = h.trim(str)
     str = str:gsub('[%[%]{}]', '')
-    return h.str_limit_width(str, cfg_mgr.query("menu_max_shown_line_length"))
+    return str
+end
+
+--- Flatten a subtitle to one line and width-limit it for the subs selector.
+--- An ellipsis ("…") is appended when truncating.
+local function limit_selector_line(str)
+    return h.str_limit_width(escape_for_osd(h.remove_newlines(str)), menu_line_width())
 end
 
 --- Flatten subtitle text for the OSD second pane and wrap it to the pane width.
---- Newlines are replaced with spaces so each recorded sub renders on one line;
---- the flat string is then width-limited and wrapped to fit the pane.
+--- Newlines are replaced with spaces so each recorded sub renders as one entry;
+--- the entry is wrapped to the pane width and capped at menu_max_shown_lines lines,
+--- with an ellipsis ("…") on the last shown line when capped.
 local function wrap_selected_for_osd(str)
     str = escape_for_osd(h.remove_newlines(str))
-    local wrap_width = math.floor(menu_consts.start_x_second_pane * 2 / cfg_mgr.query("menu_font_size"))
-    return h.str_wrap(str, wrap_width, [[\N]])
+    local wrapped_lines = h.limit_lines(h.str_to_lines(str, menu_line_width()), cfg_mgr.query("menu_max_shown_lines"))
+    return table.concat(wrapped_lines, [[\N]])
 end
 
 local function ensure_deck()
@@ -476,9 +486,9 @@ function subs_menu:print_subs_selector(osd)
     for _, item in ipairs(subs_menu.subs_selector.adjacent_items(5, 5)) do
         local checkbox = subs_menu.chosen_subs[item.idx] and "[x]" or "[ ]"
         if item.idx == subs_menu.subs_selector.get_index() then
-            osd:tab():blue(checkbox):text(' <'):blue(escape_for_osd(item.item.text)):text('>'):newline()
+            osd:tab():blue(checkbox):text(' <'):blue(limit_selector_line(item.item.text)):text('>'):newline()
         else
-            osd:tab():item(checkbox):text(' <'):text(escape_for_osd(item.item.text)):text('>'):newline()
+            osd:tab():item(checkbox):text(' <'):text(limit_selector_line(item.item.text)):text('>'):newline()
         end
     end
     osd:submenu('Controls'):newline()
