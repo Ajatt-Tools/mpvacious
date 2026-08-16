@@ -4,10 +4,10 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 ]]
 
 local mp = require('mp')
+local input = require('mp.input')
 local msg = require('mp.msg')
 local h = require('helpers')
 local dec_counter = require('utils.dec_counter')
-local OSD = require('menu.osd_styler')
 
 --- Instead of comparing fields literally, normalize them to match different representations.
 local function normalize_field_content(new_text, old_text, cfg)
@@ -66,19 +66,7 @@ end
 local function make_exporter()
     local self = {}
     local pub = {}
-    local pending_mismatch_timer = nil
-    local confirm_mismatch_yes = "mpvacious-confirm-mismatched-notes-yes"
-    local confirm_mismatch_no = "mpvacious-confirm-mismatched-notes-no"
-    local confirm_mismatch_enter = "mpvacious-confirm-mismatched-notes-enter"
-    local confirm_mismatch_left = "mpvacious-confirm-mismatched-notes-left"
-    local confirm_mismatch_right = "mpvacious-confirm-mismatched-notes-right"
-    local mismatch_selection = "no"
-    local mismatch_overlay = mp.create_osd_overlay and mp.create_osd_overlay('ass-events')
-    if mismatch_overlay then
-        mismatch_overlay.res_x = 1280
-        mismatch_overlay.res_y = 720
-        mismatch_overlay.z = 1000
-    end
+    local active_mismatch_confirmation = nil
 
     local function clear_update_state()
         self.subs_observer.clear()
@@ -89,103 +77,61 @@ local function make_exporter()
     end
 
     local function clear_mismatch_confirmation()
-        mp.remove_key_binding(confirm_mismatch_yes)
-        mp.remove_key_binding(confirm_mismatch_no)
-        mp.remove_key_binding(confirm_mismatch_enter)
-        mp.remove_key_binding(confirm_mismatch_left)
-        mp.remove_key_binding(confirm_mismatch_right)
-        if mismatch_overlay then
-            mismatch_overlay:remove()
+        if active_mismatch_confirmation then
+            active_mismatch_confirmation.resolved = true
+            if active_mismatch_confirmation.timer then
+                active_mismatch_confirmation.timer:kill()
+            end
+            active_mismatch_confirmation = nil
+            input.terminate()
         end
-        if pending_mismatch_timer then
-            pending_mismatch_timer:kill()
-            pending_mismatch_timer = nil
-        end
-        mismatch_selection = "no"
     end
 
     local function confirm_mismatched_notes(note_ids, warning, proceed_with_update)
         clear_mismatch_confirmation()
+        local confirmation = { resolved = false, timer = nil }
+        active_mismatch_confirmation = confirmation
 
-        local function cancel_update()
-            clear_mismatch_confirmation()
-            clear_update_state()
-            h.notify("Card update cancelled.", "info", 2)
-        end
-
-        local function confirm_update()
-            clear_mismatch_confirmation()
-            proceed_with_update()
-        end
-
-        local question
-        if #note_ids == 1 then
-            question = "Update this note anyway?"
-        else
-            question = string.format("Update all %i anyway?", #note_ids)
-        end
-
-        local function update_confirmation_overlay()
-            if not mismatch_overlay then
+        local function finish(confirmed)
+            if confirmation.resolved then
                 return
             end
-            local osd = OSD:new()
-                    :new_layer()
-                    :align(5)
-                    :pos(640, 360)
-                    :border(3)
-                    :fsize(32)
-                    :red("Warning")
-                    :newline()
-                    :text(warning)
-                    :newline()
-                    :text(question)
-                    :newline()
-            if mismatch_selection == "yes" then
-                osd:blue("[y] Yes")
-            else
-                osd:item("[y] Yes")
+            confirmation.resolved = true
+            if confirmation.timer then
+                confirmation.timer:kill()
             end
-            osd:text("      ")
-            if mismatch_selection == "no" then
-                osd:blue("[n] No")
-            else
-                osd:item("[n] No")
+            if active_mismatch_confirmation == confirmation then
+                active_mismatch_confirmation = nil
             end
-            osd:newline():italics("←/→ select      Enter confirm")
-            mismatch_overlay.data = osd:get_text()
-            mismatch_overlay:update()
-        end
-
-        local function select_option(option)
-            mismatch_selection = option
-            update_confirmation_overlay()
-        end
-
-        local function confirm_selection()
-            if mismatch_selection == "yes" then
-                confirm_update()
+            input.terminate()
+            if confirmed then
+                proceed_with_update()
             else
-                cancel_update()
+                clear_update_state()
+                h.notify("Card update cancelled.", "info", 2)
             end
         end
 
-        mp.add_forced_key_binding("y", confirm_mismatch_yes, confirm_update)
-        mp.add_forced_key_binding("n", confirm_mismatch_no, cancel_update)
-        mp.add_forced_key_binding("ENTER", confirm_mismatch_enter, confirm_selection)
-        mp.add_forced_key_binding("left", confirm_mismatch_left, function()
-            select_option("yes")
-        end)
-        mp.add_forced_key_binding("right", confirm_mismatch_right, function()
-            select_option("no")
-        end)
+        local question = #note_ids == 1
+                and "Update this note anyway?"
+                or string.format("Update all %i anyway?", #note_ids)
+        input.select({
+            prompt = string.format("Warning: %s mismatch. %s", self.config.sentence_field, question),
+            items = { "Yes", "No" },
+            default_item = 2,
+            submit = function(index)
+                finish(index == 1)
+            end,
+            closed = function()
+                finish(false)
+            end,
+        })
         if mp.add_timeout then
-            pending_mismatch_timer = mp.add_timeout(10, cancel_update)
+            confirmation.timer = mp.add_timeout(10, function()
+                finish(false)
+            end)
         end
-        msg.warn(string.format("%s %s [y] Yes [n] No", warning, question))
-        if mismatch_overlay then
-            update_confirmation_overlay()
-        end
+        msg.warn(string.format("%s %s", warning, question))
     end
 
     local substitute_fmt = (function()
@@ -487,16 +433,20 @@ local function make_exporter()
         return pub
     end
 
-    function pub.update_notes(note_ids, overwrite)
+    function pub.update_notes(note_ids, overwrite, warnings)
         local sub = collect_update_subtitle()
 
         if not sub:is_valid() then
             return h.notify("Nothing to export. Have you set the timings?", "warn", 2)
         end
 
-        local warning = current_subtitle_mismatch(note_ids, sub)
-        if warning then
-            confirm_mismatched_notes(note_ids, warning, function()
+        warnings = warnings or {}
+        local subtitle_warning = current_subtitle_mismatch(note_ids, sub)
+        if subtitle_warning then
+            table.insert(warnings, subtitle_warning)
+        end
+        if #warnings > 0 then
+            confirm_mismatched_notes(note_ids, table.concat(warnings, "\n"), function()
                 perform_update(note_ids, overwrite, sub)
             end)
             return pub
@@ -586,9 +536,7 @@ local function make_exporter()
                         #last_note_ids,
                         self.config.sentence_field
                 )
-                confirm_mismatched_notes(last_note_ids, warning, function()
-                    pub.update_notes(last_note_ids, overwrite)
-                end)
+                pub.update_notes(last_note_ids, overwrite, { warning })
                 return pub
             end
         end
@@ -703,34 +651,8 @@ local function make_exporter()
         h.assert_equals(make_new_note_data(old_note, new_note, { overwrite = false, disable_forvo = true }).SentKanji, expected.SentKanji)
     end
 
-    local function test_update_last_note_confirms_unrelated_notes()
-        local now_ms = os.time() * 1000
-        local note_ids = { now_ms - 5, now_ms - 4, now_ms - 3, now_ms - 2, now_ms - 1 }
-        local sentences = { "unrelated one", "unrelated two", "target", "<b>target</b>", "target" }
-        local updated = false
-        local notification = nil
-        local original_notify = h.notify
-        local original_add_key_binding = mp.add_forced_key_binding
-        local original_remove_key_binding = mp.remove_key_binding
-        local original_create_osd_overlay = mp.create_osd_overlay
-        local confirmation_bindings = {}
-        local confirmation_overlay = { update = function() return end, remove = function() return end }
-        local cleared_state = 0
-        local refreshed_menu = 0
-        h.notify = function(message)
-            notification = message
-        end
-        mp.add_forced_key_binding = function(key, _, fn)
-            confirmation_bindings[key] = fn
-        end
-        mp.remove_key_binding = function()
-            return
-        end
-        mp.create_osd_overlay = function()
-            return confirmation_overlay
-        end
-
-        local test_exporter = make_exporter().init(
+    local function make_recent_notes_test_exporter(note_ids, sentences)
+        return make_exporter().init(
                 {
                     get_last_note_ids = function()
                         return note_ids
@@ -745,11 +667,8 @@ local function make_exporter()
                 },
                 {
                     get_cards = function() return 5 end,
-                    clear_options = function() cleared_state = cleared_state + 1 end,
                 },
                 {
-                    clear = function() cleared_state = cleared_state + 1 end,
-                    menu = { update = function() refreshed_menu = refreshed_menu + 1 end },
                 },
                 nil,
                 nil,
@@ -763,83 +682,73 @@ local function make_exporter()
                     end,
                 }
         )
-        test_exporter.update_notes = function()
-            updated = true
-        end
-
-        test_exporter.update_last_note(false)
-        h.assert_equals(updated, false)
-        h.assert_equals(h.is_substr(confirmation_overlay.data, "Only the newest 3 of 5 notes share SentKanji."), true)
-        h.assert_equals(h.is_substr(confirmation_overlay.data, "Update all 5 anyway?"), true)
-        h.assert_equals(type(confirmation_bindings.y), "function")
-        h.assert_equals(type(confirmation_bindings.n), "function")
-        h.assert_equals(type(confirmation_bindings.ENTER), "function")
-        h.assert_equals(type(confirmation_bindings.left), "function")
-        h.assert_equals(type(confirmation_bindings.right), "function")
-        h.assert_equals(h.is_substr(confirmation_overlay.data, OSD:new():blue("[n] No"):get_text()), true)
-
-        confirmation_bindings.left()
-        h.assert_equals(h.is_substr(confirmation_overlay.data, OSD:new():blue("[y] Yes"):get_text()), true)
-        confirmation_bindings.right()
-        h.assert_equals(h.is_substr(confirmation_overlay.data, OSD:new():blue("[n] No"):get_text()), true)
-        confirmation_bindings.left()
-        confirmation_bindings.ENTER()
-        h.assert_equals(updated, true)
-
-        updated = false
-        test_exporter.update_last_note(false)
-        confirmation_bindings.y()
-        h.assert_equals(updated, true)
-
-        updated = false
-        test_exporter.update_last_note(false)
-        confirmation_bindings.n()
-        h.assert_equals(updated, false)
-        h.assert_equals(notification, "Card update cancelled.")
-        h.assert_equals(cleared_state, 2)
-        h.assert_equals(refreshed_menu, 1)
-
-        sentences[1], sentences[2] = "target", "target"
-        test_exporter.update_last_note(false)
-        h.assert_equals(updated, true)
-        h.notify = original_notify
-        mp.add_forced_key_binding = original_add_key_binding
-        mp.remove_key_binding = original_remove_key_binding
-        mp.create_osd_overlay = original_create_osd_overlay
     end
 
-    local function test_update_notes_confirms_unrelated_single_note()
-        local note_id = os.time() * 1000
-        local notification = nil
-        local original_notify = h.notify
-        local original_add_key_binding = mp.add_forced_key_binding
-        local original_remove_key_binding = mp.remove_key_binding
-        local original_create_osd_overlay = mp.create_osd_overlay
-        local confirmation_bindings = {}
-        local confirmation_overlay = { update = function() return end, remove = function() return end }
-        local cleared_state = 0
-        local refreshed_menu = 0
-        h.notify = function(message)
-            notification = message
-        end
-        mp.add_forced_key_binding = function(key, _, fn)
-            confirmation_bindings[key] = fn
-        end
-        mp.remove_key_binding = function()
-            return
-        end
-        mp.create_osd_overlay = function()
-            return confirmation_overlay
+    local function test_update_last_note_passes_group_warning_to_shared_confirmation()
+        local now_ms = os.time() * 1000
+        local note_ids = { now_ms - 5, now_ms - 4, now_ms - 3, now_ms - 2, now_ms - 1 }
+        local sentences = { "unrelated one", "unrelated two", "target", "<b>target</b>", "target" }
+        local passed_warnings = nil
+        local test_exporter = make_recent_notes_test_exporter(note_ids, sentences)
+        test_exporter.update_notes = function(_, _, warnings)
+            passed_warnings = warnings
         end
 
-        local function make_media_job()
-            local job = { filename = nil, run_async = function() return end }
-            job.on_finish = function()
-                return job
-            end
+        test_exporter.update_last_note(false)
+        h.assert_equals(#passed_warnings, 1)
+        h.assert_equals(passed_warnings[1], "Only the newest 3 of 5 notes share SentKanji.")
+
+        sentences[1], sentences[2] = "target", "target"
+        passed_warnings = nil
+        test_exporter.update_last_note(false)
+        h.assert_equals(passed_warnings, nil)
+    end
+
+    local function install_confirmation_test_stubs(state)
+        local originals = {
+            notify = h.notify,
+            warn = msg.warn,
+            select = input.select,
+            terminate = input.terminate,
+            add_timeout = mp.add_timeout,
+        }
+        h.notify = function(message)
+            state.notification = message
+        end
+        msg.warn = function(message)
+            state.warning_log = message
+        end
+        input.select = function(options)
+            state.options = options
+        end
+        input.terminate = function()
+            state.terminated = state.terminated + 1
+        end
+        mp.add_timeout = function(_, callback)
+            state.timeout = callback
+            return { kill = function() state.timer_kills = state.timer_kills + 1 end }
+        end
+        return function()
+            h.notify = originals.notify
+            msg.warn = originals.warn
+            input.select = originals.select
+            input.terminate = originals.terminate
+            mp.add_timeout = originals.add_timeout
+        end
+    end
+
+    local function make_confirmation_media_job(state)
+        local job = { filename = nil }
+        job.on_finish = function()
             return job
         end
+        job.run_async = function()
+            state.media_jobs = state.media_jobs + 1
+        end
+        return job
+    end
 
+    local function make_confirmation_test_exporter(state)
         local current_sub = {
             text = "無視された 小学生女子に シカトされた",
             secondary = "I was ignored by an elementary school girl.",
@@ -856,7 +765,7 @@ local function make_exporter()
                 },
                 {
                     get_lines = function() return nil end,
-                    clear_options = function() cleared_state = cleared_state + 1 end,
+                    clear_options = function() state.cleared = state.cleared + 1 end,
                 },
                 {
                     collect_from_current = function()
@@ -865,13 +774,13 @@ local function make_exporter()
                     clipboard_prepare = function(text)
                         return text
                     end,
-                    clear = function() cleared_state = cleared_state + 1 end,
-                    menu = { update = function() refreshed_menu = refreshed_menu + 1 end },
+                    clear = function() state.cleared = state.cleared + 1 end,
+                    menu = { update = function() state.menu_updates = state.menu_updates + 1 end },
                 },
                 {
                     set_output_dir = function() return end,
-                    snapshot = { create_job = make_media_job },
-                    audio = { create_job = make_media_job },
+                    snapshot = { create_job = function() return make_confirmation_media_job(state) end },
+                    audio = { create_job = function() return make_confirmation_media_job(state) end },
                 },
                 { set_output_dir = function() return end },
                 {
@@ -886,31 +795,73 @@ local function make_exporter()
                     end,
                 }
         )
+        return test_exporter
+    end
 
-        test_exporter.update_notes({ note_id }, true)
+    local function make_confirmation_test()
+        local state = {
+            cleared = 0,
+            media_jobs = 0,
+            menu_updates = 0,
+            terminated = 0,
+            timer_kills = 0,
+        }
+        local restore = install_confirmation_test_stubs(state)
+        return make_confirmation_test_exporter(state), state, restore
+    end
+
+    local function test_update_notes_combines_mismatch_warnings()
+        local test_exporter, state, restore = make_confirmation_test()
+        local note_ids = { os.time() * 1000, os.time() * 1000 + 1 }
+        local group_warning = "The target notes do not all share SentKanji."
+        test_exporter.update_notes(note_ids, true, { group_warning })
+        h.assert_equals(h.is_substr(state.warning_log, group_warning), true)
         h.assert_equals(
-                h.is_substr(confirmation_overlay.data, "The target note's SentKanji does not match the current subtitle."),
+                h.is_substr(state.warning_log, "Only 0 of 2 target notes have SentKanji matching the current subtitle."),
                 true
         )
-        h.assert_equals(h.is_substr(confirmation_overlay.data, "Update this note anyway?"), true)
-        h.assert_equals(type(confirmation_bindings.y), "function")
-        h.assert_equals(type(confirmation_bindings.n), "function")
-        h.assert_equals(type(confirmation_bindings.ENTER), "function")
-        h.assert_equals(h.is_substr(confirmation_overlay.data, OSD:new():blue("[n] No"):get_text()), true)
+        local _, question_count = state.options.prompt:gsub("Update all 2 anyway%?", "")
+        h.assert_equals(question_count, 1)
+        h.assert_equals(state.options.prompt:find("\n"), nil)
+        restore()
+    end
 
-        confirmation_bindings.ENTER()
-        h.assert_equals(notification, "Card update cancelled.")
-        h.assert_equals(cleared_state, 2)
-        h.assert_equals(refreshed_menu, 1)
+    local function test_confirmation_defaults_to_no_and_cancels()
+        local test_exporter, state, restore = make_confirmation_test()
+        test_exporter.update_notes({ os.time() * 1000 }, true)
+        h.assert_equals(state.options.default_item, 2)
+        h.assert_equals(state.options.items[2], "No")
+        state.options.submit(2)
+        h.assert_equals(state.notification, "Card update cancelled.")
+        h.assert_equals(state.cleared, 2)
+        h.assert_equals(state.menu_updates, 1)
+        restore()
+    end
 
-        test_exporter.update_notes({ note_id }, true)
-        confirmation_bindings.y()
-        h.assert_equals(cleared_state, 4)
-        h.assert_equals(refreshed_menu, 2)
-        h.notify = original_notify
-        mp.add_forced_key_binding = original_add_key_binding
-        mp.remove_key_binding = original_remove_key_binding
-        mp.create_osd_overlay = original_create_osd_overlay
+    local function test_confirmation_waits_for_yes_before_creating_media()
+        local test_exporter, state, restore = make_confirmation_test()
+        test_exporter.update_notes({ os.time() * 1000 }, true)
+        h.assert_equals(state.media_jobs, 0)
+        state.options.submit(1)
+        h.assert_equals(state.media_jobs, 2)
+        h.assert_equals(state.cleared, 2)
+        state.options.closed()
+        h.assert_equals(state.media_jobs, 2)
+        h.assert_equals(state.cleared, 2)
+        restore()
+    end
+
+    local function test_confirmation_close_and_timeout_cancel()
+        local test_exporter, state, restore = make_confirmation_test()
+        test_exporter.update_notes({ os.time() * 1000 }, true)
+        state.options.closed()
+        h.assert_equals(state.notification, "Card update cancelled.")
+
+        test_exporter.update_notes({ os.time() * 1000 }, true)
+        state.timeout()
+        h.assert_equals(state.cleared, 4)
+        h.assert_equals(state.media_jobs, 0)
+        restore()
     end
 
     local function test_html_escaping()
@@ -933,8 +884,11 @@ local function make_exporter()
         test_html_escaping()
         test_join_fields_duplicates()
         test_make_new_note_data()
-        test_update_last_note_confirms_unrelated_notes()
-        test_update_notes_confirms_unrelated_single_note()
+        test_update_last_note_passes_group_warning_to_shared_confirmation()
+        test_update_notes_combines_mismatch_warnings()
+        test_confirmation_defaults_to_no_and_cancels()
+        test_confirmation_waits_for_yes_before_creating_media()
+        test_confirmation_close_and_timeout_cancel()
         return pub
     end
 
