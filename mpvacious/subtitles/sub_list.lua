@@ -10,6 +10,9 @@ local Subtitle = require('subtitles.subtitle')
 local speech_collector = require('subtitles.collector')
 local LOOKUP_WINDOW_SIZE = 25 -- how many recent subs to scan for duplicate events
 local MAX_SUB_GAP_SECONDS = 20 -- stop joining lines separated by a longer gap
+local SHORT_SUB_SECONDS = 1
+local MIN_SUB_OVERLAP_RATIO = 0.5
+local MIN_SHORT_SUB_OVERLAP_RATIO = 0.75
 
 local function flatten_subtitle_text(text)
     return h.remove_leading_trailing_spaces(h.collapse_whitespace(text))
@@ -38,6 +41,7 @@ local new_sub_list = function()
     --- between consecutive time-overlapping cues.
     local collect_n_subs = function(start_sub, n_subs)
         local collector = speech_collector.make_speech_collector()
+        local collected_subs = {}
         local end_sub = start_sub
         local collected_count = 0
         for _, sub in ipairs(subs_list) do
@@ -46,29 +50,47 @@ local new_sub_list = function()
             end
             if not (sub < start_sub) and collected_count < n_subs then
                 collector.append_sub(sub)
+                table.insert(collected_subs, sub)
                 end_sub = sub
                 collected_count = collected_count + 1
             end
         end
-        return Subtitle:from_text(collector.get_all_as_string(), start_sub['start'], end_sub['end'])
+        return Subtitle:from_text(collector.get_all_as_string(), start_sub['start'], end_sub['end']), collected_subs
     end
 
     --- Return the text of all subs overlapping the given time window, as one line.
     --- Used to align secondary (translation) text with the primary text's time span:
     --- primary and secondary cues have independent timings, so collecting secondary
     --- text by line count or by the currently visible cue would misalign it with the
-    --- primary text. Cues merely touching a window edge are excluded.
+    --- primary text. Small boundary intersections are treated as timing noise.
     --- Boundary overlap between consecutive cues is removed by the speech collector,
     --- and the result is flattened to a single whitespace-collapsed, trimmed line.
-    --- `window` is a Subtitle, e.g. the combined primary Subtitle from collect_n_subs.
-    local get_overlapping_text = function(window)
+    --- `windows` is either one Subtitle or a list of alternative timing windows.
+    --- A secondary cue is accepted when it passes the threshold against any window.
+    local get_overlapping_text = function(windows)
+        if windows[1] == nil then
+            windows = { windows }
+        end
         local collector = speech_collector.make_speech_collector()
+        local overlapping_subs = {}
         for _, sub in ipairs(subs_list) do
-            if sub:overlaps_in_time(window) then
+            local overlaps_enough = false
+            for _, window in ipairs(windows) do
+                local overlap = math.min(sub['end'], window['end']) - math.max(sub['start'], window['start'])
+                local shorter_duration = math.min(sub['end'] - sub['start'], window['end'] - window['start'])
+                local min_overlap_ratio = shorter_duration < SHORT_SUB_SECONDS
+                        and MIN_SHORT_SUB_OVERLAP_RATIO or MIN_SUB_OVERLAP_RATIO
+                if shorter_duration > 0 and overlap >= shorter_duration * min_overlap_ratio then
+                    overlaps_enough = true
+                    break
+                end
+            end
+            if overlaps_enough then
                 collector.append_sub(sub)
+                table.insert(overlapping_subs, sub)
             end
         end
-        return flatten_subtitle_text(collector.get_all_as_string())
+        return flatten_subtitle_text(collector.get_all_as_string()), overlapping_subs
     end
 
     -- Event-level guard and expansion.
@@ -335,10 +357,13 @@ local function test_collect_n_subs()
     covered_subs.insert(container)
     covered_subs.insert(Subtitle:from_text("B", 1, 3))
     covered_subs.insert(Subtitle:from_text("C", 2, 4))
-    local combined = covered_subs.collect_n_subs(container, 2)
+    local combined, collected = covered_subs.collect_n_subs(container, 2)
     h.assert_equals(combined["text"], "A\nB")
     h.assert_equals(combined['start'], 0)
     h.assert_equals(combined['end'], 3)
+    h.assert_equals(#collected, 2)
+    h.assert_equals(collected[1], container)
+    h.assert_equals(collected[2]['text'], "B")
 end
 
 local function test_get_overlapping_text_uses_timing_and_removes_line_overlap()
@@ -352,6 +377,72 @@ local function test_get_overlapping_text_uses_timing_and_removes_line_overlap()
     local spaced_subs = new_sub_list()
     spaced_subs.insert(Subtitle:from_text("  First\t line\nSecond  line  ", 1, 2))
     h.assert_equals(spaced_subs.get_overlapping_text(Subtitle:from_text('', 1, 2)), "First line Second line")
+
+    local timing_noise = new_sub_list()
+    timing_noise.insert(Subtitle:from_text("Relevant", 759.82, 763.09))
+    timing_noise.insert(Subtitle:from_text("Unrelated", 763.09, 766.03))
+    h.assert_equals(
+            timing_noise.get_overlapping_text(Subtitle:from_text('', 761.594, 763.179)),
+            "Relevant"
+    )
+
+    local larger_timing_noise = new_sub_list()
+    larger_timing_noise.insert(Subtitle:from_text("Relevant", 759.82, 763.09))
+    larger_timing_noise.insert(Subtitle:from_text("Unrelated", 763.00, 766.03))
+    h.assert_equals(
+            larger_timing_noise.get_overlapping_text(Subtitle:from_text('', 761.594, 763.179)),
+            "Relevant"
+    )
+
+    local short_timing_noise = new_sub_list()
+    short_timing_noise.insert(Subtitle:from_text("Unrelated", 776.65, 778.53))
+    h.assert_equals(
+            short_timing_noise.get_overlapping_text(Subtitle:from_text('', 776.358, 777.193)),
+            ""
+    )
+
+    local longer_partial_overlap = new_sub_list()
+    longer_partial_overlap.insert(Subtitle:from_text("Relevant", 0.8, 2.8))
+    h.assert_equals(
+            longer_partial_overlap.get_overlapping_text(Subtitle:from_text('', 0, 2)),
+            "Relevant"
+    )
+
+    -- Coalgirls combines text that the Japanese track splits across cues. The
+    -- first English cue covers most of the first selected Japanese cue, but less
+    -- than half of the English cue because it begins before the combined window.
+    local split_primary_cues = new_sub_list()
+    split_primary_cues.insert(Subtitle:from_text(
+            "But her mother became increasingly immersed in the cult.",
+            1243.200,
+            1247.740
+    ))
+    split_primary_cues.insert(Subtitle:from_text(
+            "After that, the relationship between Senjougahara and her mother became strained.",
+            1248.680,
+            1252.180
+    ))
+    local combined_window = Subtitle:from_text('', 1245.702, 1252.125)
+    local first_primary_cue = Subtitle:from_text('', 1245.702, 1248.205)
+    local second_primary_cue = Subtitle:from_text('', 1248.789, 1252.125)
+    h.assert_equals(
+            split_primary_cues.get_overlapping_text(combined_window),
+            "After that, the relationship between Senjougahara and her mother became strained."
+    )
+    local overlapping_text, overlapping_subs = split_primary_cues.get_overlapping_text(
+            { combined_window, first_primary_cue, second_primary_cue }
+    )
+    h.assert_equals(
+            overlapping_text,
+            "But her mother became increasingly immersed in the cult. "
+                    .. "After that, the relationship between Senjougahara and her mother became strained."
+    )
+    h.assert_equals(#overlapping_subs, 2)
+    h.assert_equals(overlapping_subs[1]['text'], "But her mother became increasingly immersed in the cult.")
+    h.assert_equals(
+            overlapping_subs[2]['text'],
+            "After that, the relationship between Senjougahara and her mother became strained."
+    )
 end
 
 local function run_tests()
