@@ -4,8 +4,11 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 ]]
 
 local h = require("helpers")
+local note_update_guard = require("anki.note_update_guard")
 local note_update_context = require("anki.note_update_context")
 local snapshot = require("config.snapshot")
+local note_update_workflow = require("anki.note_update_workflow")
+local confirmation_module = require("menu.confirmation")
 
 local LOOKUP_WARNING_DURATION_SECONDS = 4
 
@@ -28,9 +31,20 @@ local function make_exporter()
             encoder = self.encoder,
             forvo = self.forvo,
             cfg_mgr = self.cfg_mgr,
+            note_update_guard = self.note_update_guard,
             mp = components.mp,
             notify = self.notify,
         })
+    end
+
+    --- Bind the captured context and shared confirmation UI into one request workflow.
+    local function make_update_workflow(context)
+        return note_update_workflow.new {
+            context = context,
+            confirmation = self.confirmation,
+            notify = self.notify,
+            exporter = pub,
+        }
     end
 
     ------------------------------------------------------------
@@ -46,6 +60,19 @@ local function make_exporter()
         return pub
     end
 
+    --- Cancel any pending note-update confirmation.
+    function pub.cancel_pending_update()
+        if self.confirmation ~= nil then
+            self.confirmation.cancel()
+        end
+    end
+
+    --- Cancel confirmation and discard timings when the source file changes.
+    function pub.cancel_pending_update_for_file_change()
+        pub.cancel_pending_update()
+        return pub.reset_for_file_change()
+    end
+
     --- Reload configuration before creating a card when configured.
     function pub.maybe_reload_config()
         if config().reload_config_before_card_creation then
@@ -54,7 +81,7 @@ local function make_exporter()
         return pub
     end
 
-    --- Dispatch new-note export through a context captured before preflight.
+    --- Dispatch new-note export through a context captured before model and media-directory checks.
     function pub.export_to_anki(gui)
         pub.maybe_reload_config()
         self.note_update_context.new(snapshot.new(self.cfg_mgr)).export_note(gui)
@@ -67,29 +94,39 @@ local function make_exporter()
         local context = self.note_update_context.new(snapshot.new(self.cfg_mgr))
         local note_ids, error = context.find_recent_note_ids()
         if error then
+            pub.cancel_pending_update()
             self.notify(error, "warn", LOOKUP_WARNING_DURATION_SECONDS)
             return pub
         end
-        context.update_notes(note_ids, overwrite)
+        make_update_workflow(context).update_notes {
+            note_ids = note_ids,
+            overwrite = overwrite,
+            options = { check_recent_notes = true },
+        }
         return pub
     end
 
     --- Dispatch a timer-driven or direct update without changing reload behavior.
     function pub.update_notes(note_ids, overwrite)
-        self.note_update_context.new(snapshot.new(self.cfg_mgr)).update_notes(note_ids, overwrite)
+        local context = self.note_update_context.new(snapshot.new(self.cfg_mgr))
+        make_update_workflow(context).update_notes {
+            note_ids = note_ids,
+            overwrite = overwrite,
+        }
         return pub
     end
 
-    --- Dispatch selected-note lookup and updating through one captured context.
+    --- Update notes selected in the Anki Browser.
     function pub.update_selected_note(overwrite)
         pub.maybe_reload_config()
         local context = self.note_update_context.new(snapshot.new(self.cfg_mgr))
         local note_ids, error = context.find_selected_note_ids()
         if error then
+            pub.cancel_pending_update()
             self.notify(error, "warn", LOOKUP_WARNING_DURATION_SECONDS)
             return pub
         end
-        context.update_notes(note_ids, overwrite)
+        make_update_workflow(context).update_notes { note_ids = note_ids, overwrite = overwrite }
         return pub
     end
 
@@ -102,6 +139,8 @@ local function make_exporter()
         self.subs_observer = components.subs_observer
         self.encoder = components.encoder
         self.forvo = components.forvo
+        self.note_update_guard = components.note_update_guard or note_update_guard.new()
+        self.confirmation = components.confirmation or confirmation_module.new()
         self.notify = components.notify or h.notify
         self.note_update_context = make_update_context(components)
         return pub

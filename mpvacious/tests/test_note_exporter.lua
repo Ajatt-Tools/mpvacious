@@ -15,9 +15,9 @@ local base64 = require("utils.base64")
 local forvo = require("utils.forvo")
 
 --- Create a valid subtitle fixture retaining the real class methods and timings.
-local function make_valid_update_test_subtitle()
+local function make_valid_update_test_subtitle(text)
     return subtitle.Subtitle:new {
-        text = "new sentence",
+        text = text or "new sentence",
         secondary = "",
         ["start"] = 0,
         ["end"] = 1,
@@ -37,6 +37,7 @@ end
 --- Create the fixed configuration used by exporter tests.
 local function make_update_test_config()
     return fixtures.make_update_config {
+        card_overwrite_safeguard = 3,
         model_name = "Test model",
         note_tag = "",
     }
@@ -54,10 +55,12 @@ local function make_update_test_exporter(result, jobs, subtitle, options)
         ankiconnect = options.ankiconnect or fixtures.make_update_ankiconnect(result, make_exporter_test_stored_fields),
         quick_creation_opts = options.quick_options
             or fixtures.make_quick_creation_options(result, { record_clear = true }),
-        subs_observer = fixtures.make_subtitle_observer(result, subtitle or make_valid_update_test_subtitle()),
+        subs_observer = options.observer
+            or fixtures.make_subtitle_observer(result, subtitle or make_valid_update_test_subtitle("new sentence")),
         encoder = fixtures.make_update_encoder(jobs, options.media),
         forvo = options.forvo or fixtures.make_forvo(result),
         cfg_mgr = fixtures.make_config_manager(options.config or make_update_test_config()),
+        confirmation = options.confirmation or { cancel = h.noop, confirm = h.noop },
         notify = fixtures.make_notifier(result),
         mp = options.mp,
     }
@@ -81,18 +84,361 @@ local function complete_export_test_media(jobs)
     end
 end
 
+--- Return a note-field map for the update-test AnkiConnect fake.
+local function update_test_note_fields(options, note_id)
+    if options.note_fields then
+        local sentence = options.note_fields[note_id]
+        if sentence == nil then
+            return nil
+        end
+        return { SentKanji = sentence }
+    end
+    return { SentKanji = options.stored_sentence or "new sentence" }
+end
+
+--- Record a field fetch and return the configured fields for one note.
+local function get_update_test_note_fields(result, options, note_id)
+    result.note_field_fetches = result.note_field_fetches or {}
+    result.note_field_fetches[note_id] = (result.note_field_fetches[note_id] or 0) + 1
+    if options.read_errors and options.read_errors[note_id] then
+        return nil, options.read_errors[note_id]
+    end
+    local fields = update_test_note_fields(options, note_id)
+    if fields == nil then
+        return nil, string.format("Could not read note %s", tostring(note_id))
+    end
+    return fields, nil
+end
+
+--- Return the AnkiConnect fake used by update tests.
+local function make_update_test_ankiconnect(result, options)
+    result.last_note_ids = options.last_note_ids
+    result.selected_note_ids = options.selected_note_ids
+    --- Supply scenario-specific fields after the shared fake records the request.
+    result.read_fields = function(note_ids)
+        local fields_by_id = {}
+        for _, note_id in ipairs(note_ids) do
+            local fields, error = get_update_test_note_fields(result, options, note_id)
+            if error then
+                return nil, error
+            end
+            fields_by_id[note_id] = fields
+        end
+        return fields_by_id, nil
+    end
+    --- Preview reads do not count as update-target field requests.
+    result.read_preview = function(note_id)
+        local fields = update_test_note_fields(options, note_id)
+        if fields == nil then
+            return nil, string.format("Could not read note %s", tostring(note_id))
+        end
+        return fields, nil
+    end
+    return fixtures.make_update_ankiconnect(
+        result,
+        function(note_id)
+            return update_test_note_fields(options, note_id)
+        end
+    )
+end
+
+--- Create fresh subtitle data for a guarded exporter test scenario.
+local function make_guarded_update_test_subtitle(options)
+    local subtitle = make_valid_update_test_subtitle(options.current_sentence or "new sentence")
+    if options.valid == false then
+        subtitle.is_valid = function()
+            return false
+        end
+    end
+    return subtitle
+end
+
+--- Construct an exporter with controllable confirmation-test dependencies.
+local function make_guarded_update_test_exporter(result, jobs, options)
+    options = options or {}
+    local confirmation = options.confirmation or { cancel = h.noop, confirm = h.noop }
+    return note_exporter.new().init({
+        ankiconnect = make_update_test_ankiconnect(result, options),
+        quick_creation_opts = fixtures.make_quick_creation_options(result, {
+            cards = options.card_count or #(options.last_note_ids or {}),
+            record_clear = true,
+        }),
+        subs_observer = fixtures.make_subtitle_observer(result, make_guarded_update_test_subtitle(options)),
+        encoder = fixtures.make_update_encoder(jobs),
+        forvo = fixtures.make_forvo(result),
+        cfg_mgr = fixtures.make_config_manager(make_update_test_config()),
+        confirmation = confirmation,
+        notify = fixtures.make_notifier(result),
+    })
+end
+
+--- Return a confirmation fake that retains one pending request.
+local function make_update_test_confirmation(result)
+    return {
+        cancel = h.noop,
+        confirm = function(options)
+            result.confirmation = options
+        end,
+    }
+end
+
+--- Create a started mismatched-update test fixture.
+local function make_mismatched_update_test_fixture()
+    local result = { append_count = 0 }
+    local jobs = {}
+    local note_id = h.minutes_ago(1)
+    make_guarded_update_test_exporter(result, jobs, {
+        confirmation = make_update_test_confirmation(result),
+        current_sentence = "それは うまくすれば 鉛から黄金を生み出すことも 可能になる",
+        stored_sentence = "まあ 無理やり手伝った というのが正しいけれど それで稼いだお金よ",
+        last_note_ids = { note_id },
+    }).update_last_note(true)
+    return result, jobs, note_id
+end
+
+--- Test that a mismatched note remains unchanged until acceptance.
+local function test_mismatched_update_requires_confirmation()
+    local result, jobs, note_id = make_mismatched_update_test_fixture()
+    h.assert_equals(#jobs, 0)
+    h.assert_equals(
+        result.confirmation.prompt,
+        "The target note's SentKanji does not match the current subtitle.\nUpdate this note anyway?"
+    )
+    result.confirmation.on_accept()
+    h.assert_equals(#jobs, 2)
+    jobs[1].callback()
+    jobs[2].callback()
+    h.assert_equals(result.append_count, 1)
+    h.assert_equals(result.note_field_fetches[note_id], 1)
+    h.assert_equals(result.clear_count, 2)
+end
+
+--- Test that cancelling a mismatched update preserves its selection.
+local function test_cancelled_update_preserves_selection()
+    local result, jobs = make_mismatched_update_test_fixture()
+    result.confirmation.on_cancel()
+    h.assert_equals(#jobs, 0)
+    h.assert_equals({ result.clear_count, result.menu_updates }, { nil, nil })
+end
+
+--- Test a valid but empty current subtitle requires confirmation before media generation.
+local function test_empty_current_subtitle_requires_confirmation()
+    local result = { append_count = 0 }
+    local jobs = {}
+    make_guarded_update_test_exporter(result, jobs, {
+        confirmation = make_update_test_confirmation(result),
+        current_sentence = "",
+        last_note_ids = { h.minutes_ago(1) },
+    }).update_last_note(true)
+    h.assert_equals(#jobs, 0)
+    h.assert_equals(
+        result.confirmation.prompt,
+        "Couldn't verify the current subtitle against target notes' SentKanji field.\nUpdate this note anyway?"
+    )
+    result.confirmation.on_cancel()
+    h.assert_equals({ result.clear_count, result.menu_updates }, { nil, nil })
+end
+
+--- Test an accepted recent update reuses target fields read before confirmation.
+local function test_accepted_update_reuses_target_snapshot()
+    local note_id = h.minutes_ago(1)
+    local result = { append_count = 0 }
+    local jobs = {}
+    local options = {
+        confirmation = make_update_test_confirmation(result),
+        current_sentence = "new sentence",
+        note_fields = { [note_id] = "old sentence" },
+        last_note_ids = { note_id },
+    }
+    make_guarded_update_test_exporter(result, jobs, options).update_last_note(true)
+    options.note_fields[note_id] = "changed sentence"
+    result.confirmation.on_accept()
+    jobs[1].callback()
+    jobs[2].callback()
+    h.assert_equals(result.forvo_stored_data.SentKanji, "old sentence")
+    h.assert_equals(result.note_field_fetches[note_id], 1)
+end
+
+--- Return recent note IDs for exporter update tests.
+local function make_recent_note_test_ids()
+    return { h.minutes_ago(2), h.minutes_ago(1) }
+end
+
+--- Test that matching recent notes update without a confirmation prompt.
+local function test_update_last_note_with_matching_sentences()
+    local note_ids = make_recent_note_test_ids()
+    local result = { append_count = 0 }
+    local jobs = {}
+    make_guarded_update_test_exporter(result, jobs, {
+        current_sentence = "shared sentence",
+        note_fields = { [note_ids[1]] = "shared sentence", [note_ids[2]] = "shared sentence" },
+        last_note_ids = note_ids,
+    }).update_last_note(true)
+    h.assert_equals(#jobs, 2)
+    h.assert_equals(result.clear_count, 2)
+    h.assert_equals(result.menu_updates, 1)
+    h.assert_equals(result.note_field_fetches[note_ids[1]], 1)
+    h.assert_equals(result.note_field_fetches[note_ids[2]], 1)
+end
+
+--- Test that mixed recent notes show a mismatch warning before updating.
+local function test_update_last_note_with_mismatched_sentences()
+    local note_ids = make_recent_note_test_ids()
+    local result = { append_count = 0 }
+    local jobs = {}
+    make_guarded_update_test_exporter(result, jobs, {
+        confirmation = make_update_test_confirmation(result),
+        current_sentence = "new sentence",
+        note_fields = { [note_ids[1]] = "old sentence", [note_ids[2]] = "new sentence" },
+        last_note_ids = note_ids,
+    }).update_last_note(true)
+    h.assert_equals(#jobs, 0)
+    h.assert_equals(
+        result.confirmation.prompt,
+        "Only 1 of 2 target notes have SentKanji matching the current subtitle.\n" .. "Update all 2 notes anyway?"
+    )
+    h.assert_equals(result.note_field_fetches[note_ids[1]], 1)
+    h.assert_equals(result.note_field_fetches[note_ids[2]], 1)
+end
+
+--- A blank stored sentence is readable but requires explicit confirmation.
+local function test_update_last_note_with_unverifiable_field()
+    local note_ids = make_recent_note_test_ids()
+    local result = { append_count = 0 }
+    local jobs = {}
+    make_guarded_update_test_exporter(result, jobs, {
+        confirmation = make_update_test_confirmation(result),
+        note_fields = { [note_ids[1]] = "old sentence", [note_ids[2]] = "" },
+        last_note_ids = note_ids,
+    }).update_last_note(true)
+    h.assert_equals(#jobs, 0)
+    h.assert_equals(
+        result.confirmation.prompt,
+        "Only 0 of 2 target notes have SentKanji matching the current subtitle.\nUpdate all 2 notes anyway?"
+    )
+    h.assert_equals(result.note_field_fetches[note_ids[2]], 1)
+end
+
+--- One failed field read aborts every target without a confirmation or media job.
+local function test_update_last_note_aborts_on_field_error()
+    local note_ids = make_recent_note_test_ids()
+    local result = { append_count = 0 }
+    local jobs = {}
+    make_guarded_update_test_exporter(result, jobs, {
+        confirmation = make_update_test_confirmation(result),
+        note_fields = { [note_ids[1]] = "old sentence", [note_ids[2]] = "old sentence" },
+        read_errors = { [note_ids[2]] = string.format("Could not read note %s", tostring(note_ids[2])) },
+        last_note_ids = note_ids,
+    }).update_last_note(true)
+    h.assert_equals(#jobs, 0)
+    h.assert_equals(result.append_count, 0)
+    h.assert_equals(result.confirmation, nil)
+    h.assert_equals(result.clear_count, nil)
+    h.assert_equals(result.notification, string.format("Could not read note %s", tostring(note_ids[2])))
+    h.assert_equals(result.notification_level, "error")
+end
+
+--- Test that a file transition cancels the pending update rather than accepting stale timings.
+local function test_cancel_pending_update_cancels_confirmation()
+    local result = { append_count = 0 }
+    local jobs = {}
+    local confirmation = make_update_test_confirmation(result)
+    confirmation.cancel = function()
+        if result.confirmation then
+            result.confirmation.on_cancel()
+            result.confirmation = nil
+        end
+    end
+    local exporter = make_guarded_update_test_exporter(result, jobs, {
+        confirmation = confirmation,
+        current_sentence = "new sentence",
+        stored_sentence = "old sentence",
+        last_note_ids = { h.minutes_ago(1) },
+    })
+    exporter.update_last_note(true)
+    exporter.cancel_pending_update()
+    h.assert_equals({ #jobs, result.clear_count, result.confirmation }, { 0, nil, nil })
+end
+
+--- File transitions cancel confirmations and reset subtitle and card options.
+local function test_file_change_cancels_and_clears()
+    note_exporter.new().cancel_pending_update_for_file_change() -- safe before init
+    local result = { append_count = 0 }
+    local jobs = {}
+    local confirmation = make_update_test_confirmation(result)
+    confirmation.cancel = function()
+        if result.confirmation then
+            result.confirmation.on_cancel()
+            result.confirmation = nil
+        end
+    end
+    local exporter = make_guarded_update_test_exporter(result, jobs, {
+        confirmation = confirmation,
+        stored_sentence = "old sentence",
+        last_note_ids = { h.minutes_ago(1) },
+    })
+    exporter.update_last_note(true)
+    exporter.cancel_pending_update_for_file_change()
+    h.assert_equals(result.confirmation, nil)
+    h.assert_equals(result.clear_count, 2)
+    h.assert_equals(#jobs, 0)
+end
+
+--- Test that blocked note-update entry points cancel a pending confirmation.
+local function test_blocked_updates_cancel_confirmation()
+    local scenarios = {
+        { method = "update_last_note", last_note_ids = { h.minutes_ago(11) }, duration = 4 },
+        { method = "update_selected_note", selected_note_ids = {}, duration = 4 },
+        { method = "update_selected_note", selected_note_ids = { 1, 2, 3, 4 }, duration = 4 },
+    }
+    for _, scenario in ipairs(scenarios) do
+        local result = { append_count = 0, cancel_count = 0 }
+        local confirmation = make_update_test_confirmation(result)
+        confirmation.cancel = function()
+            result.cancel_count = result.cancel_count + 1
+        end
+        local exporter = make_guarded_update_test_exporter(result, {}, {
+            confirmation = confirmation,
+            last_note_ids = scenario.last_note_ids,
+            selected_note_ids = scenario.selected_note_ids,
+        })
+        exporter[scenario.method](true)
+        h.assert_equals({ result.cancel_count, result.append_count }, { 1, 0 })
+        h.assert_equals(result.notification_duration, scenario.duration)
+    end
+end
+
+--- Test that selected-note updates remain immediate when their fields differ.
+local function test_mismatched_selected_note_update()
+    local result = { append_count = 0 }
+    local jobs = {}
+    make_guarded_update_test_exporter(result, jobs, {
+        confirmation = make_update_test_confirmation(result),
+        current_sentence = "selected sentence",
+        stored_sentence = "different sentence",
+        selected_note_ids = { 1 },
+    }).update_selected_note(true)
+    h.assert_equals(result.confirmation, nil)
+    h.assert_equals(#jobs, 2)
+    jobs[1].callback()
+    jobs[2].callback()
+    h.assert_equals(result.append_count, 1)
+    h.assert_equals(result.note_field_fetches[1], 1)
+end
+
 --- Wait for both media jobs and pass original stored fields to pronunciation merging.
 local function test_update_notes_after_media_created()
     local result = { append_count = 0, clear_count = 0 }
     local jobs = {}
     make_update_test_exporter(result, jobs).update_notes({ 1 }, true)
     h.assert_equals(#jobs, 2)
-    jobs[1].callback()
+    jobs[1].callback("snapshot.avif", nil)
     h.assert_equals(result.append_count, 0)
     h.assert_equals(result.forvo_stored_data, nil)
-    jobs[2].callback()
+    jobs[2].callback("audio.ogg", nil)
     h.assert_equals(result.forvo_stored_data, { SentKanji = "old sentence" })
     h.assert_equals(result.append_count, 1)
+    h.assert_equals(result.clear_count, 2)
     h.assert_equals(result.field_requests, { { 1 } })
     h.assert_equals(result.preview_reads, { 1 })
     h.assert_equals(result.note_id, 1)
@@ -121,7 +467,8 @@ end
 local function test_invalid_subtitle_does_not_start_update()
     local result = { append_count = 0, clear_count = 0 }
     local jobs = {}
-    make_update_test_exporter(result, jobs, make_invalid_update_test_subtitle()).update_notes({ 1 }, true)
+    local exporter = make_update_test_exporter(result, jobs, make_invalid_update_test_subtitle())
+    h.assert_equals(rawequal(exporter.update_notes({ 1 }, true), exporter), true)
     h.assert_equals(#jobs, 0)
     h.assert_equals(result.append_count, 0)
     h.assert_equals(result.clear_count, 0)
@@ -175,7 +522,10 @@ local function assert_lookup_dispatch_test_case(case)
     result.last_note_ids, result.selected_note_ids = case.recent_ids, case.selected_ids
     local config = make_update_test_config()
     config.card_overwrite_safeguard = 3
-    local exporter = make_update_test_exporter(result, jobs, nil, { config = config })
+    local exporter = make_update_test_exporter(result, jobs, nil, {
+        config = config,
+        confirmation = fixtures.make_accepting_confirmation(),
+    })
     h.assert_equals(rawequal(exporter[case.method](case.overwrite), exporter), true)
     h.assert_equals(#jobs, 2)
     h.assert_equals(result.field_requests, { case.expected_ids })
@@ -238,7 +588,7 @@ end
 local function test_export_without_media_directory()
     local result = { append_count = 0, clear_count = 0, media_dir_error = "AnkiConnect unavailable" }
     local jobs = {}
-    local subtitle = make_valid_update_test_subtitle()
+    local subtitle = make_valid_update_test_subtitle("new sentence")
     local exporter = make_update_test_exporter(result, jobs, subtitle)
     exporter.export_to_anki(false)
     h.assert_equals(#jobs, 0)
@@ -446,6 +796,7 @@ local function make_transaction_update_test_exporter(state, jobs, config, pronun
         ankiconnect = client,
         forvo = pronunciation,
         mp = fixtures.make_mp_property_reader { filename = "episode.mkv", ["time-pos"] = 65, duration = 200 },
+        confirmation = fixtures.make_accepting_confirmation(),
     })
 end
 
@@ -551,6 +902,64 @@ local function test_update_transactions_capture_profile()
     end
 end
 
+--- Start a recent-note prompt with real request serialization and invocation metadata.
+local function make_waiting_profile_test_fixture()
+    local note_id = h.minutes_ago(1)
+    local state, jobs = make_transaction_update_test_state({ note_id }), {}
+    local config = make_transaction_update_test_config(true)
+    config.note_tag, config.miscinfo_format = "%t|%f", "%t|%f"
+    config.miscinfo_enable, config.miscinfo_field, config.use_forvo = true, "Notes", "no"
+    local properties = { filename = "original.mkv", path = "/videos/original%1.mkv", ["time-pos"] = 65, duration = 200 }
+    local client =
+        fixtures.make_update_transport_test_client(state, ankiconnect.new, fixtures.make_config_manager(config))
+    local exporter = make_update_test_exporter(state, jobs, make_valid_update_test_subtitle("new sentence"), {
+        config = config,
+        ankiconnect = client,
+        mp = fixtures.make_mp_property_reader(properties),
+        confirmation = make_update_test_confirmation(state),
+    })
+    exporter.update_last_note(false)
+    return state, jobs, config, properties, note_id
+end
+
+--- Verify all captured transport calls and formatted tags use their pre-prompt values.
+local function assert_waiting_profile_test_transport(state)
+    local expected = "01m05s000ms|/videos/original%1.mkv"
+    for index, options in ipairs(state.anki_transport) do
+        h.assert_equals(options.url, "http://original-server:8765")
+        h.assert_equals(options.request_json:match('"key"%s*:%s*"([^"]*)"'), "original-key")
+        local request = state.anki_requests[index].request
+        if request.action == "addTags" then h.assert_equals(request.params.tags, expected) end
+    end
+end
+
+--- Verify media timestamp and prepared fields remain paired with the original transaction.
+local function assert_waiting_profile_test_result(state, jobs)
+    h.assert_equals(jobs[1].argument, 65)
+    local write = state.anki_requests[#state.anki_requests].request
+    h.assert_equals(write.params.note.fields.Notes, "01m05s000ms|/videos/original%1.mkv")
+    h.assert_equals(write.params.note.fields.SentKanji, "stored sentence<br>new sentence")
+    assert_waiting_profile_test_transport(state)
+end
+
+--- Change profiles and playback while a prompt waits without retargeting the accepted update.
+local function test_confirmation_captures_profile_and_metadata()
+    local state, jobs, config, properties, note_id = make_waiting_profile_test_fixture()
+    h.assert_equals(jobs, {})
+    change_transaction_update_test_profile(config)
+    properties.filename, properties.path, properties["time-pos"] = "later.mkv", "/later/later.mkv", 125
+    state.confirmation.on_accept()
+    complete_export_test_media(jobs)
+    assert_waiting_profile_test_result(state, jobs)
+    state.anki_write_callbacks[note_id](true, {}, nil)
+    assert_waiting_profile_test_transport(state)
+    local note_field_reads = 0
+    for _, item in ipairs(state.anki_requests) do
+        if item.request.action == "notesInfo" then note_field_reads = note_field_reads + 1 end
+    end
+    h.assert_equals(note_field_reads, 2) -- One target-field read and one notification-only preview.
+end
+
 --- Complete one media pair without completing later requests' pending jobs.
 local function complete_transaction_update_test_pair(jobs, first_index)
     complete_export_test_job(jobs[first_index], nil)
@@ -642,7 +1051,20 @@ local function run_tests()
     test_export_captures_destination()
     test_update_transactions_capture_profile()
     test_update_transactions_isolate_media_directories()
+    test_confirmation_captures_profile_and_metadata()
     test_reset_for_file_change()
+    test_mismatched_update_requires_confirmation()
+    test_cancelled_update_preserves_selection()
+    test_empty_current_subtitle_requires_confirmation()
+    test_accepted_update_reuses_target_snapshot()
+    test_update_last_note_with_matching_sentences()
+    test_update_last_note_with_mismatched_sentences()
+    test_update_last_note_with_unverifiable_field()
+    test_update_last_note_aborts_on_field_error()
+    test_cancel_pending_update_cancels_confirmation()
+    test_file_change_cancels_and_clears()
+    test_blocked_updates_cancel_confirmation()
+    test_mismatched_selected_note_update()
 end
 
 return {

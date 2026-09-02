@@ -183,6 +183,7 @@ and end up with a broken installation.
 
 `mpvacious` is a user-script for mpv,
 so it has to be installed in the directory `mpv` reads its user-scripts from.
+mpvacious requires mpv 0.41.0 or newer.
 
 | OS                 | Location                                         |
 |--------------------|--------------------------------------------------|
@@ -208,23 +209,6 @@ to your [mpv scripts](https://github.com/mpv-player/mpv/wiki/User-Scripts) direc
 |   |-- helpers.lua
 |   `-- other files
 `-- other script 3
-```
-
-</details>
-
-<details>
-
-<summary>A note for mpv v0.32 and older</summary>
-
-Older versions of `mpv` don't know how to handle user-scripts in subdirectories.
-You need to tell mpv where to look for `mpvacious`.
-
-Open or create  `~/.config/mpv/scripts/modules.lua` and add these lines:
-```
-local mpv_scripts_dir_path = os.getenv("HOME") ..  "/.config/mpv/scripts/"
-package.path = package.path .. ';' .. os.getenv("HOME") .. '/.config/mpv/scripts/mpvacious/?.lua'
-function load(relative_path) dofile(mpv_scripts_dir_path .. relative_path) end
-load("mpvacious/main.lua")
 ```
 
 </details>
@@ -390,6 +374,14 @@ mpvacious preserves highlighting around the first exact occurrence of the stored
 
 If the configured note type cannot be found or its first field cannot be read,
 new-note export stops before creating media and retains your subtitle selection for a retry.
+
+When updating recent notes,
+mpvacious compares the configured sentence field with the current subtitle.
+If a target sentence does not appear related, select **Yes** to update anyway or **No** to cancel.
+The prompt defaults to "No" and expires after ten seconds.
+Changing the loaded video cancels an unanswered update confirmation and clears
+saved subtitle timings and quick-creation options.
+If media creation fails during an update, the existing note fields are left unchanged.
 
 **Clipboard:**
 

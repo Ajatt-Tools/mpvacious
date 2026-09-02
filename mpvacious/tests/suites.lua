@@ -20,6 +20,9 @@ local modules = {
     "tests.test_subtitle",
     "tests.test_note_update_context",
     "tests.test_forvo",
+    "tests.test_note_update_guard",
+    "tests.test_note_update_workflow",
+    "tests.test_confirmation",
 }
 
 --- Load each registered suite for the standalone and mpv-backed runners.
