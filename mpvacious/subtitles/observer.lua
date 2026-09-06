@@ -9,6 +9,7 @@ local h = require('helpers')
 local timings = require('utils.timings')
 local sub_list = require('subtitles.sub_list')
 local Subtitle = require('subtitles.subtitle')
+local secondary_scanner = require('subtitles.secondary_scanner').new()
 local mp = require('mp')
 local platform = require('platform.init')
 local new_autoclip_method_selector = require('subtitles.autoclip_methods')
@@ -149,7 +150,9 @@ local function handle_primary_sub()
 end
 
 local function handle_secondary_sub()
-    append_secondary_sub()
+    if not secondary_scanner.is_scanning() then
+        append_secondary_sub()
+    end
 end
 
 local function copy_subtitle(subtitle_id)
@@ -229,6 +232,15 @@ self.get_timing = function(position)
     return -1
 end
 
+local function selected_primary()
+    return Subtitle:new {
+        text = dialogs.get_text(),
+        ['start'] = self.get_timing('start'),
+        ['end'] = self.get_timing('end'),
+        cues = dialogs.get_subs_list(),
+    }
+end
+
 self.collect_from_all_dialogues = function(n_lines)
     local current_sub = Subtitle:now()
     local current_secondary_sub = Subtitle:now('secondary')
@@ -238,10 +250,10 @@ self.collect_from_all_dialogues = function(n_lines)
         return Subtitle:new() -- return a default empty new Subtitle to let consumer handle
     end
     local combined = all_dialogs.collect_n_subs(current_sub, n_lines)
-    local secondary_text = all_secondary_dialogs.get_overlapping_text(combined)
+    local secondary = secondary_scanner.select(all_secondary_dialogs, combined)
     return Subtitle:new {
         ['text'] = combined["text"],
-        ['secondary'] = secondary_text,
+        ['secondary'] = secondary.text,
         ['start'] = combined['start'],
         ['end'] = combined['end'],
     }
@@ -256,13 +268,18 @@ self.collect_from_current = function()
     if secondary_dialogs.is_empty() then
         secondary_dialogs.insert(Subtitle:now('secondary'))
     end
-    local combined = Subtitle:from_text(dialogs.get_text(), self.get_timing('start'), self.get_timing('end'))
+    local combined = selected_primary()
+    local secondary = secondary_scanner.select(secondary_dialogs, combined)
     return Subtitle:new {
         ['text'] = combined['text'],
-        ['secondary'] = secondary_dialogs.get_overlapping_text(combined),
+        ['secondary'] = secondary.text,
         ['start'] = combined['start'],
         ['end'] = combined['end'],
     }
+end
+
+self.get_selected_secondary_subs = function()
+    return secondary_scanner.select(secondary_dialogs, selected_primary()).subs
 end
 
 self.set_manual_timing = function(position)

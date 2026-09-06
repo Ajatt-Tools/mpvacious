@@ -37,20 +37,40 @@ local function subtitle_delay(is_secondary, mp_api)
     return mp_api.get_property_native(delay_property) - mp_api.get_property_native('audio-delay')
 end
 
---- Return the currently displayed primary or secondary subtitle with mpv delays applied.
-function Subtitle:now(secondary)
+--- Build the currently displayed primary or secondary subtitle from an mp-compatible API.
+--- `delay` overrides its live track delay when a caller temporarily changes that delay.
+function Subtitle:from_current(secondary, mp_api, delay)
+    mp_api = mp_api or mp
     local prefix = secondary and "secondary-" or ""
     local this = self:new {
-        ['text'] = mp.get_property(prefix .. "sub-text"),
-        ['start'] = mp.get_property_number(prefix .. "sub-start"),
-        ['end'] = mp.get_property_number(prefix .. "sub-end"),
+        ['text'] = mp_api.get_property(prefix .. "sub-text"),
+        ['start'] = mp_api.get_property_number(prefix .. "sub-start"),
+        ['end'] = mp_api.get_property_number(prefix .. "sub-end"),
         ['is_secondary'] = (secondary and true or false),
     }
     if this:is_valid() then
-        return this:delay(subtitle_delay(secondary))
+        return this:delay(delay == nil and subtitle_delay(secondary, mp_api) or delay)
     else
         return nil
     end
+end
+
+--- Return the currently displayed primary or secondary subtitle with mpv delays applied.
+function Subtitle:now(secondary)
+    return self:from_current(secondary, mp)
+end
+
+--- Return this selected subtitle plus its constituent cues clipped to its timing boundaries.
+function Subtitle:timing_windows()
+    local windows = { self }
+    for _, cue in ipairs(self.cues or {}) do
+        local start_time = math.max(cue['start'], self['start'])
+        local end_time = math.min(cue['end'], self['end'])
+        if end_time > start_time then
+            windows[#windows + 1] = Subtitle:from_text('', start_time, end_time)
+        end
+    end
+    return windows
 end
 
 function Subtitle:delay(delay)
@@ -198,6 +218,37 @@ local function test_subtitle_delay()
     end
 end
 
+local function test_from_current_accepts_delay_override()
+    local mp_stub = {
+        get_property = function()
+            return "Line"
+        end,
+        get_property_number = function(name)
+            return ({ ['secondary-sub-start'] = 1, ['secondary-sub-end'] = 2 })[name]
+        end,
+    }
+    local current = Subtitle:from_current('secondary', mp_stub, 4)
+    h.assert_equals(current['start'], 5)
+    h.assert_equals(current['end'], 6)
+    h.assert_equals(current.is_secondary, true)
+end
+
+local function test_timing_windows_clips_constituent_cues()
+    local selected = Subtitle:new {
+        text = 'Selected',
+        ['start'] = 2,
+        ['end'] = 8,
+        cues = {
+            sub('First', 1, 4),
+            sub('Second', 6, 10),
+        },
+    }
+    local windows = selected:timing_windows()
+    h.assert_equals(#windows, 3)
+    h.assert_equals({ windows[2]['start'], windows[2]['end'] }, { 2, 4 })
+    h.assert_equals({ windows[3]['start'], windows[3]['end'] }, { 6, 8 })
+end
+
 function Subtitle.run_tests()
     test_is_same_event()
     test_eq_uses_same_event()
@@ -206,6 +257,8 @@ function Subtitle.run_tests()
     test_can_expand_with()
     test_expand_end_time()
     test_subtitle_delay()
+    test_from_current_accepts_delay_override()
+    test_timing_windows_clips_constituent_cues()
 end
 
 return Subtitle

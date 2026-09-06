@@ -160,6 +160,7 @@ local mp_stub = {
     get_property_native = return_nil,
     set_property = noop,
     set_property_bool = noop,
+    set_property_number = noop,
     set_property_native = noop,
     get_script_directory = get_script_directory,
     register_event = noop,

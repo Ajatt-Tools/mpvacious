@@ -51,6 +51,7 @@ local new_sub_list = function()
     --- between consecutive time-overlapping cues.
     local collect_n_subs = function(start_sub, n_subs)
         local collector = speech_collector.make_speech_collector()
+        local collected_subs = {}
         local end_sub = start_sub
         local collected_count = 0
         for _, sub in ipairs(subs_list) do
@@ -59,30 +60,42 @@ local new_sub_list = function()
             end
             if not (sub < start_sub) and collected_count < n_subs then
                 collector.append_sub(sub)
+                table.insert(collected_subs, sub)
                 end_sub = sub
                 collected_count = collected_count + 1
             end
         end
-        return Subtitle:from_text(collector.get_all_as_string(), start_sub['start'], end_sub['end'])
+        return Subtitle:new {
+            text = collector.get_all_as_string(),
+            ['start'] = start_sub['start'],
+            ['end'] = end_sub['end'],
+            cues = collected_subs,
+        }
     end
 
-    --- Return the text of all subs overlapping the given time window, as one line.
-    --- Used to align secondary (translation) text with the primary text's time span:
-    --- primary and secondary cues have independent timings, so collecting secondary
-    --- text by line count or by the currently visible cue would misalign it with the
-    --- primary text. Small boundary intersections are treated as timing noise.
-    --- Boundary overlap between consecutive cues is removed by the speech collector,
-    --- and the result is flattened to a single whitespace-collapsed, trimmed line.
-    --- `window` is the selected primary Subtitle. Normal cues must overlap at least
-    --- half of the shorter cue; cues shorter than one second must overlap by 75%.
-    local get_overlapping_text = function(window)
+    --- Return the matching subtitles and flattened text for a list of timing windows.
+    --- A cue is accepted once when it passes the threshold against any window.
+    --- Small boundary intersections are treated as timing noise.
+    local select_overlapping = function(windows)
         local collector = speech_collector.make_speech_collector()
+        local overlapping_subs = {}
         for _, sub in ipairs(subs_list) do
-            if overlaps_enough(sub, window) then
-                collector.append_sub(sub)
+            for _, window in ipairs(windows) do
+                if overlaps_enough(sub, window) then
+                    collector.append_sub(sub)
+                    table.insert(overlapping_subs, sub)
+                    break
+                end
             end
         end
-        return flatten_subtitle_text(collector.get_all_as_string())
+        return {
+            text = flatten_subtitle_text(collector.get_all_as_string()),
+            subs = overlapping_subs,
+        }
+    end
+    --- Return flattened text for subtitles overlapping one selected primary window.
+    local get_overlapping_text = function(window)
+        return select_overlapping({ window }).text
     end
 
     -- Event-level guard and expansion.
@@ -126,6 +139,7 @@ local new_sub_list = function()
         get_text = get_text,
         collect_n_subs = collect_n_subs,
         get_overlapping_text = get_overlapping_text,
+        select_overlapping = select_overlapping,
         insert = insert,
         is_empty = function()
             return h.is_empty(subs_list)
@@ -353,6 +367,9 @@ local function test_collect_n_subs()
     h.assert_equals(combined["text"], "A\nB")
     h.assert_equals(combined['start'], 0)
     h.assert_equals(combined['end'], 3)
+    h.assert_equals(#combined.cues, 2)
+    h.assert_equals(combined.cues[1], container)
+    h.assert_equals(combined.cues[2]['text'], "B")
 end
 
 local function test_overlap_thresholds()
@@ -394,6 +411,23 @@ local function test_get_overlapping_text_filters_timing_noise()
     )
 end
 
+local function test_select_overlapping_accepts_alternative_windows()
+    local subs = new_sub_list()
+    local first = Subtitle:from_text("First", 0, 4)
+    local second = Subtitle:from_text("Second", 4, 6)
+    subs.insert(first)
+    subs.insert(second)
+
+    local selection = subs.select_overlapping({
+        Subtitle:from_text('', 2.5, 6),
+        Subtitle:from_text('', 0, 3),
+    })
+    h.assert_equals(selection.text, "First Second")
+    h.assert_equals(#selection.subs, 2)
+    h.assert_equals(selection.subs[1], first)
+    h.assert_equals(selection.subs[2], second)
+end
+
 local function run_tests()
     test_insert_rejects_invalid_subs()
     test_insert_rejects_duplicate_event()
@@ -411,6 +445,7 @@ local function run_tests()
     test_overlap_thresholds()
     test_get_overlapping_text_formats_matches()
     test_get_overlapping_text_filters_timing_noise()
+    test_select_overlapping_accepts_alternative_windows()
 end
 
 return {
