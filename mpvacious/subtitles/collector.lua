@@ -75,6 +75,9 @@ function this.make_speech_collector()
     return self
 end
 
+------------------------------------------------------------
+-- Tests: executed by both standalone and mpv-backed runners.
+
 local function test_count_overlapping_lines()
     local cases = {
         -- {recorded_lines, lines_to_append, expected}
