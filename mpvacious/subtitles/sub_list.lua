@@ -28,14 +28,15 @@ local function overlaps_enough(sub, window)
             and sub:overlap_duration(window) >= shorter_duration * required_overlap_ratio(shorter_duration)
 end
 
-local new_sub_list = function()
+local function make_sub_list()
     local subs_list = {}
+    local public = {}
 
-    local get_time = function(position)
+    function public.get_time(position)
         local i = position == 'start' and 1 or #subs_list
         return subs_list[i][position]
     end
-    local get_text = function()
+    function public.get_text()
         -- Dedup applies to every list (primary, secondary), collapsing adjacent
         -- multiline sub expansions into one continuous dialog string.
         local collector = speech_collector.make_speech_collector()
@@ -49,7 +50,7 @@ local new_sub_list = function()
     --- early at the first gap of MAX_SUB_GAP_SECONDS or more between consecutive cues.
     --- Text is joined by the speech collector, which removes boundary line overlap
     --- between consecutive time-overlapping cues.
-    local collect_n_subs = function(start_sub, n_subs)
+    function public.collect_n_subs(start_sub, n_subs)
         local collector = speech_collector.make_speech_collector()
         local end_sub = start_sub
         local collected_count = 0
@@ -75,7 +76,7 @@ local new_sub_list = function()
     --- and the result is flattened to a single whitespace-collapsed, trimmed line.
     --- `window` is the selected primary Subtitle. Normal cues must overlap at least
     --- half of the shorter cue; cues shorter than one second must overlap by 75%.
-    local get_overlapping_text = function(window)
+    function public.get_overlapping_text(window)
         local collector = speech_collector.make_speech_collector()
         for _, sub in ipairs(subs_list) do
             if overlaps_enough(sub, window) then
@@ -92,7 +93,7 @@ local new_sub_list = function()
     -- the last recorded sub's end time.
     -- Text-overlap cleanup for multiline expansion is intentionally delayed
     -- until get_text()/collect_n_subs(), where the selected output window is known.
-    local insert = function(sub)
+    function public.insert(sub)
         if sub == nil or h.is_empty(sub.text) then
             return false
         end
@@ -112,7 +113,7 @@ local new_sub_list = function()
         table.insert(subs_list, (#subs_list - #n_latest_subs) + h.find_insertion_point(n_latest_subs, sub), sub)
         return true
     end
-    local get_subs_list = function()
+    function public.get_subs_list()
         -- Return a shallow copy so callers can't mutate the internal list.
         local copy = {}
         for key, value in pairs(subs_list) do
@@ -120,25 +121,22 @@ local new_sub_list = function()
         end
         return copy
     end
-    return {
-        get_subs_list = get_subs_list,
-        get_time = get_time,
-        get_text = get_text,
-        collect_n_subs = collect_n_subs,
-        get_overlapping_text = get_overlapping_text,
-        insert = insert,
-        is_empty = function()
-            return h.is_empty(subs_list)
-        end,
-    }
+    function public.is_empty()
+        return h.is_empty(subs_list)
+    end
+
+    return public
 end
+
+------------------------------------------------------------
+-- Tests: executed by both standalone and mpv-backed runners.
 
 local function numbered_sub(index)
     return Subtitle:from_text("Line " .. index, index, index + 1)
 end
 
 local function make_numbered_sub_list(first_index, last_index)
-    local subs = new_sub_list()
+    local subs = make_sub_list()
     for i = first_index, last_index do
         h.assert_equals(subs.insert(numbered_sub(i)), true)
     end
@@ -156,26 +154,26 @@ local function assert_subs_sorted(subs)
 end
 
 local function make_two_line_subs()
-    local subs = new_sub_list()
+    local subs = make_sub_list()
     subs.insert(Subtitle:from_text("First line", 0, 2))
     subs.insert(Subtitle:from_text("Second line", 3, 5))
     return subs
 end
 
 local function test_insert_rejects_invalid_subs()
-    local subs = new_sub_list()
+    local subs = make_sub_list()
     h.assert_equals(subs.insert(nil), false)
     h.assert_equals(subs.insert(Subtitle:from_text("", 0, 2)), false)
 end
 
 local function test_insert_rejects_duplicate_event()
-    local subs = new_sub_list()
+    local subs = make_sub_list()
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 2)), true)
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0.04, 2.04)), false)
 end
 
 local function test_insert_expands_touching_same_text_event()
-    local subs = new_sub_list()
+    local subs = make_sub_list()
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 1)), true)
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 1, 2)), true)
     local ordered_list = subs.get_subs_list()
@@ -187,7 +185,7 @@ end
 
 local function test_insert_chains_expansions()
     -- Successive adjacent same-text events keep expanding the same stored sub.
-    local subs = new_sub_list()
+    local subs = make_sub_list()
     h.assert_equals(subs.insert(Subtitle:from_text("A", 0, 1)), true)
     h.assert_equals(subs.insert(Subtitle:from_text("A", 1, 2)), true)
     h.assert_equals(subs.insert(Subtitle:from_text("A", 2, 3)), true)
@@ -198,7 +196,7 @@ local function test_insert_chains_expansions()
 end
 
 local function test_insert_keeps_same_text_event_after_real_gap()
-    local subs = new_sub_list()
+    local subs = make_sub_list()
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 1)), true)
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 1.01, 2)), true)
     h.assert_equals(#subs.get_subs_list(), 2)
@@ -206,7 +204,7 @@ local function test_insert_keeps_same_text_event_after_real_gap()
 end
 
 local function test_insert_keeps_backward_arrival_unmerged_and_sorted()
-    local subs = new_sub_list()
+    local subs = make_sub_list()
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 1, 2)), true)
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 1)), true)
     local ordered_list = subs.get_subs_list()
@@ -217,7 +215,7 @@ local function test_insert_keeps_backward_arrival_unmerged_and_sorted()
 end
 
 local function test_insert_does_not_expand_across_intervening_event()
-    local subs = new_sub_list()
+    local subs = make_sub_list()
     h.assert_equals(subs.insert(Subtitle:from_text("A", 1, 2)), true)
     h.assert_equals(subs.insert(Subtitle:from_text("B", 1, 3)), true)
     h.assert_equals(subs.insert(Subtitle:from_text("A", 2, 4)), true)
@@ -266,24 +264,24 @@ end
 local function test_get_text()
     local first = Subtitle:from_text("First line", 0, 2)
     local expanded = Subtitle:from_text("First line\nSecond line", 1, 3)
-    local subs = new_sub_list()
+    local subs = make_sub_list()
     subs.insert(first)
     subs.insert(expanded)
     h.assert_equals(subs.get_text(), "First line\nSecond line")
 
     -- The second sub is rejected by insert()'s event-level guard (same text and timing),
     -- so the list holds only one sub.
-    local duplicate_subs = new_sub_list()
+    local duplicate_subs = make_sub_list()
     duplicate_subs.insert(Subtitle:from_text("Same line", 0, 2))
     duplicate_subs.insert(Subtitle:from_text("Same line", 0.04, 2.04))
     h.assert_equals(duplicate_subs.get_text(), "Same line")
 
-    local repeated_same_text_subs = new_sub_list()
+    local repeated_same_text_subs = make_sub_list()
     repeated_same_text_subs.insert(Subtitle:from_text("Same line", 0, 1))
     repeated_same_text_subs.insert(Subtitle:from_text("Same line", 3, 4))
     h.assert_equals(repeated_same_text_subs.get_text(), "Same line\nSame line")
 
-    local repeated_event_subs = new_sub_list()
+    local repeated_event_subs = make_sub_list()
     repeated_event_subs.insert(Subtitle:from_text("Yes", 0, 1))
     repeated_event_subs.insert(Subtitle:from_text("No", 1, 2))
     repeated_event_subs.insert(Subtitle:from_text("Yes", 2, 3))
@@ -291,52 +289,52 @@ local function test_get_text()
 
     -- A repeated line outside the adjacent suffix/prefix boundary must be kept.
     -- The old global seen-set approach dropped the final "X" here.
-    local repeated_subs = new_sub_list()
+    local repeated_subs = make_sub_list()
     repeated_subs.insert(Subtitle:from_text("X", 0, 1))
     repeated_subs.insert(Subtitle:from_text("Y", 1, 2))
     repeated_subs.insert(Subtitle:from_text("Y\nX", 2, 3))
     h.assert_equals(repeated_subs.get_text(), "X\nY\nX")
 
-    local adjacent_overlap_subs = new_sub_list()
+    local adjacent_overlap_subs = make_sub_list()
     adjacent_overlap_subs.insert(Subtitle:from_text("Yes\nNo", 0, 2))
     adjacent_overlap_subs.insert(Subtitle:from_text("No\nMaybe", 2, 4))
     h.assert_equals(adjacent_overlap_subs.get_text(), "Yes\nNo\nMaybe")
 
-    local formatted_subs = new_sub_list()
+    local formatted_subs = make_sub_list()
     formatted_subs.insert(Subtitle:from_text("First line\n\nSecond line", 0, 2))
     h.assert_equals(formatted_subs.get_text(), "First line\n\nSecond line")
 
     -- Lines repeated within a single sub are kept as-is:
     -- dedup only applies at the boundary between consecutive subs.
-    local within_subs = new_sub_list()
+    local within_subs = make_sub_list()
     within_subs.insert(Subtitle:from_text("A\nA", 0, 2))
     h.assert_equals(within_subs.get_text(), "A\nA")
 
-    local crlf_subs = new_sub_list()
+    local crlf_subs = make_sub_list()
     crlf_subs.insert(Subtitle:from_text("First line\r\nSecond line\rThird line", 0, 2))
     h.assert_equals(crlf_subs.get_text(), "First line\nSecond line\nThird line")
 
     -- A trailing newline must not introduce a spurious blank line.
-    local trailing_newline_subs = new_sub_list()
+    local trailing_newline_subs = make_sub_list()
     trailing_newline_subs.insert(Subtitle:from_text("First line\nSecond line\n", 0, 2))
     h.assert_equals(trailing_newline_subs.get_text(), "First line\nSecond line")
 end
 
 local function test_collect_n_subs()
     local first = Subtitle:from_text("First line", 0, 2)
-    local subs = new_sub_list()
+    local subs = make_sub_list()
     subs.insert(first)
     subs.insert(Subtitle:from_text("First line\nSecond line", 1, 3))
     h.assert_equals(subs.collect_n_subs(first, 2).text, "First line\nSecond line")
 
-    local limited_subs = new_sub_list()
+    local limited_subs = make_sub_list()
     limited_subs.insert(Subtitle:from_text("First line", 0, 2))
     limited_subs.insert(Subtitle:from_text("First line\nSecond line", 1, 3))
     limited_subs.insert(Subtitle:from_text("Second line\nThird line", 2, 4))
     h.assert_equals(limited_subs.collect_n_subs(first, 2).text, "First line\nSecond line")
 
     -- Non-adjacent repeated lines are kept in collect_n_subs too.
-    local repeated_subs = new_sub_list()
+    local repeated_subs = make_sub_list()
     repeated_subs.insert(Subtitle:from_text("Yes", 0, 1))
     repeated_subs.insert(Subtitle:from_text("No", 1, 2))
     repeated_subs.insert(Subtitle:from_text("Yes\nAgain", 2, 3))
@@ -344,7 +342,7 @@ local function test_collect_n_subs()
 
     -- A sub fully covered by the previous suffix still counts toward n_lines,
     -- so end_sub (used for the card's end timing) advances past it.
-    local covered_subs = new_sub_list()
+    local covered_subs = make_sub_list()
     local container = Subtitle:from_text("A\nB", 0, 2)
     covered_subs.insert(container)
     covered_subs.insert(Subtitle:from_text("B", 1, 3))
@@ -372,20 +370,20 @@ local function test_overlap_thresholds()
 end
 
 local function test_get_overlapping_text_formats_matches()
-    local subs = new_sub_list()
+    local subs = make_sub_list()
     subs.insert(Subtitle:from_text("Before", 0, 1))
     subs.insert(Subtitle:from_text("First line", 1, 2))
     subs.insert(Subtitle:from_text("First line\nSecond line", 2, 3))
     subs.insert(Subtitle:from_text("After", 3, 4))
     h.assert_equals(subs.get_overlapping_text(Subtitle:from_text('', 1, 3)), "First line Second line")
 
-    local spaced_subs = new_sub_list()
+    local spaced_subs = make_sub_list()
     spaced_subs.insert(Subtitle:from_text("  First\t line\nSecond  line  ", 1, 2))
     h.assert_equals(spaced_subs.get_overlapping_text(Subtitle:from_text('', 1, 2)), "First line Second line")
 end
 
 local function test_get_overlapping_text_filters_timing_noise()
-    local timing_noise = new_sub_list()
+    local timing_noise = make_sub_list()
     timing_noise.insert(Subtitle:from_text("Relevant", 759.82, 763.09))
     timing_noise.insert(Subtitle:from_text("Unrelated", 763.09, 766.03))
     h.assert_equals(
@@ -414,6 +412,6 @@ local function run_tests()
 end
 
 return {
-    new = new_sub_list,
+    new = make_sub_list,
     run_tests = run_tests,
 }
