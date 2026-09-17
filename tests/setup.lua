@@ -197,8 +197,14 @@ local mp_options_stub = {
     read_options = noop,
 }
 
+local mp_input_stub = {
+    select = noop,
+    terminate = noop,
+}
+
 -- Register stubs before any mpvacious module is required.
 package.loaded['mp'] = mp_stub
 package.loaded['mp.msg'] = mp_msg_stub
 package.loaded['mp.utils'] = mp_utils_stub
 package.loaded['mp.options'] = mp_options_stub
+package.loaded['mp.input'] = mp_input_stub

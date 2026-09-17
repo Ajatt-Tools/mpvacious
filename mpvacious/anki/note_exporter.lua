@@ -5,6 +5,7 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
 local mp = require('mp')
 local h = require('helpers')
+local note_update_guard = require('anki.note_update_guard')
 local dec_counter = require('utils.dec_counter')
 
 --- Instead of comparing fields literally, normalize them to match different representations.
@@ -53,9 +54,18 @@ local function join_field_content(new_text, old_text, cfg)
     return string.format("%s%s%s", old_text, cfg.separator, new_text)
 end
 
-local function make_exporter()
+local function make_exporter(update_confirmation)
     local self = {}
     local pub = {}
+    local confirmation = update_confirmation or note_update_guard.new()
+
+    local function clear_update_state()
+        self.subs_observer.clear()
+        self.quick_creation_opts:clear_options()
+        if self.subs_observer.menu and self.subs_observer.menu.update then
+            self.subs_observer.menu:update()
+        end
+    end
 
     local substitute_fmt = (function()
         local function substitute_filename(tag, filename)
@@ -284,7 +294,7 @@ local function make_exporter()
         end
     end
 
-    function pub.update_notes(note_ids, overwrite)
+    local function collect_update_subtitle()
         local sub
         local n_lines = self.quick_creation_opts:get_lines()
         if n_lines then
@@ -292,11 +302,10 @@ local function make_exporter()
         else
             sub = self.subs_observer.collect_from_current()
         end
+        return sub
+    end
 
-        if not sub:is_valid() then
-            return h.notify("Nothing to export. Have you set the timings?", "warn", 2)
-        end
-
+    local function perform_update(note_ids, overwrite, sub)
         if h.is_empty(sub['text']) then
             -- In this case, don't modify whatever existing text there is and just
             -- modify the other fields we can. The user might be trying to add
@@ -317,8 +326,42 @@ local function make_exporter()
         snapshot.on_finish(create_files_countdown.decrease).run_async()
         audio.on_finish(create_files_countdown.decrease).run_async()
 
-        self.subs_observer.clear()
-        self.quick_creation_opts:clear_options()
+        clear_update_state()
+        return pub
+    end
+
+    function pub.update_notes(note_ids, overwrite, warnings)
+        local sub = collect_update_subtitle()
+        if not sub:is_valid() then
+            return h.notify("Nothing to export. Have you set the timings?", "warn", 2)
+        end
+
+        warnings = warnings or {}
+        local subtitle_warning = note_update_guard.current_subtitle_warning(
+                note_ids,
+                prepare_for_exporting(sub['text']),
+                self.config.sentence_field,
+                self.ankiconnect.get_note_fields
+        )
+        if subtitle_warning then
+            warnings[#warnings + 1] = subtitle_warning
+        end
+        if #warnings == 0 then
+            return perform_update(note_ids, overwrite, sub)
+        end
+
+        confirmation.confirm({
+            note_count = #note_ids,
+            field_name = self.config.sentence_field,
+            warning = table.concat(warnings, "\n"),
+            accepted = function()
+                perform_update(note_ids, overwrite, sub)
+            end,
+            cancelled = function()
+                clear_update_state()
+                h.notify("Card update cancelled.", "info", 2)
+            end,
+        })
         return pub
     end
 
@@ -362,6 +405,7 @@ local function make_exporter()
 
     function pub.update_last_note(overwrite)
         local accept_notes_made_within_last_minutes = 10
+        confirmation.close()
         pub.maybe_reload_config()
 
         local n_cards = self.quick_creation_opts:get_cards()
@@ -374,7 +418,15 @@ local function make_exporter()
             return h.notify("Couldn't find the target note.", "warn", 2)
         end
 
-        pub.update_notes(last_note_ids, overwrite)
+        local warning, error_message = note_update_guard.recent_notes_warning(
+                last_note_ids,
+                self.config.sentence_field,
+                self.ankiconnect.get_note_fields
+        )
+        if error_message then
+            return h.notify(error_message, "warn", 4)
+        end
+        pub.update_notes(last_note_ids, overwrite, warning and { warning } or nil)
         return pub
     end
 
@@ -502,9 +554,9 @@ local function test_make_new_note_data(test_exporter)
     h.assert_equals(test_exporter.make_new_note_data(old_note, new_note, { overwrite = false, disable_forvo = true }).SentKanji, expected.SentKanji)
 end
 
-local function valid_update_subtitle()
+local function update_subtitle(text)
     return {
-        text = "new sentence",
+        text = text,
         secondary = "",
         is_valid = function()
             return true
@@ -546,7 +598,8 @@ local UPDATE_TEST_CONFIG = {
     miscinfo_enable = false,
 }
 
-local function make_update_test_exporter(result, jobs)
+local function make_update_test_exporter(result, jobs, options)
+    options = options or {}
     local function append_media(note_id, fields)
         result.append_count = result.append_count + 1
         result.note_id = note_id
@@ -557,20 +610,31 @@ local function make_update_test_exporter(result, jobs)
             return "/tmp"
         end,
         get_note_fields = function()
-            return { SentKanji = "old sentence" }
+            return { SentKanji = options.stored_sentence or "new sentence" }
         end,
         append_media = append_media,
     }
     local quick_options = {
         get_lines = h.noop,
-        clear_options = h.noop
+        clear_options = function()
+            result.cleared = (result.cleared or 0) + 1
+        end,
     }
     local observer = {
-        collect_from_current = valid_update_subtitle,
+        collect_from_current = function()
+            return update_subtitle(options.current_sentence or "new sentence")
+        end,
         clipboard_prepare = function(text)
             return text
         end,
-        clear = h.noop,
+        clear = function()
+            result.cleared = (result.cleared or 0) + 1
+        end,
+        menu = {
+            update = function()
+                result.menu_updates = (result.menu_updates or 0) + 1
+            end,
+        },
     }
     local forvo = {
         set_output_dir = h.noop,
@@ -584,7 +648,7 @@ local function make_update_test_exporter(result, jobs)
             return UPDATE_TEST_CONFIG
         end
     }
-    return make_exporter().init(
+    return make_exporter(options.confirmation).init(
             ankiconnect,
             quick_options,
             observer,
@@ -592,6 +656,47 @@ local function make_update_test_exporter(result, jobs)
             forvo,
             config_manager
     )
+end
+
+local function test_mismatched_update_requires_confirmation()
+    local result = { append_count = 0 }
+    local jobs = {}
+    local confirmation = { close = h.noop }
+    confirmation.confirm = function(options)
+        result.confirmation = options
+    end
+    make_update_test_exporter(result, jobs, {
+        confirmation = confirmation,
+        current_sentence = 'それは うまくすれば 鉛から黄金を生み出すことも 可能になる',
+        stored_sentence = 'まあ 無理やり手伝った というのが正しいけれど それで稼いだお金よ',
+    }).update_notes({ 1 }, true)
+    h.assert_equals(#jobs, 0)
+    h.assert_equals(result.confirmation.field_name, 'SentKanji')
+    h.assert_equals(
+            result.confirmation.warning,
+            "The target note's SentKanji does not match the current subtitle."
+    )
+    result.confirmation.accepted()
+    h.assert_equals(#jobs, 2)
+    h.assert_equals(result.cleared, 2)
+end
+
+local function test_cancelled_update_clears_selection()
+    local result = { append_count = 0 }
+    local jobs = {}
+    local confirmation = { close = h.noop }
+    confirmation.confirm = function(options)
+        result.confirmation = options
+    end
+    make_update_test_exporter(result, jobs, {
+        confirmation = confirmation,
+        current_sentence = 'それは うまくすれば 鉛から黄金を生み出すことも 可能になる',
+        stored_sentence = 'まあ 無理やり手伝った というのが正しいけれど それで稼いだお金よ',
+    }).update_notes({ 1 }, true)
+    result.confirmation.cancelled()
+    h.assert_equals(#jobs, 0)
+    h.assert_equals(result.cleared, 2)
+    h.assert_equals(result.menu_updates, 1)
 end
 
 local function test_update_notes_after_media_created()
@@ -646,6 +751,8 @@ local function run_tests(test_exporter)
     test_join_fields_duplicates(test_exporter)
     test_make_new_note_data(test_exporter)
     test_update_notes_after_media_created()
+    test_mismatched_update_requires_confirmation()
+    test_cancelled_update_clears_selection()
 end
 
 return {
