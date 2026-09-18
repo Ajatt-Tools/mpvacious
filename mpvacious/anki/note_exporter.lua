@@ -41,24 +41,6 @@ local function make_exporter()
         return ret
     end
 
-    function pub.join_fields(new_data, stored_data)
-        fail_if_not_ready()
-        for _, field in pairs { self.config.audio_field, self.config.image_field, self.config.miscinfo_field } do
-            if not h.is_empty(field) then
-                new_data[field] = join_field_content(h.table_get(new_data, field, ""), h.table_get(stored_data, field, ""))
-            end
-        end
-
-        for _, field in pairs { self.config.sentence_field, self.config.secondary_field } do
-            if not h.is_empty(field) then
-                -- Strip html tags to compare text only.
-                new_data[field] = join_field_content(h.table_get(new_data, field, ""), h.table_get(stored_data, field, ""), { plaintext_compare = true })
-            end
-        end
-
-        return new_data
-    end
-
     --- Merge generated note fields with stored fields according to update options.
     --- cfg.disable_forvo skips pronunciation media; cfg.overwrite replaces rather than appends.
     function pub.make_new_note_data(stored_data, new_data, cfg)
