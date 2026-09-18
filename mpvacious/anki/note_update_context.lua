@@ -292,6 +292,32 @@ local function make_note_update_context(components)
         return new_data
     end
 
+    --- Merge generated note fields with stored fields according to update options.
+    --- cfg.disable_forvo skips pronunciation media; cfg.overwrite replaces rather than appends.
+    function pub.make_new_note_data(stored_data, new_data, cfg)
+        cfg = cfg or {}
+
+        if stored_data then
+            if not cfg.disable_forvo then
+                new_data = self.forvo.append(new_data, stored_data)
+            end
+            new_data = update_sentence(new_data, stored_data)
+            if not cfg.overwrite then
+                if config().append_media then
+                    new_data = pub.join_fields(new_data, stored_data)
+                else
+                    new_data = pub.join_fields(stored_data, new_data)
+                end
+            end
+        end
+        -- If the text is still empty, put some dummy text to let the user know why
+        -- there's no text in the sentence field.
+        if h.is_empty(new_data[config().sentence_field]) then
+            new_data[config().sentence_field] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
+        end
+        return new_data
+    end
+
     return pub
 end
 
