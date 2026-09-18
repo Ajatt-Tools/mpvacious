@@ -318,6 +318,27 @@ local function make_note_update_context(components)
         return new_data
     end
 
+    --- Construct fields for ordinary new-note export.
+    --- Construct generated note fields from subtitle text and media filenames.
+    function pub.construct_note_fields(kwargs)
+        local ret = {
+            [config().sentence_field] = prepare_for_exporting(kwargs.primary_text),
+        }
+        if not h.is_empty(config().secondary_field) then
+            ret[config().secondary_field] = prepare_for_exporting(kwargs.secondary_text)
+        end
+        if not h.is_empty(config().image_field) and not h.is_empty(kwargs.snapshot_filename) then
+            ret[config().image_field] = string.format(config().image_template, kwargs.snapshot_filename)
+        end
+        if not h.is_empty(config().audio_field) and not h.is_empty(kwargs.audio_filename) then
+            ret[config().audio_field] = string.format(config().audio_template, kwargs.audio_filename)
+        end
+        if config().miscinfo_enable then
+            ret[config().miscinfo_field] = self.substitute_fmt(config().miscinfo_format)
+        end
+        return ret
+    end
+
     return pub
 end
 

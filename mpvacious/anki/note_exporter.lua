@@ -22,25 +22,6 @@ local function make_exporter()
         return self.config.audio_padding
     end
 
-    local function construct_note_fields(sub_text, secondary_text, snapshot_filename, audio_filename)
-        local ret = {
-            [self.config.sentence_field] = prepare_for_exporting(sub_text),
-        }
-        if not h.is_empty(self.config.secondary_field) then
-            ret[self.config.secondary_field] = prepare_for_exporting(secondary_text)
-        end
-        if not h.is_empty(self.config.image_field) and not h.is_empty(snapshot_filename) then
-            ret[self.config.image_field] = string.format(self.config.image_template, snapshot_filename)
-        end
-        if not h.is_empty(self.config.audio_field) and not h.is_empty(audio_filename) then
-            ret[self.config.audio_field] = string.format(self.config.audio_template, audio_filename)
-        end
-        if self.config.miscinfo_enable == true then
-            ret[self.config.miscinfo_field] = substitute_fmt(self.config.miscinfo_format)
-        end
-        return ret
-    end
-
     function pub.update_notes(note_ids, overwrite)
         local sub
         local n_lines = self.quick_creation_opts:get_lines()
