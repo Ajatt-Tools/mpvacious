@@ -270,6 +270,41 @@ local function make_note_update_context(components)
         end
     end
 
+    --- Configure output paths and create update media jobs.
+    local function create_update_media(request)
+        local anki_media_dir = self.ankiconnect.get_media_dir_path()
+        self.encoder.set_output_dir(anki_media_dir)
+        self.forvo.set_output_dir(anki_media_dir)
+        local snapshot = self.encoder.snapshot.create_job(request.subtitle)
+        local audio = self.encoder.audio.create_job(request.subtitle, pub.audio_padding())
+        local new_data = pub.construct_note_fields {
+            primary_text = request.subtitle['text'],
+            secondary_text = request.subtitle['secondary'],
+            snapshot_filename = snapshot.filename,
+            audio_filename = audio.filename,
+        }
+        return {
+            snapshot = snapshot,
+            audio = audio,
+            new_data = new_data,
+        }
+    end
+
+    --- Start media jobs and schedule the resulting note write.
+    local function start_update_media(request, future)
+        local create_files_countdown = dec_counter.new(2).on_finish(
+                h.as_callback(change_fields, request, future.new_data)
+        )
+        future.snapshot.on_finish(create_files_countdown.decrease).run_async()
+        future.audio.on_finish(create_files_countdown.decrease).run_async()
+    end
+
+    --- Clear subtitle selection after an update starts.
+    local function clear_update_state()
+        self.subs_observer.clear()
+        self.quick_creation_opts:clear_options()
+    end
+
     ------------------------------------------------------------
     --- Public
 
@@ -364,41 +399,6 @@ local function make_note_update_context(components)
         else
             return self.subs_observer.collect_from_current()
         end
-    end
-
-    --- Configure output paths and create update media jobs.
-    local function create_update_media(request)
-        local anki_media_dir = self.ankiconnect.get_media_dir_path()
-        self.encoder.set_output_dir(anki_media_dir)
-        self.forvo.set_output_dir(anki_media_dir)
-        local snapshot = self.encoder.snapshot.create_job(request.subtitle)
-        local audio = self.encoder.audio.create_job(request.subtitle, pub.audio_padding())
-        local new_data = pub.construct_note_fields {
-            primary_text = request.subtitle['text'],
-            secondary_text = request.subtitle['secondary'],
-            snapshot_filename = snapshot.filename,
-            audio_filename = audio.filename,
-        }
-        return {
-            snapshot=snapshot,
-            audio=audio,
-            new_data=new_data,
-        }
-    end
-
-    --- Start media jobs and schedule the resulting note write.
-    local function start_update_media(request, future)
-        local create_files_countdown = dec_counter.new(2).on_finish(
-                h.as_callback(change_fields, request, future.new_data)
-        )
-        future.snapshot.on_finish(create_files_countdown.decrease).run_async()
-        future.audio.on_finish(create_files_countdown.decrease).run_async()
-    end
-
-    --- Clear subtitle selection after an update starts.
-    local function clear_update_state()
-        self.subs_observer.clear()
-        self.quick_creation_opts:clear_options()
     end
 
     --- Start media creation and write note fields after both jobs finish.
