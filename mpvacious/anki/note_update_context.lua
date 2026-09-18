@@ -98,13 +98,7 @@ local function make_substitute_fmt(cfg_mgr)
         return filename
     end
 
-    local function tag_format(filename)
-        filename = h.remove_extension(filename)
-        filename = h.remove_common_resolutions(filename)
-
-        local start_index, end_index, episode_num = h.get_episode_number(filename)
-        filename = remove_episode_number(filename, start_index, end_index)
-
+    local function clean_tag_filename(filename)
         if config().tag_nuke_brackets == true then
             filename = h.remove_text_in_brackets(filename)
         end
@@ -120,14 +114,23 @@ local function make_substitute_fmt(cfg_mgr)
         filename = filename:gsub(" ", "_")
         filename = filename:gsub("_%-_", "_") -- Replaces garbage _-_ substrings with a underscore
         filename = h.remove_leading_trailing_dashes(filename)
+        return filename
+    end
+
+    local function tag_format(filename)
+        filename = h.remove_extension(filename)
+        filename = h.remove_common_resolutions(filename)
+        local start_index, end_index, episode_num = h.get_episode_number(filename)
+        filename = remove_episode_number(filename, start_index, end_index)
+        filename = clean_tag_filename(filename)
         return filename, episode_num or ''
     end
 
     return function(tag)
         if not h.is_empty(tag) then
-            local filename, episode = tag_format(mp.get_property("filename"))
+            local filename, episode_num = tag_format(mp.get_property("filename"))
             tag = substitute_filename(tag, filename)
-            tag = substitute_episode_number(tag, episode)
+            tag = substitute_episode_number(tag, episode_num)
             tag = substitute_time_pos(tag)
             tag = substitute_envvar(tag)
             tag = substitute_fullpath(tag)
