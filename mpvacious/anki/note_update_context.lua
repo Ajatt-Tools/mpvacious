@@ -167,6 +167,11 @@ local function make_note_update_context(components)
     ------------------------------------------------------------
     --- Private
 
+    --- Return the current update configuration.
+    local function config()
+        return self.cfg_mgr.config()
+    end
+
     ------------------------------------------------------------
     --- Public
 
