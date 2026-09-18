@@ -239,16 +239,6 @@ local function make_update_test_encoder(jobs)
     }
 end
 
-local UPDATE_TEST_CONFIG = {
-    sentence_field = "SentKanji",
-    audio_field = "SentAudio",
-    audio_template = "[sound:%s]",
-    image_field = "Image",
-    image_template = '<img alt="snapshot" src="%s">',
-    audio_padding = 0,
-    miscinfo_enable = false,
-}
-
 local function make_update_test_exporter(result, jobs)
     local function append_media(note_id, fields)
         result.append_count = result.append_count + 1

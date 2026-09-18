@@ -423,6 +423,19 @@ end
 ------------------------------------------------------------
 --- Tests: executed by both standalone and mpv-backed runners.
 
+local TEST_CONFIG = {
+    sentence_field = "SentKanji",
+    secondary_field = "SentEng",
+    audio_field = "SentAudio",
+    audio_template = "[sound:%s]",
+    image_field = "Image",
+    image_template = '<img alt="snapshot" src="%s">',
+    miscinfo_field = 'Notes',
+    append_media = true,
+    audio_padding = 0,
+    miscinfo_enable = false,
+}
+
 --- Test nested sentence fields retain the more complete normalized value.
 local function test_join_field_content()
     h.assert_equals(join_field_content("ヤツらの声に現実味が…", "あの遠さはヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
