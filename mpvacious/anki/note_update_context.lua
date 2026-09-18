@@ -386,6 +386,15 @@ local function make_note_update_context(components)
         }
     end
 
+    --- Start media jobs and schedule the resulting note write.
+    local function start_update_media(request, future)
+        local create_files_countdown = dec_counter.new(2).on_finish(
+                h.as_callback(change_fields, request, future.new_data)
+        )
+        future.snapshot.on_finish(create_files_countdown.decrease).run_async()
+        future.audio.on_finish(create_files_countdown.decrease).run_async()
+    end
+
     --- Start media creation and write note fields after both jobs finish.
     --- Create media and update fields for `request`,
     --- which contains the captured "subtitle", target "note_ids", and "overwrite" mode.
@@ -397,12 +406,7 @@ local function make_note_update_context(components)
             -- has no subtitles or it has image subtitles).
             request.subtitle['text'] = nil
         end
-        local future = create_update_media(request)
-        local create_files_countdown = dec_counter.new(2).on_finish(h.as_callback(change_fields, request.note_ids, future.new_data, request.overwrite))
-
-        future.snapshot.on_finish(create_files_countdown.decrease).run_async()
-        future.audio.on_finish(create_files_countdown.decrease).run_async()
-
+        start_update_media(request, create_update_media(request))
         self.subs_observer.clear()
         self.quick_creation_opts:clear_options()
         return pub
