@@ -85,19 +85,6 @@ local function make_exporter()
         return new_data
     end
 
-    local function change_fields(note_ids, new_data, overwrite)
-        --- Run this callback once audio and image files are created.
-        local change_notes_countdown = dec_counter.new(#note_ids).on_finish(h.as_callback(notify_user_on_finish, note_ids))
-        for _, note_id in pairs(note_ids) do
-            self.ankiconnect.append_media(
-                    note_id,
-                    pub.make_new_note_data(self.ankiconnect.get_note_fields(note_id), h.deep_copy(new_data), { overwrite = overwrite }),
-                    substitute_fmt(self.config.note_tag),
-                    change_notes_countdown.decrease
-            )
-        end
-    end
-
     function pub.update_notes(note_ids, overwrite)
         local sub
         local n_lines = self.quick_creation_opts:get_lines()

@@ -250,6 +250,26 @@ local function make_note_update_context(components)
         end
     end
 
+    --- Write generated fields after media creation completes.
+    local function change_fields(request, new_data)
+        --- Run this callback once audio and image files are created.
+        local change_notes_countdown = dec_counter.new(#request.note_ids).on_finish(
+                h.as_callback(notify_user_on_finish, request.note_ids)
+        )
+        for _, note_id in pairs(request.note_ids) do
+            self.ankiconnect.append_media(
+                    note_id,
+                    pub.make_new_note_data(
+                            self.ankiconnect.get_note_fields(note_id),
+                            h.deep_copy(new_data),
+                            { overwrite = request.overwrite }
+                    ),
+                    self.substitute_fmt(config().note_tag),
+                    change_notes_countdown.decrease
+            )
+        end
+    end
+
     ------------------------------------------------------------
     --- Public
 
