@@ -395,6 +395,12 @@ local function make_note_update_context(components)
         future.audio.on_finish(create_files_countdown.decrease).run_async()
     end
 
+    --- Clear subtitle selection after an update starts.
+    local function clear_update_state()
+        self.subs_observer.clear()
+        self.quick_creation_opts:clear_options()
+    end
+
     --- Start media creation and write note fields after both jobs finish.
     --- Create media and update fields for `request`,
     --- which contains the captured "subtitle", target "note_ids", and "overwrite" mode.
@@ -407,8 +413,7 @@ local function make_note_update_context(components)
             request.subtitle['text'] = nil
         end
         start_update_media(request, create_update_media(request))
-        self.subs_observer.clear()
-        self.quick_creation_opts:clear_options()
+        clear_update_state()
         return pub
     end
 
