@@ -443,6 +443,29 @@ local function test_join_field_content()
     h.assert_equals(join_field_content('new', 'old'), 'old<br>new')
 end
 
+--- Create a context with concrete test components for field-merge tests.
+local function make_test_context()
+    return make_note_update_context {
+        ankiconnect = {},
+        quick_creation_opts = {},
+        subs_observer = {},
+        encoder = {},
+        forvo = {
+            --- Preserve generated fields in field-merge tests.
+            append = function(new_data)
+                return new_data
+            end,
+        },
+        cfg_mgr = {
+            --- Return the fixed field-merge test configuration.
+            config = function()
+                return TEST_CONFIG
+            end,
+        },
+        notify = h.noop,
+    }
+end
+
 --- Run context tests without requiring mpv-backed components.
 local function run_tests()
     local context = make_test_context()
