@@ -172,6 +172,13 @@ local function make_note_update_context(components)
         return self.cfg_mgr.config()
     end
 
+    --- Raise an error when no update configuration is available.
+    local function fail_if_not_ready()
+        if h.is_empty(config()) then
+            error("config not assigned")
+        end
+    end
+
     ------------------------------------------------------------
     --- Public
 

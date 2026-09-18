@@ -105,11 +105,7 @@ local function make_exporter()
         return new_data
     end
 
-    local function fail_if_not_ready()
-        if h.is_empty(self.config) then
-            error("config not assigned")
-        end
-    end
+
 
     function pub.join_fields(new_data, stored_data)
         fail_if_not_ready()
