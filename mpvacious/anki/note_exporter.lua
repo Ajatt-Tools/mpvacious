@@ -41,36 +41,6 @@ local function make_exporter()
         return ret
     end
 
-    local function notify_user_on_finish(note_ids)
-        --- Run this callback once all notes are changed.
-
-        -- Construct a search query for the Anki Browser.
-        local queries = {}
-        for _, note_id in ipairs(note_ids) do
-            table.insert(queries, string.format("nid:%s", tostring(note_id)))
-        end
-        local query = table.concat(queries, " OR ")
-        self.ankiconnect.gui_browse(query)
-
-        local first_field = self.ankiconnect.get_first_field(self.config.model_name)
-
-        -- Notify the user.
-        if #note_ids > 1 then
-            h.notify(string.format("Updated %i notes.", #note_ids))
-        else
-            local field_data = self.ankiconnect.get_note_fields(note_ids[1])[first_field]
-            if not h.is_empty(field_data) then
-                local max_len = 20
-                if string.len(field_data) > max_len then
-                    field_data = h.str_limit(field_data, max_len)
-                end
-                h.notify(string.format("Updated note: %s.", field_data))
-            else
-                h.notify(string.format("Updated note #%s.", tostring(note_ids[1])))
-            end
-        end
-    end
-
     function pub.join_fields(new_data, stored_data)
         fail_if_not_ready()
         for _, field in pairs { self.config.audio_field, self.config.image_field, self.config.miscinfo_field } do
