@@ -85,21 +85,25 @@ local function make_substitute_fmt(cfg_mgr)
         return tag:gsub("%%f", full_path)
     end
 
+    local function remove_episode_number(filename, start_index, end_index)
+        if config().tag_del_episode_num == true and not h.is_empty(start_index) then
+            if config().tag_del_after_episode_num == true then
+                -- Removing everything (e.g. episode name) after the episode number including itself.
+                return filename:sub(1, start_index)
+            else
+                -- Removing the first found instance of the episode number.
+                return filename:sub(1, start_index) .. filename:sub(end_index + 1, -1)
+            end
+        end
+        return filename
+    end
+
     local function tag_format(filename)
         filename = h.remove_extension(filename)
         filename = h.remove_common_resolutions(filename)
 
-        local s, e, episode_num = h.get_episode_number(filename)
-
-        if config().tag_del_episode_num == true and not h.is_empty(s) then
-            if config().tag_del_after_episode_num == true then
-                -- Removing everything (e.g. episode name) after the episode number including itself.
-                filename = filename:sub(1, s)
-            else
-                -- Removing the first found instance of the episode number.
-                filename = filename:sub(1, s) .. filename:sub(e + 1, -1)
-            end
-        end
+        local start_index, end_index, episode_num = h.get_episode_number(filename)
+        filename = remove_episode_number(filename, start_index, end_index)
 
         if config().tag_nuke_brackets == true then
             filename = h.remove_text_in_brackets(filename)
