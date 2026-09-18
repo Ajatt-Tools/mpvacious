@@ -213,19 +213,20 @@ local function make_note_update_context(components)
         return new_data
     end
 
-    local function notify_user_on_finish(note_ids)
-        --- Run this callback once all notes are changed.
-
+    --- Build an Anki Browser query for the updated notes.
+    local function make_browse_query(note_ids)
         -- Construct a search query for the Anki Browser.
         local queries = {}
         for _, note_id in ipairs(note_ids) do
             table.insert(queries, string.format("nid:%s", tostring(note_id)))
         end
-        local query = table.concat(queries, " OR ")
-        self.ankiconnect.gui_browse(query)
+        return table.concat(queries, " OR ")
+    end
 
+    local function notify_user_on_finish(note_ids)
+        --- Run this callback once all notes are changed.
+        self.ankiconnect.gui_browse(make_browse_query(note_ids))
         local first_field = self.ankiconnect.get_first_field(config().model_name)
-
         -- Notify the user.
         if #note_ids > 1 then
             h.notify(string.format("Updated %i notes.", #note_ids))
