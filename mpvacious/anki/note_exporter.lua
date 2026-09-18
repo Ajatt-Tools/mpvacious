@@ -7,8 +7,6 @@ local mp = require('mp')
 local h = require('helpers')
 local dec_counter = require('utils.dec_counter')
 
-
-
 local function make_exporter()
     local self = {}
     local pub = {}
@@ -72,32 +70,6 @@ local function make_exporter()
             end
         end
     end
-
-    local function update_sentence(new_data, stored_data)
-        -- adds support for TSCs
-        -- https://tatsumoto-ren.github.io/blog/discussing-various-card-templates.html#targeted-sentence-cards
-        -- if the target word was marked by Rikaitan, this function makes sure that the highlighting doesn't get erased.
-
-        if h.is_empty(stored_data[self.config.sentence_field]) then
-            -- sentence field is empty. can't continue.
-            return new_data
-        elseif h.is_empty(new_data[self.config.sentence_field]) then
-            -- *new* sentence field is empty, but old one contains data. don't delete the existing sentence.
-            new_data[self.config.sentence_field] = stored_data[self.config.sentence_field]
-            return new_data
-        end
-
-        local _, opentag, target, closetag, _ = stored_data[self.config.sentence_field]:match('^(.-)(<[^>]+>)(.-)(</[^>]+>)(.-)$')
-        if target then
-            local prefix, _, suffix = new_data[self.config.sentence_field]:match(table.concat { '^(.-)(', target, ')(.-)$' })
-            if prefix and suffix then
-                new_data[self.config.sentence_field] = table.concat { prefix, opentag, target, closetag, suffix }
-            end
-        end
-        return new_data
-    end
-
-
 
     function pub.join_fields(new_data, stored_data)
         fail_if_not_ready()

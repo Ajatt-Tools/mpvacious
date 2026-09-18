@@ -188,6 +188,31 @@ local function make_note_update_context(components)
         return sub_text
     end
 
+    --- Preserve targeted-sentence markup when the generated sentence contains its target.
+    local function update_sentence(new_data, stored_data)
+        -- adds support for TSCs
+        -- https://tatsumoto-ren.github.io/blog/discussing-various-card-templates.html#targeted-sentence-cards
+        -- if the target word was marked by Rikaitan, this function makes sure that the highlighting doesn't get erased.
+
+        if h.is_empty(stored_data[config().sentence_field]) then
+            -- sentence field is empty. can't continue.
+            return new_data
+        elseif h.is_empty(new_data[config().sentence_field]) then
+            -- *new* sentence field is empty, but old one contains data. don't delete the existing sentence.
+            new_data[config().sentence_field] = stored_data[config().sentence_field]
+            return new_data
+        end
+
+        local _, opentag, target, closetag, _ = stored_data[config().sentence_field]:match('^(.-)(<[^>]+>)(.-)(</[^>]+>)(.-)$')
+        if target then
+            local prefix, _, suffix = new_data[config().sentence_field]:match(table.concat { '^(.-)(', target, ')(.-)$' })
+            if prefix and suffix then
+                new_data[config().sentence_field] = table.concat { prefix, opentag, target, closetag, suffix }
+            end
+        end
+        return new_data
+    end
+
     ------------------------------------------------------------
     --- Public
 
