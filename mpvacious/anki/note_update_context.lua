@@ -356,6 +356,45 @@ local function make_note_update_context(components)
         return self.substitute_fmt(tag)
     end
 
+    --- Collect the current subtitle selection for one note update.
+    function pub.collect_subtitle()
+        local n_lines = self.quick_creation_opts:get_lines()
+        if n_lines then
+            return self.subs_observer.collect_from_all_dialogues(n_lines)
+        else
+            return self.subs_observer.collect_from_current()
+        end
+    end
+
+    --- Start media creation and write note fields after both jobs finish.
+    --- Create media and update fields for `request`,
+    --- which contains the captured "subtitle", target "note_ids", and "overwrite" mode.
+    function pub.perform_update(request)
+        if h.is_empty(request.subtitle['text']) then
+            -- In this case, don't modify whatever existing text there is and just
+            -- modify the other fields we can. The user might be trying to add
+            -- audio to a card which they've manually transcribed (either the video
+            -- has no subtitles or it has image subtitles).
+            request.subtitle['text'] = nil
+        end
+
+        local anki_media_dir = self.ankiconnect.get_media_dir_path()
+        self.encoder.set_output_dir(anki_media_dir)
+        self.forvo.set_output_dir(anki_media_dir)
+
+        local snapshot = self.encoder.snapshot.create_job(request.subtitle)
+        local audio = self.encoder.audio.create_job(request.subtitle, pub.audio_padding())
+        local new_data = pub.construct_note_fields(request.subtitle['text'], request.subtitle['secondary'], snapshot.filename, audio.filename)
+        local create_files_countdown = dec_counter.new(2).on_finish(h.as_callback(change_fields, request.note_ids, new_data, request.overwrite))
+
+        snapshot.on_finish(create_files_countdown.decrease).run_async()
+        audio.on_finish(create_files_countdown.decrease).run_async()
+
+        self.subs_observer.clear()
+        self.quick_creation_opts:clear_options()
+        return pub
+    end
+
     return pub
 end
 

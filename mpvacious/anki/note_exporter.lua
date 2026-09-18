@@ -11,41 +11,17 @@ local function make_exporter()
     local self = {}
     local pub = {}
 
+    --- Update the specified notes with the current subtitle selection.
     function pub.update_notes(note_ids, overwrite)
-        local sub
-        local n_lines = self.quick_creation_opts:get_lines()
-        if n_lines then
-            sub = self.subs_observer.collect_from_all_dialogues(n_lines)
-        else
-            sub = self.subs_observer.collect_from_current()
+        local request = {
+            note_ids = note_ids,
+            overwrite = overwrite,
+            subtitle = self.note_update_context.collect_subtitle(),
+        }
+        if not request.subtitle:is_valid() then
+            return self.notify("Nothing to export. Have you set the timings?", "warn", 2)
         end
-
-        if not sub:is_valid() then
-            return h.notify("Nothing to export. Have you set the timings?", "warn", 2)
-        end
-
-        if h.is_empty(sub['text']) then
-            -- In this case, don't modify whatever existing text there is and just
-            -- modify the other fields we can. The user might be trying to add
-            -- audio to a card which they've manually transcribed (either the video
-            -- has no subtitles or it has image subtitles).
-            sub['text'] = nil
-        end
-
-        local anki_media_dir = self.ankiconnect.get_media_dir_path()
-        self.encoder.set_output_dir(anki_media_dir)
-        self.forvo.set_output_dir(anki_media_dir)
-
-        local snapshot = self.encoder.snapshot.create_job(sub)
-        local audio = self.encoder.audio.create_job(sub, audio_padding())
-        local new_data = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
-        local create_files_countdown = dec_counter.new(2).on_finish(h.as_callback(change_fields, note_ids, new_data, overwrite))
-
-        snapshot.on_finish(create_files_countdown.decrease).run_async()
-        audio.on_finish(create_files_countdown.decrease).run_async()
-
-        self.subs_observer.clear()
-        self.quick_creation_opts:clear_options()
+        self.note_update_context.perform_update(request)
         return pub
     end
 
