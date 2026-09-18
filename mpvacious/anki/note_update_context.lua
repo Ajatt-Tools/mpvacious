@@ -223,24 +223,30 @@ local function make_note_update_context(components)
         return table.concat(queries, " OR ")
     end
 
+    --- Notify the user about one updated note.
+    local function notify_single_updated_note(note_id)
+        local first_field = self.ankiconnect.get_first_field(config().model_name)
+        local field_data = self.ankiconnect.get_note_fields(note_id)[first_field]
+        if not h.is_empty(field_data) then
+            local max_len = 20
+            if string.len(field_data) > max_len then
+                field_data = h.str_limit(field_data, max_len)
+            end
+            self.notify(string.format("Updated note: %s.", field_data))
+        else
+            self.notify(string.format("Updated note #%s.", tostring(note_id)))
+        end
+    end
+
+    --- Notify the user after every requested note has been updated.
     local function notify_user_on_finish(note_ids)
         --- Run this callback once all notes are changed.
         self.ankiconnect.gui_browse(make_browse_query(note_ids))
-        local first_field = self.ankiconnect.get_first_field(config().model_name)
         -- Notify the user.
         if #note_ids > 1 then
-            h.notify(string.format("Updated %i notes.", #note_ids))
+            self.notify(string.format("Updated %i notes.", #note_ids))
         else
-            local field_data = self.ankiconnect.get_note_fields(note_ids[1])[first_field]
-            if not h.is_empty(field_data) then
-                local max_len = 20
-                if string.len(field_data) > max_len then
-                    field_data = h.str_limit(field_data, max_len)
-                end
-                h.notify(string.format("Updated note: %s.", field_data))
-            else
-                h.notify(string.format("Updated note #%s.", tostring(note_ids[1])))
-            end
+            notify_single_updated_note(note_ids[1])
         end
     end
 
