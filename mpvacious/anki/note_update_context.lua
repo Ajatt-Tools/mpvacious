@@ -339,6 +339,18 @@ local function make_note_update_context(components)
         return ret
     end
 
+    --- Return audio padding for ordinary new-note export unless the user manually selected timings.
+    function pub.audio_padding()
+        local video_duration = mp.get_property_number('duration')
+        if config().audio_padding == 0.0 or not video_duration then
+            return 0.0
+        end
+        if self.subs_observer.user_altered() then
+            return 0.0
+        end
+        return config().audio_padding
+    end
+
     return pub
 end
 

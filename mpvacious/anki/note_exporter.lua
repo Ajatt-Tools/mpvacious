@@ -11,17 +11,6 @@ local function make_exporter()
     local self = {}
     local pub = {}
 
-    local function audio_padding()
-        local video_duration = mp.get_property_number('duration')
-        if self.config.audio_padding == 0.0 or not video_duration then
-            return 0.0
-        end
-        if self.subs_observer.user_altered() then
-            return 0.0
-        end
-        return self.config.audio_padding
-    end
-
     function pub.update_notes(note_ids, overwrite)
         local sub
         local n_lines = self.quick_creation_opts:get_lines()
