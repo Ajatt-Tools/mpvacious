@@ -27,6 +27,36 @@ local function normalize_field_content(new_text, old_text, cfg)
     end
 end
 
+--- Join field content unless one normalized value contains the other.
+--- Expected cfg fields: str separator, bool plaintext_compare
+local function join_field_content(new_text, old_text, cfg)
+    cfg = cfg or {}
+
+    -- By default, join fields with a HTML newline.
+    cfg.separator = cfg.separator or "<br>"
+
+    local cmp_new_text, cmp_old_text = normalize_field_content(new_text, old_text, cfg)
+
+    if h.is_empty(cmp_old_text) then
+        -- If 'old_text' is empty, there's no need to join content with the separator.
+        return new_text
+    end
+
+    if h.is_substr(cmp_old_text, cmp_new_text) then
+        -- If 'old_text' (field) already contains new_text (sentence, image, audio, etc.),
+        -- there's no need to add 'new_text' to 'old_text'.
+        return old_text
+    end
+
+    if h.is_substr(cmp_new_text, cmp_old_text) then
+        -- If 'new_text' (field) already contains old_text (sentence, image, audio, etc.),
+        -- there's no need to add 'new_text' to 'old_text'.
+        return new_text
+    end
+
+    return string.format("%s%s%s", old_text, cfg.separator, new_text)
+end
+
 --- Create a context that prepares and applies Anki note updates.
 local function make_note_update_context(components)
     local self = {
