@@ -351,6 +351,11 @@ local function make_note_update_context(components)
         return config().audio_padding
     end
 
+    --- Apply media-tag substitutions using the current update configuration.
+    function pub.substitute_fmt(tag)
+        return self.substitute_fmt(tag)
+    end
+
     return pub
 end
 
