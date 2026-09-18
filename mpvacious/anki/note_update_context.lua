@@ -423,6 +423,13 @@ end
 ------------------------------------------------------------
 --- Tests: executed by both standalone and mpv-backed runners.
 
+--- Test nested sentence fields retain the more complete normalized value.
+local function test_join_field_content()
+    h.assert_equals(join_field_content("ヤツらの声に現実味が…", "あの遠さはヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
+    h.assert_equals(join_field_content("あの遠さはヤツらの声に現実味が…", "ヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
+    h.assert_equals(join_field_content('new', 'old'), 'old<br>new')
+end
+
 --- Run context tests without requiring mpv-backed components.
 local function run_tests()
     local context = make_test_context()

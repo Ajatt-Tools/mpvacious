@@ -336,14 +336,9 @@ local function make_test_exporter()
     )
 end
 
-local function test_join_field_content()
-    h.assert_equals(join_field_content("ヤツらの声に現実味が…", "あの遠さはヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
-    h.assert_equals(join_field_content("あの遠さはヤツらの声に現実味が…", "ヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
-end
 
 local function run_tests(test_exporter)
     test_exporter = test_exporter or make_test_exporter()
-    test_join_field_content()
     test_join_fields(test_exporter)
     test_html_escaping(test_exporter)
     test_join_fields_duplicates(test_exporter)
