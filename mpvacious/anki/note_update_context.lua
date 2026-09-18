@@ -57,6 +57,82 @@ local function join_field_content(new_text, old_text, cfg)
     return string.format("%s%s%s", old_text, cfg.separator, new_text)
 end
 
+local function make_substitute_fmt(cfg_mgr)
+    local function config()
+        return cfg_mgr.config()
+    end
+
+    local function substitute_filename(tag, filename)
+        return tag:gsub("%%n", filename)
+    end
+
+    local function substitute_episode_number(tag, episode)
+        return tag:gsub("%%d", episode)
+    end
+
+    local function substitute_time_pos(tag)
+        local time_pos = h.human_readable_time(mp.get_property_number('time-pos'))
+        return tag:gsub("%%t", time_pos)
+    end
+
+    local function substitute_envvar(tag)
+        local env_tags = os.getenv('SUBS2SRS_TAGS') or ''
+        return tag:gsub("%%e", env_tags)
+    end
+
+    local function substitute_fullpath(tag)
+        local full_path = mp.get_property("path") or ''
+        return tag:gsub("%%f", full_path)
+    end
+
+    local function tag_format(filename)
+        filename = h.remove_extension(filename)
+        filename = h.remove_common_resolutions(filename)
+
+        local s, e, episode_num = h.get_episode_number(filename)
+
+        if config().tag_del_episode_num == true and not h.is_empty(s) then
+            if config().tag_del_after_episode_num == true then
+                -- Removing everything (e.g. episode name) after the episode number including itself.
+                filename = filename:sub(1, s)
+            else
+                -- Removing the first found instance of the episode number.
+                filename = filename:sub(1, s) .. filename:sub(e + 1, -1)
+            end
+        end
+
+        if config().tag_nuke_brackets == true then
+            filename = h.remove_text_in_brackets(filename)
+        end
+        if config().tag_nuke_parentheses == true then
+            filename = h.remove_filename_text_in_parentheses(filename)
+        end
+
+        if config().tag_filename_lowercase == true then
+            filename = filename:lower()
+        end
+
+        filename = h.remove_leading_trailing_spaces(filename)
+        filename = filename:gsub(" ", "_")
+        filename = filename:gsub("_%-_", "_") -- Replaces garbage _-_ substrings with a underscore
+        filename = h.remove_leading_trailing_dashes(filename)
+        return filename, episode_num or ''
+    end
+
+    return function(tag)
+        if not h.is_empty(tag) then
+            local filename, episode = tag_format(mp.get_property("filename"))
+            tag = substitute_filename(tag, filename)
+            tag = substitute_episode_number(tag, episode)
+            tag = substitute_time_pos(tag)
+            tag = substitute_envvar(tag)
+            tag = substitute_fullpath(tag)
+            tag = h.remove_leading_trailing_spaces(tag)
+        end
+        return tag
+    end
+end
+
 --- Create a context that prepares and applies Anki note updates.
 local function make_note_update_context(components)
     local self = {
