@@ -466,6 +466,21 @@ local function make_test_context()
     }
 end
 
+--- Test targeted-sentence markup is preserved while merging fields.
+local function test_make_new_note_data(test_context)
+    local old_note = {
+        SentKanji = "ヤツらの声に<b>現実味</b>が…",
+    }
+    local new_note = {
+        SentKanji = "あの遠さはヤツらの声に現実味が…",
+    }
+    local expected = {
+        SentKanji = "あの遠さはヤツらの声に<b>現実味</b>が…",
+    }
+    local new_data = test_context.make_new_note_data(old_note, new_note, { overwrite = false, disable_forvo = true })
+    h.assert_equals(new_data.SentKanji, expected.SentKanji)
+end
+
 --- Run context tests without requiring mpv-backed components.
 local function run_tests()
     local context = make_test_context()

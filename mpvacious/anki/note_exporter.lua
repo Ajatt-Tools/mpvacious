@@ -191,20 +191,6 @@ local function test_join_fields_duplicates(test_exporter)
 
 end
 
-local function test_make_new_note_data(test_exporter)
-    -- Test make_new_note_data
-    local old_note = {
-        SentKanji = "ヤツらの声に<b>現実味</b>が…",
-    }
-    local new_note = {
-        SentKanji = "あの遠さはヤツらの声に現実味が…",
-    }
-    local expected = {
-        SentKanji = "あの遠さはヤツらの声に<b>現実味</b>が…",
-    }
-    h.assert_equals(test_exporter.make_new_note_data(old_note, new_note, { overwrite = false, disable_forvo = true }).SentKanji, expected.SentKanji)
-end
-
 local function valid_update_subtitle()
     return {
         text = "new sentence",
@@ -325,7 +311,6 @@ local function make_test_exporter()
             test_cfg_mgr
     )
 end
-
 
 local function run_tests(test_exporter)
     test_exporter = test_exporter or make_test_exporter()
