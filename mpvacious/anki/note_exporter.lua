@@ -24,14 +24,6 @@ local function make_exporter()
         return self.config.audio_padding
     end
 
-    local function prepare_for_exporting(sub_text)
-        if not h.is_empty(sub_text) then
-            sub_text = self.subs_observer.clipboard_prepare(sub_text)
-            sub_text = h.escape_special_characters(sub_text)
-        end
-        return sub_text
-    end
-
     local function construct_note_fields(sub_text, secondary_text, snapshot_filename, audio_filename)
         local ret = {
             [self.config.sentence_field] = prepare_for_exporting(sub_text),

@@ -179,6 +179,15 @@ local function make_note_update_context(components)
         end
     end
 
+    --- Prepare subtitle text for an Anki field.
+    local function prepare_for_exporting(sub_text)
+        if not h.is_empty(sub_text) then
+            sub_text = self.subs_observer.clipboard_prepare(sub_text)
+            sub_text = h.escape_special_characters(sub_text)
+        end
+        return sub_text
+    end
+
     ------------------------------------------------------------
     --- Public
 
