@@ -9,6 +9,23 @@ local mp = require('mp')
 local h = require('helpers')
 local dec_counter = require('utils.dec_counter')
 
+--- Normalize two fields before joining them.
+--- Instead of comparing fields literally, normalize them to match different representations.
+local function normalize_field_content(new_text, old_text, cfg)
+    -- lowercase
+    new_text, old_text = new_text:lower(), old_text:lower()
+
+    -- Avoid duplicate sentence/media content when equivalent HTML entities differ,
+    -- e.g. "'" versus "&apos;".
+    new_text, old_text = h.unescape_special_characters(new_text), h.unescape_special_characters(old_text)
+
+    -- Primary and secondary subtitles are compared as normalized plain text.
+    if cfg.plaintext_compare then
+        return h.normalize_subtitle_text(new_text), h.normalize_subtitle_text(old_text)
+    else
+        return new_text, old_text
+    end
+end
 
 --- Create a context that prepares and applies Anki note updates.
 local function make_note_update_context(components)
