@@ -57,34 +57,42 @@ local function join_field_content(new_text, old_text, cfg)
     return string.format("%s%s%s", old_text, cfg.separator, new_text)
 end
 
+--- Create a formatter for media-tag substitutions.
 local function make_substitute_fmt(cfg_mgr)
+    --- Return the active configuration.
     local function config()
         return cfg_mgr.config()
     end
 
+    --- Replace the filename placeholder in a tag.
     local function substitute_filename(tag, filename)
         return tag:gsub("%%n", filename)
     end
 
+    --- Replace the episode-number placeholder in a tag.
     local function substitute_episode_number(tag, episode)
         return tag:gsub("%%d", episode)
     end
 
+    --- Replace the playback-time placeholder in a tag.
     local function substitute_time_pos(tag)
         local time_pos = h.human_readable_time(mp.get_property_number('time-pos'))
         return tag:gsub("%%t", time_pos)
     end
 
+    --- Replace the environment-tag placeholder in a tag.
     local function substitute_envvar(tag)
         local env_tags = os.getenv('SUBS2SRS_TAGS') or ''
         return tag:gsub("%%e", env_tags)
     end
 
+    --- Replace the full-path placeholder in a tag.
     local function substitute_fullpath(tag)
         local full_path = mp.get_property("path") or ''
         return tag:gsub("%%f", full_path)
     end
 
+    --- Remove the configured episode-number portion from a filename.
     local function remove_episode_number(filename, start_index, end_index)
         if config().tag_del_episode_num == true and not h.is_empty(start_index) then
             if config().tag_del_after_episode_num == true then
@@ -98,6 +106,7 @@ local function make_substitute_fmt(cfg_mgr)
         return filename
     end
 
+    --- Apply configured cleanup rules to a tag filename.
     local function clean_tag_filename(filename)
         if config().tag_nuke_brackets == true then
             filename = h.remove_text_in_brackets(filename)
@@ -117,15 +126,16 @@ local function make_substitute_fmt(cfg_mgr)
         return filename
     end
 
+    --- Format a filename and return its detected episode number.
     local function tag_format(filename)
         filename = h.remove_extension(filename)
         filename = h.remove_common_resolutions(filename)
         local start_index, end_index, episode_num = h.get_episode_number(filename)
         filename = remove_episode_number(filename, start_index, end_index)
-        filename = clean_tag_filename(filename)
-        return filename, episode_num or ''
+        return clean_tag_filename(filename), episode_num or ''
     end
 
+    --- Substitute all supported placeholders in a media tag.
     return function(tag)
         if not h.is_empty(tag) then
             local filename, episode_num = tag_format(mp.get_property("filename"))
