@@ -526,9 +526,36 @@ local function test_join_fields_duplicates(test_context)
     h.assert_equals(test_context.join_fields(new_note, old_note).SentKanji, "『お』から始まる<br>“お”から終わる")
 end
 
+--- Test joining sentence, media, and translation fields.
+local function test_join_fields(test_context)
+    local new_note = {
+        SentKanji = "それは…分からんよ",
+        SentAudio = "[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
+        SentEng = "Well...",
+        Image = '<img alt="snapshot" src="s01e13_02m25s561ms.avif">'
+    }
+    local old_note = {
+        SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]",
+        Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif">',
+        VocabAudio = "",
+        Notes = "",
+        VocabDef = "",
+        SentKanji = "勝ちって何に？",
+        SentEng = "What would we win, exactly?",
+    }
+    local expected = {
+        SentKanji = "勝ちって何に？<br>それは…分からんよ",
+        SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]<br>[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
+        SentEng = "What would we win, exactly?<br>Well...",
+        Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif"><br><img alt="snapshot" src="s01e13_02m25s561ms.avif">',
+        Notes = "",
+    }
+    h.assert_equals(test_context.join_fields(new_note, old_note), expected)
+end
+
 --- Run context tests without requiring mpv-backed components.
-local function run_tests()
-    local context = make_test_context()
+local function run_tests(context)
+    context = context or make_test_context()
     test_join_field_content()
     test_collect_subtitle()
     test_update_completion()

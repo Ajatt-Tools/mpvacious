@@ -120,33 +120,6 @@ local function make_exporter()
     return pub
 end
 
-local function test_join_fields(test_exporter)
-    -- Test join_fields
-    local new_note = {
-        SentKanji = "それは…分からんよ",
-        SentAudio = "[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
-        SentEng = "Well...",
-        Image = '<img alt="snapshot" src="s01e13_02m25s561ms.avif">'
-    }
-    local old_note = {
-        SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]",
-        Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif">',
-        VocabAudio = "",
-        Notes = "",
-        VocabDef = "",
-        SentKanji = "勝ちって何に？",
-        SentEng = "What would we win, exactly?",
-    }
-    local expected = {
-        SentKanji = "勝ちって何に？<br>それは…分からんよ",
-        SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]<br>[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
-        SentEng = "What would we win, exactly?<br>Well...",
-        Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif"><br><img alt="snapshot" src="s01e13_02m25s561ms.avif">',
-        Notes = "",
-    }
-    h.assert_equals(test_exporter.join_fields(new_note, old_note), expected)
-end
-
 local function valid_update_subtitle()
     return {
         text = "new sentence",
@@ -270,7 +243,6 @@ end
 
 local function run_tests(test_exporter)
     test_exporter = test_exporter or make_test_exporter()
-    test_join_fields(test_exporter)
     test_update_notes_after_media_created()
 end
 
