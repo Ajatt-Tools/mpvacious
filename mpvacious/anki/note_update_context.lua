@@ -423,18 +423,21 @@ end
 ------------------------------------------------------------
 --- Tests: executed by both standalone and mpv-backed runners.
 
-local TEST_CONFIG = {
-    sentence_field = "SentKanji",
-    secondary_field = "SentEng",
-    audio_field = "SentAudio",
-    audio_template = "[sound:%s]",
-    image_field = "Image",
-    image_template = '<img alt="snapshot" src="%s">',
-    miscinfo_field = 'Notes',
-    append_media = true,
-    audio_padding = 0,
-    miscinfo_enable = false,
-}
+--- Create an update configuration with the selected merge order.
+local function make_update_test_config(append_media)
+    return {
+        sentence_field = "SentKanji",
+        secondary_field = "SentEng",
+        audio_field = "SentAudio",
+        audio_template = "[sound:%s]",
+        image_field = "Image",
+        image_template = '<img alt="snapshot" src="%s">',
+        miscinfo_field = 'Notes',
+        append_media = append_media,
+        miscinfo_enable = false,
+        audio_padding = 0,
+    }
+end
 
 --- Test nested sentence fields retain the more complete normalized value.
 local function test_join_field_content()
@@ -444,7 +447,7 @@ local function test_join_field_content()
 end
 
 --- Create a context with concrete test components for field-merge tests.
-local function make_test_context()
+local function make_field_merge_test_context()
     return make_note_update_context {
         ankiconnect = {},
         quick_creation_opts = {},
@@ -459,7 +462,7 @@ local function make_test_context()
         cfg_mgr = {
             --- Return the fixed field-merge test configuration.
             config = function()
-                return TEST_CONFIG
+                return make_update_test_config(true)
             end,
         },
         notify = h.noop,
@@ -553,9 +556,176 @@ local function test_join_fields(test_context)
     h.assert_equals(test_context.join_fields(new_note, old_note), expected)
 end
 
+--- Create a deferred media job that records its completion callback.
+local function make_update_test_pending_media_job(filename, jobs)
+    local job = { filename = filename, run_async = h.noop }
+    --- Register the media-job completion callback.
+    function job.on_finish(callback)
+        job.callback = callback
+        return job
+    end
+    table.insert(jobs, job)
+    return job
+end
+
+--- Create an encoder test double that records media jobs.
+local function make_update_test_encoder(jobs)
+    return {
+        set_output_dir = h.noop,
+        snapshot = {
+            --- Create a deferred snapshot job.
+            create_job = function()
+                return make_update_test_pending_media_job('snapshot.avif', jobs)
+            end,
+        },
+        audio = {
+            --- Create a deferred audio job.
+            create_job = function()
+                return make_update_test_pending_media_job('audio.ogg', jobs)
+            end,
+        },
+    }
+end
+
+--- Create a subtitle observer test double for context updates.
+local function make_update_test_observer(result, subtitle)
+    return {
+        --- Return the configured current subtitle.
+        collect_from_current = function()
+            result.current_collections = result.current_collections + 1
+            return subtitle
+        end,
+        --- Record requested subtitle lines and return the fixture.
+        collect_from_all_dialogues = function(lines)
+            result.collected_lines = lines
+            return subtitle
+        end,
+        --- Preserve subtitle text during test export preparation.
+        clipboard_prepare = function(text)
+            return text
+        end,
+        --- Record clearing the subtitle selection.
+        clear = function()
+            result.clear_count = result.clear_count + 1
+        end,
+        --- Report that test timings were not manually altered.
+        user_altered = function()
+            return false
+        end,
+    }
+end
+
+--- Create an AnkiConnect test double for context updates.
+local function make_update_test_ankiconnect(result)
+    return {
+        --- Return the test media directory.
+        get_media_dir_path = function()
+            return '/tmp'
+        end,
+        --- Return stored fields for the supplied note.
+        get_note_fields = function(note_id)
+            return { SentKanji = 'stored ' .. tostring(note_id) }
+        end,
+        --- Return the first field used in notifications.
+        get_first_field = function()
+            return 'SentKanji'
+        end,
+        --- Record fields and immediately complete the simulated write.
+        append_media = function(note_id, fields, _, on_finish)
+            table.insert(result.appended_note_ids, note_id)
+            result.fields_by_note[note_id] = fields
+            on_finish()
+        end,
+        --- Record the Anki Browser query.
+        gui_browse = function(query)
+            result.browse_query = query
+        end,
+    }
+end
+
+--- Create a context and subtitle fixture for update-flow tests.
+local function make_update_test_context(result, jobs, n_lines, test_config)
+    local subtitle = { text = 'new sentence', secondary = '' }
+    result.fields_by_note = {}
+    return make_note_update_context {
+        ankiconnect = make_update_test_ankiconnect(result),
+        quick_creation_opts = {
+            --- Return the configured quick-creation line count.
+            get_lines = function()
+                return n_lines
+            end,
+            clear_options = h.noop,
+        },
+        subs_observer = make_update_test_observer(result, subtitle),
+        encoder = make_update_test_encoder(jobs),
+        forvo = {
+            set_output_dir = h.noop,
+            --- Preserve generated fields without pronunciation media.
+            append = function(new_data)
+                return new_data
+            end,
+        },
+        cfg_mgr = {
+            --- Return the supplied or default update-test configuration.
+            config = function()
+                return test_config or make_update_test_config(true)
+            end,
+        },
+        --- Record the update notification.
+        notify = function(message)
+            result.notification = message
+        end,
+    }, subtitle
+end
+
+--- Test both configured media merge orders.
+local function test_update_media_merge()
+    for _, scenario in ipairs {
+        { append_media = true, expected = 'stored 13<br>new sentence' },
+        { append_media = false, expected = 'new sentence<br>stored 13' },
+    } do
+        local result = { current_collections = 0, clear_count = 0, appended_note_ids = {} }
+        local jobs = {}
+        local context, subtitle = make_update_test_context(result, jobs, nil, make_update_test_config(scenario.append_media))
+        context.perform_update({ note_ids = { 13 }, overwrite = false, subtitle = subtitle })
+        jobs[1].callback()
+        jobs[2].callback()
+        h.assert_equals(result.fields_by_note[13].SentKanji, scenario.expected)
+    end
+end
+
+--- Test collection from current and configured multi-line subtitles.
+local function test_collect_subtitle()
+    local current_result = { current_collections = 0, clear_count = 0, appended_note_ids = {} }
+    local current_context, current_subtitle = make_update_test_context(current_result, {}, nil)
+    h.assert_equals(current_context.collect_subtitle(), current_subtitle)
+    h.assert_equals(current_result.current_collections, 1)
+
+    local multi_result = { current_collections = 0, clear_count = 0, appended_note_ids = {} }
+    local multi_context, multi_subtitle = make_update_test_context(multi_result, {}, 3)
+    h.assert_equals(multi_context.collect_subtitle(), multi_subtitle)
+    h.assert_equals(multi_result.collected_lines, 3)
+end
+
+--- Test media completion writes each note and notifies the user.
+local function test_update_completion()
+    local result = { current_collections = 0, clear_count = 0, appended_note_ids = {} }
+    local jobs = {}
+    local context, subtitle = make_update_test_context(result, jobs, nil)
+    context.perform_update({ note_ids = { 11, 12 }, overwrite = true, subtitle = subtitle })
+    h.assert_equals(#jobs, 2)
+    jobs[1].callback()
+    h.assert_equals(result.appended_note_ids, {})
+    jobs[2].callback()
+    h.assert_equals(result.appended_note_ids, { 11, 12 })
+    h.assert_equals(result.browse_query, 'nid:11 OR nid:12')
+    h.assert_equals(result.notification, 'Updated 2 notes.')
+    h.assert_equals(result.clear_count, 1)
+end
+
 --- Run context tests without requiring mpv-backed components.
 local function run_tests(context)
-    context = context or make_test_context()
+    context = context or make_field_merge_test_context()
     test_join_field_content()
     test_collect_subtitle()
     test_update_completion()
