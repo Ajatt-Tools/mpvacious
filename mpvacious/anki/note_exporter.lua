@@ -38,26 +38,28 @@ local function make_exporter()
         return pub
     end
 
+    --- Create and start media jobs for an ordinary note export.
+    local function start_export_media(subtitle)
+        self.encoder.set_output_dir(self.ankiconnect.get_media_dir_path())
+        local snapshot = self.encoder.snapshot.create_job(subtitle)
+        local audio = self.encoder.audio.create_job(subtitle, self.note_update_context.audio_padding())
+        snapshot.run_async()
+        audio.run_async()
+        return snapshot, audio
+    end
+
     --- Export the current subtitle as a new Anki note.
     function pub.export_to_anki(gui)
         pub.maybe_reload_config()
         local sub = self.subs_observer.collect_from_current()
-
         if not sub:is_valid() then
             return h.notify("Nothing to export.", "warn", 1)
         end
-
         if not gui and h.is_empty(sub['text']) then
             sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
         end
 
-        self.encoder.set_output_dir(self.ankiconnect.get_media_dir_path())
-        local snapshot = self.encoder.snapshot.create_job(sub)
-        local audio = self.encoder.audio.create_job(sub, self.note_update_context.audio_padding())
-
-        snapshot.run_async()
-        audio.run_async()
-
+        local snapshot, audio = start_export_media(sub)
         local first_field = self.ankiconnect.get_first_field(config().model_name)
         local note_fields = self.note_update_context.construct_note_fields {
             primary_text = sub['text'],
