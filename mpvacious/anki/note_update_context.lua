@@ -644,7 +644,7 @@ local function make_update_test_encoder(jobs)
 end
 
 --- Create a subtitle observer test double for context updates.
-local function make_update_test_observer(result, subtitle)
+local function make_update_test_observer(result, subtitle, user_altered)
     return {
         --- Return the configured current subtitle.
         collect_from_current = function()
@@ -666,7 +666,7 @@ local function make_update_test_observer(result, subtitle)
         end,
         --- Report that test timings were not manually altered.
         user_altered = function()
-            return false
+            return user_altered or false
         end,
     }
 end
@@ -740,13 +740,13 @@ local function make_update_test_notifier(result)
 end
 
 --- Create a context and subtitle fixture for update-flow tests.
-local function make_update_test_context(result, jobs, n_lines, test_config)
+local function make_update_test_context(result, jobs, n_lines, test_config, user_altered)
     local subtitle = { text = 'new sentence', secondary = '' }
     result.fields_by_note = {}
     return make_note_update_context {
         ankiconnect = make_update_test_ankiconnect(result),
         quick_creation_opts = make_update_test_quick_creation_opts(n_lines),
-        subs_observer = make_update_test_observer(result, subtitle),
+        subs_observer = make_update_test_observer(result, subtitle, user_altered),
         encoder = make_update_test_encoder(jobs),
         forvo = make_update_test_forvo(),
         cfg_mgr = make_update_test_config_manager(test_config),
@@ -799,12 +799,82 @@ local function test_update_completion()
     h.assert_equals(result.clear_count, 1)
 end
 
+--- Test one updated note opens the matching browser query and notification.
+local function test_single_note_update_completion()
+    local result = { current_collections = 0, clear_count = 0, appended_note_ids = {} }
+    local jobs = {}
+    local context, subtitle = make_update_test_context(result, jobs, nil)
+    context.perform_update({ note_ids = { 11 }, overwrite = true, subtitle = subtitle })
+    jobs[1].callback()
+    jobs[2].callback()
+    h.assert_equals(result.browse_query, 'nid:11')
+    h.assert_equals(result.notification, 'Updated note: stored 11.')
+end
+
+--- Test blank update subtitles preserve the stored sentence.
+local function test_blank_update_subtitle()
+    local result = { current_collections = 0, clear_count = 0, appended_note_ids = {} }
+    local jobs = {}
+    local context, subtitle = make_update_test_context(result, jobs, nil)
+    subtitle.text = ''
+    context.perform_update({ note_ids = { 13 }, overwrite = false, subtitle = subtitle })
+    jobs[1].callback()
+    jobs[2].callback()
+    h.assert_equals(result.fields_by_note[13].SentKanji, 'stored 13')
+end
+
+--- Run a callback with stable media-tag and duration properties.
+local function with_update_test_mpv_properties(callback)
+    local get_property = mp.get_property
+    local get_property_number = mp.get_property_number
+    --- Return the test media filename.
+    mp.get_property = function(name)
+        if name == 'filename' then
+            return 'episode.mkv'
+        end
+        return nil
+    end
+    --- Return the test media duration.
+    mp.get_property_number = function(name)
+        if name == 'duration' then
+            return 1
+        end
+        return nil
+    end
+    local success, error_message = pcall(callback)
+    mp.get_property = get_property
+    mp.get_property_number = get_property_number
+    if not success then
+        error(error_message)
+    end
+end
+
+--- Assert tag substitution and audio padding for automatic and altered timings.
+local function assert_update_test_media_metadata()
+    local config = make_update_test_config(true)
+    config.audio_padding = 0.5
+    local result = { current_collections = 0, clear_count = 0, appended_note_ids = {} }
+    local context = make_update_test_context(result, {}, nil, config)
+    local altered_context = make_update_test_context(result, {}, nil, config, true)
+    h.assert_equals(context.substitute_fmt('source_%n'), 'source_episode')
+    h.assert_equals(context.audio_padding(), 0.5)
+    h.assert_equals(altered_context.audio_padding(), 0.0)
+end
+
+--- Test tag substitution and audio padding for automatic and altered timings.
+local function test_media_metadata()
+    with_update_test_mpv_properties(assert_update_test_media_metadata)
+end
+
 --- Run context tests without requiring mpv-backed components.
 local function run_tests(context)
     context = context or make_field_merge_test_context()
     test_join_field_content()
     test_collect_subtitle()
     test_update_completion()
+    test_single_note_update_completion()
+    test_blank_update_subtitle()
+    test_media_metadata()
     test_update_media_merge()
     test_join_fields(context)
     test_join_fields_duplicates(context)

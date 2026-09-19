@@ -589,6 +589,7 @@ end
 ------------------------------------------------------------
 -- tests
 
+--- Run every module test suite in the mpv-backed environment.
 local function run_tests()
     h.run_tests()
     eutils.run_tests()
@@ -596,7 +597,7 @@ local function run_tests()
     Subtitle.run_tests()
     sub_list.run_tests()
     make_subtitles_observer.run_tests()
-    make_note_exporter.run_tests(note_exporter)
+    make_note_exporter.run_tests()
     make_note_update_context.run_tests()
     speech_collector.run_tests()
 end
