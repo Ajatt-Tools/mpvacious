@@ -500,44 +500,19 @@ local function test_html_escaping(test_context)
     h.assert_equals(test_context.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
 end
 
---- Test equivalent HTML entities and subtitle punctuation do not duplicate fields.
-local function test_join_fields_duplicates(test_context)
-    -- Equivalent subtitle punctuation must not duplicate a dictionary sentence.
-    local old_note = {
-        SentKanji = "女の子の <b>女性</b>の　『お』から始まる…",
-    }
-    local new_note = {
-        SentKanji = "女の子の <b>女性</b>の “お”から始まる…",
-    }
-    h.assert_equals(test_context.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
-    for _, equivalent in ipairs {
-        "女の子の <b>女性</b>の\194\160〝お〟から始まる…\226\128\139",
-        "\239\187\191女の子の <b>女性</b>の\226\128\175＂お＂から始まる…",
-    } do
-        new_note.SentKanji = equivalent
-        h.assert_equals(test_context.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
-    end
-
-    -- Distinct punctuation must still be appended, not treated as duplicates.
-    old_note = { SentKanji = "それは…分からんよ" }
-    new_note = { SentKanji = "それは！分からんよ" }
-    h.assert_equals(test_context.join_fields(new_note, old_note).SentKanji, "それは…分からんよ<br>それは！分からんよ")
-
-    -- Quote variants normalize, but differing surrounding text must still be appended.
-    old_note = { SentKanji = "『お』から始まる" }
-    new_note = { SentKanji = "“お”から終わる" }
-    h.assert_equals(test_context.join_fields(new_note, old_note).SentKanji, "『お』から始まる<br>“お”から終わる")
-end
-
---- Test joining sentence, media, and translation fields.
-local function test_join_fields(test_context)
-    local new_note = {
+--- Create fresh generated fields for a field-merge test.
+local function make_join_fields_test_new_note()
+    return {
         SentKanji = "それは…分からんよ",
         SentAudio = "[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
         SentEng = "Well...",
-        Image = '<img alt="snapshot" src="s01e13_02m25s561ms.avif">'
+        Image = '<img alt="snapshot" src="s01e13_02m25s561ms.avif">',
     }
-    local old_note = {
+end
+
+--- Create fresh stored fields for a field-merge test.
+local function make_join_fields_test_old_note()
+    return {
         SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]",
         Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif">',
         VocabAudio = "",
@@ -546,14 +521,95 @@ local function test_join_fields(test_context)
         SentKanji = "勝ちって何に？",
         SentEng = "What would we win, exactly?",
     }
-    local expected = {
+end
+
+--- Create the expected output for a field-merge test.
+local function make_join_fields_test_expected()
+    return {
         SentKanji = "勝ちって何に？<br>それは…分からんよ",
         SentAudio = "[sound:s01e13_02m21s340ms_02m24s140ms.ogg]<br>[sound:s01e13_02m25s010ms_02m27s640ms.ogg]",
         SentEng = "What would we win, exactly?<br>Well...",
         Image = '<img alt="snapshot" src="s01e13_02m22s225ms.avif"><br><img alt="snapshot" src="s01e13_02m25s561ms.avif">',
         Notes = "",
     }
-    h.assert_equals(test_context.join_fields(new_note, old_note), expected)
+end
+
+--- Create fresh field-merge input and expected-output fixtures.
+local function make_join_fields_test_case()
+    return {
+        new_note = make_join_fields_test_new_note(),
+        old_note = make_join_fields_test_old_note(),
+        expected = make_join_fields_test_expected(),
+    }
+end
+
+--- Create a scenario for equivalent quote variants.
+local function make_quote_variant_duplicate_test_scenario()
+    local text = "女の子の <b>女性</b>の　『お』から始まる…"
+    return { old = text, new = "女の子の <b>女性</b>の “お”から始まる…", expected = text }
+end
+
+--- Create a scenario for equivalent nonbreaking spaces and quotes.
+local function make_nonbreaking_space_duplicate_test_scenario()
+    local text = "女の子の <b>女性</b>の　『お』から始まる…"
+    return {
+        old = text,
+        new = "女の子の <b>女性</b>の\194\160〝お〟から始まる…\226\128\139",
+        expected = text,
+    }
+end
+
+--- Create a scenario for equivalent byte-order marks and quotes.
+local function make_byte_order_mark_duplicate_test_scenario()
+    local text = "女の子の <b>女性</b>の　『お』から始まる…"
+    return {
+        old = text,
+        new = "\239\187\191女の子の <b>女性</b>の\226\128\175＂お＂から始まる…",
+        expected = text,
+    }
+end
+
+--- Create a scenario for distinct punctuation.
+local function make_distinct_punctuation_test_scenario()
+    return {
+        old = "それは…分からんよ",
+        new = "それは！分からんよ",
+        expected = "それは…分からんよ<br>それは！分からんよ",
+    }
+end
+
+--- Create a scenario for distinct surrounding quote text.
+local function make_distinct_quote_text_test_scenario()
+    return {
+        old = "『お』から始まる",
+        new = "“お”から終わる",
+        expected = "『お』から始まる<br>“お”から終わる",
+    }
+end
+
+--- Create fresh scenarios for duplicate field-content handling.
+local function make_join_fields_duplicate_test_scenarios()
+    return {
+        make_quote_variant_duplicate_test_scenario(),
+        make_nonbreaking_space_duplicate_test_scenario(),
+        make_byte_order_mark_duplicate_test_scenario(),
+        make_distinct_punctuation_test_scenario(),
+        make_distinct_quote_text_test_scenario(),
+    }
+end
+
+--- Test joining sentence, media, and translation fields.
+local function test_join_fields(test_context)
+    local test_case = make_join_fields_test_case()
+    h.assert_equals(test_context.join_fields(test_case.new_note, test_case.old_note), test_case.expected)
+end
+
+--- Test equivalent HTML entities and subtitle punctuation do not duplicate fields.
+local function test_join_fields_duplicates(test_context)
+    for _, scenario in ipairs(make_join_fields_duplicate_test_scenarios()) do
+        local actual = test_context.join_fields({ SentKanji = scenario.new }, { SentKanji = scenario.old })
+        h.assert_equals(actual.SentKanji, scenario.expected)
+    end
 end
 
 --- Create a deferred media job that records its completion callback.
@@ -643,38 +699,58 @@ local function make_update_test_ankiconnect(result)
     }
 end
 
+--- Create quick-creation options for update-flow tests.
+local function make_update_test_quick_creation_opts(n_lines)
+    return {
+        --- Return the configured quick-creation line count.
+        get_lines = function()
+            return n_lines
+        end,
+        clear_options = h.noop,
+    }
+end
+
+--- Create a Forvo test double that preserves generated fields.
+local function make_update_test_forvo()
+    return {
+        set_output_dir = h.noop,
+        --- Preserve generated fields without pronunciation media.
+        append = function(new_data)
+            return new_data
+        end,
+    }
+end
+
+--- Create a configuration manager for update-flow tests.
+local function make_update_test_config_manager(test_config)
+    return {
+        --- Return the supplied or default update-test configuration.
+        config = function()
+            return test_config or make_update_test_config(true)
+        end,
+    }
+end
+
+--- Create a notification callback that records its message.
+local function make_update_test_notifier(result)
+    --- Record the update notification.
+    return function(message)
+        result.notification = message
+    end
+end
+
 --- Create a context and subtitle fixture for update-flow tests.
 local function make_update_test_context(result, jobs, n_lines, test_config)
     local subtitle = { text = 'new sentence', secondary = '' }
     result.fields_by_note = {}
     return make_note_update_context {
         ankiconnect = make_update_test_ankiconnect(result),
-        quick_creation_opts = {
-            --- Return the configured quick-creation line count.
-            get_lines = function()
-                return n_lines
-            end,
-            clear_options = h.noop,
-        },
+        quick_creation_opts = make_update_test_quick_creation_opts(n_lines),
         subs_observer = make_update_test_observer(result, subtitle),
         encoder = make_update_test_encoder(jobs),
-        forvo = {
-            set_output_dir = h.noop,
-            --- Preserve generated fields without pronunciation media.
-            append = function(new_data)
-                return new_data
-            end,
-        },
-        cfg_mgr = {
-            --- Return the supplied or default update-test configuration.
-            config = function()
-                return test_config or make_update_test_config(true)
-            end,
-        },
-        --- Record the update notification.
-        notify = function(message)
-            result.notification = message
-        end,
+        forvo = make_update_test_forvo(),
+        cfg_mgr = make_update_test_config_manager(test_config),
+        notify = make_update_test_notifier(result),
     }, subtitle
 end
 

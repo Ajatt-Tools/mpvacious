@@ -147,7 +147,7 @@ end
 --- Tests: executed by both standalone and mpv-backed runners.
 
 --- Create a valid subtitle fixture for update tests.
-local function valid_update_subtitle()
+local function make_valid_update_test_subtitle()
     return {
         text = "new sentence",
         secondary = "",
@@ -159,7 +159,7 @@ local function valid_update_subtitle()
 end
 
 --- Create an invalid subtitle fixture for update tests.
-local function invalid_update_subtitle()
+local function make_invalid_update_test_subtitle()
     return {
         --- Mark the subtitle fixture as invalid.
         is_valid = function()
@@ -169,8 +169,12 @@ local function invalid_update_subtitle()
 end
 
 --- Create a deferred media job that records its completion callback.
-local function make_pending_media_job(filename, jobs)
-    local job = { filename = filename, run_async = h.noop }
+local function make_exporter_test_pending_media_job(filename, jobs)
+    local job = { filename = filename }
+    --- Record that the media job started.
+    function job.run_async()
+        job.started = true
+    end
     --- Register the media-job completion callback.
     function job.on_finish(callback)
         job.callback = callback
@@ -181,10 +185,10 @@ local function make_pending_media_job(filename, jobs)
 end
 
 --- Create a media-job factory for the supplied filename.
-local function make_media_job_factory(filename, jobs)
+local function make_exporter_test_media_job_factory(filename, jobs)
     --- Create one pending media job.
     return function()
-        return make_pending_media_job(filename, jobs)
+        return make_exporter_test_pending_media_job(filename, jobs)
     end
 end
 
@@ -192,11 +196,12 @@ end
 local function make_update_test_encoder(jobs)
     return {
         set_output_dir = h.noop,
-        snapshot = { create_job = make_media_job_factory("snapshot.avif", jobs) },
-        audio = { create_job = make_media_job_factory("audio.ogg", jobs) },
+        snapshot = { create_job = make_exporter_test_media_job_factory("snapshot.avif", jobs) },
+        audio = { create_job = make_exporter_test_media_job_factory("audio.ogg", jobs) },
     }
 end
 
+--- Create the fixed configuration used by exporter tests.
 local function make_update_test_config()
     return {
         sentence_field = "SentKanji",
@@ -206,22 +211,37 @@ local function make_update_test_config()
         image_template = '<img alt="snapshot" src="%s">',
         audio_padding = 0,
         miscinfo_enable = false,
+        model_name = "Test model",
+        note_tag = "",
     }
 end
 
 --- Create an AnkiConnect test double that records updated fields.
 local function make_update_test_ankiconnect(result)
     return {
+        --- Return the test media directory.
         get_media_dir_path = function()
             return "/tmp"
         end,
+        --- Return stored fields for an update target.
         get_note_fields = function()
             return { SentKanji = "old sentence" }
         end,
+        --- Return the model's first field name.
+        get_first_field = function()
+            return "SentKanji"
+        end,
+        --- Record fields written by an update.
         append_media = function(note_id, fields)
             result.append_count = result.append_count + 1
             result.note_id = note_id
             result.fields = fields
+        end,
+        --- Record fields created by an ordinary export.
+        add_note = function(fields, tag, gui)
+            result.fields = fields
+            result.tag = tag
+            result.gui = gui
         end,
     }
 end
@@ -229,12 +249,15 @@ end
 --- Create a subtitle observer test double.
 local function make_update_test_observer(result, subtitle)
     return {
+        --- Return the configured subtitle fixture.
         collect_from_current = function()
-            return subtitle or valid_update_subtitle()
+            return subtitle or make_valid_update_test_subtitle()
         end,
+        --- Preserve test subtitle text during field preparation.
         clipboard_prepare = function(text)
             return text
         end,
+        --- Record clearing the subtitle selection.
         clear = function()
             result.clear_count = result.clear_count + 1
         end,
@@ -256,6 +279,7 @@ end
 local function make_update_test_forvo()
     return {
         set_output_dir = h.noop,
+        --- Preserve generated fields without pronunciation media.
         append = function(new_data)
             return new_data
         end
@@ -266,6 +290,7 @@ end
 local function make_update_test_config_manager()
     return {
         fail_if_not_ready = h.noop,
+        --- Return the fixed exporter-test configuration.
         config = function()
             return make_update_test_config()
         end
@@ -305,16 +330,33 @@ end
 local function test_invalid_subtitle_does_not_start_update()
     local result = { append_count = 0, clear_count = 0 }
     local jobs = {}
-    make_update_test_exporter(result, jobs, invalid_update_subtitle()).update_notes({ 1 }, true)
+    make_update_test_exporter(result, jobs, make_invalid_update_test_subtitle()).update_notes({ 1 }, true)
     h.assert_equals(#jobs, 0)
     h.assert_equals(result.append_count, 0)
     h.assert_equals(result.clear_count, 0)
+end
+
+--- Test ordinary exports use the context to create and write note fields.
+local function test_export_to_anki()
+    local result = { append_count = 0, clear_count = 0 }
+    local jobs = {}
+    make_update_test_exporter(result, jobs).export_to_anki(false)
+    h.assert_equals(#jobs, 2)
+    h.assert_equals(jobs[1].started, true)
+    h.assert_equals(jobs[2].started, true)
+    h.assert_equals(result.fields.SentKanji, "new sentence")
+    h.assert_equals(result.fields.SentAudio, "[sound:audio.ogg]")
+    h.assert_equals(result.fields.Image, '<img alt="snapshot" src="snapshot.avif">')
+    h.assert_equals(result.tag, "")
+    h.assert_equals(result.gui, false)
+    h.assert_equals(result.clear_count, 1)
 end
 
 --- Run exporter tests.
 local function run_tests()
     test_update_notes_after_media_created()
     test_invalid_subtitle_does_not_start_update()
+    test_export_to_anki()
 end
 
 return {
