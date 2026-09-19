@@ -147,21 +147,6 @@ local function test_join_fields(test_exporter)
     h.assert_equals(test_exporter.join_fields(new_note, old_note), expected)
 end
 
-local function test_html_escaping(test_exporter)
-    -- HTML escaping
-    local old_note = {
-        SentKanji = "Well, that's the knighthood in the bag.",
-    }
-    local new_note = {
-        SentKanji = "Well, that&apos;s the knighthood in the bag.",
-    }
-    h.assert_equals(test_exporter.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
-    local new_note = {
-        SentKanji = "Well, that&#39;s the knighthood in the bag.",
-    }
-    h.assert_equals(test_exporter.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
-end
-
 local function test_join_fields_duplicates(test_exporter)
     -- Equivalent subtitle punctuation must not duplicate a dictionary sentence.
     local old_note = {
@@ -315,9 +300,7 @@ end
 local function run_tests(test_exporter)
     test_exporter = test_exporter or make_test_exporter()
     test_join_fields(test_exporter)
-    test_html_escaping(test_exporter)
     test_join_fields_duplicates(test_exporter)
-    test_make_new_note_data(test_exporter)
     test_update_notes_after_media_created()
 end
 

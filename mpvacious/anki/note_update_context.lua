@@ -481,6 +481,22 @@ local function test_make_new_note_data(test_context)
     h.assert_equals(new_data.SentKanji, expected.SentKanji)
 end
 
+--- Test equivalent apostrophe entities do not duplicate a sentence field.
+local function test_html_escaping(test_context)
+    -- HTML escaping
+    local old_note = {
+        SentKanji = "Well, that's the knighthood in the bag.",
+    }
+    local new_note = {
+        SentKanji = "Well, that&apos;s the knighthood in the bag.",
+    }
+    h.assert_equals(test_context.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+    new_note = {
+        SentKanji = "Well, that&#39;s the knighthood in the bag.",
+    }
+    h.assert_equals(test_context.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
+end
+
 --- Run context tests without requiring mpv-backed components.
 local function run_tests()
     local context = make_test_context()
