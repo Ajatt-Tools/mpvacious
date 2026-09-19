@@ -48,6 +48,21 @@ local function make_exporter()
         return snapshot, audio
     end
 
+    --- Build note fields and ensure the first model field is populated.
+    local function make_export_note_fields(subtitle, snapshot, audio)
+        local first_field = self.ankiconnect.get_first_field(config().model_name)
+        local note_fields = self.note_update_context.construct_note_fields {
+            primary_text = subtitle['text'],
+            secondary_text = subtitle['secondary'],
+            snapshot_filename = snapshot.filename,
+            audio_filename = audio.filename,
+        }
+        if not h.is_empty(first_field) and h.is_empty(note_fields[first_field]) then
+            note_fields[first_field] = "[empty]"
+        end
+        return note_fields
+    end
+
     --- Export the current subtitle as a new Anki note.
     function pub.export_to_anki(gui)
         pub.maybe_reload_config()
@@ -60,18 +75,7 @@ local function make_exporter()
         end
 
         local snapshot, audio = start_export_media(sub)
-        local first_field = self.ankiconnect.get_first_field(config().model_name)
-        local note_fields = self.note_update_context.construct_note_fields {
-            primary_text = sub['text'],
-            secondary_text = sub['secondary'],
-            snapshot_filename = snapshot.filename,
-            audio_filename = audio.filename,
-        }
-
-        if not h.is_empty(first_field) and h.is_empty(note_fields[first_field]) then
-            note_fields[first_field] = "[empty]"
-        end
-
+        local note_fields = make_export_note_fields(sub, snapshot, audio)
         self.ankiconnect.add_note(note_fields, self.note_update_context.substitute_fmt(config().note_tag), gui)
         self.subs_observer.clear()
         return pub
