@@ -3,13 +3,18 @@ Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 ]]
 
-local mp = require('mp')
 local h = require('helpers')
-local dec_counter = require('utils.dec_counter')
+local make_note_update_context = require('anki.note_update_context')
 
+--- Create the public Anki note export command adapter.
 local function make_exporter()
     local self = {}
     local pub = {}
+
+    --- Return the current config.
+    local function config()
+        return self.cfg_mgr.config()
+    end
 
     --- Update the specified notes with the current subtitle selection.
     function pub.update_notes(note_ids, overwrite)
@@ -25,13 +30,15 @@ local function make_exporter()
         return pub
     end
 
+    --- Reload configuration before creating a card when configured.
     function pub.maybe_reload_config()
-        if self.config.reload_config_before_card_creation then
+        if config().reload_config_before_card_creation then
             self.cfg_mgr.reload_from_disk()
         end
         return pub
     end
 
+    --- Export the current subtitle as a new Anki note.
     function pub.export_to_anki(gui)
         pub.maybe_reload_config()
         local sub = self.subs_observer.collect_from_current()
@@ -46,23 +53,29 @@ local function make_exporter()
 
         self.encoder.set_output_dir(self.ankiconnect.get_media_dir_path())
         local snapshot = self.encoder.snapshot.create_job(sub)
-        local audio = self.encoder.audio.create_job(sub, audio_padding())
+        local audio = self.encoder.audio.create_job(sub, self.note_update_context.audio_padding())
 
         snapshot.run_async()
         audio.run_async()
 
-        local first_field = self.ankiconnect.get_first_field(self.config.model_name)
-        local note_fields = construct_note_fields(sub['text'], sub['secondary'], snapshot.filename, audio.filename)
+        local first_field = self.ankiconnect.get_first_field(config().model_name)
+        local note_fields = self.note_update_context.construct_note_fields {
+            primary_text = sub['text'],
+            secondary_text = sub['secondary'],
+            snapshot_filename = snapshot.filename,
+            audio_filename = audio.filename,
+        }
 
         if not h.is_empty(first_field) and h.is_empty(note_fields[first_field]) then
             note_fields[first_field] = "[empty]"
         end
 
-        self.ankiconnect.add_note(note_fields, substitute_fmt(self.config.note_tag), gui)
+        self.ankiconnect.add_note(note_fields, self.note_update_context.substitute_fmt(config().note_tag), gui)
         self.subs_observer.clear()
         return pub
     end
 
+    --- Update the most recently created Anki notes.
     function pub.update_last_note(overwrite)
         local accept_notes_made_within_last_minutes = 10
         pub.maybe_reload_config()
@@ -81,6 +94,7 @@ local function make_exporter()
         return pub
     end
 
+    --- Update notes selected in the Anki Browser.
     function pub.update_selected_note(overwrite)
         pub.maybe_reload_config()
 
@@ -90,11 +104,11 @@ local function make_exporter()
             return h.notify("Couldn't find the target note(s). Did you select the notes you want in Anki?", "warn", 3)
         end
 
-        if #selected_note_ids > self.config.card_overwrite_safeguard then
+        if #selected_note_ids > config().card_overwrite_safeguard then
             return h.notify(
                     string.format(
                             "More than %i notes selected\nnot recommended, but you can change the limit in your config",
-                            self.config.card_overwrite_safeguard
+                            config().card_overwrite_safeguard
                     ),
                     "warn",
                     4
@@ -105,33 +119,59 @@ local function make_exporter()
         return pub
     end
 
-    function pub.init(ankiconnect, quick_creation_opts, subs_observer, encoder, forvo, cfg_mgr)
-        cfg_mgr.fail_if_not_ready()
-        self.config = cfg_mgr.config()
-        self.cfg_mgr = cfg_mgr
-        self.ankiconnect = ankiconnect
-        self.quick_creation_opts = quick_creation_opts
-        self.subs_observer = subs_observer
-        self.encoder = encoder
-        self.forvo = forvo
+    --- Initialize the exporter with its named dependencies.
+    function pub.init(components)
+        components.cfg_mgr.fail_if_not_ready()
+        self.cfg_mgr = components.cfg_mgr
+        self.ankiconnect = components.ankiconnect
+        self.quick_creation_opts = components.quick_creation_opts
+        self.subs_observer = components.subs_observer
+        self.encoder = components.encoder
+        self.forvo = components.forvo
+        self.notify = components.notify or h.notify
+        self.note_update_context = make_note_update_context.new({
+            ankiconnect = self.ankiconnect,
+            quick_creation_opts = self.quick_creation_opts,
+            subs_observer = self.subs_observer,
+            encoder = self.encoder,
+            forvo = self.forvo,
+            cfg_mgr = self.cfg_mgr,
+        })
         return pub
     end
 
     return pub
 end
 
+------------------------------------------------------------
+--- Tests: executed by both standalone and mpv-backed runners.
+
+--- Create a valid subtitle fixture for update tests.
 local function valid_update_subtitle()
     return {
         text = "new sentence",
         secondary = "",
+        --- Mark the subtitle fixture as valid.
         is_valid = function()
             return true
         end,
     }
 end
 
+--- Create an invalid subtitle fixture for update tests.
+local function invalid_update_subtitle()
+    return {
+        --- Mark the subtitle fixture as invalid.
+        is_valid = function()
+            return false
+        end,
+    }
+end
+
+--- Create a deferred media job that records its completion callback.
 local function make_pending_media_job(filename, jobs)
     local job = { filename = filename, run_async = h.noop }
+    --- Register the media-job completion callback.
     function job.on_finish(callback)
         job.callback = callback
         return job
@@ -140,12 +180,15 @@ local function make_pending_media_job(filename, jobs)
     return job
 end
 
+--- Create a media-job factory for the supplied filename.
 local function make_media_job_factory(filename, jobs)
+    --- Create one pending media job.
     return function()
         return make_pending_media_job(filename, jobs)
     end
 end
 
+--- Create an encoder test double that records media jobs.
 local function make_update_test_encoder(jobs)
     return {
         set_output_dir = h.noop,
@@ -154,56 +197,97 @@ local function make_update_test_encoder(jobs)
     }
 end
 
-local function make_update_test_exporter(result, jobs)
-    local function append_media(note_id, fields)
-        result.append_count = result.append_count + 1
-        result.note_id = note_id
-        result.fields = fields
-    end
-    local ankiconnect = {
+local function make_update_test_config()
+    return {
+        sentence_field = "SentKanji",
+        audio_field = "SentAudio",
+        audio_template = "[sound:%s]",
+        image_field = "Image",
+        image_template = '<img alt="snapshot" src="%s">',
+        audio_padding = 0,
+        miscinfo_enable = false,
+    }
+end
+
+--- Create an AnkiConnect test double that records updated fields.
+local function make_update_test_ankiconnect(result)
+    return {
         get_media_dir_path = function()
             return "/tmp"
         end,
         get_note_fields = function()
             return { SentKanji = "old sentence" }
         end,
-        append_media = append_media,
+        append_media = function(note_id, fields)
+            result.append_count = result.append_count + 1
+            result.note_id = note_id
+            result.fields = fields
+        end,
     }
-    local quick_options = {
-        get_lines = h.noop,
-        clear_options = h.noop
-    }
-    local observer = {
-        collect_from_current = valid_update_subtitle,
+end
+
+--- Create a subtitle observer test double.
+local function make_update_test_observer(result, subtitle)
+    return {
+        collect_from_current = function()
+            return subtitle or valid_update_subtitle()
+        end,
         clipboard_prepare = function(text)
             return text
         end,
-        clear = h.noop,
+        clear = function()
+            result.clear_count = result.clear_count + 1
+        end,
     }
-    local forvo = {
+end
+
+--- Create quick-creation options for update tests.
+local function make_update_test_options(result)
+    return {
+        get_lines = h.noop,
+        --- Record that quick-creation options were cleared.
+        clear_options = function()
+            result.clear_count = result.clear_count + 1
+        end,
+    }
+end
+
+--- Create a Forvo test double that leaves fields unchanged.
+local function make_update_test_forvo()
+    return {
         set_output_dir = h.noop,
         append = function(new_data)
             return new_data
         end
     }
-    local config_manager = {
-        fail_if_not_ready = h.noop,
-        config = function()
-            return UPDATE_TEST_CONFIG
-        end
-    }
-    return make_exporter().init(
-            ankiconnect,
-            quick_options,
-            observer,
-            make_update_test_encoder(jobs),
-            forvo,
-            config_manager
-    )
 end
 
+--- Create the configuration manager used by update tests.
+local function make_update_test_config_manager()
+    return {
+        fail_if_not_ready = h.noop,
+        config = function()
+            return make_update_test_config()
+        end
+    }
+end
+
+--- Create an initialized exporter for update tests.
+local function make_update_test_exporter(result, jobs, subtitle)
+    return make_exporter().init {
+        ankiconnect = make_update_test_ankiconnect(result),
+        quick_creation_opts = make_update_test_options(result),
+        subs_observer = make_update_test_observer(result, subtitle),
+        encoder = make_update_test_encoder(jobs),
+        forvo = make_update_test_forvo(),
+        cfg_mgr = make_update_test_config_manager(),
+        notify = h.noop,
+    }
+end
+
+--- Test that note writes wait for both media jobs.
 local function test_update_notes_after_media_created()
-    local result = { append_count = 0 }
+    local result = { append_count = 0, clear_count = 0 }
     local jobs = {}
     make_update_test_exporter(result, jobs).update_notes({ 1 }, true)
     h.assert_equals(#jobs, 2)
@@ -217,33 +301,20 @@ local function test_update_notes_after_media_created()
     h.assert_equals(result.fields.Image, '<img alt="snapshot" src="snapshot.avif">')
 end
 
-local function make_test_exporter()
-    local test_cfg_mgr = {
-        fail_if_not_ready = h.noop,
-        config = function()
-            return {
-                sentence_field = "SentKanji",
-                secondary_field = "SentEng",
-                audio_field = "SentAudio",
-                image_field = "Image",
-                miscinfo_field = "Notes",
-                append_media = true,
-            }
-        end,
-    }
-    return make_exporter().init(
-            nil, -- ankiconnect
-            nil, -- quick_creation_opts
-            nil, -- subs_observer
-            nil, -- encoder
-            nil, -- forvo
-            test_cfg_mgr
-    )
+--- Test that invalid subtitles do not start an update.
+local function test_invalid_subtitle_does_not_start_update()
+    local result = { append_count = 0, clear_count = 0 }
+    local jobs = {}
+    make_update_test_exporter(result, jobs, invalid_update_subtitle()).update_notes({ 1 }, true)
+    h.assert_equals(#jobs, 0)
+    h.assert_equals(result.append_count, 0)
+    h.assert_equals(result.clear_count, 0)
 end
 
-local function run_tests(test_exporter)
-    test_exporter = test_exporter or make_test_exporter()
+--- Run exporter tests.
+local function run_tests()
     test_update_notes_after_media_created()
+    test_invalid_subtitle_does_not_start_update()
 end
 
 return {

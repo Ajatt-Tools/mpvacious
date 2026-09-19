@@ -633,7 +633,14 @@ local main = (function()
         secondary_sid.init(cfg_mgr)
         ensure_deck()
         subs_observer.init(menu, cfg_mgr)
-        note_exporter.init(ankiconnect, quick_creation_opts, subs_observer, encoder, forvo, cfg_mgr)
+        note_exporter.init {
+            ankiconnect = ankiconnect,
+            quick_creation_opts = quick_creation_opts,
+            subs_observer = subs_observer,
+            encoder = encoder,
+            forvo = forvo,
+            cfg_mgr = cfg_mgr,
+        }
         new_note_checker.init(ankiconnect, menu:with_update { note_exporter.update_notes }, cfg_mgr)
         pcall_tests()
 
