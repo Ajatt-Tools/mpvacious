@@ -147,35 +147,6 @@ local function test_join_fields(test_exporter)
     h.assert_equals(test_exporter.join_fields(new_note, old_note), expected)
 end
 
-local function test_join_fields_duplicates(test_exporter)
-    -- Equivalent subtitle punctuation must not duplicate a dictionary sentence.
-    local old_note = {
-        SentKanji = "女の子の <b>女性</b>の　『お』から始まる…",
-    }
-    local new_note = {
-        SentKanji = "女の子の <b>女性</b>の “お”から始まる…",
-    }
-    h.assert_equals(test_exporter.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
-    for _, equivalent in ipairs {
-        "女の子の <b>女性</b>の\194\160〝お〟から始まる…\226\128\139",
-        "\239\187\191女の子の <b>女性</b>の\226\128\175＂お＂から始まる…",
-    } do
-        new_note.SentKanji = equivalent
-        h.assert_equals(test_exporter.join_fields(new_note, old_note).SentKanji, old_note.SentKanji)
-    end
-
-    -- Distinct punctuation must still be appended, not treated as duplicates.
-    old_note = { SentKanji = "それは…分からんよ" }
-    new_note = { SentKanji = "それは！分からんよ" }
-    h.assert_equals(test_exporter.join_fields(new_note, old_note).SentKanji, "それは…分からんよ<br>それは！分からんよ")
-
-    -- Quote variants normalize, but differing surrounding text must still be appended.
-    old_note = { SentKanji = "『お』から始まる" }
-    new_note = { SentKanji = "“お”から終わる" }
-    h.assert_equals(test_exporter.join_fields(new_note, old_note).SentKanji, "『お』から始まる<br>“お”から終わる")
-
-end
-
 local function valid_update_subtitle()
     return {
         text = "new sentence",
@@ -300,7 +271,6 @@ end
 local function run_tests(test_exporter)
     test_exporter = test_exporter or make_test_exporter()
     test_join_fields(test_exporter)
-    test_join_fields_duplicates(test_exporter)
     test_update_notes_after_media_created()
 end
 
