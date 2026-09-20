@@ -10,6 +10,27 @@ local msg = require('mp.msg')
 local h = require('helpers')
 local platform = require('platform.init')
 
+--- Return true if AnkiConnect returned no fields for note
+local function no_fields_for_note_id(result)
+    return h.is_empty(result) or h.is_empty(result[1]) or h.is_empty(result[1].fields)
+end
+
+--- Extract plain fields from a notesInfo response without mutating it.
+--- Missing notes/fields are errors, but an empty string is a valid field value.
+local function extract_note_fields(result, note_id)
+    if no_fields_for_note_id(result) then
+        return nil, string.format("AnkiConnect returned no fields for note %s", tostring(note_id))
+    end
+    local fields = {}
+    for name, field in pairs(result[1].fields) do
+        if h.is_empty(field) or type(field.value) ~= 'string' then
+            return nil, string.format("AnkiConnect returned invalid fields for note %s", tostring(note_id))
+        end
+        fields[name] = field.value
+    end
+    return fields, nil
+end
+
 local function make_ankiconnect()
     local self = {}
 
@@ -194,6 +215,7 @@ local function make_ankiconnect()
         return note_ids
     end
 
+    --- Return (fields, nil) on success or (nil, error) when the note cannot be read.
     self.get_note_fields = function(note_id)
         local request = {
             action = "notesInfo",
@@ -206,15 +228,10 @@ local function make_ankiconnect()
 
         local result, error = self.parse_result(ret)
 
-        if error == nil then
-            result = result[1].fields
-            for key, value in pairs(result) do
-                result[key] = value.value
-            end
-            return result
-        else
-            return nil
+        if error ~= nil then
+            return nil, error
         end
+        return extract_note_fields(result, note_id)
     end
 
     self.get_first_field = function(model_name)
