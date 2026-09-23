@@ -65,6 +65,37 @@ local function make_anki_new_note_checker()
         return h.is_empty(note_fields[self.config.audio_field]) and h.is_empty(note_fields[self.config.image_field])
     end
 
+    --- Return whether the note has the configured sentence field, is recent, and has no media.
+    local function is_note_eligible_for_update(note_id, note_fields)
+        -- The configured sentence field identifies the expected note type, even when its value is blank.
+        -- Notes added by mpvacious already have media and must not be updated again.
+        return not h.is_empty(note_fields)
+                and note_fields[self.config.sentence_field] ~= nil
+                and is_note_recent(note_id)
+                and has_no_media(note_fields)
+    end
+
+    --- Inspect one note once per checker session and add it to `to_update` when eligible.
+    local function collect_note_for_update(note_id, to_update)
+        if is_note_ignored(note_id) then
+            return
+        end
+        -- Get note info to check whether it matches the user's configured note type.
+        local note_fields, error = self.ankiconnect.get_note_fields(note_id)
+        if error then
+            -- An unavailable server or deleted note cannot be updated safely.
+            -- Log the failed read once rather than repeating it on every timer tick.
+            msg.error(string.format("failed to retrieve note %s: %s", tostring(note_id), error))
+        elseif is_note_eligible_for_update(note_id, note_fields) then
+            -- The note matches the configured type and can be updated (just like pressing Ctrl+M does).
+            table.insert(to_update, note_id)
+        end
+        -- Process each discovered ID once per checker session, including failed
+        -- reads and ineligible notes. Manual updates remain available for a retry.
+        add_to_ignore_list(note_id)
+    end
+
+    --- Inspect newly discovered note IDs, skipping those already handled in this checker session.
     local function process_new_notes(note_ids, error)
         if not h.is_empty(error) and not h.is_substr(error, "isn't running") then
             mp.msg.error("failed to check new notes: " .. error)
@@ -75,18 +106,7 @@ local function make_anki_new_note_checker()
         end
         local to_update = {}
         for _, note_id in ipairs(note_ids) do
-            if not is_note_ignored(note_id) then
-                -- Get note info to check if it matches the user's config
-                local note_fields = self.ankiconnect.get_note_fields(note_id)
-                -- Check if the note has the configured sentence field.
-                if not h.is_empty(note_fields) and note_fields[self.config.sentence_field] ~= nil and is_note_recent(note_id) and has_no_media(note_fields) then
-                    -- Note matches our criteria, update it (just like pressing Ctrl+M does).
-                    table.insert(to_update, note_id)
-                end
-                -- Add to ignore list regardless of whether we updated it or not.
-                -- This prevents the function from processing the same notes over and over.
-                add_to_ignore_list(note_id)
-            end
+            collect_note_for_update(note_id, to_update)
         end
         if not h.is_empty(to_update) then
             self.update_notes_fn(to_update, false)
