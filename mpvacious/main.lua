@@ -587,7 +587,7 @@ function quick_menu_card:make_osd()
 end
 
 ------------------------------------------------------------
--- tests
+--- Tests
 
 --- Run every module test suite in the mpv-backed environment.
 local function run_tests()
@@ -595,6 +595,7 @@ local function run_tests()
     eutils.run_tests()
     cfg_utils.run_tests()
     make_ankiconnect.run_tests()
+    make_new_note_checker.run_tests()
     Subtitle.run_tests()
     sub_list.run_tests()
     make_subtitles_observer.run_tests()
