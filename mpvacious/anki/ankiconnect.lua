@@ -322,6 +322,57 @@ local function make_ankiconnect()
     return self
 end
 
+------------------------------------------------------------
+--- Tests: executed by both standalone and mpv-backed runners.
+
+--- Assert one public field-fetch scenario without sending a network request.
+local function assert_note_fields_test_case(case)
+    local client = make_ankiconnect()
+    client.execute = function(options)
+        h.assert_equals(options.request.params.notes, { 123 })
+        return options
+    end
+    client.parse_result = function()
+        return case.result, case.error
+    end
+    local original_result = h.deep_copy(case.result)
+    local fields, error = client.get_note_fields(123)
+    h.assert_equals(fields, case.fields)
+    h.assert_equals(error, case.expected_error)
+    h.assert_equals(case.result, original_result)
+end
+
+--- Exercise successful, failed, missing-note, and invalid-field responses.
+local function test_get_note_fields()
+    local cases = {
+        {
+            result = { { fields = { Sentence = { value = 'text' }, Audio = { value = '' } } } },
+            fields = { Sentence = 'text', Audio = '' }
+        },
+        { error = 'connection failed', expected_error = 'connection failed' },
+        { expected_error = 'AnkiConnect returned no fields for note 123' },
+        { result = {}, expected_error = 'AnkiConnect returned no fields for note 123' },
+        { result = { {} }, expected_error = 'AnkiConnect returned no fields for note 123' },
+        {
+            result = { { fields = {} } },
+            expected_error = 'AnkiConnect returned no fields for note 123'
+        },
+        {
+            result = { { fields = { Sentence = {} } } },
+            expected_error = 'AnkiConnect returned invalid fields for note 123'
+        },
+    }
+    for _, case in ipairs(cases) do
+        assert_note_fields_test_case(case)
+    end
+end
+
+--- Run field-fetch contract tests without contacting Anki.
+local function run_tests()
+    test_get_note_fields()
+end
+
 return {
-    new = make_ankiconnect
+    new = make_ankiconnect,
+    run_tests = run_tests,
 }

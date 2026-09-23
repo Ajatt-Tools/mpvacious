@@ -15,6 +15,7 @@ local modules = {
     'helpers',
     'encoder.utils',
     'config.utils',
+    'anki.ankiconnect',
     'anki.note_exporter',
     'anki.note_update_context',
     'subtitles.subtitle',
