@@ -226,7 +226,12 @@ local function make_note_update_context(components)
     --- Notify the user about one updated note.
     local function notify_single_updated_note(note_id)
         local first_field = self.ankiconnect.get_first_field(config().model_name)
-        local field_data = self.ankiconnect.get_note_fields(note_id)[first_field]
+        local note_fields, error = self.ankiconnect.get_note_fields(note_id)
+        if error then
+            -- The update succeeded. An unavailable notification preview must not hide that success.
+            return self.notify(string.format("Updated note #%s.", tostring(note_id)))
+        end
+        local field_data = note_fields[first_field]
         if not h.is_empty(field_data) then
             local max_len = 20
             if string.len(field_data) > max_len then
