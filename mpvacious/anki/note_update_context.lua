@@ -255,17 +255,29 @@ local function make_note_update_context(components)
         end
     end
 
-    --- Write generated fields after media creation completes.
-    local function change_fields(request, new_data)
-        --- Run this callback once audio and image files are created.
+    --- Fetch all targets before any write; never return a partial snapshot on failure.
+    local function collect_target_fields(note_ids)
+        local fields_by_note_id, error = self.ankiconnect.get_notes_fields(note_ids)
+        if error then
+            return nil, error
+        end
+        local targets = {}
+        for _, note_id in pairs(note_ids) do
+            table.insert(targets, { note_id = note_id, fields = fields_by_note_id[note_id] })
+        end
+        return targets, nil
+    end
+
+    --- Start writes using completed target snapshots, without fetching their fields again.
+    local function write_target_fields(request, new_data, targets)
         local change_notes_countdown = dec_counter.new(#request.note_ids).on_finish(
                 h.as_callback(notify_user_on_finish, request.note_ids)
         )
-        for _, note_id in pairs(request.note_ids) do
+        for _, target in pairs(targets) do
             self.ankiconnect.append_media(
-                    note_id,
+                    target.note_id,
                     pub.make_new_note_data(
-                            self.ankiconnect.get_note_fields(note_id),
+                            target.fields,
                             h.deep_copy(new_data),
                             { overwrite = request.overwrite }
                     ),
@@ -273,6 +285,17 @@ local function make_note_update_context(components)
                     change_notes_countdown.decrease
             )
         end
+    end
+
+    --- Write generated fields after media creation completes.
+    local function change_fields(request, new_data)
+        -- Run this callback once audio and image files are created.
+        -- Read every target first: a later read failure must not leave earlier notes partly updated.
+        local targets, error = collect_target_fields(request.note_ids)
+        if error then
+            return self.notify(error, 'error', 5)
+        end
+        write_target_fields(request, new_data, targets)
     end
 
     --- Configure output paths and create update media jobs.
