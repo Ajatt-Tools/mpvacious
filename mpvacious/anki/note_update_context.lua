@@ -257,6 +257,32 @@ local function make_note_update_context(components)
         end
     end
 
+    --- Collect Anki write failures and notify only after every target completes.
+    local function make_update_write_completion(note_ids)
+        local errors = {}
+
+        --- Report all completed writes without claiming success after any failure.
+        local function on_finish()
+            if #errors > 0 then
+                self.notify("Failed to update notes: " .. table.concat(errors, "; "), 'error', 5)
+            else
+                notify_user_on_finish(note_ids)
+            end
+        end
+
+        local countdown = dec_counter.new(#note_ids).on_finish(on_finish)
+        --- Record the result for one note before counting its completion.
+        return function(note_id)
+            --- Record any AnkiConnect error with its corresponding note ID.
+            return function(error)
+                if error ~= nil then
+                    table.insert(errors, string.format("note %s: %s", tostring(note_id), tostring(error)))
+                end
+                countdown.decrease()
+            end
+        end
+    end
+
     --- Fetch all targets before any write; never return a partial snapshot on failure.
     local function collect_target_fields(note_ids)
         local fields_by_note_id, error = self.ankiconnect.get_notes_fields(note_ids)
@@ -272,9 +298,7 @@ local function make_note_update_context(components)
 
     --- Start writes using completed target snapshots, without fetching their fields again.
     local function write_target_fields(request, new_data, targets)
-        local change_notes_countdown = dec_counter.new(#request.note_ids).on_finish(
-                h.as_callback(notify_user_on_finish, request.note_ids)
-        )
+        local completion_for = make_update_write_completion(request.note_ids)
         for _, target in pairs(targets) do
             self.ankiconnect.append_media(
                     target.note_id,
@@ -284,7 +308,7 @@ local function make_note_update_context(components)
                             { overwrite = request.overwrite }
                     ),
                     self.substitute_fmt(config().note_tag),
-                    change_notes_countdown.decrease
+                    completion_for(target.note_id)
             )
         end
     end
