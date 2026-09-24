@@ -340,14 +340,14 @@ local function make_ankiconnect(components)
             }
         }
 
-        local on_finish_wrap = function(_, error)
+        local on_finish_wrap = function(result, error)
             if not error then
                 self.add_tag(note_id, tag)
             else
                 -- The update context reports combined write errors after all targets finish.
                 logger.error(string.format("Failed to update note %s: %s", tostring(note_id), tostring(error)))
             end
-            on_finish_fn(error)
+            on_finish_fn(result, error)
         end
 
         self.execute { request = request, completion_fn = self.make_result_parser_async(on_finish_wrap) }

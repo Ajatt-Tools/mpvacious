@@ -151,6 +151,54 @@ local function make_substitute_fmt(cfg_mgr, mp_api)
     end
 end
 
+--- Collect labeled errors and finish only when every asynchronous job completes.
+local function make_completion_collector()
+    local private = { errors = {}, count = 0 }
+    local public = {}
+
+    --- Set the number of callbacks in this batch before starting work.
+    function public.count(count)
+        private.count = count
+        return public
+    end
+
+    --- Register the aggregate error handler.
+    function public.on_failure(on_failure_fn)
+        private.on_failure = on_failure_fn
+        return public
+    end
+
+    --- Register the handler for a batch with no errors.
+    function public.on_success(on_success_fn)
+        private.on_success = on_success_fn
+        return public
+    end
+
+    --- Decide the outcome after the last callback, including skipped media jobs.
+    local function on_finish()
+        if #private.errors > 0 then
+            private.on_failure(private.errors)
+        else
+            private.on_success()
+        end
+    end
+
+    --- Associate a completion with its note or media job.
+    function public.callback_for(label)
+        --- Record an error before decrementing the counter.
+        -- Every labeled callback must decrement the same batch countdown.
+        private.countdown = private.countdown or dec_counter.new(private.count).on_finish(on_finish)
+        return function(result, error)
+            if error ~= nil then
+                table.insert(private.errors, string.format('%s: %s', label, tostring(error)))
+            end
+            private.countdown.decrease()
+        end
+    end
+
+    return public
+end
+
 --- Create a context that prepares and applies Anki note updates.
 local function make_note_update_context(components)
     local mp_api = components.mp or mp
@@ -257,30 +305,16 @@ local function make_note_update_context(components)
         end
     end
 
-    --- Collect Anki write failures and notify only after every target completes.
+    --- Collect Anki write errors without claiming success after a partial failure.
     local function make_update_write_completion(note_ids)
-        local errors = {}
-
-        --- Report all completed writes without claiming success after any failure.
-        local function on_finish()
-            if #errors > 0 then
-                self.notify("Failed to update notes: " .. table.concat(errors, "; "), 'error', 5)
-            else
-                notify_user_on_finish(note_ids)
-            end
+        --- Show all failed writes once their batch is complete.
+        local function on_failure(errors)
+            self.notify(string.format('Failed to update notes: %s', table.concat(errors, '; ')), 'error', 5)
         end
-
-        local countdown = dec_counter.new(#note_ids).on_finish(on_finish)
-        --- Record the result for one note before counting its completion.
-        return function(note_id)
-            --- Record any AnkiConnect error with its corresponding note ID.
-            return function(error)
-                if error ~= nil then
-                    table.insert(errors, string.format("note %s: %s", tostring(note_id), tostring(error)))
-                end
-                countdown.decrease()
-            end
-        end
+        return make_completion_collector()
+                .count(#note_ids)
+                .on_success(h.as_callback(notify_user_on_finish, note_ids))
+                .on_failure(on_failure)
     end
 
     --- Fetch all targets before any write; never return a partial snapshot on failure.
@@ -308,7 +342,7 @@ local function make_note_update_context(components)
                             { overwrite = request.overwrite }
                     ),
                     self.substitute_fmt(config().note_tag),
-                    completion_for(target.note_id)
+                    completion_for.callback_for('note ' .. tostring(target.note_id))
             )
         end
     end
@@ -346,11 +380,15 @@ local function make_note_update_context(components)
 
     --- Start media jobs and schedule the resulting note write.
     local function start_update_media(request, future)
-        local create_files_countdown = dec_counter.new(2).on_finish(
-                h.as_callback(change_fields, request, future.new_data)
-        )
-        future.snapshot.on_finish(create_files_countdown.decrease).run_async()
-        future.audio.on_finish(create_files_countdown.decrease).run_async()
+        local function on_failure(errors)
+            self.notify('Failed to create media: ' .. table.concat(errors, '; '), 'error', 5)
+        end
+        local completion_for = make_completion_collector()
+                .count(2)
+                .on_success(h.as_callback(change_fields, request, future.new_data))
+                .on_failure(on_failure)
+        future.snapshot.on_finish(completion_for.callback_for('snapshot')).run_async()
+        future.audio.on_finish(completion_for.callback_for('audio')).run_async()
     end
 
     --- Clear subtitle selection after an update starts.
