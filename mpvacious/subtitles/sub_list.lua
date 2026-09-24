@@ -129,7 +129,7 @@ local function make_sub_list()
 end
 
 ------------------------------------------------------------
--- Tests: executed by both standalone and mpv-backed runners.
+--- Tests: executed by both standalone and mpv-backed runners.
 
 local function numbered_sub(index)
     return Subtitle:from_text("Line " .. index, index, index + 1)
@@ -261,66 +261,40 @@ local function test_get_subs_list_returns_array_copy()
     h.assert_equals(subs.get_subs_list()[1]['text'], "First line")
 end
 
-local function test_get_text()
-    local first = Subtitle:from_text("First line", 0, 2)
-    local expanded = Subtitle:from_text("First line\nSecond line", 1, 3)
-    local subs = make_sub_list()
-    subs.insert(first)
-    subs.insert(expanded)
-    h.assert_equals(subs.get_text(), "First line\nSecond line")
-
-    -- The second sub is rejected by insert()'s event-level guard (same text and timing),
-    -- so the list holds only one sub.
-    local duplicate_subs = make_sub_list()
-    duplicate_subs.insert(Subtitle:from_text("Same line", 0, 2))
-    duplicate_subs.insert(Subtitle:from_text("Same line", 0.04, 2.04))
-    h.assert_equals(duplicate_subs.get_text(), "Same line")
-
-    local repeated_same_text_subs = make_sub_list()
-    repeated_same_text_subs.insert(Subtitle:from_text("Same line", 0, 1))
-    repeated_same_text_subs.insert(Subtitle:from_text("Same line", 3, 4))
-    h.assert_equals(repeated_same_text_subs.get_text(), "Same line\nSame line")
-
-    local repeated_event_subs = make_sub_list()
-    repeated_event_subs.insert(Subtitle:from_text("Yes", 0, 1))
-    repeated_event_subs.insert(Subtitle:from_text("No", 1, 2))
-    repeated_event_subs.insert(Subtitle:from_text("Yes", 2, 3))
-    h.assert_equals(repeated_event_subs.get_text(), "Yes\nNo\nYes")
-
-    -- A repeated line outside the adjacent suffix/prefix boundary must be kept.
-    -- The old global seen-set approach dropped the final "X" here.
-    local repeated_subs = make_sub_list()
-    repeated_subs.insert(Subtitle:from_text("X", 0, 1))
-    repeated_subs.insert(Subtitle:from_text("Y", 1, 2))
-    repeated_subs.insert(Subtitle:from_text("Y\nX", 2, 3))
-    h.assert_equals(repeated_subs.get_text(), "X\nY\nX")
-
-    local adjacent_overlap_subs = make_sub_list()
-    adjacent_overlap_subs.insert(Subtitle:from_text("Yes\nNo", 0, 2))
-    adjacent_overlap_subs.insert(Subtitle:from_text("No\nMaybe", 2, 4))
-    h.assert_equals(adjacent_overlap_subs.get_text(), "Yes\nNo\nMaybe")
-
-    local formatted_subs = make_sub_list()
-    formatted_subs.insert(Subtitle:from_text("First line\n\nSecond line", 0, 2))
-    h.assert_equals(formatted_subs.get_text(), "First line\n\nSecond line")
-
-    -- Lines repeated within a single sub are kept as-is:
-    -- dedup only applies at the boundary between consecutive subs.
-    local within_subs = make_sub_list()
-    within_subs.insert(Subtitle:from_text("A\nA", 0, 2))
-    h.assert_equals(within_subs.get_text(), "A\nA")
-
-    local crlf_subs = make_sub_list()
-    crlf_subs.insert(Subtitle:from_text("First line\r\nSecond line\rThird line", 0, 2))
-    h.assert_equals(crlf_subs.get_text(), "First line\nSecond line\nThird line")
-
-    -- A trailing newline must not introduce a spurious blank line.
-    local trailing_newline_subs = make_sub_list()
-    trailing_newline_subs.insert(Subtitle:from_text("First line\nSecond line\n", 0, 2))
-    h.assert_equals(trailing_newline_subs.get_text(), "First line\nSecond line")
+--- Return fresh text cases with timings so insertion and boundary dedup run together.
+local function make_get_text_test_cases()
+    return {
+        { cues = { { "First line", 0, 2 }, { "First line\nSecond line", 1, 3 } }, expected = "First line\nSecond line" },
+        -- The second cue is rejected by insert()'s event-level guard.
+        { cues = { { "Same line", 0, 2 }, { "Same line", 0.04, 2.04 } }, expected = "Same line" },
+        { cues = { { "Same line", 0, 1 }, { "Same line", 3, 4 } }, expected = "Same line\nSame line" },
+        { cues = { { "Yes", 0, 1 }, { "No", 1, 2 }, { "Yes", 2, 3 } }, expected = "Yes\nNo\nYes" },
+        -- A repeated line outside the adjacent suffix/prefix boundary must be kept.
+        -- The old global seen-set approach dropped the final "X" here.
+        { cues = { { "X", 0, 1 }, { "Y", 1, 2 }, { "Y\nX", 2, 3 } }, expected = "X\nY\nX" },
+        { cues = { { "Yes\nNo", 0, 2 }, { "No\nMaybe", 2, 4 } }, expected = "Yes\nNo\nMaybe" },
+        { cues = { { "First line\n\nSecond line", 0, 2 } }, expected = "First line\n\nSecond line" },
+        -- Dedup only applies at boundaries between cues, not within one cue.
+        { cues = { { "A\nA", 0, 2 } }, expected = "A\nA" },
+        { cues = { { "First line\r\nSecond line\rThird line", 0, 2 } }, expected = "First line\nSecond line\nThird line" },
+        -- A trailing newline must not introduce a spurious blank line.
+        { cues = { { "First line\nSecond line\n", 0, 2 } }, expected = "First line\nSecond line" },
+    }
 end
 
-local function test_collect_n_subs()
+--- Check every text collection case with a fresh subtitle list.
+local function test_get_text()
+    for _, case in ipairs(make_get_text_test_cases()) do
+        local subs = make_sub_list()
+        for _, cue in ipairs(case.cues) do
+            subs.insert(Subtitle:from_text(h.unpack(cue)))
+        end
+        h.assert_equals(subs.get_text(), case.expected)
+    end
+end
+
+--- Collect adjacent subtitle lines up to the requested count.
+local function test_collect_n_subs_limit()
     local first = Subtitle:from_text("First line", 0, 2)
     local subs = make_sub_list()
     subs.insert(first)
@@ -332,14 +306,20 @@ local function test_collect_n_subs()
     limited_subs.insert(Subtitle:from_text("First line\nSecond line", 1, 3))
     limited_subs.insert(Subtitle:from_text("Second line\nThird line", 2, 4))
     h.assert_equals(limited_subs.collect_n_subs(first, 2).text, "First line\nSecond line")
+end
 
+--- Preserve non-adjacent repeated lines while collecting subtitles.
+local function test_collect_n_subs_repeated_lines()
     -- Non-adjacent repeated lines are kept in collect_n_subs too.
     local repeated_subs = make_sub_list()
     repeated_subs.insert(Subtitle:from_text("Yes", 0, 1))
     repeated_subs.insert(Subtitle:from_text("No", 1, 2))
     repeated_subs.insert(Subtitle:from_text("Yes\nAgain", 2, 3))
     h.assert_equals(repeated_subs.collect_n_subs(repeated_subs.get_subs_list()[1], 3).text, "Yes\nNo\nYes\nAgain")
+end
 
+--- Count a covered cue even when it contributes no new text.
+local function test_collect_n_subs_covered_line()
     -- A sub fully covered by the previous suffix still counts toward n_lines,
     -- so end_sub (used for the card's end timing) advances past it.
     local covered_subs = make_sub_list()
@@ -353,6 +333,7 @@ local function test_collect_n_subs()
     h.assert_equals(combined['end'], 3)
 end
 
+--- Exercise ordinary, short-cue, and zero-duration overlap thresholds.
 local function test_overlap_thresholds()
     local cases = {
         { sub = Subtitle:from_text('', 1, 3), window = Subtitle:from_text('', 0, 2), expected = true }, -- 50%
@@ -369,6 +350,7 @@ local function test_overlap_thresholds()
     end
 end
 
+--- Combine and format subtitles aligned with the requested time window.
 local function test_get_overlapping_text_formats_matches()
     local subs = make_sub_list()
     subs.insert(Subtitle:from_text("Before", 0, 1))
@@ -382,6 +364,7 @@ local function test_get_overlapping_text_formats_matches()
     h.assert_equals(spaced_subs.get_overlapping_text(Subtitle:from_text('', 1, 2)), "First line Second line")
 end
 
+--- Exclude subtitles whose boundary overlap is only timing noise.
 local function test_get_overlapping_text_filters_timing_noise()
     local timing_noise = make_sub_list()
     timing_noise.insert(Subtitle:from_text("Relevant", 759.82, 763.09))
@@ -392,6 +375,7 @@ local function test_get_overlapping_text_filters_timing_noise()
     )
 end
 
+--- Run subtitle-list behavior tests in both test environments.
 local function run_tests()
     test_insert_rejects_invalid_subs()
     test_insert_rejects_duplicate_event()
@@ -405,7 +389,9 @@ local function run_tests()
     test_get_time_returns_boundary_times()
     test_get_subs_list_returns_array_copy()
     test_get_text()
-    test_collect_n_subs()
+    test_collect_n_subs_limit()
+    test_collect_n_subs_repeated_lines()
+    test_collect_n_subs_covered_line()
     test_overlap_thresholds()
     test_get_overlapping_text_formats_matches()
     test_get_overlapping_text_filters_timing_noise()

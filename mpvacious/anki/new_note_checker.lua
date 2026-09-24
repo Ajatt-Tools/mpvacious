@@ -10,6 +10,7 @@ and automatically add media (audio and images) to them if they match your config
 local mp = require('mp')
 local msg = require('mp.msg')
 local h = require('helpers')
+local fixtures = require('test_fixtures')
 
 --- Create a new-note checker with optional mpv-compatible dependencies.
 local function make_anki_new_note_checker(components)
@@ -163,68 +164,22 @@ end
 ------------------------------------------------------------
 --- Tests: executed by both standalone and mpv-backed runners.
 
---- Supply an initial empty collection, then repeatedly report one fresh test note.
-local function make_checker_test_ankiconnect(state, case)
-    return {
-        find_notes = function(options)
-            state.searches = state.searches + 1
-            if state.searches == 1 then
-                options.completion_fn({}, nil)
-            else
-                options.completion_fn({ state.note_id }, nil)
-            end
-        end,
-        get_note_fields = function()
-            state.fetches = state.fetches + 1
-            if case.error then
-                return nil, case.error
-            end
-            return case.fields, nil
-        end,
-    }
-end
-
---- Return a fake timer API that exposes each scheduled checker tick through `state`.
-local function make_checker_test_mp(state)
-    return {
-        add_periodic_timer = function(_, callback)
-            state.tick = callback
-            return { kill = function()
-                state.timer_kills = state.timer_kills + 1
-            end }
-        end,
-    }
-end
-
---- Return a fake logger that records checker errors and ignores status messages.
-local function make_checker_test_logger(state)
-    return {
-        error = function(message)
-            table.insert(state.errors, message)
-        end,
-        info = h.noop,
-    }
-end
-
 --- Drive the checker through initialization and three ticks using its public API.
 local function run_checker_test_scenario(state, case)
     local checker = make_anki_new_note_checker({
-        mp = make_checker_test_mp(state),
-        logger = make_checker_test_logger(state),
+        mp = fixtures.make_new_note_checker_mp(state),
+        logger = fixtures.make_new_note_checker_logger(state),
     })
     checker.init(
-            make_checker_test_ankiconnect(state, case),
+            fixtures.make_new_note_checker_ankiconnect(state, case),
             function(ids, overwrite)
                 h.assert_equals(ids, { state.note_id })
                 h.assert_equals(overwrite, false)
                 state.updates = state.updates + 1
-            end, {
-                fail_if_not_ready = h.noop,
-                config = function()
-                    return { model_name = 'Test', deck_name = 'Test', sentence_field = 'Sentence',
-                             audio_field = 'Audio', image_field = 'Image', enable_new_note_timer = true,
-                             new_note_timer_interval_seconds = 2 }
-                end,
+            end, fixtures.make_config_manager {
+                model_name = 'Test', deck_name = 'Test', sentence_field = 'Sentence',
+                audio_field = 'Audio', image_field = 'Image', enable_new_note_timer = true,
+                new_note_timer_interval_seconds = 2,
             }
     )
     checker.start_timer()

@@ -10,6 +10,12 @@ local h = require('helpers')
 local utils = require('mp.utils')
 local defaults = require('config.defaults')
 
+--- Prefix a generated config with its profile name and creation date.
+local function format_default_config(name, config_text)
+    return string.format("# Written by %s on %s.\n%s", name, os.date(), config_text)
+end
+
+--- Create the default config file if one does not already exist.
 local function create_config_file(default_profile_name)
     -- default profile name is "subs2srs"
     local name = default_profile_name
@@ -35,8 +41,7 @@ local function create_config_file(default_profile_name)
         return
     end
 
-    handle:write(string.format("# Written by %s on %s.\n", name, os.date()))
-    handle:write(config_text)
+    handle:write(format_default_config(name, config_text))
     handle:close()
     h.notify("Settings saved.", "info", 2)
 end
@@ -152,7 +157,13 @@ local function validate_config(config)
     return main()
 end
 
+--- Run config default and validation tests.
 local function run_tests()
+    h.assert_equals(defaults.get_default().menu_max_shown_lines, 1)
+    local formatted = format_default_config('subs2srs', 'option=value\n')
+    h.assert_equals(formatted:match('^# Written by subs2srs on .-%.\n(.*)$'), 'option=value\n')
+
+    --- Return the validated number of visible menu lines.
     local function validate_menu_max_shown_lines(value)
         local config = defaults.get_default()
         config.menu_max_shown_lines = value

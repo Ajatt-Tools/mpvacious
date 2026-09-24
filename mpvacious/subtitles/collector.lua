@@ -76,7 +76,7 @@ function this.make_speech_collector()
 end
 
 ------------------------------------------------------------
--- Tests: executed by both standalone and mpv-backed runners.
+--- Tests: executed by both standalone and mpv-backed runners.
 
 local function test_count_overlapping_lines()
     local cases = {

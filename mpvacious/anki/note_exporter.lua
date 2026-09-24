@@ -5,6 +5,7 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
 local h = require('helpers')
 local make_note_update_context = require('anki.note_update_context')
+local fixtures = require('test_fixtures')
 
 --- Create the public Anki note export command adapter.
 local function make_exporter()
@@ -174,144 +175,28 @@ local function make_invalid_update_test_subtitle()
     }
 end
 
---- Create a deferred media job that records its completion callback.
-local function make_exporter_test_pending_media_job(filename, jobs)
-    local job = { filename = filename }
-    --- Record that the media job started.
-    function job.run_async()
-        job.started = true
-    end
-    --- Register the media-job completion callback.
-    function job.on_finish(callback)
-        job.callback = callback
-        return job
-    end
-    table.insert(jobs, job)
-    return job
-end
-
---- Create a media-job factory for the supplied filename.
-local function make_exporter_test_media_job_factory(filename, jobs)
-    --- Create one pending media job.
-    return function()
-        return make_exporter_test_pending_media_job(filename, jobs)
-    end
-end
-
---- Create an encoder test double that records media jobs.
-local function make_update_test_encoder(jobs)
-    return {
-        set_output_dir = h.noop,
-        snapshot = { create_job = make_exporter_test_media_job_factory("snapshot.avif", jobs) },
-        audio = { create_job = make_exporter_test_media_job_factory("audio.ogg", jobs) },
-    }
-end
-
 --- Create the fixed configuration used by exporter tests.
 local function make_update_test_config()
-    return {
-        sentence_field = "SentKanji",
-        audio_field = "SentAudio",
-        audio_template = "[sound:%s]",
-        image_field = "Image",
-        image_template = '<img alt="snapshot" src="%s">',
-        audio_padding = 0,
-        miscinfo_enable = false,
+    return fixtures.make_update_config {
         model_name = "Test model",
         note_tag = "",
     }
 end
 
---- Create an AnkiConnect test double that records updated fields.
-local function make_update_test_ankiconnect(result)
-    return {
-        --- Return the test media directory.
-        get_media_dir_path = function()
-            return "/tmp"
-        end,
-        --- Return stored fields for an update target.
-        get_note_fields = function()
-            return { SentKanji = "old sentence" }
-        end,
-        --- Return the model's first field name.
-        get_first_field = function()
-            return "SentKanji"
-        end,
-        --- Record fields written by an update.
-        append_media = function(note_id, fields)
-            result.append_count = result.append_count + 1
-            result.note_id = note_id
-            result.fields = fields
-        end,
-        --- Record fields created by an ordinary export.
-        add_note = function(fields, tag, gui)
-            result.fields = fields
-            result.tag = tag
-            result.gui = gui
-        end,
-    }
-end
-
---- Create a subtitle observer test double.
-local function make_update_test_observer(result, subtitle)
-    return {
-        --- Return the configured subtitle fixture.
-        collect_from_current = function()
-            return subtitle or make_valid_update_test_subtitle()
-        end,
-        --- Preserve test subtitle text during field preparation.
-        clipboard_prepare = function(text)
-            return text
-        end,
-        --- Record clearing the subtitle selection.
-        clear = function()
-            result.clear_count = result.clear_count + 1
-        end,
-    }
-end
-
---- Create quick-creation options for update tests.
-local function make_update_test_options(result)
-    return {
-        get_lines = h.noop,
-        --- Record that quick-creation options were cleared.
-        clear_options = function()
-            result.clear_count = result.clear_count + 1
-        end,
-    }
-end
-
---- Create a Forvo test double that leaves fields unchanged.
-local function make_update_test_forvo()
-    return {
-        set_output_dir = h.noop,
-        --- Preserve generated fields without pronunciation media.
-        append = function(new_data)
-            return new_data
-        end
-    }
-end
-
---- Create the configuration manager used by update tests.
-local function make_update_test_config_manager()
-    return {
-        fail_if_not_ready = h.noop,
-        --- Return the fixed exporter-test configuration.
-        config = function()
-            return make_update_test_config()
-        end
-    }
+--- Return the stored sentence used by exporter tests.
+local function make_exporter_test_stored_fields()
+    return { SentKanji = 'old sentence' }
 end
 
 --- Create an initialized exporter for update tests.
 local function make_update_test_exporter(result, jobs, subtitle)
     return make_exporter().init {
-        ankiconnect = make_update_test_ankiconnect(result),
-        quick_creation_opts = make_update_test_options(result),
-        subs_observer = make_update_test_observer(result, subtitle),
-        encoder = make_update_test_encoder(jobs),
-        forvo = make_update_test_forvo(),
-        cfg_mgr = make_update_test_config_manager(),
+        ankiconnect = fixtures.make_update_ankiconnect(result, make_exporter_test_stored_fields),
+        quick_creation_opts = fixtures.make_quick_creation_options(result, { record_clear = true }),
+        subs_observer = fixtures.make_subtitle_observer(result, subtitle or make_valid_update_test_subtitle()),
+        encoder = fixtures.make_update_encoder(jobs),
+        forvo = fixtures.make_forvo(),
+        cfg_mgr = fixtures.make_config_manager(make_update_test_config()),
         notify = h.noop,
     }
 end
@@ -326,6 +211,8 @@ local function test_update_notes_after_media_created()
     h.assert_equals(result.append_count, 0)
     jobs[2].callback()
     h.assert_equals(result.append_count, 1)
+    h.assert_equals(result.field_requests, { { 1 } })
+    h.assert_equals(result.preview_reads, { 1 })
     h.assert_equals(result.note_id, 1)
     h.assert_equals(result.fields.SentKanji, "new sentence")
     h.assert_equals(result.fields.SentAudio, "[sound:audio.ogg]")

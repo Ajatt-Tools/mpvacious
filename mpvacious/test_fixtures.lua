@@ -132,7 +132,7 @@ function this.make_update_ankiconnect(state, fields_for_note)
         get_first_field = function()
             return 'SentKanji'
         end,
-        --- Record a write and complete it when a callback is supplied.
+        --- Record a write and optionally defer its completion for asynchronous tests.
         append_media = function(note_id, fields, _, on_finish)
             state.append_count = (state.append_count or 0) + 1
             state.appended_note_ids = state.appended_note_ids or {}
@@ -141,7 +141,9 @@ function this.make_update_ankiconnect(state, fields_for_note)
             state.fields_by_note[note_id] = fields
             state.note_id = note_id
             state.fields = fields
-            if on_finish then
+            if state.write_callbacks then
+                state.write_callbacks[note_id] = on_finish
+            elseif on_finish then
                 on_finish()
             end
         end,
@@ -216,6 +218,7 @@ end
 --- Return a fake AnkiConnect API for automatic new-note checker tests.
 function this.make_new_note_checker_ankiconnect(state, scenario)
     return {
+        --- Return an empty search first, then the note to inspect.
         find_notes = function(options)
             state.searches = state.searches + 1
             if state.searches == 1 then
@@ -224,6 +227,7 @@ function this.make_new_note_checker_ankiconnect(state, scenario)
                 options.completion_fn({ state.note_id }, nil)
             end
         end,
+        --- Record a field read and return the scenario response.
         get_note_fields = function()
             state.fetches = state.fetches + 1
             if scenario.error then
@@ -237,11 +241,15 @@ end
 --- Return a fake mp API that exposes each scheduled checker tick through `state`.
 function this.make_new_note_checker_mp(state)
     return {
+        --- Expose the scheduled timer callback to the test.
         add_periodic_timer = function(_, callback)
             state.tick = callback
-            return { kill = function()
-                state.timer_kills = state.timer_kills + 1
-            end }
+            return {
+                --- Record timer cancellation.
+                kill = function()
+                    state.timer_kills = state.timer_kills + 1
+                end,
+            }
         end,
     }
 end
@@ -249,6 +257,7 @@ end
 --- Return a fake logger that records checker errors and ignores status messages.
 function this.make_new_note_checker_logger(state)
     return {
+        --- Record checker errors without printing them.
         error = function(message)
             table.insert(state.errors, message)
         end,
