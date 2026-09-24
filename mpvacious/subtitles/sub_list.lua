@@ -21,7 +21,10 @@ end
 
 --- Return the minimum overlap ratio for the shorter subtitle.
 local function required_overlap_ratio(shorter_duration)
-    return shorter_duration < SHORT_SUB_SECONDS and MIN_SHORT_SUB_OVERLAP_RATIO or MIN_SUB_OVERLAP_RATIO
+    if shorter_duration < SHORT_SUB_SECONDS then
+        return MIN_SHORT_SUB_OVERLAP_RATIO
+    end
+    return MIN_SUB_OVERLAP_RATIO
 end
 
 --- Check that two subtitle windows overlap beyond timing noise.
@@ -38,8 +41,10 @@ local function make_sub_list()
 
     --- Return the start or end time of the selected subtitles.
     function public.get_time(position)
-        local i = position == 'start' and 1 or #subs_list
-        return subs_list[i][position]
+        if position == 'start' then
+            return subs_list[1][position]
+        end
+        return subs_list[#subs_list][position]
     end
     --- Return collected subtitle text with adjacent boundary lines deduplicated.
     function public.get_text()
