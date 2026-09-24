@@ -14,12 +14,12 @@ local fixtures = require('test_fixtures')
 --- Extract plain fields from one notesInfo item without mutating it.
 --- Missing notes/fields are errors, but an empty string is a valid field value.
 local function extract_note_fields(raw_fields, note_id)
-    if h.is_empty(raw_fields) then
+    if type(raw_fields) ~= 'table' or h.is_empty(raw_fields) then
         return nil, string.format("AnkiConnect returned no fields for note %s", tostring(note_id))
     end
     local fields = {}
     for name, field in pairs(raw_fields) do
-        if h.is_empty(field) or type(field.value) ~= 'string' then
+        if type(field) ~= 'table' or type(field.value) ~= 'string' then
             return nil, string.format("AnkiConnect returned invalid fields for note %s", tostring(note_id))
         end
         fields[name] = field.value
@@ -29,12 +29,12 @@ end
 
 --- Decode notesInfo items and verify every requested note ID is present.
 local function decode_note_fields(result, note_ids)
-    if h.is_empty(result) then
+    if type(result) ~= 'table' or h.is_empty(result) then
         return nil, "AnkiConnect returned no requested notes"
     end
     local fields_by_note_id = {}
     for _, note_info in pairs(result) do
-        if h.is_empty(note_info) or note_info.noteId == nil then
+        if type(note_info) ~= 'table' or note_info.noteId == nil then
             return nil, "AnkiConnect returned note fields without a note ID"
         end
         local fields, error = extract_note_fields(note_info.fields, note_info.noteId)
