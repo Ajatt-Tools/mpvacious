@@ -14,28 +14,34 @@ local SHORT_SUB_SECONDS = 1
 local MIN_SUB_OVERLAP_RATIO = 0.5
 local MIN_SHORT_SUB_OVERLAP_RATIO = 0.75
 
+--- Collapse whitespace in collected subtitle text.
 local function flatten_subtitle_text(text)
     return h.remove_leading_trailing_spaces(h.collapse_whitespace(text))
 end
 
+--- Return the minimum overlap ratio for the shorter subtitle.
 local function required_overlap_ratio(shorter_duration)
     return shorter_duration < SHORT_SUB_SECONDS and MIN_SHORT_SUB_OVERLAP_RATIO or MIN_SUB_OVERLAP_RATIO
 end
 
+--- Check that two subtitle windows overlap beyond timing noise.
 local function overlaps_enough(sub, window)
     local shorter_duration = math.min(sub:duration(), window:duration())
     return shorter_duration > 0
             and sub:overlap_duration(window) >= shorter_duration * required_overlap_ratio(shorter_duration)
 end
 
+--- Create an ordered collection of selected subtitles.
 local function make_sub_list()
     local subs_list = {}
     local public = {}
 
+    --- Return the start or end time of the selected subtitles.
     function public.get_time(position)
         local i = position == 'start' and 1 or #subs_list
         return subs_list[i][position]
     end
+    --- Return collected subtitle text with adjacent boundary lines deduplicated.
     function public.get_text()
         -- Dedup applies to every list (primary, secondary), collapsing adjacent
         -- multiline sub expansions into one continuous dialog string.
@@ -93,6 +99,7 @@ local function make_sub_list()
     -- the last recorded sub's end time.
     -- Text-overlap cleanup for multiline expansion is intentionally delayed
     -- until get_text()/collect_n_subs(), where the selected output window is known.
+    --- Insert a subtitle, skipping duplicate events and expanding adjacent ones.
     function public.insert(sub)
         if sub == nil or h.is_empty(sub.text) then
             return false
@@ -113,6 +120,7 @@ local function make_sub_list()
         table.insert(subs_list, (#subs_list - #n_latest_subs) + h.find_insertion_point(n_latest_subs, sub), sub)
         return true
     end
+    --- Return a detached list of the collected subtitle objects.
     function public.get_subs_list()
         -- Return a shallow copy so callers can't mutate the internal list.
         local copy = {}
@@ -121,6 +129,7 @@ local function make_sub_list()
         end
         return copy
     end
+    --- Report whether any subtitles have been collected.
     function public.is_empty()
         return h.is_empty(subs_list)
     end
@@ -131,10 +140,12 @@ end
 ------------------------------------------------------------
 --- Tests: executed by both standalone and mpv-backed runners.
 
+--- Create a numbered subtitle for list-order tests.
 local function numbered_sub(index)
     return Subtitle:from_text("Line " .. index, index, index + 1)
 end
 
+--- Fill a subtitle list with numbered test cues.
 local function make_numbered_sub_list(first_index, last_index)
     local subs = make_sub_list()
     for i = first_index, last_index do
@@ -143,6 +154,7 @@ local function make_numbered_sub_list(first_index, last_index)
     return subs
 end
 
+--- Assert that the collected subtitles remain chronologically sorted.
 local function assert_subs_sorted(subs)
     local previous
     for _, sub in ipairs(subs) do
@@ -153,6 +165,7 @@ local function assert_subs_sorted(subs)
     end
 end
 
+--- Create two separated subtitle lines for test cases.
 local function make_two_line_subs()
     local subs = make_sub_list()
     subs.insert(Subtitle:from_text("First line", 0, 2))
@@ -160,18 +173,21 @@ local function make_two_line_subs()
     return subs
 end
 
+--- Reject missing and empty subtitle events.
 local function test_insert_rejects_invalid_subs()
     local subs = make_sub_list()
     h.assert_equals(subs.insert(nil), false)
     h.assert_equals(subs.insert(Subtitle:from_text("", 0, 2)), false)
 end
 
+--- Reject the same subtitle event when observed twice.
 local function test_insert_rejects_duplicate_event()
     local subs = make_sub_list()
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 2)), true)
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0.04, 2.04)), false)
 end
 
+--- Extend a subtitle when the next matching event touches it.
 local function test_insert_expands_touching_same_text_event()
     local subs = make_sub_list()
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 1)), true)
@@ -183,6 +199,7 @@ local function test_insert_expands_touching_same_text_event()
     h.assert_equals(subs.get_text(), "Same line")
 end
 
+--- Preserve a single event through successive adjacent expansions.
 local function test_insert_chains_expansions()
     -- Successive adjacent same-text events keep expanding the same stored sub.
     local subs = make_sub_list()
@@ -195,6 +212,7 @@ local function test_insert_chains_expansions()
     h.assert_equals(ordered_list[1]['end'], 3)
 end
 
+--- Keep repeated text as distinct events across a real gap.
 local function test_insert_keeps_same_text_event_after_real_gap()
     local subs = make_sub_list()
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 1)), true)
@@ -203,6 +221,7 @@ local function test_insert_keeps_same_text_event_after_real_gap()
     h.assert_equals(subs.get_text(), "Same line\nSame line")
 end
 
+--- Sort events that arrive backward without merging them.
 local function test_insert_keeps_backward_arrival_unmerged_and_sorted()
     local subs = make_sub_list()
     h.assert_equals(subs.insert(Subtitle:from_text("Same line", 1, 2)), true)
@@ -214,6 +233,7 @@ local function test_insert_keeps_backward_arrival_unmerged_and_sorted()
     assert_subs_sorted(ordered_list)
 end
 
+--- Avoid merging matching events across an intervening subtitle.
 local function test_insert_does_not_expand_across_intervening_event()
     local subs = make_sub_list()
     h.assert_equals(subs.insert(Subtitle:from_text("A", 1, 2)), true)
@@ -228,6 +248,7 @@ local function test_insert_does_not_expand_across_intervening_event()
     assert_subs_sorted(ordered_list)
 end
 
+--- Limit duplicate detection to the recent lookup window.
 local function test_insert_uses_recent_lookup_window()
     local subs = make_numbered_sub_list(0, 29)
     h.assert_equals(#subs.get_subs_list(), 30)
@@ -235,6 +256,7 @@ local function test_insert_uses_recent_lookup_window()
     h.assert_equals(subs.insert(Subtitle:from_text("Line 4", 4.04, 5.04)), true)
 end
 
+--- Keep events sorted when inserting between existing cues.
 local function test_insert_preserves_sorted_order()
     local subs = make_numbered_sub_list(0, 29)
     h.assert_equals(subs.insert(Subtitle:from_text("Line 5.5", 5.5, 6.5)), true)
@@ -246,12 +268,14 @@ local function test_insert_preserves_sorted_order()
     assert_subs_sorted(ordered_list)
 end
 
+--- Return the first start and last end times.
 local function test_get_time_returns_boundary_times()
     local subs = make_two_line_subs()
     h.assert_equals(subs.get_time('start'), 0)
     h.assert_equals(subs.get_time('end'), 5)
 end
 
+--- Prevent clients from mutating the internal subtitle list.
 local function test_get_subs_list_returns_array_copy()
     local subs = make_two_line_subs()
     local copy = subs.get_subs_list()

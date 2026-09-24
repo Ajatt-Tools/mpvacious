@@ -12,10 +12,12 @@ local this = {}
 --- Return an AnkiConnect client that records the requested IDs and supplies a response.
 function this.make_note_fields_client(state, make_client, scenario)
     local client = make_client()
+    --- Record the notesInfo request without asserting inside the fixture.
     client.execute = function(options)
         state.requested_note_ids = options.request.params.notes
         return options
     end
+    --- Return the scenario's simulated AnkiConnect response.
     client.parse_result = function()
         return scenario.result, scenario.error
     end

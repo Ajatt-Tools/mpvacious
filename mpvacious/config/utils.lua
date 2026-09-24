@@ -46,11 +46,13 @@ local function create_config_file(default_profile_name)
     h.notify("Settings saved.", "info", 2)
 end
 
+--- Validate config values and derive audio, video, and menu settings.
 local function validate_config(config)
     if h.is_empty(config) then
         error("config not passed")
     end
 
+    --- Choose the supported container extension for Opus audio.
     local function set_file_extension_for_opus()
         -- Default to OGG, then change if an extension is supported.
         -- https://en.wikipedia.org/wiki/Core_Audio_Format
@@ -63,6 +65,7 @@ local function validate_config(config)
         end
     end
 
+    --- Derive the audio codec and extension from the configured format.
     local function set_audio_format()
         if config.audio_format == 'opus' then
             -- https://opus-codec.org/
@@ -75,6 +78,7 @@ local function validate_config(config)
         return config
     end
 
+    --- Derive still and animated image codecs and extensions.
     local function set_video_format()
         if config.snapshot_format == 'avif' then
             config.snapshot_extension = '.avif'
@@ -99,6 +103,7 @@ local function validate_config(config)
         return config
     end
 
+    --- Clamp an image dimension to the supported range.
     local function ensure_in_range(dimension)
         if config[dimension] < defaults.min_side_px then
             config[dimension] = defaults.preserve_aspect_ratio
@@ -109,6 +114,7 @@ local function validate_config(config)
         return config
     end
 
+    --- Restore defaults for invalid image dimensions and quality.
     local function conditionally_set_defaults(width, height, quality)
         if config[width] < 1 and config[height] < 1 then
             config[width] = defaults.preserve_aspect_ratio
@@ -120,18 +126,21 @@ local function validate_config(config)
         return config
     end
 
+    --- Validate static snapshot dimensions and quality.
     local function check_image_settings()
         ensure_in_range('snapshot_width')
         ensure_in_range('snapshot_height')
         conditionally_set_defaults('snapshot_width', 'snapshot_height', 'snapshot_quality')
     end
 
+    --- Restore the default animation frame rate when invalid.
     local function ensure_correct_fps()
         if config.animated_snapshot_fps == nil or config.animated_snapshot_fps <= 0 or config.animated_snapshot_fps > 30 then
             config.animated_snapshot_fps = 10
         end
     end
 
+    --- Validate animated snapshot dimensions, quality, and frame rate.
     local function check_animated_snapshot_settings()
         ensure_in_range('animated_snapshot_width')
         ensure_in_range('animated_snapshot_height')
@@ -139,6 +148,7 @@ local function validate_config(config)
         ensure_correct_fps()
     end
 
+    --- Clamp the menu subtitle preview to its supported line range.
     local function check_menu_settings()
         config.menu_max_shown_lines = h.clamp(
                 config.menu_max_shown_lines,
@@ -147,6 +157,7 @@ local function validate_config(config)
         )
     end
 
+    --- Apply each validation and derived setting to this config.
     local function main()
         set_audio_format()
         set_video_format()
