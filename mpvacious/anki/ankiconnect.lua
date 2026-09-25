@@ -127,6 +127,7 @@ local function make_ankiconnect(components)
         end
     end
 
+    --- Return the Anki media directory, or an error when it cannot be retrieved.
     self.get_media_dir_path = function()
         -- Ask AnkiConnect where to store media files.
         -- If AnkiConnect isn't running, returns nil.
@@ -136,12 +137,13 @@ local function make_ankiconnect(components)
         }
         local ret = self.execute { request = request }
         local dir_path, error = self.parse_result(ret)
-        if not error then
-            return dir_path
-        else
-            msg.error(string.format("Couldn't retrieve path to collection.media folder: %s", error))
-            return nil
+        if error then
+            return nil, error
         end
+        if not h.is_non_empty_str(dir_path) then
+            return nil, 'AnkiConnect returned no media directory'
+        end
+        return dir_path, nil
     end
 
     self.create_deck = function(deck_name)
