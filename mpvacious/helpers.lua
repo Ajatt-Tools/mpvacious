@@ -471,9 +471,36 @@ function this.repr(value)
     end
 end
 
+--- Compare test values structurally, independent of JSON object-key order.
+local function are_two_values_equal(first, last, seen)
+    if type(first) ~= type(last) then
+        return false
+    end
+    if type(first) ~= 'table' then
+        return first == last
+    end
+    seen = seen or {}
+    seen[first] = seen[first] or {}
+    if seen[first][last] then
+        return true
+    end
+    seen[first][last] = true
+    for key, value in pairs(first) do
+        if last[key] == nil or not are_two_values_equal(value, last[key], seen) then
+            return false
+        end
+    end
+    for key in pairs(last) do
+        if first[key] == nil then
+            return false
+        end
+    end
+    return true
+end
+
+--- Test whether two scalar or table values are equal.
 function this.equal(first, last)
-    --- Test whether two values are equal
-    return this.repr(first) == this.repr(last)
+    return are_two_values_equal(first, last)
 end
 
 function this.get_loaded_tracks(track_type)
