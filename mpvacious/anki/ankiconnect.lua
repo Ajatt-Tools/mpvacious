@@ -420,6 +420,29 @@ local function test_get_notes_fields()
     end
 end
 
+--- Verify media directory requests distinguish valid paths from AnkiConnect failures.
+local function test_get_media_dir_path()
+    for _, case in ipairs {
+        { result = '/anki/media', expected_path = '/anki/media' },
+        { error = 'AnkiConnect unavailable', expected_error = 'AnkiConnect unavailable' },
+        { expected_error = 'AnkiConnect returned no media directory' },
+        { result = '', expected_error = 'AnkiConnect returned no media directory' },
+        { result = 42, expected_error = 'AnkiConnect returned no media directory' },
+    } do
+        local client = make_ankiconnect()
+        client.execute = function(options)
+            h.assert_equals(options.request.action, 'getMediaDirPath')
+            return options
+        end
+        client.parse_result = function()
+            return case.result, case.error
+        end
+        local path, error = client.get_media_dir_path()
+        h.assert_equals(path, case.expected_path)
+        h.assert_equals(error, case.expected_error)
+    end
+end
+
 --- Verify singleton reads delegate to bulk reads and propagate failures.
 local function test_get_note_fields()
     local cases = {
@@ -497,6 +520,7 @@ end
 --- Run field-fetch contract tests without contacting Anki.
 local function run_tests()
     test_get_notes_fields()
+    test_get_media_dir_path()
     test_get_note_fields()
     test_append_media_reports_write_error()
     test_append_media_reports_write_result()

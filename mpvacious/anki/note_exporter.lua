@@ -206,7 +206,7 @@ local function make_update_test_exporter(result, jobs, subtitle)
         encoder = fixtures.make_update_encoder(jobs),
         forvo = fixtures.make_forvo(),
         cfg_mgr = fixtures.make_config_manager(make_update_test_config()),
-        notify = h.noop,
+        notify = fixtures.make_notifier(result),
     }
 end
 
@@ -254,11 +254,32 @@ local function test_export_to_anki()
     h.assert_equals(result.clear_count, 1)
 end
 
+--- Keep the subtitle and skip note creation until Anki's media directory is available.
+local function test_export_without_media_directory()
+    local result = { append_count = 0, clear_count = 0, media_dir_error = 'AnkiConnect unavailable' }
+    local jobs = {}
+    local subtitle = make_valid_update_test_subtitle()
+    local exporter = make_update_test_exporter(result, jobs, subtitle)
+    exporter.export_to_anki(false)
+    h.assert_equals(#jobs, 0)
+    h.assert_equals(result.fields, nil)
+    h.assert_equals(result.clear_count, 0)
+    h.assert_equals(result.notification, 'AnkiConnect unavailable')
+    h.assert_equals(result.notification_level, 'error')
+
+    result.media_dir_error = nil
+    exporter.export_to_anki(false)
+    h.assert_equals(#jobs, 2)
+    h.assert_equals(result.fields.SentKanji, 'new sentence')
+    h.assert_equals(result.clear_count, 1)
+end
+
 --- Run exporter tests.
 local function run_tests()
     test_update_notes_after_media_created()
     test_invalid_subtitle_does_not_start_update()
     test_export_to_anki()
+    test_export_without_media_directory()
 end
 
 return {

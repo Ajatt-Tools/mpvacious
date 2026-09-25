@@ -802,6 +802,21 @@ local function test_update_media_failures()
     end
 end
 
+--- A missing Anki media directory must not start jobs or discard the selection.
+local function test_update_without_media_directory()
+    local result = make_update_test_result()
+    result.media_dir_error = 'AnkiConnect unavailable'
+    local jobs = {}
+    local context, subtitle = make_update_test_context { result = result, jobs = jobs }
+    context.perform_update({ note_ids = { 11 }, overwrite = true, subtitle = subtitle })
+    h.assert_equals(#jobs, 0)
+    h.assert_equals(result.field_requests, {})
+    h.assert_equals(result.appended_note_ids, {})
+    h.assert_equals(result.clear_count, 0)
+    h.assert_equals(result.notification_level, 'error')
+    h.assert_equals(result.notification, 'AnkiConnect unavailable')
+end
+
 --- A skipped media job has no filename and must not block the other job.
 local function test_update_skipped_media_job()
     local result = make_update_test_result()
@@ -977,6 +992,7 @@ local function run_tests(context)
     test_collect_subtitle()
     test_update_completion()
     test_update_media_failures()
+    test_update_without_media_directory()
     test_update_skipped_media_job()
     test_update_write_outcomes()
     test_single_note_update_completion()

@@ -265,6 +265,13 @@ local function make_encoder_test_logger(state)
     }
 end
 
+--- Check that a reporter emitted one expected test message.
+local function assert_encoder_test_log(log, case)
+    h.assert_equals(log.count, 1)
+    h.assert_equals(log.level, case.expected_error and 'error' or 'info')
+    h.assert_equals(log.message, case.expected_error or 'Created file: output.ogg')
+end
+
 --- Check one reporter outcome without launching an audio preview subprocess.
 local function assert_creation_result_test_case(case)
     local completed_path, completed_error, previewed_path
@@ -279,6 +286,7 @@ local function assert_creation_result_test_case(case)
         end,
         logger = make_encoder_test_logger(log),
     }
+    --- Capture the reported result without writing media files.
     local function on_finish(path, error)
         completed_path, completed_error = path, error
     end
@@ -289,9 +297,7 @@ local function assert_creation_result_test_case(case)
     h.assert_equals(completed_path, case.expected_path)
     h.assert_equals(completed_error, case.expected_error)
     h.assert_equals(previewed_path, case.expected_preview)
-    h.assert_equals(log.count, 1)
-    h.assert_equals(log.level, case.expected_error and 'error' or 'info')
-    h.assert_equals(log.message, case.expected_error or 'Created file: output.ogg')
+    assert_encoder_test_log(log, case)
 end
 
 --- Verify completion outcomes and preview playback share the media reporter.

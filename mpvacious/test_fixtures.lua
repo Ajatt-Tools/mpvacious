@@ -110,7 +110,10 @@ function this.make_update_ankiconnect(state, fields_for_note)
     return {
         --- Return the test media directory.
         get_media_dir_path = function()
-            return '/tmp'
+            if state.media_dir_error then
+                return nil, state.media_dir_error
+            end
+            return '/tmp', nil
         end,
         --- Record bulk field reads before returning test-specific fields or errors.
         get_notes_fields = function(note_ids)

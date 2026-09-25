@@ -979,6 +979,21 @@ local function test_equal_table_values()
     end
 end
 
+--- Verify only nonempty strings satisfy the media-path boundary check.
+local function test_is_non_empty_str()
+    for _, case in ipairs {
+        { value = '/anki/media', expected = true },
+        { value = ' ', expected = true },
+        { value = '', expected = false },
+        { value = nil, expected = false },
+        { value = 42, expected = false },
+        { value = false, expected = false },
+        { value = {}, expected = false },
+    } do
+        this.assert_equals(this.is_non_empty_str(case.value), case.expected)
+    end
+end
+
 local function test_normalize_newlines()
     local normalize_newline_cases = {
         { "a\r\nb", "a\nb" },
@@ -1149,6 +1164,7 @@ function this.run_tests()
     -- Test list_equal
     test_list_equal()
     test_equal_table_values()
+    test_is_non_empty_str()
 
     local t1 = { 1, 2, 3 }
     local t2 = { 3, 4, 5 }
