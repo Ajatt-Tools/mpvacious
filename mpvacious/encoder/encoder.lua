@@ -40,6 +40,7 @@ local function pad_timings(padding, start_time, end_time)
     return start_time, end_time
 end
 
+--- Play a generated audio clip in a separate mpv process.
 local function background_play(file_path, on_finish)
     return h.subprocess {
         args = { exec.mpv, '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
@@ -149,6 +150,7 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding,
             start_timestamp, end_timestamp = pad_timings(padding, start_timestamp, end_timestamp)
         end
 
+        --- Start encoding and forward its completion to the media reporter.
         local function start_encoding(args)
             local completion = report_creation_result(output_path)
                     .on_finish(on_finish_fn)
