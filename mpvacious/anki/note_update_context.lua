@@ -360,7 +360,11 @@ local function make_note_update_context(components)
 
     --- Configure output paths and create update media jobs.
     local function create_update_media(request)
-        local anki_media_dir = self.ankiconnect.get_media_dir_path()
+        local anki_media_dir, error = self.ankiconnect.get_media_dir_path()
+        if error then
+            -- Without a destination, encoder jobs cannot complete the update batch.
+            return nil, error
+        end
         self.encoder.set_output_dir(anki_media_dir)
         self.forvo.set_output_dir(anki_media_dir)
         local snapshot = self.encoder.snapshot.create_job(request.subtitle)
@@ -380,6 +384,7 @@ local function make_note_update_context(components)
 
     --- Start media jobs and schedule the resulting note write.
     local function start_update_media(request, future)
+        --- Report media failures only after every job in the batch completes.
         local function on_failure(errors)
             self.notify('Failed to create media: ' .. table.concat(errors, '; '), 'error', 5)
         end
@@ -504,7 +509,13 @@ local function make_note_update_context(components)
             -- has no subtitles or it has image subtitles).
             request.subtitle['text'] = nil
         end
-        start_update_media(request, create_update_media(request))
+        local future, error = create_update_media(request)
+        if error then
+            -- Keep the subtitle selection so the user can retry after Anki reconnects.
+            self.notify(error, 'error', 5)
+            return pub
+        end
+        start_update_media(request, future)
         clear_update_state()
         return pub
     end

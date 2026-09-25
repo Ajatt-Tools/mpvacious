@@ -41,12 +41,16 @@ local function make_exporter()
 
     --- Create and start media jobs for an ordinary note export.
     local function start_export_media(subtitle)
-        self.encoder.set_output_dir(self.ankiconnect.get_media_dir_path())
+        local media_dir, error = self.ankiconnect.get_media_dir_path()
+        if error then
+            return nil, error
+        end
+        self.encoder.set_output_dir(media_dir)
         local snapshot = self.encoder.snapshot.create_job(subtitle)
         local audio = self.encoder.audio.create_job(subtitle, self.note_update_context.audio_padding())
         snapshot.run_async()
         audio.run_async()
-        return snapshot, audio
+        return { snapshot = snapshot, audio = audio }, nil
     end
 
     --- Build note fields and ensure the first model field is populated.
@@ -75,8 +79,13 @@ local function make_exporter()
             sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
         end
 
-        local snapshot, audio = start_export_media(sub)
-        local note_fields = make_export_note_fields(sub, snapshot, audio)
+        local media, error = start_export_media(sub)
+        if error then
+            -- Keep the observer's selection for a retry when Anki is unavailable.
+            self.notify(error, 'error', 5)
+            return pub
+        end
+        local note_fields = make_export_note_fields(sub, media.snapshot, media.audio)
         self.ankiconnect.add_note(note_fields, self.note_update_context.substitute_fmt(config().note_tag), gui)
         self.subs_observer.clear()
         return pub
