@@ -156,6 +156,11 @@ function this.is_empty(var)
     return var == nil or var == '' or (type(var) == 'table' and next(var) == nil)
 end
 
+--- Return whether a value is a string containing at least one character.
+function this.is_non_empty_str(value)
+    return type(value) == 'string' and value ~= ''
+end
+
 function this.contains_non_latin_letters(str)
     return str:match("[^%c%p%s%w—]")
 end
