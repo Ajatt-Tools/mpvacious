@@ -48,9 +48,11 @@ local function background_play(file_path, on_finish)
 end
 
 --- Report a created media path or a descriptive failure to the job callback.
-local function report_creation_result(file_path, file_exists, play_audio)
-    file_exists = file_exists or h.file_exists
-    play_audio = play_audio or background_play
+local function report_creation_result(file_path, components)
+    components = components or {}
+    components.file_exists = components.file_exists or h.file_exists
+    components.play_audio = components.play_audio or background_play
+    components.logger = components.logger or msg
 
     local private = { preview_audio = false }
     local public = {}
@@ -71,19 +73,19 @@ local function report_creation_result(file_path, file_exists, play_audio)
     --- https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst#mp-functions
     function public.run(success, result, error)
         -- result is nil on success for screenshot-to-file.
-        if success and (result == nil or result.status == 0) and file_exists(file_path) then
-            msg.info(string.format("Created file: %s", file_path))
+        if success and (result == nil or result.status == 0) and components.file_exists(file_path) then
+            components.logger.info(string.format("Created file: %s", file_path))
             if type(private.on_finish_fn) == 'function' then
                 private.on_finish_fn(file_path, nil)
             end
             if private.preview_audio then
-                play_audio(file_path, function()
+                components.play_audio(file_path, function()
                     print("Played file: " .. file_path)
                 end)
             end
         else
             local reason = error or string.format("Couldn't create file: %s", file_path)
-            msg.error(reason)
+            components.logger.error(reason)
             if type(private.on_finish_fn) == 'function' then
                 private.on_finish_fn(nil, reason)
             end
