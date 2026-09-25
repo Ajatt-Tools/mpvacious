@@ -184,6 +184,8 @@ local mp_msg_stub = {
     debug = noop,
     verbose = noop,
 }
+-- Encoder codec detection uses mp.msg directly when the module is loaded.
+mp_stub.msg = mp_msg_stub
 
 local mp_utils_stub = {
     format_json = format_json,

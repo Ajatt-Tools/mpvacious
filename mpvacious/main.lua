@@ -592,6 +592,7 @@ end
 --- Run every module test suite in the mpv-backed environment.
 local function run_tests()
     h.run_tests()
+    encoder.run_tests()
     eutils.run_tests()
     cfg_utils.run_tests()
     make_ankiconnect.run_tests()

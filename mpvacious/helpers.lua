@@ -952,6 +952,28 @@ local function test_list_equal()
     end
 end
 
+--- Verify table equality ignores object-key order but respects values and array order.
+local function test_equal_table_values()
+    local note_info = { noteId = 2, fields = { Sentence = { value = 'second' }, Audio = { value = '' } } }
+    local reordered = { fields = { Audio = { value = '' }, Sentence = { value = 'second' } }, noteId = 2 }
+    local shared = { value = 'same' }
+    this.assert_equals(reordered, note_info)
+    for _, case in ipairs {
+        { first = note_info, last = reordered, expected = true },
+        { first = reordered, last = note_info, expected = true },
+        { first = note_info, last = { noteId = 2, fields = { Sentence = { value = 'changed' } } }, expected = false },
+        { first = note_info, last = { noteId = 2, fields = note_info.fields, extra = true }, expected = false },
+        { first = { 1, 2 }, last = { 2, 1 }, expected = false },
+        { first = { false }, last = { {} }, expected = false },
+        { first = { a = shared, b = shared }, last = { a = { value = 'same' }, b = { value = 'same' } },
+          expected = true },
+        { first = false, last = nil, expected = false },
+        { first = nil, last = nil, expected = true },
+    } do
+        this.assert_equals(this.equal(case.first, case.last), case.expected)
+    end
+end
+
 local function test_normalize_newlines()
     local normalize_newline_cases = {
         { "a\r\nb", "a\nb" },
@@ -1121,6 +1143,7 @@ function this.run_tests()
 
     -- Test list_equal
     test_list_equal()
+    test_equal_table_values()
 
     local t1 = { 1, 2, 3 }
     local t2 = { 3, 4, 5 }

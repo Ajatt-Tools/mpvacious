@@ -697,10 +697,10 @@ local function make_update_test_result()
     return { current_collections = 0, clear_count = 0, appended_note_ids = {} }
 end
 
---- Complete both media jobs with their real callback success values.
+--- Complete both media jobs with their created filenames.
 local function complete_update_test_media_jobs(jobs)
-    jobs[1].callback(true)
-    jobs[2].callback(true)
+    jobs[1].callback('snapshot.avif', nil)
+    jobs[2].callback('audio.ogg', nil)
 end
 
 --- Create a context and subtitle fixture from named update-test options.
@@ -759,19 +759,55 @@ local function test_update_completion()
     local context, subtitle = make_update_test_context { result = result, jobs = jobs }
     context.perform_update({ note_ids = { 11, 12 }, overwrite = true, subtitle = subtitle })
     h.assert_equals(#jobs, 2)
-    jobs[1].callback(true)
+    jobs[1].callback('snapshot.avif', nil)
     h.assert_equals(result.appended_note_ids, {})
-    jobs[2].callback(true)
+    jobs[2].callback('audio.ogg', nil)
     h.assert_equals(result.appended_note_ids, { 11, 12 })
     h.assert_equals(result.browse_query, 'nid:11 OR nid:12')
     h.assert_equals(result.notification, 'Updated 2 notes.')
     h.assert_equals(result.clear_count, 1)
 end
 
+--- Verify a failed media job never starts field reads or writes.
+local function test_update_media_failures()
+    for _, case in ipairs {
+        { snapshot_error = 'image conversion failed', expected = 'snapshot: image conversion failed' },
+        { audio_error = 'sound conversion failed', expected = 'audio: sound conversion failed' },
+        { snapshot_error = 'image conversion failed', audio_error = 'sound conversion failed',
+          expected = 'snapshot: image conversion failed; audio: sound conversion failed' },
+    } do
+        local result = make_update_test_result()
+        local jobs = {}
+        local context, subtitle = make_update_test_context { result = result, jobs = jobs }
+        context.perform_update({ note_ids = { 11 }, overwrite = true, subtitle = subtitle })
+        jobs[1].callback(case.snapshot_error and nil or 'snapshot.avif', case.snapshot_error)
+        h.assert_equals(result.notification, nil)
+        jobs[2].callback(case.audio_error and nil or 'audio.ogg', case.audio_error)
+        h.assert_equals(result.field_requests, {})
+        h.assert_equals(result.appended_note_ids, {})
+        h.assert_equals(result.browse_query, nil)
+        h.assert_equals(result.notification, 'Failed to create media: ' .. case.expected)
+        h.assert_equals(result.notification_level, 'error')
+    end
+end
+
+--- A skipped media job has no filename and must not block the other job.
+local function test_update_skipped_media_job()
+    local result = make_update_test_result()
+    local jobs = {}
+    local context, subtitle = make_update_test_context { result = result, jobs = jobs }
+    context.perform_update({ note_ids = { 11 }, overwrite = true, subtitle = subtitle })
+    jobs[1].callback(nil, nil)
+    jobs[2].callback('audio.ogg', nil)
+    h.assert_equals(result.appended_note_ids, { 11 })
+    h.assert_equals(result.notification, 'Updated note: stored 11.')
+end
+
 --- Verify delayed Anki write failures cannot trigger a success notification.
 local function test_update_write_outcomes()
     local cases = {
-        { errors = {}, notification = 'Updated 2 notes.', browse_query = 'nid:11 OR nid:12' },
+        { errors = {}, results = { [11] = 'updated', [12] = 'updated' },
+          notification = 'Updated 2 notes.', browse_query = 'nid:11 OR nid:12' },
         { errors = { [12] = 'denied' }, notification = 'Failed to update notes: note 12: denied' },
         { errors = { [12] = 'denied', [11] = 'busy' },
           notification = 'Failed to update notes: note 12: denied; note 11: busy' },
@@ -784,9 +820,9 @@ local function test_update_write_outcomes()
         context.perform_update({ note_ids = { 11, 12 }, overwrite = true, subtitle = subtitle })
         complete_update_test_media_jobs(jobs)
         h.assert_equals(result.notification, nil)
-        result.write_callbacks[12](case.errors[12])
+        result.write_callbacks[12](case.results and case.results[12], case.errors[12])
         h.assert_equals(result.notification, nil)
-        result.write_callbacks[11](case.errors[11])
+        result.write_callbacks[11](case.results and case.results[11], case.errors[11])
         h.assert_equals(result.notification, case.notification)
         h.assert_equals(result.browse_query, case.browse_query)
     end
@@ -929,6 +965,8 @@ local function run_tests(context)
     test_join_field_content()
     test_collect_subtitle()
     test_update_completion()
+    test_update_media_failures()
+    test_update_skipped_media_job()
     test_update_write_outcomes()
     test_single_note_update_completion()
     test_update_field_read_failures()

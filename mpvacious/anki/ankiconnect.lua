@@ -383,28 +383,20 @@ local function make_notes_fields_test_scenarios()
         { note_ids = { 1 }, error = 'connection failed', expected_error = 'connection failed' },
         { note_ids = { 1 }, expected_error = 'AnkiConnect returned no requested notes' },
         { note_ids = { 1 }, result = {}, expected_error = 'AnkiConnect returned no requested notes' },
+        { note_ids = { 1 }, result = 'invalid', expected_error = 'AnkiConnect returned no requested notes' },
         { note_ids = { 1 }, result = { {} }, expected_error = 'AnkiConnect returned note fields without a note ID' },
+        { note_ids = { 1 }, result = { false }, expected_error = 'AnkiConnect returned note fields without a note ID' },
         { note_ids = { 1, 2 }, result = { { noteId = 1, fields = { Sentence = { value = 'first' } } } },
           expected_error = 'AnkiConnect returned no fields for note 2' },
         { note_ids = { 1 }, result = { { noteId = 1, fields = {} } },
           expected_error = 'AnkiConnect returned no fields for note 1' },
+        { note_ids = { 1 }, result = { { noteId = 1, fields = false } },
+          expected_error = 'AnkiConnect returned no fields for note 1' },
+        { note_ids = { 1 }, result = { { noteId = 1, fields = { Sentence = false } } },
+          expected_error = 'AnkiConnect returned invalid fields for note 1' },
         { note_ids = { 1 }, result = { { noteId = 1, fields = { Sentence = {} } } },
           expected_error = 'AnkiConnect returned invalid fields for note 1' },
     }
-end
-
---- Assert field extraction left the raw notesInfo response structure untouched.
-local function assert_raw_note_fields_unchanged(result, original)
-    if h.is_empty(original) then
-        return
-    end
-    h.assert_equals(#result, #original)
-    for index, original_info in ipairs(original) do
-        h.assert_equals(result[index].noteId, original_info.noteId)
-        for name, original_field in pairs(original_info.fields or {}) do
-            h.assert_equals(result[index].fields[name].value, original_field.value)
-        end
-    end
 end
 
 --- Assert one bulk field-fetch scenario without sending a network request.
@@ -416,7 +408,7 @@ local function assert_notes_fields_test_case(case)
     h.assert_equals(state.requested_note_ids, case.note_ids)
     h.assert_equals(fields, case.fields)
     h.assert_equals(error, case.expected_error)
-    assert_raw_note_fields_unchanged(case.result, original_result)
+    h.assert_equals(case.result, original_result)
 end
 
 --- Exercise successful, failed, reordered, missing-note, and invalid-field responses.
@@ -459,7 +451,7 @@ local function test_append_media_reports_write_error()
             logged_error = message
         end,
     } }
-    local completed_error
+    local completed_result, completed_error
     --- Avoid a real Anki Browser request during this test.
     client.gui_browse = h.noop
     --- Deliver a failed write through the real response callback.
@@ -470,11 +462,34 @@ local function test_append_media_reports_write_error()
     client.add_tag = function()
         error('unexpected tag on failed write')
     end
-    client.append_media(123, { Sentence = 'text' }, '', function(error)
-        completed_error = error
+    client.append_media(123, { Sentence = 'text' }, '', function(result, error)
+        completed_result, completed_error = result, error
     end)
+    h.assert_equals(completed_result, nil)
     h.assert_equals(completed_error, 'write denied')
     h.assert_equals(logged_error, 'Failed to update note 123: write denied')
+end
+
+--- Forward a successful AnkiConnect result and apply the note tag.
+local function test_append_media_reports_write_result()
+    local client = make_ankiconnect()
+    local completed_result, completed_error, tagged_note_id
+    client.gui_browse = h.noop
+    client.parse_result = function()
+        return 'updated', nil
+    end
+    client.execute = function(options)
+        options.completion_fn(true, {}, nil)
+    end
+    client.add_tag = function(note_id)
+        tagged_note_id = note_id
+    end
+    client.append_media(123, { Sentence = 'text' }, 'tag', function(result, error)
+        completed_result, completed_error = result, error
+    end)
+    h.assert_equals(completed_result, 'updated')
+    h.assert_equals(completed_error, nil)
+    h.assert_equals(tagged_note_id, 123)
 end
 
 --- Run field-fetch contract tests without contacting Anki.
@@ -482,6 +497,7 @@ local function run_tests()
     test_get_notes_fields()
     test_get_note_fields()
     test_append_media_reports_write_error()
+    test_append_media_reports_write_result()
 end
 
 return {

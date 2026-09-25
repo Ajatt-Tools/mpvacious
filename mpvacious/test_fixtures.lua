@@ -146,7 +146,7 @@ function this.make_update_ankiconnect(state, fields_for_note)
             if state.write_callbacks then
                 state.write_callbacks[note_id] = on_finish
             elseif on_finish then
-                on_finish()
+                on_finish(nil, nil)
             end
         end,
         --- Record an ordinary note export.

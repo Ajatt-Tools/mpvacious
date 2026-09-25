@@ -13,6 +13,7 @@ require('tests.setup')
 
 local modules = {
     'helpers',
+    'encoder.encoder',
     'encoder.utils',
     'config.utils',
     'anki.ankiconnect',
