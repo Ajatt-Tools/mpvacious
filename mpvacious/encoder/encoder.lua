@@ -22,7 +22,7 @@ local self = {
 }
 
 ------------------------------------------------------------
--- utility functions
+--- utility functions
 
 local function pad_timings(padding, start_time, end_time)
     local video_duration = mp.get_property_number('duration')
@@ -40,8 +40,61 @@ local function pad_timings(padding, start_time, end_time)
     return start_time, end_time
 end
 
+local function background_play(file_path, on_finish)
+    return h.subprocess {
+        args = { exec.mpv, '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
+        completion_fn = on_finish
+    }
+end
+
+--- Report a created media path or a descriptive failure to the job callback.
+local function report_creation_result(file_path, file_exists, play_audio)
+    file_exists = file_exists or h.file_exists
+    play_audio = play_audio or background_play
+
+    local private = { preview_audio = false }
+    local public = {}
+
+    --- Register the callback that receives (file_path, error).
+    function public.on_finish(on_finish_fn)
+        private.on_finish_fn = on_finish_fn
+        return public
+    end
+
+    --- Enable playback of an audio file only after successful creation.
+    function public.preview_audio(preview_audio)
+        private.preview_audio = not not preview_audio
+        return public
+    end
+
+    --- Handle completion of an mpv or subprocess media command.
+    --- https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst#mp-functions
+    function public.run(success, result, error)
+        -- result is nil on success for screenshot-to-file.
+        if success and (result == nil or result.status == 0) and file_exists(file_path) then
+            msg.info(string.format("Created file: %s", file_path))
+            if type(private.on_finish_fn) == 'function' then
+                private.on_finish_fn(file_path, nil)
+            end
+            if private.preview_audio then
+                play_audio(file_path, function()
+                    print("Played file: " .. file_path)
+                end)
+            end
+        else
+            local reason = error or string.format("Couldn't create file: %s", file_path)
+            msg.error(reason)
+            if type(private.on_finish_fn) == 'function' then
+                private.on_finish_fn(nil, reason)
+            end
+        end
+    end
+
+    return public
+end
+
 ------------------------------------------------------------
--- main interface
+--- main interface
 
 local create_animated_snapshot = function(start_timestamp, end_timestamp, source_path, output_path, on_finish_fn)
     -- Creates the animated snapshot and then calls on_finish_fn
@@ -60,23 +113,6 @@ local create_static_snapshot = function(timestamp, source_path, output_path, on_
     end
 end
 
-local report_creation_result = function(file_path, on_finish_fn)
-    return function(success, result)
-        -- result is nil on success for screenshot-to-file.
-        if success and (result == nil or result.status == 0) and h.file_exists(file_path) then
-            msg.info(string.format("Created file: %s", file_path))
-            success = true
-        else
-            msg.error(string.format("Couldn't create file: %s", file_path))
-            success = false
-        end
-        if type(on_finish_fn) == 'function' then
-            on_finish_fn(success)
-        end
-        return success
-    end
-end
-
 local create_snapshot = function(start_timestamp, end_timestamp, current_timestamp, filename, on_finish_fn)
     if h.is_empty(self.output_dir_path) then
         return msg.error("Output directory wasn't provided. Image file will not be created.")
@@ -87,22 +123,15 @@ local create_snapshot = function(start_timestamp, end_timestamp, current_timesta
         local source_path = mp.get_property("path")
         local output_path = utils.join_path(self.output_dir_path, filename)
 
-        local on_finish_wrap = report_creation_result(output_path, on_finish_fn)
+        local on_finish_wrap = report_creation_result(output_path).on_finish(on_finish_fn)
         if self.config.animated_snapshot_enabled then
-            create_animated_snapshot(start_timestamp, end_timestamp, source_path, output_path, on_finish_wrap)
+            create_animated_snapshot(start_timestamp, end_timestamp, source_path, output_path, on_finish_wrap.run)
         else
-            create_static_snapshot(current_timestamp, source_path, output_path, on_finish_wrap)
+            create_static_snapshot(current_timestamp, source_path, output_path, on_finish_wrap.run)
         end
     else
         print("Snapshot will not be created.")
     end
-end
-
-local background_play = function(file_path, on_finish)
-    return h.subprocess {
-        args = { exec.mpv, '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
-        completion_fn = on_finish
-    }
 end
 
 local create_audio = function(start_timestamp, end_timestamp, filename, padding, on_finish_fn)
@@ -119,15 +148,10 @@ local create_audio = function(start_timestamp, end_timestamp, filename, padding,
         end
 
         local function start_encoding(args)
-            local on_finish_wrap = function(success, result)
-                local conversion_check = report_creation_result(output_path, on_finish_fn)
-                if conversion_check(success, result) and self.config.preview_audio then
-                    background_play(output_path, function()
-                        print("Played file: " .. output_path)
-                    end)
-                end
-            end
-            h.subprocess { args = args, completion_fn = on_finish_wrap }
+            local completion = report_creation_result(output_path)
+                    .on_finish(on_finish_fn)
+                    .preview_audio(self.config.preview_audio)
+            h.subprocess { args = args, completion_fn = completion.run }
         end
 
         self.encoder.make_audio_args(
@@ -171,7 +195,8 @@ local create_job = function(job_type, sub, audio_padding)
         job.run_async = function()
             print(job_type .. " will not be created.")
             if type(on_finish_fn) == 'function' then
-                on_finish_fn()
+                -- No media track or configured field: this is a skipped job, not a failure.
+                on_finish_fn(nil, nil)
             end
         end
     end
