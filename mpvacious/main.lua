@@ -589,27 +589,12 @@ end
 ------------------------------------------------------------
 --- Tests
 
---- Run every module test suite in the mpv-backed environment.
-local function run_tests()
-    h.run_tests()
-    encoder.run_tests()
-    eutils.run_tests()
-    cfg_utils.run_tests()
-    make_ankiconnect.run_tests()
-    make_new_note_checker.run_tests()
-    Subtitle.run_tests()
-    sub_list.run_tests()
-    make_subtitles_observer.run_tests()
-    make_note_exporter.run_tests()
-    make_note_update_context.run_tests()
-    speech_collector.run_tests()
-end
-
 local function pcall_tests()
     if os.getenv("MPVACIOUS_TEST") == "TRUE" then
         -- at this point, other tests in submodules should have been finished.
+        local runner = require('tests.suites').new()
         mp.msg.warn("RUNNING TESTS")
-        local success, err = pcall(run_tests)
+        local success, err = pcall(runner.run_tests)
         if not success then
             mp.msg.error("TESTS FAILED")
             mp.msg.error(err)

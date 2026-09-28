@@ -10,29 +10,6 @@ Usage: luajit tests/run.lua
 ]]
 
 require('tests.setup')
-
-local modules = {
-    'helpers',
-    'encoder.encoder',
-    'encoder.utils',
-    'config.utils',
-    'anki.ankiconnect',
-    'anki.new_note_checker',
-    'anki.note_exporter',
-    'anki.note_update_context',
-    'subtitles.subtitle',
-    'subtitles.collector',
-    'subtitles.sub_list',
-    'subtitles.observer',
-}
-
-for _, module_name in ipairs(modules) do
-    print(string.format("Running %s tests...", module_name))
-    local module = require(module_name)
-    module.run_tests()
-    print(string.format("%s tests passed.", module_name))
-end
-
-------------------------------------------------------------
-
+local runner = require('tests.suites').new()
+runner.run_tests()
 print("ALL TESTS PASSED")
