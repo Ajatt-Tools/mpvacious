@@ -6,7 +6,7 @@ Test suites
 ]]
 
 local modules = {
-    'helpers',
+    'tests.test_helpers',
     'encoder.encoder',
     'encoder.utils',
     'config.utils',
