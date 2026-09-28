@@ -7,6 +7,7 @@ Test suites
 
 local modules = {
     'tests.test_helpers',
+    'tests.test_observer',
     'encoder.encoder',
     'encoder.utils',
     'config.utils',
@@ -17,7 +18,6 @@ local modules = {
     'subtitles.subtitle',
     'subtitles.collector',
     'subtitles.sub_list',
-    'subtitles.observer',
 }
 
 local function load_test_suites()
