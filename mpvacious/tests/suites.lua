@@ -8,8 +8,8 @@ Test suites
 local modules = {
     'tests.test_helpers',
     'tests.test_observer',
+    'tests.test_encoder_utils',
     'encoder.encoder',
-    'encoder.utils',
     'config.utils',
     'anki.ankiconnect',
     'anki.new_note_checker',
