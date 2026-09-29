@@ -8,8 +8,8 @@ Test helpers.
 local h = require('helpers')
 local utils = require('mp.utils')
 
-local function test_islice()
-    local slice_cases = {
+local function make_islice_cases()
+    return {
         { input = { 1, 2, 3 }, expected = { 1, 2, 3 } },
         { input = { 1, 2, 3 }, start_pos = 2, expected = { 2, 3 } },
         { input = { 1, 2, 3 }, start_pos = 2, end_pos = 2, expected = { 2 } },
@@ -26,13 +26,16 @@ local function test_islice()
         { input = { 1, 2, 3 }, start_pos = 1, end_pos = 2.5, expected = { 1, 2 } },
         { input = { 1, 2, 3 }, start_pos = 1.5, end_pos = 2.5, expected = { 2 } },
     }
-    for _, case in ipairs(slice_cases) do
+end
+
+local function test_islice()
+    for _, case in ipairs(make_islice_cases()) do
         h.assert_equals(h.itable_slice(case.input, case.start_pos, case.end_pos), case.expected)
     end
 end
 
-local function test_list_equal()
-    local list_equal_cases = {
+local function make_list_equal_cases()
+    return {
         { { 1, 2, 3 }, { 1, 2, 3 }, true }, -- identical lists
         { { 1, 2 }, { 1, 2, 3 }, false }, -- different lengths
         { { 1, 2, 3 }, { 1, 2 }, false }, -- different lengths, other direction
@@ -42,19 +45,18 @@ local function test_list_equal()
         { { "a" }, { "A" }, false }, -- exact (case-sensitive) match
         { { 1, 2 }, { 2, 1 }, false }, -- order matters
     }
-    for _, case in ipairs(list_equal_cases) do
+end
+
+local function test_list_equal()
+    for _, case in ipairs(make_list_equal_cases()) do
         local first, second, expected = h.unpack(case)
         h.assert_equals(h.list_equal(first, second), expected)
     end
 end
 
---- Verify table equality ignores object-key order but respects values and array order.
-local function test_equal_table_values()
-    local note_info = { noteId = 2, fields = { Sentence = { value = 'second' }, Audio = { value = '' } } }
-    local reordered = { fields = { Audio = { value = '' }, Sentence = { value = 'second' } }, noteId = 2 }
+local function make_equal_table_values_cases(reordered, note_info)
     local shared = { value = 'same' }
-    h.assert_equals(reordered, note_info)
-    for _, case in ipairs {
+    return {
         { first = note_info, last = reordered, expected = true },
         { first = reordered, last = note_info, expected = true },
         { first = note_info, last = { noteId = 2, fields = { Sentence = { value = 'changed' } } }, expected = false },
@@ -65,14 +67,21 @@ local function test_equal_table_values()
           expected = true },
         { first = false, last = nil, expected = false },
         { first = nil, last = nil, expected = true },
-    } do
+    }
+end
+
+--- Verify table equality ignores object-key order but respects values and array order.
+local function test_equal_table_values()
+    local note_info = { noteId = 2, fields = { Sentence = { value = 'second' }, Audio = { value = '' } } }
+    local reordered = { fields = { Audio = { value = '' }, Sentence = { value = 'second' } }, noteId = 2 }
+    h.assert_equals(reordered, note_info)
+    for _, case in ipairs(make_equal_table_values_cases(reordered, note_info)) do
         h.assert_equals(h.equal(case.first, case.last), case.expected)
     end
 end
 
---- Verify only nonempty strings satisfy the media-path boundary check.
-local function test_is_non_empty_str()
-    for _, case in ipairs {
+local function make_is_non_empty_str_cases()
+    return {
         { value = '/anki/media', expected = true },
         { value = ' ', expected = true },
         { value = '', expected = false },
@@ -80,39 +89,50 @@ local function test_is_non_empty_str()
         { value = 42, expected = false },
         { value = false, expected = false },
         { value = {}, expected = false },
-    } do
+    }
+end
+
+--- Verify only nonempty strings satisfy the media-path boundary check.
+local function test_is_non_empty_str()
+    for _, case in ipairs(make_is_non_empty_str_cases()) do
         h.assert_equals(h.is_non_empty_str(case.value), case.expected)
     end
 end
 
-local function test_normalize_newlines()
-    local normalize_newline_cases = {
+local function make_normalize_newlines_cases()
+    return {
         { "a\r\nb", "a\nb" },
         { "a\rb", "a\nb" },
         { "a\r\nb\rc", "a\nb\nc" },
         { "a\nb", "a\nb" },
     }
-    for _, case in ipairs(normalize_newline_cases) do
+end
+
+local function test_normalize_newlines()
+    for _, case in ipairs(make_normalize_newlines_cases()) do
         local text, expected = h.unpack(case)
         h.assert_equals(h.normalize_newlines(text), expected)
     end
 end
 
-local function test_split_lines()
-    local split_line_cases = {
+local function make_split_line_cases()
+    return {
         { "a\nb", { "a", "b" } },
         { "a\n", { "a", "" } },
         { "", { "" } },
         { "\n", { "", "" } },
     }
-    for _, case in ipairs(split_line_cases) do
+end
+
+local function test_split_lines()
+    for _, case in ipairs(make_split_line_cases()) do
         local text, expected = h.unpack(case)
         h.assert_equals(h.split_lines(text), expected)
     end
 end
 
-local function test_limit_lines()
-    local limit_lines_cases = {
+local function make_limit_lines_cases()
+    return {
         -- {lines, max_lines, expected}
         { { "a", "b" }, 3, { "a", "b" } }, -- under the limit: unchanged
         { { "a", "b" }, 2, { "a", "b" } }, -- exactly at the limit: unchanged
@@ -120,14 +140,17 @@ local function test_limit_lines()
         { { "a", "b", "c" }, 1, { "a…" } }, -- limit of one line
         { {}, 2, {} }, -- empty input
     }
-    for _, case in ipairs(limit_lines_cases) do
+end
+
+local function test_limit_lines()
+    for _, case in ipairs(make_limit_lines_cases()) do
         local lines, max_lines, expected = h.unpack(case)
         h.assert_equals(h.limit_lines(lines, max_lines), expected)
     end
 end
 
-local function test_str_wrap()
-    local str_wrap_cases = {
+local function make_str_wrap_cases()
+    return {
         { text = "short", n_chars = 25, separator = [[\N]], expected = "short" },
         { text = "abcdef", n_chars = 3, separator = [[\N]], expected = [[abc\Ndef]] },
         { text = "one two three", n_chars = 6, separator = [[\N]], expected = [[one\Ntwo\Nthree]] },
@@ -145,27 +168,33 @@ local function test_str_wrap()
         { text = "\na", n_chars = 6, separator = [[\N]], expected = [[\Na]] },
         { text = "abcdef", n_chars = 3, expected = "abc\ndef" },
     }
-    for _, case in ipairs(str_wrap_cases) do
+end
+
+local function test_str_wrap()
+    for _, case in ipairs(make_str_wrap_cases()) do
         h.assert_equals(h.str_wrap(case.text, case.n_chars, case.separator), case.expected)
     end
 end
 
-local function test_trim()
-    local trim_cases = {
+local function make_trim_cases()
+    return {
         { "  hello  ", "hello" },
         { "　hello　", "hello" },
         { " (note) hello ", "hello" },
         { "a \n b", "a b" },
         { "a  b", "a b" },
     }
-    for _, case in ipairs(trim_cases) do
+end
+
+local function test_trim()
+    for _, case in ipairs(make_trim_cases()) do
         local text, expected = h.unpack(case)
         h.assert_equals(h.trim(text), expected)
     end
 end
 
-local function test_normalize_subtitle_text()
-    local normalized_subtitle_text_cases = {
+local function make_normalized_subtitle_text_cases()
+    return {
         { "<b>現実味</b>", "現実味" },
         { "a　b", "a b" },
         { "a\194\160b", "a b" },
@@ -180,7 +209,10 @@ local function test_normalize_subtitle_text()
         { "  a\t\nb  ", "a b" },
         { "女の子の <b>女性</b>の　『お』から始まる…", "女の子の 女性の \"お\"から始まる…" },
     }
-    for _, case in ipairs(normalized_subtitle_text_cases) do
+end
+
+local function test_normalize_subtitle_text()
+    for _, case in ipairs(make_normalized_subtitle_text_cases()) do
         local text, expected = h.unpack(case)
         h.assert_equals(h.normalize_subtitle_text(text), expected)
     end

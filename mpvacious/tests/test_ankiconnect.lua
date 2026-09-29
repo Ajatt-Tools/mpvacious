@@ -63,15 +63,19 @@ local function test_get_notes_fields()
     end
 end
 
---- Verify media directory requests distinguish valid paths from AnkiConnect failures.
-local function test_get_media_dir_path()
-    for _, case in ipairs {
+local function make_get_media_dir_path_scenarios()
+    return {
         { result = '/anki/media', expected_path = '/anki/media' },
         { error = 'AnkiConnect unavailable', expected_error = 'AnkiConnect unavailable' },
         { expected_error = 'AnkiConnect returned no media directory' },
         { result = '', expected_error = 'AnkiConnect returned no media directory' },
         { result = 42, expected_error = 'AnkiConnect returned no media directory' },
-    } do
+    }
+end
+
+--- Verify media directory requests distinguish valid paths from AnkiConnect failures.
+local function test_get_media_dir_path()
+    for _, case in ipairs(make_get_media_dir_path_scenarios()) do
         local client = ankiconnect.new()
         client.execute = function(options)
             h.assert_equals(options.request.action, 'getMediaDirPath')
@@ -86,9 +90,8 @@ local function test_get_media_dir_path()
     end
 end
 
---- Verify singleton reads delegate to bulk reads and propagate failures.
-local function test_get_note_fields()
-    local cases = {
+local function make_get_note_fields_scenarios()
+    return {
         { result = { { noteId = 123, fields = { Sentence = { value = 'text' }, Audio = { value = '' } } } },
           fields = { Sentence = 'text', Audio = '' } },
         { error = 'connection failed', expected_error = 'connection failed' },
@@ -100,7 +103,11 @@ local function test_get_note_fields()
         { result = { { noteId = 123, fields = { Sentence = {} } } },
           expected_error = 'AnkiConnect returned invalid fields for note 123' },
     }
-    for _, case in ipairs(cases) do
+end
+
+--- Verify singleton reads delegate to bulk reads and propagate failures.
+local function test_get_note_fields()
+    for _, case in ipairs(make_get_note_fields_scenarios()) do
         local state = {}
         local client = fixtures.make_note_fields_client(state, ankiconnect.new, case)
         local fields, error = client.get_note_fields(123)

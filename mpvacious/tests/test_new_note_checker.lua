@@ -49,9 +49,8 @@ local function assert_checker_test_case(case)
     h.assert_equals(state.errors, expected_errors)
 end
 
---- Verify one-time inspection for server errors, deleted notes, and each eligibility condition.
-local function run_tests()
-    local cases = {
+local function make_test_cases()
+    return {
         { error = "Ankiconnect isn't running", fetches = 1, updates = 0 },
         { error = 'AnkiConnect returned no fields for the deleted note', fetches = 1, updates = 0 },
         { fields = nil, fetches = 1, updates = 0 }, -- preserve the predicate's guard independently of fetch errors
@@ -63,7 +62,11 @@ local function run_tests()
         { fields = { Sentence = 'text', Image = '<img src="existing.png">' }, fetches = 1, updates = 0 },
         { fields = { Sentence = 'text' }, age_minutes = 3, fetches = 1, updates = 0 },
     }
-    for _, case in ipairs(cases) do
+end
+
+--- Verify one-time inspection for server errors, deleted notes, and each eligibility condition.
+local function run_tests()
+    for _, case in ipairs(make_test_cases()) do
         assert_checker_test_case(case)
     end
 end
