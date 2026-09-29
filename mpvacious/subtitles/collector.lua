@@ -6,8 +6,6 @@ Collect subtitle lines into a joined speech.
 ]]
 
 local h = require('helpers')
-local Subtitle = require('subtitles.subtitle')
-local this = {}
 local CONCAT_CHR = '\n' -- character used to concatenate subtitle lines
 
 --- Split text into individual lines, normalized to LF.
@@ -47,7 +45,7 @@ end
 
 --- Collect subtitle lines into a joined speech, removing boundary overlap
 --- between consecutive time-overlapping or touching subs.
-function this.make_speech_collector()
+local function make_speech_collector()
     local self = {}
     local recorded_lines = {}
     local previous_sub -- store last recorded sub (with timings, unlike recorded_lines)
@@ -75,70 +73,7 @@ function this.make_speech_collector()
     return self
 end
 
-------------------------------------------------------------
---- Tests: executed by both standalone and mpv-backed runners.
-
-local function test_count_overlapping_lines()
-    local cases = {
-        -- {recorded_lines, lines_to_append, expected}
-        { { "Yes", "No" }, { "No", "Maybe" }, 1 }, -- one shared boundary line
-        { { "A", "B", "C" }, { "B", "C", "D" }, 2 }, -- multi-line boundary overlap
-        { { "A", "B" }, { "A", "B" }, 2 }, -- full overlap
-        { { "A", "B", "C", "D" }, { "C", "D" }, 2 }, -- bounded by the shorter list
-        { { "X", "A", "B" }, { "A", "B", "C" }, 2 }, -- larger candidate fails, smaller matches
-        { { "A", "B" }, { "C", "D" }, 0 }, -- no overlap
-        { {}, { "A" }, 0 }, -- empty recorded_lines
-        { { "A" }, {}, 0 }, -- empty lines_to_append
-        { {}, {}, 0 }, -- both empty
-        { { "A", "B", "C" }, { "A", "D" }, 0 }, -- "A" is in recorded_lines but not at the boundary
-        { { "B" }, { "A", "B" }, 0 }, -- "B" ends recorded_lines but doesn't start lines_to_append
-        { { "a" }, { "A" }, 0 }, -- exact (case-sensitive) match
-    }
-    for _, case in ipairs(cases) do
-        local recorded_lines, lines_to_append, expected = h.unpack(case)
-        h.assert_equals(count_overlapping_lines(recorded_lines, lines_to_append), expected)
-    end
-end
-
-local function test_speech_collector_removes_boundary_overlap()
-    local collector = this.make_speech_collector()
-    collector.append_sub(Subtitle:from_text("First line", 0, 1))
-    collector.append_sub(Subtitle:from_text("First line\nSecond line", 1, 2))
-    h.assert_equals(collector.get_all_as_string(), "First line\nSecond line")
-end
-
-local function test_speech_collector_keeps_repeated_text_after_gap()
-    local collector = this.make_speech_collector()
-    collector.append_sub(Subtitle:from_text("Same line", 0, 1))
-    collector.append_sub(Subtitle:from_text("Same line", 2, 3))
-    h.assert_equals(collector.get_all_as_string(), "Same line\nSame line")
-end
-
-local function test_speech_collector_normalizes_newlines()
-    local collector = this.make_speech_collector()
-    collector.append_sub(Subtitle:from_text("First line\r\nSecond line\rThird line", 0, 1))
-    h.assert_equals(collector.get_all_as_string(), "First line\nSecond line\nThird line")
-end
-
-local function test_speech_collector_preserves_empty_lines()
-    local collector = this.make_speech_collector()
-    collector.append_sub(Subtitle:from_text("First line\n\nSecond line", 0, 1))
-    h.assert_equals(collector.get_all_as_string(), "First line\n\nSecond line")
-end
-
-local function test_speech_collector_drops_trailing_newline()
-    local collector = this.make_speech_collector()
-    collector.append_sub(Subtitle:from_text("First line\nSecond line\n", 0, 1))
-    h.assert_equals(collector.get_all_as_string(), "First line\nSecond line")
-end
-
-function this.run_tests()
-    test_count_overlapping_lines()
-    test_speech_collector_removes_boundary_overlap()
-    test_speech_collector_keeps_repeated_text_after_gap()
-    test_speech_collector_normalizes_newlines()
-    test_speech_collector_preserves_empty_lines()
-    test_speech_collector_drops_trailing_newline()
-end
-
-return this
+return {
+    new = make_speech_collector,
+    count_overlapping_lines = count_overlapping_lines,
+}

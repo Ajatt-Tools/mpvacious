@@ -13,11 +13,11 @@ local modules = {
     'tests.test_ankiconnect',
     'tests.test_note_exporter',
     'tests.test_sub_list',
+    'tests.test_collector',
     'encoder.encoder',
     'config.utils',
     'anki.note_update_context',
     'subtitles.subtitle',
-    'subtitles.collector',
 }
 
 local function load_test_suites()

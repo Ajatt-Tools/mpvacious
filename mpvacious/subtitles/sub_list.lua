@@ -50,7 +50,7 @@ local function make_sub_list()
     function public.get_text()
         -- Dedup applies to every list (primary, secondary), collapsing adjacent
         -- multiline sub expansions into one continuous dialog string.
-        local collector = speech_collector.make_speech_collector()
+        local collector = speech_collector.new()
         for _, sub in ipairs(subs_list) do
             collector.append_sub(sub)
         end
@@ -62,7 +62,7 @@ local function make_sub_list()
     --- Text is joined by the speech collector, which removes boundary line overlap
     --- between consecutive time-overlapping cues.
     function public.collect_n_subs(start_sub, n_subs)
-        local collector = speech_collector.make_speech_collector()
+        local collector = speech_collector.new()
         local end_sub = start_sub
         local collected_count = 0
         for _, sub in ipairs(subs_list) do
@@ -88,7 +88,7 @@ local function make_sub_list()
     --- `window` is the selected primary Subtitle. Normal cues must overlap at least
     --- half of the shorter cue; cues shorter than one second must overlap by 75%.
     function public.get_overlapping_text(window)
-        local collector = speech_collector.make_speech_collector()
+        local collector = speech_collector.new()
         for _, sub in ipairs(subs_list) do
             if overlaps_enough(sub, window) then
                 collector.append_sub(sub)
