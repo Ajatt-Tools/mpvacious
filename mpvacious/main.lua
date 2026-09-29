@@ -51,15 +51,10 @@ local platform = require('platform.init')
 local forvo = require('utils.forvo')
 local make_subtitles_observer = require('subtitles.observer')
 local codec_support = require('encoder.codec_support')
-local eutils = require('encoder.utils')
-local cfg_utils = require('config.utils')
 local make_new_note_checker = require('anki.new_note_checker')
 local make_note_exporter = require('anki.note_exporter')
-local make_note_update_context = require('anki.note_update_context')
 local Subtitle = require('subtitles.subtitle')
-local sub_list = require('subtitles.sub_list')
 local make_release_checker = require('utils.release_checker')
-local speech_collector = require('subtitles.collector')
 
 local quick_creation_opts = {
     _n_lines = nil,
