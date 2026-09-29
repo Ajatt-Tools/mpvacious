@@ -38,7 +38,6 @@ For complete usage guide, see <https://github.com/Ajatt-Tools/mpvacious/blob/mas
 local mp = require('mp')
 local OSD = require('menu.osd_styler')
 local make_cfg_mgr = require('config.cfg_mgr')
-local encoder = require('encoder.encoder')
 local h = require('helpers')
 local Menu = require('menu.menu')
 local MainMenu = require('menu.main_menu')
@@ -55,6 +54,7 @@ local make_new_note_checker = require('anki.new_note_checker')
 local make_note_exporter = require('anki.note_exporter')
 local Subtitle = require('subtitles.subtitle')
 local make_release_checker = require('utils.release_checker')
+local make_encoder = require('encoder.encoder')
 
 local quick_creation_opts = {
     _n_lines = nil,
@@ -99,6 +99,7 @@ local cfg_mgr = make_cfg_mgr.new()
 local ankiconnect = make_ankiconnect.new()
 local release_checker = make_release_checker.new()
 local subs_observer = make_subtitles_observer.new()
+local encoder = make_encoder.new()
 
 local function _run(params)
     return function()

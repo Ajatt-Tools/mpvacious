@@ -14,13 +14,6 @@ local exec = require('encoder.executables')
 local mpv_encoder = require('encoder.mpv')
 local ffmpeg_encoder = require('encoder.ffmpeg')
 
---Contains the state of the module
-local self = {
-    config = nil,
-    encoder = nil,
-    output_dir_path = nil,
-}
-
 ------------------------------------------------------------
 --- utility functions
 
@@ -97,229 +90,185 @@ local function report_creation_result(file_path, components)
 end
 
 ------------------------------------------------------------
---- main interface
+--- public interface
 
-local create_animated_snapshot = function(start_timestamp, end_timestamp, source_path, output_path, on_finish_fn)
-    -- Creates the animated snapshot and then calls on_finish_fn
-    local args = self.encoder.make_animated_snapshot_args(source_path, output_path, start_timestamp, end_timestamp)
-    h.subprocess { args = args, completion_fn = on_finish_fn }
-end
+local function make_encoder()
+    -- Contains the state of the encoder
+    local self = {
+        config = nil,
+        encoder = nil,
+        output_dir_path = nil,
+    }
 
-local create_static_snapshot = function(timestamp, source_path, output_path, on_finish_fn)
-    -- Creates a static snapshot, in other words an image, and then calls on_finish_fn
-    if not self.config.screenshot then
-        local args = self.encoder.make_static_snapshot_args(source_path, output_path, timestamp)
+    local public = {
+        snapshot = {},
+        audio = {},
+    }
+
+    --- Private
+
+    local function config()
+        return self.cfg_mgr.config()
+    end
+
+    local function create_animated_snapshot(start_timestamp, end_timestamp, source_path, output_path, on_finish_fn)
+        -- Creates the animated snapshot and then calls on_finish_fn
+        local args = self.encoder.make_animated_snapshot_args(source_path, output_path, start_timestamp, end_timestamp)
         h.subprocess { args = args, completion_fn = on_finish_fn }
-    else
-        local args = { 'screenshot-to-file', output_path, 'video', }
-        mp.command_native_async(args, on_finish_fn)
-    end
-end
-
-local create_snapshot = function(start_timestamp, end_timestamp, current_timestamp, filename, on_finish_fn)
-    if h.is_empty(self.output_dir_path) then
-        return msg.error("Output directory wasn't provided. Image file will not be created.")
     end
 
-    -- Calls the proper function depending on whether or not the snapshot should be animated
-    if not h.is_empty(self.config.image_field) then
-        local source_path = mp.get_property("path")
-        local output_path = utils.join_path(self.output_dir_path, filename)
-
-        local on_finish_wrap = report_creation_result(output_path).on_finish(on_finish_fn)
-        if self.config.animated_snapshot_enabled then
-            create_animated_snapshot(start_timestamp, end_timestamp, source_path, output_path, on_finish_wrap.run)
+    local function create_static_snapshot(timestamp, source_path, output_path, on_finish_fn)
+        -- Creates a static snapshot, in other words an image, and then calls on_finish_fn
+        if not config().screenshot then
+            local args = self.encoder.make_static_snapshot_args(source_path, output_path, timestamp)
+            h.subprocess { args = args, completion_fn = on_finish_fn }
         else
-            create_static_snapshot(current_timestamp, source_path, output_path, on_finish_wrap.run)
+            local args = { 'screenshot-to-file', output_path, 'video', }
+            mp.command_native_async(args, on_finish_fn)
         end
-    else
-        print("Snapshot will not be created.")
-    end
-end
-
-local create_audio = function(start_timestamp, end_timestamp, filename, padding, on_finish_fn)
-    if h.is_empty(self.output_dir_path) then
-        return msg.error("Output directory wasn't provided. Audio file will not be created.")
     end
 
-    if not h.is_empty(self.config.audio_field) then
-        local source_path = mp.get_property("path")
-        local output_path = utils.join_path(self.output_dir_path, filename)
-
-        if padding > 0 then
-            start_timestamp, end_timestamp = pad_timings(padding, start_timestamp, end_timestamp)
+    local function create_snapshot(start_timestamp, end_timestamp, current_timestamp, filename, on_finish_fn)
+        if h.is_empty(self.output_dir_path) then
+            return msg.error("Output directory wasn't provided. Image file will not be created.")
         end
 
-        --- Start encoding and forward its completion to the media reporter.
-        local function start_encoding(args)
-            local completion = report_creation_result(output_path)
-                    .on_finish(on_finish_fn)
-                    .preview_audio(self.config.preview_audio)
-            h.subprocess { args = args, completion_fn = completion.run }
-        end
+        -- Calls the proper function depending on whether or not the snapshot should be animated
+        if not h.is_empty(config().image_field) then
+            local source_path = mp.get_property("path")
+            local output_path = utils.join_path(self.output_dir_path, filename)
 
-        self.encoder.make_audio_args(
-                source_path, output_path, start_timestamp, end_timestamp, start_encoding
-        )
-    else
-        print("Audio will not be created.")
+            local on_finish_wrap = report_creation_result(output_path).on_finish(on_finish_fn)
+            if config().animated_snapshot_enabled then
+                create_animated_snapshot(start_timestamp, end_timestamp, source_path, output_path, on_finish_wrap.run)
+            else
+                create_static_snapshot(current_timestamp, source_path, output_path, on_finish_wrap.run)
+            end
+        else
+            print("Snapshot will not be created.")
+        end
     end
-end
 
-local make_snapshot_filename = function(start_time, end_time, timestamp)
-    -- Generate a filename for the snapshot, taking care of its extension and whether it's animated or static
-    if self.config.animated_snapshot_enabled then
-        return filename_factory.make_filename(start_time, end_time, self.config.animated_snapshot_extension)
-    else
-        return filename_factory.make_filename(timestamp, self.config.snapshot_extension)
+    local function create_audio(start_timestamp, end_timestamp, filename, padding, on_finish_fn)
+        if h.is_empty(self.output_dir_path) then
+            return msg.error("Output directory wasn't provided. Audio file will not be created.")
+        end
+
+        if not h.is_empty(config().audio_field) then
+            local source_path = mp.get_property("path")
+            local output_path = utils.join_path(self.output_dir_path, filename)
+
+            if padding > 0 then
+                start_timestamp, end_timestamp = pad_timings(padding, start_timestamp, end_timestamp)
+            end
+
+            --- Start encoding and forward its completion to the media reporter.
+            local function start_encoding(args)
+                local completion = report_creation_result(output_path)
+                        .on_finish(on_finish_fn)
+                        .preview_audio(config().preview_audio)
+                h.subprocess { args = args, completion_fn = completion.run }
+            end
+
+            self.encoder.make_audio_args(
+                    source_path, output_path, start_timestamp, end_timestamp, start_encoding
+            )
+        else
+            print("Audio will not be created.")
+        end
     end
-end
 
-local make_audio_filename = function(start_time, end_time)
-    -- Generates a filename for the audio
-    return filename_factory.make_filename(start_time, end_time, self.config.audio_extension)
-end
+    local function make_snapshot_filename(start_time, end_time, timestamp)
+        -- Generate a filename for the snapshot, taking care of its extension and whether it's animated or static
+        if config().animated_snapshot_enabled then
+            return filename_factory.make_filename(start_time, end_time, config().animated_snapshot_extension)
+        else
+            return filename_factory.make_filename(timestamp, config().snapshot_extension)
+        end
+    end
 
-local create_job = function(job_type, sub, audio_padding)
-    local current_timestamp, on_finish_fn
-    local job = {}
-    if job_type == 'snapshot' and h.has_video_track() and not h.is_empty(self.config.image_field) then
-        current_timestamp = mp.get_property_number("time-pos", 0)
-        job.filename = make_snapshot_filename(sub['start'], sub['end'], current_timestamp)
-        job.run_async = function()
-            create_snapshot(sub['start'], sub['end'], current_timestamp, job.filename, on_finish_fn)
-        end
-    elseif job_type == 'audioclip' and h.has_audio_track() and not h.is_empty(self.config.audio_field) then
-        job.filename = make_audio_filename(sub['start'], sub['end'])
-        job.run_async = function()
-            create_audio(sub['start'], sub['end'], job.filename, audio_padding, on_finish_fn)
-        end
-    else
-        job.filename = nil
-        job.run_async = function()
-            print(job_type .. " will not be created.")
-            if type(on_finish_fn) == 'function' then
-                -- No media track or configured field: this is a skipped job, not a failure.
-                on_finish_fn(nil, nil)
+    local function make_audio_filename(start_time, end_time)
+        -- Generates a filename for the audio
+        return filename_factory.make_filename(start_time, end_time, config().audio_extension)
+    end
+
+    local function create_job(job_type, sub, audio_padding)
+        local current_timestamp, on_finish_fn
+        local job = {}
+        if job_type == 'snapshot' and h.has_video_track() and not h.is_empty(config().image_field) then
+            current_timestamp = mp.get_property_number("time-pos", 0)
+            job.filename = make_snapshot_filename(sub['start'], sub['end'], current_timestamp)
+            job.run_async = function()
+                create_snapshot(sub['start'], sub['end'], current_timestamp, job.filename, on_finish_fn)
+            end
+        elseif job_type == 'audioclip' and h.has_audio_track() and not h.is_empty(config().audio_field) then
+            job.filename = make_audio_filename(sub['start'], sub['end'])
+            job.run_async = function()
+                create_audio(sub['start'], sub['end'], job.filename, audio_padding, on_finish_fn)
+            end
+        else
+            job.filename = nil
+            job.run_async = function()
+                print(job_type .. " will not be created.")
+                if type(on_finish_fn) == 'function' then
+                    -- No media track or configured field: this is a skipped job, not a failure.
+                    on_finish_fn(nil, nil)
+                end
             end
         end
-    end
-    job.on_finish = function(fn)
-        on_finish_fn = fn
+        job.on_finish = function(fn)
+            on_finish_fn = fn
+            return job
+        end
         return job
     end
-    return job
+
+    local function choose_backend()
+        if config().use_ffmpeg then
+            return ffmpeg_encoder.new(self.cfg_mgr)
+        else
+            return mpv_encoder.new(self.cfg_mgr)
+        end
+    end
+
+    --- Public
+
+    function public.encoder()
+        return self.encoder
+    end
+
+    function public.init(cfg_mgr)
+        -- Sets the module to its preconfigured status
+        cfg_mgr.fail_if_not_ready()
+        self.cfg_mgr = cfg_mgr
+        self.encoder = choose_backend()
+        self.encoder.set_avif_encoder()
+    end
+
+    function public.set_output_dir(dir_path)
+        -- Set directory where media files should be saved.
+        -- This function is called every time a card is created or updated.
+        self.output_dir_path = dir_path
+    end
+
+    function public.snapshot.create_job(sub)
+        return create_job('snapshot', sub)
+    end
+
+    function public.snapshot.toggle_animation()
+        -- Toggles on and off animated snapshot generation at runtime. It is called whenever ctrl+g is pressed
+        config().animated_snapshot_enabled = not config().animated_snapshot_enabled
+        h.notify("Animation " .. (config().animated_snapshot_enabled and "enabled" or "disabled"), "info", 2)
+    end
+
+    function public.audio.create_job(subtitle, padding)
+        return create_job('audioclip', subtitle, padding)
+    end
+
+    return public
 end
 
-------------------------------------------------------------
--- public interface
-
-local public = {
-    snapshot = {},
-    audio = {},
+return {
+    new = make_encoder,
+    report_creation_result = report_creation_result,
 }
-
-function public.encoder()
-    return self.encoder
-end
-
-function public.init(cfg_mgr)
-    -- Sets the module to its preconfigured status
-    cfg_mgr.fail_if_not_ready()
-    self.cfg_mgr = cfg_mgr
-    self.config = cfg_mgr.config()
-    self.encoder = self.config.use_ffmpeg and ffmpeg_encoder.new(cfg_mgr) or mpv_encoder.new(cfg_mgr)
-    self.encoder.set_avif_encoder()
-end
-
-function public.set_output_dir(dir_path)
-    -- Set directory where media files should be saved.
-    -- This function is called every time a card is created or updated.
-    self.output_dir_path = dir_path
-end
-
-function public.snapshot.create_job(sub)
-    return create_job('snapshot', sub)
-end
-
-function public.snapshot.toggle_animation()
-    -- Toggles on and off animated snapshot generation at runtime. It is called whenever ctrl+g is pressed
-    self.config.animated_snapshot_enabled = not self.config.animated_snapshot_enabled
-    h.notify("Animation " .. (self.config.animated_snapshot_enabled and "enabled" or "disabled"), "info", 2)
-end
-
-function public.audio.create_job(subtitle, padding)
-    return create_job('audioclip', subtitle, padding)
-end
-
-------------------------------------------------------------
---- Tests: executed by both standalone and mpv-backed runners.
-
---- Record reporter messages without printing expected test failures.
-local function make_encoder_test_logger(state)
-    return {
-        info = function(message)
-            state.level, state.message, state.count = 'info', message, state.count + 1
-        end,
-        error = function(message)
-            state.level, state.message, state.count = 'error', message, state.count + 1
-        end,
-    }
-end
-
---- Check that a reporter emitted one expected test message.
-local function assert_encoder_test_log(log, case)
-    h.assert_equals(log.count, 1)
-    h.assert_equals(log.level, case.expected_error and 'error' or 'info')
-    h.assert_equals(log.message, case.expected_error or 'Created file: output.ogg')
-end
-
---- Check one reporter outcome without launching an audio preview subprocess.
-local function assert_creation_result_test_case(case)
-    local completed_path, completed_error, previewed_path
-    local log = { count = 0 }
-    local components = {
-        file_exists = function(path)
-            h.assert_equals(path, 'output.ogg')
-            return case.exists
-        end,
-        play_audio = function(path)
-            previewed_path = path
-        end,
-        logger = make_encoder_test_logger(log),
-    }
-    --- Capture the reported result without writing media files.
-    local function on_finish(path, error)
-        completed_path, completed_error = path, error
-    end
-    local completion = report_creation_result('output.ogg', components)
-            .on_finish(on_finish)
-            .preview_audio(case.preview)
-    h.assert_equals(completion.run(case.success, case.result, case.error), nil)
-    h.assert_equals(completed_path, case.expected_path)
-    h.assert_equals(completed_error, case.expected_error)
-    h.assert_equals(previewed_path, case.expected_preview)
-    assert_encoder_test_log(log, case)
-end
-
---- Verify completion outcomes and preview playback share the media reporter.
-local function test_report_creation_result()
-    for _, case in ipairs {
-        { success = true, result = { status = 0 }, exists = true, preview = true,
-          expected_path = 'output.ogg', expected_preview = 'output.ogg' },
-        { success = true, exists = true, preview = false, expected_path = 'output.ogg' },
-        { success = true, result = { status = 0 }, exists = false, preview = true,
-          expected_error = "Couldn't create file: output.ogg" },
-        { success = false, result = { status = 1 }, error = 'encoder exited', preview = true,
-          expected_error = 'encoder exited' },
-    } do
-        assert_creation_result_test_case(case)
-    end
-end
-
---- Run encoder completion-contract tests.
-function public.run_tests()
-    test_report_creation_result()
-end
-
-return public
