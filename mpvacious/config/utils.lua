@@ -168,36 +168,8 @@ local function validate_config(config)
     return main()
 end
 
---- Run config default and validation tests.
-local function run_tests()
-    h.assert_equals(defaults.get_default().menu_max_shown_lines, 1)
-    local formatted = format_default_config('subs2srs', 'option=value\n')
-    h.assert_equals(formatted:match('^# Written by subs2srs on .-%.\n(.*)$'), 'option=value\n')
-
-    --- Return the validated number of visible menu lines.
-    local function validate_menu_max_shown_lines(value)
-        local config = defaults.get_default()
-        config.menu_max_shown_lines = value
-        validate_config(config)
-        return config.menu_max_shown_lines
-    end
-
-    local cases = {
-        { -10, defaults.min_menu_max_shown_lines },
-        { defaults.min_menu_max_shown_lines, defaults.min_menu_max_shown_lines },
-        { defaults.default_menu_max_shown_lines, defaults.default_menu_max_shown_lines },
-        { defaults.max_menu_max_shown_lines, defaults.max_menu_max_shown_lines },
-        { 9999, defaults.max_menu_max_shown_lines },
-    }
-
-    for _, case in ipairs(cases) do
-        local value, expected = h.unpack(case)
-        h.assert_equals(validate_menu_max_shown_lines(value), expected)
-    end
-end
-
 return {
     create_config_file = create_config_file,
     validate_config = validate_config,
-    run_tests = run_tests,
+    format_default_config = format_default_config,
 }

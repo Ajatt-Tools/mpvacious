@@ -14,8 +14,8 @@ local modules = {
     'tests.test_note_exporter',
     'tests.test_sub_list',
     'tests.test_collector',
+    'tests.test_config_utils',
     'encoder.encoder',
-    'config.utils',
     'anki.note_update_context',
     'subtitles.subtitle',
 }
