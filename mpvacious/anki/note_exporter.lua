@@ -4,7 +4,7 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 ]]
 
 local h = require('helpers')
-local make_note_update_context = require('anki.note_update_context')
+local note_update_context = require('anki.note_update_context')
 
 --- Create the public Anki note export command adapter.
 local function make_exporter()
@@ -144,7 +144,7 @@ local function make_exporter()
         self.encoder = components.encoder
         self.forvo = components.forvo
         self.notify = components.notify or h.notify
-        self.note_update_context = make_note_update_context.new({
+        self.note_update_context = note_update_context.new({
             ankiconnect = self.ankiconnect,
             quick_creation_opts = self.quick_creation_opts,
             subs_observer = self.subs_observer,

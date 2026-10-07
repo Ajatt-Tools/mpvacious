@@ -17,7 +17,7 @@ local modules = {
     'tests.test_config_utils',
     'tests.test_encoder',
     'tests.test_subtitle',
-    'anki.note_update_context',
+    'tests.test_note_update_context',
 }
 
 local function load_test_suites()
