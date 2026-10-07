@@ -6,12 +6,12 @@ Subtitle list tests.
 ]]
 
 local h = require('helpers')
-local Subtitle = require('subtitles.subtitle')
+local subtitle = require('subtitles.subtitle')
 local sub_list = require('subtitles.sub_list')
 
 --- Create a numbered subtitle for list-order tests.
 local function numbered_sub(index)
-    return Subtitle:from_text("Line " .. index, index, index + 1)
+    return subtitle.make_subtitle("Line " .. index, index, index + 1)
 end
 
 --- Fill a subtitle list with numbered test cues.
@@ -37,8 +37,8 @@ end
 --- Create two separated subtitle lines for test cases.
 local function make_two_line_subs()
     local subs = sub_list.new()
-    subs.insert(Subtitle:from_text("First line", 0, 2))
-    subs.insert(Subtitle:from_text("Second line", 3, 5))
+    subs.insert(subtitle.make_subtitle("First line", 0, 2))
+    subs.insert(subtitle.make_subtitle("Second line", 3, 5))
     return subs
 end
 
@@ -46,21 +46,21 @@ end
 local function test_insert_rejects_invalid_subs()
     local subs = sub_list.new()
     h.assert_equals(subs.insert(nil), false)
-    h.assert_equals(subs.insert(Subtitle:from_text("", 0, 2)), false)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("", 0, 2)), false)
 end
 
 --- Reject the same subtitle event when observed twice.
 local function test_insert_rejects_duplicate_event()
     local subs = sub_list.new()
-    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 2)), true)
-    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0.04, 2.04)), false)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("Same line", 0, 2)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("Same line", 0.04, 2.04)), false)
 end
 
 --- Extend a subtitle when the next matching event touches it.
 local function test_insert_expands_touching_same_text_event()
     local subs = sub_list.new()
-    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 1)), true)
-    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 1, 2)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("Same line", 0, 1)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("Same line", 1, 2)), true)
     local ordered_list = subs.get_subs_list()
     h.assert_equals(#ordered_list, 1)
     h.assert_equals(ordered_list[1]['start'], 0)
@@ -72,9 +72,9 @@ end
 local function test_insert_chains_expansions()
     -- Successive adjacent same-text events keep expanding the same stored sub.
     local subs = sub_list.new()
-    h.assert_equals(subs.insert(Subtitle:from_text("A", 0, 1)), true)
-    h.assert_equals(subs.insert(Subtitle:from_text("A", 1, 2)), true)
-    h.assert_equals(subs.insert(Subtitle:from_text("A", 2, 3)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("A", 0, 1)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("A", 1, 2)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("A", 2, 3)), true)
     local ordered_list = subs.get_subs_list()
     h.assert_equals(#ordered_list, 1)
     h.assert_equals(ordered_list[1]['start'], 0)
@@ -84,8 +84,8 @@ end
 --- Keep repeated text as distinct events across a real gap.
 local function test_insert_keeps_same_text_event_after_real_gap()
     local subs = sub_list.new()
-    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 1)), true)
-    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 1.01, 2)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("Same line", 0, 1)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("Same line", 1.01, 2)), true)
     h.assert_equals(#subs.get_subs_list(), 2)
     h.assert_equals(subs.get_text(), "Same line\nSame line")
 end
@@ -93,8 +93,8 @@ end
 --- Sort events that arrive backward without merging them.
 local function test_insert_keeps_backward_arrival_unmerged_and_sorted()
     local subs = sub_list.new()
-    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 1, 2)), true)
-    h.assert_equals(subs.insert(Subtitle:from_text("Same line", 0, 1)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("Same line", 1, 2)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("Same line", 0, 1)), true)
     local ordered_list = subs.get_subs_list()
     h.assert_equals(#ordered_list, 2)
     h.assert_equals(ordered_list[1]['start'], 0)
@@ -105,9 +105,9 @@ end
 --- Avoid merging matching events across an intervening subtitle.
 local function test_insert_does_not_expand_across_intervening_event()
     local subs = sub_list.new()
-    h.assert_equals(subs.insert(Subtitle:from_text("A", 1, 2)), true)
-    h.assert_equals(subs.insert(Subtitle:from_text("B", 1, 3)), true)
-    h.assert_equals(subs.insert(Subtitle:from_text("A", 2, 4)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("A", 1, 2)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("B", 1, 3)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("A", 2, 4)), true)
     local ordered_list = subs.get_subs_list()
     h.assert_equals(#ordered_list, 3)
     h.assert_equals(ordered_list[1]['text'], "A")
@@ -121,14 +121,14 @@ end
 local function test_insert_uses_recent_lookup_window()
     local subs = make_numbered_sub_list(0, 29)
     h.assert_equals(#subs.get_subs_list(), 30)
-    h.assert_equals(subs.insert(Subtitle:from_text("Line 29", 29.04, 30.04)), false)
-    h.assert_equals(subs.insert(Subtitle:from_text("Line 4", 4.04, 5.04)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("Line 29", 29.04, 30.04)), false)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("Line 4", 4.04, 5.04)), true)
 end
 
 --- Keep events sorted when inserting between existing cues.
 local function test_insert_preserves_sorted_order()
     local subs = make_numbered_sub_list(0, 29)
-    h.assert_equals(subs.insert(Subtitle:from_text("Line 5.5", 5.5, 6.5)), true)
+    h.assert_equals(subs.insert(subtitle.make_subtitle("Line 5.5", 5.5, 6.5)), true)
     local ordered_list = subs.get_subs_list()
     h.assert_equals(#ordered_list, 31)
     h.assert_equals(ordered_list[6]['text'], "Line 5")
@@ -180,7 +180,7 @@ local function test_get_text()
     for _, case in ipairs(make_get_text_test_cases()) do
         local subs = sub_list.new()
         for _, cue in ipairs(case.cues) do
-            subs.insert(Subtitle:from_text(h.unpack(cue)))
+            subs.insert(subtitle.make_subtitle(h.unpack(cue)))
         end
         h.assert_equals(subs.get_text(), case.expected)
     end
@@ -188,16 +188,16 @@ end
 
 --- Collect adjacent subtitle lines up to the requested count.
 local function test_collect_n_subs_limit()
-    local first = Subtitle:from_text("First line", 0, 2)
+    local first = subtitle.make_subtitle("First line", 0, 2)
     local subs = sub_list.new()
     subs.insert(first)
-    subs.insert(Subtitle:from_text("First line\nSecond line", 1, 3))
+    subs.insert(subtitle.make_subtitle("First line\nSecond line", 1, 3))
     h.assert_equals(subs.collect_n_subs(first, 2).text, "First line\nSecond line")
 
     local limited_subs = sub_list.new()
-    limited_subs.insert(Subtitle:from_text("First line", 0, 2))
-    limited_subs.insert(Subtitle:from_text("First line\nSecond line", 1, 3))
-    limited_subs.insert(Subtitle:from_text("Second line\nThird line", 2, 4))
+    limited_subs.insert(subtitle.make_subtitle("First line", 0, 2))
+    limited_subs.insert(subtitle.make_subtitle("First line\nSecond line", 1, 3))
+    limited_subs.insert(subtitle.make_subtitle("Second line\nThird line", 2, 4))
     h.assert_equals(limited_subs.collect_n_subs(first, 2).text, "First line\nSecond line")
 end
 
@@ -205,9 +205,9 @@ end
 local function test_collect_n_subs_repeated_lines()
     -- Non-adjacent repeated lines are kept in collect_n_subs too.
     local repeated_subs = sub_list.new()
-    repeated_subs.insert(Subtitle:from_text("Yes", 0, 1))
-    repeated_subs.insert(Subtitle:from_text("No", 1, 2))
-    repeated_subs.insert(Subtitle:from_text("Yes\nAgain", 2, 3))
+    repeated_subs.insert(subtitle.make_subtitle("Yes", 0, 1))
+    repeated_subs.insert(subtitle.make_subtitle("No", 1, 2))
+    repeated_subs.insert(subtitle.make_subtitle("Yes\nAgain", 2, 3))
     h.assert_equals(repeated_subs.collect_n_subs(repeated_subs.get_subs_list()[1], 3).text, "Yes\nNo\nYes\nAgain")
 end
 
@@ -216,10 +216,10 @@ local function test_collect_n_subs_covered_line()
     -- A sub fully covered by the previous suffix still counts toward n_lines,
     -- so end_sub (used for the card's end timing) advances past it.
     local covered_subs = sub_list.new()
-    local container = Subtitle:from_text("A\nB", 0, 2)
+    local container = subtitle.make_subtitle("A\nB", 0, 2)
     covered_subs.insert(container)
-    covered_subs.insert(Subtitle:from_text("B", 1, 3))
-    covered_subs.insert(Subtitle:from_text("C", 2, 4))
+    covered_subs.insert(subtitle.make_subtitle("B", 1, 3))
+    covered_subs.insert(subtitle.make_subtitle("C", 2, 4))
     local combined = covered_subs.collect_n_subs(container, 2)
     h.assert_equals(combined["text"], "A\nB")
     h.assert_equals(combined['start'], 0)
@@ -228,14 +228,14 @@ end
 
 local function make_overlap_thresholds_cases()
     return {
-        { sub = Subtitle:from_text('', 1, 3), window = Subtitle:from_text('', 0, 2), expected = true }, -- 50%
-        { sub = Subtitle:from_text('', 1.01, 3.01), window = Subtitle:from_text('', 0, 2), expected = false },
-        { sub = Subtitle:from_text('', 0.125, 0.625), window = Subtitle:from_text('', 0, 0.5), expected = true }, -- 75%
-        { sub = Subtitle:from_text('', 0.126, 0.626), window = Subtitle:from_text('', 0, 0.5), expected = false },
-        { sub = Subtitle:from_text('', 0.5, 1.5), window = Subtitle:from_text('', 0, 1), expected = true }, -- 1s uses 50%
-        { sub = Subtitle:from_text('', 1, 2), window = Subtitle:from_text('', 0, 1), expected = false },
-        { sub = Subtitle:from_text('', 0, 0), window = Subtitle:from_text('', 0, 1), expected = false },
-        { sub = Subtitle:from_text('', 0.25, 0.75), window = Subtitle:from_text('', 0, 1), expected = true },
+        { sub = subtitle.make_subtitle('', 1, 3), window = subtitle.make_subtitle('', 0, 2), expected = true }, -- 50%
+        { sub = subtitle.make_subtitle('', 1.01, 3.01), window = subtitle.make_subtitle('', 0, 2), expected = false },
+        { sub = subtitle.make_subtitle('', 0.125, 0.625), window = subtitle.make_subtitle('', 0, 0.5), expected = true }, -- 75%
+        { sub = subtitle.make_subtitle('', 0.126, 0.626), window = subtitle.make_subtitle('', 0, 0.5), expected = false },
+        { sub = subtitle.make_subtitle('', 0.5, 1.5), window = subtitle.make_subtitle('', 0, 1), expected = true }, -- 1s uses 50%
+        { sub = subtitle.make_subtitle('', 1, 2), window = subtitle.make_subtitle('', 0, 1), expected = false },
+        { sub = subtitle.make_subtitle('', 0, 0), window = subtitle.make_subtitle('', 0, 1), expected = false },
+        { sub = subtitle.make_subtitle('', 0.25, 0.75), window = subtitle.make_subtitle('', 0, 1), expected = true },
     }
 end
 
@@ -249,24 +249,24 @@ end
 --- Combine and format subtitles aligned with the requested time window.
 local function test_get_overlapping_text_formats_matches()
     local subs = sub_list.new()
-    subs.insert(Subtitle:from_text("Before", 0, 1))
-    subs.insert(Subtitle:from_text("First line", 1, 2))
-    subs.insert(Subtitle:from_text("First line\nSecond line", 2, 3))
-    subs.insert(Subtitle:from_text("After", 3, 4))
-    h.assert_equals(subs.get_overlapping_text(Subtitle:from_text('', 1, 3)), "First line Second line")
+    subs.insert(subtitle.make_subtitle("Before", 0, 1))
+    subs.insert(subtitle.make_subtitle("First line", 1, 2))
+    subs.insert(subtitle.make_subtitle("First line\nSecond line", 2, 3))
+    subs.insert(subtitle.make_subtitle("After", 3, 4))
+    h.assert_equals(subs.get_overlapping_text(subtitle.make_subtitle('', 1, 3)), "First line Second line")
 
     local spaced_subs = sub_list.new()
-    spaced_subs.insert(Subtitle:from_text("  First\t line\nSecond  line  ", 1, 2))
-    h.assert_equals(spaced_subs.get_overlapping_text(Subtitle:from_text('', 1, 2)), "First line Second line")
+    spaced_subs.insert(subtitle.make_subtitle("  First\t line\nSecond  line  ", 1, 2))
+    h.assert_equals(spaced_subs.get_overlapping_text(subtitle.make_subtitle('', 1, 2)), "First line Second line")
 end
 
 --- Exclude subtitles whose boundary overlap is only timing noise.
 local function test_get_overlapping_text_filters_timing_noise()
     local timing_noise = sub_list.new()
-    timing_noise.insert(Subtitle:from_text("Relevant", 759.82, 763.09))
-    timing_noise.insert(Subtitle:from_text("Unrelated", 763.09, 766.03))
+    timing_noise.insert(subtitle.make_subtitle("Relevant", 759.82, 763.09))
+    timing_noise.insert(subtitle.make_subtitle("Unrelated", 763.09, 766.03))
     h.assert_equals(
-            timing_noise.get_overlapping_text(Subtitle:from_text('', 761.594, 763.179)),
+            timing_noise.get_overlapping_text(subtitle.make_subtitle('', 761.594, 763.179)),
             "Relevant"
     )
 end

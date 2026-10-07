@@ -37,17 +37,25 @@ local function subtitle_delay(is_secondary, mp_api)
     return mp_api.get_property_native(delay_property) - mp_api.get_property_native('audio-delay')
 end
 
+local function make_subtitle(text, start_time, end_time)
+    return Subtitle:from_text(text, start_time, end_time)
+end
+
+local function make_current(is_secondary)
+    return Subtitle:now(is_secondary)
+end
+
 --- Return the currently displayed primary or secondary subtitle with mpv delays applied.
-function Subtitle:now(secondary)
-    local prefix = secondary and "secondary-" or ""
+function Subtitle:now(is_secondary)
+    local prefix = is_secondary and "secondary-" or ""
     local this = self:new {
         ['text'] = mp.get_property(prefix .. "sub-text"),
         ['start'] = mp.get_property_number(prefix .. "sub-start"),
         ['end'] = mp.get_property_number(prefix .. "sub-end"),
-        ['is_secondary'] = (secondary and true or false),
+        ['is_secondary'] = (is_secondary and true or false),
     }
     if this:is_valid() then
-        return this:delay(subtitle_delay(secondary))
+        return this:delay(subtitle_delay(is_secondary))
     else
         return nil
     end
@@ -116,96 +124,9 @@ Subtitle.__lt = function(lhs, rhs)
     end
 end
 
-local function sub(text, start_time, end_time)
-    return Subtitle:from_text(text, start_time, end_time)
-end
-
-local function test_is_same_event()
-    h.assert_equals(sub("Same line", 0, 2):is_same_event(sub("Same line", 0, 2)), true)
-    h.assert_equals(sub("Same line", 0, 2):is_same_event(sub("Same line", 0.04, 2.04)), true)
-    h.assert_equals(sub("Same line", 0, 2):is_same_event(sub("Same line", 0.06, 2)), false)
-    h.assert_equals(sub("Same line", 0, 2):is_same_event(sub("Other line", 0, 2)), false)
-end
-
-local function test_eq_uses_same_event()
-    -- __eq delegates to is_same_event: same text and timing within tolerance.
-    h.assert_equals(sub("A", 0, 2) == sub("A", 0.04, 2.04), true)
-    h.assert_equals(sub("A", 0, 2) == sub("A", 3, 4), false)
-end
-
-local function test_time_overlap()
-    local cases = {
-        -- {first, second, overlaps, overlaps_or_touches}
-        { sub("A", 0, 2), sub("B", 1, 3), true, true },
-        { sub("A", 0, 1), sub("B", 1, 2), false, true },
-        { sub("A", 0, 1), sub("B", 1.01, 2), false, false },
-        { sub("A", 0, 5), sub("B", 1, 2), true, true },
-    }
-    for _, case in ipairs(cases) do
-        local first, second, overlaps, overlaps_or_touches = h.unpack(case)
-        h.assert_equals(first:overlaps_in_time(second), overlaps)
-        h.assert_equals(first:overlaps_or_touches_in_time(second), overlaps_or_touches)
-    end
-end
-
-local function test_duration_and_overlap_duration()
-    local first = sub("A", 0, 2)
-    local cases = {
-        { other = sub("B", 1, 3), expected = 1 },
-        { other = sub("B", 2, 3), expected = 0 },
-        { other = sub("B", 3, 4), expected = 0 },
-        { other = sub("B", 0.5, 1.5), expected = 1 },
-    }
-    h.assert_equals(first:duration(), 2)
-    for _, case in ipairs(cases) do
-        h.assert_equals(first:overlap_duration(case.other), case.expected)
-        h.assert_equals(case.other:overlap_duration(first), case.expected)
-    end
-end
-
-local function test_can_expand_with()
-    h.assert_equals(sub("A", 0, 1):can_expand_with(sub("A", 1, 2)), true)
-    h.assert_equals(sub("A", 0, 2):can_expand_with(sub("A", 1, 3)), true)
-    h.assert_equals(sub("A", 0, 1):can_expand_with(sub("A", 1.01, 2)), false)
-    h.assert_equals(sub("A", 1, 2):can_expand_with(sub("A", 0, 1)), false)
-    h.assert_equals(sub("A", 0, 1):can_expand_with(sub("B", 0.5, 2)), false)
-end
-
-local function test_expand_end_time()
-    local expanded = sub("A", 0, 1):expand_end_time(sub("A", 1, 3))
-    h.assert_equals(expanded['start'], 0)
-    h.assert_equals(expanded['end'], 3)
-end
-
-local function make_mp_stub_for_tests()
-    local delays = { ['sub-delay'] = 10, ['secondary-sub-delay'] = 3, ['audio-delay'] = 1 }
-    local function get_property_native(name)
-        return delays[name]
-    end
-    return { get_property_native = get_property_native }
-end
-
-local function test_subtitle_delay()
-    local mp_stub = make_mp_stub_for_tests()
-    local cases = {
-        { is_secondary = false, expected_start = 10, expected_end = 11 },
-        { is_secondary = true, expected_start = 3, expected_end = 4 },
-    }
-    for _, case in ipairs(cases) do
-        local shifted = sub("Line", 1, 2):delay(subtitle_delay(case.is_secondary, mp_stub))
-        h.assert_equals(shifted['start'], case.expected_start)
-        h.assert_equals(shifted['end'], case.expected_end)
-    end
-end
-
-function Subtitle.run_tests()
-    test_is_same_event()
-    test_eq_uses_same_event()
-    test_time_overlap()
-    test_duration_and_overlap_duration()
-    test_can_expand_with()
-    test_expand_end_time()
-    test_subtitle_delay()
-end
-
-return Subtitle
+return {
+    Subtitle = Subtitle,
+    subtitle_delay = subtitle_delay,
+    make_subtitle = make_subtitle,
+    make_current = make_current,
+}

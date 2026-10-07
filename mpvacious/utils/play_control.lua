@@ -8,7 +8,7 @@ Provides additional methods for controlling playback.
 local mp = require('mp')
 local h = require('helpers')
 local pause_timer = require('utils.pause_timer')
-local Subtitle = require('subtitles.subtitle')
+local subtitle = require('subtitles.subtitle')
 
 local current_sub
 
@@ -18,7 +18,7 @@ local function stop_at_the_end(sub)
 end
 
 local function play_till_sub_end()
-    local sub = Subtitle:now()
+    local sub = subtitle.make_current()
     if sub == nil then
         h.notify("No subtitle is currently playing", "error", 5)
         return
@@ -38,7 +38,7 @@ local function sub_seek(direction, pause)
 end
 
 local function sub_rewind()
-    local sub = Subtitle:now()
+    local sub = subtitle.make_current()
     if sub == nil then
         h.notify("No subtitle is currently visible", "error", 5)
         return
@@ -48,7 +48,7 @@ local function sub_rewind()
 end
 
 local function check_sub()
-    local sub = Subtitle:now()
+    local sub = subtitle.make_current()
     if sub and sub ~= current_sub then
         mp.unobserve_property(check_sub)
         stop_at_the_end(sub)
@@ -56,7 +56,7 @@ local function check_sub()
 end
 
 local function play_till_next_sub_end()
-    current_sub = Subtitle:now()
+    current_sub = subtitle.make_current()
     mp.observe_property("sub-text", "string", check_sub)
     mp.set_property("pause", "no")
     h.notify("Waiting till next sub...", "info", 10)

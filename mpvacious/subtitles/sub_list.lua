@@ -6,7 +6,7 @@ Subtitle list remembers selected subtitle lines.
 ]]
 
 local h = require('helpers')
-local Subtitle = require('subtitles.subtitle')
+local subtitle = require('subtitles.subtitle')
 local speech_collector = require('subtitles.collector')
 local LOOKUP_WINDOW_SIZE = 25 -- how many recent subs to scan for duplicate events
 local MAX_SUB_GAP_SECONDS = 20 -- stop joining lines separated by a longer gap
@@ -75,7 +75,7 @@ local function make_sub_list()
                 collected_count = collected_count + 1
             end
         end
-        return Subtitle:from_text(collector.get_all_as_string(), start_sub['start'], end_sub['end'])
+        return subtitle.make_subtitle(collector.get_all_as_string(), start_sub['start'], end_sub['end'])
     end
 
     --- Return the text of all subs overlapping the given time window, as one line.

@@ -52,7 +52,7 @@ local make_subtitles_observer = require('subtitles.observer')
 local codec_support = require('encoder.codec_support')
 local make_new_note_checker = require('anki.new_note_checker')
 local make_note_exporter = require('anki.note_exporter')
-local Subtitle = require('subtitles.subtitle')
+local subtitle = require('subtitles.subtitle')
 local make_release_checker = require('utils.release_checker')
 local make_encoder = require('encoder.encoder')
 
@@ -246,7 +246,7 @@ local function make_latest_subtitle_list()
     local all_subs = h.join_two_sorted_lists(primary_subs, secondary_subs)
     local subs_selector = switch.new(all_subs)
 
-    local dummy_now = Subtitle:new { ['text'] = "", ['start'] = mp.get_property_number("time-pos", 0), ['end'] = mp.get_property_number("time-pos", 0) }
+    local dummy_now = subtitle.Subtitle:new { ['text'] = "", ['start'] = mp.get_property_number("time-pos", 0), ['end'] = mp.get_property_number("time-pos", 0) }
     subs_selector.set_index(h.find_insertion_point(all_subs, dummy_now) - 1)
     return subs_selector
 end

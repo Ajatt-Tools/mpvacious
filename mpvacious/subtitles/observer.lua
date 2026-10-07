@@ -8,7 +8,7 @@ Observer waits for subtitles to appear on the screen and adds them to a list.
 local h = require('helpers')
 local timings = require('utils.timings')
 local sub_list = require('subtitles.sub_list')
-local Subtitle = require('subtitles.subtitle')
+local subtitle = require('subtitles.subtitle')
 local mp = require('mp')
 local platform = require('platform.init')
 local new_autoclip_method_selector = require('subtitles.autoclip_methods')
@@ -142,7 +142,7 @@ local function make_subtitles_observer()
     --- Private methods
 
     local function append_primary_sub()
-        local current_sub = Subtitle:now()
+        local current_sub = subtitle.make_current()
         private.all_dialogs.insert(current_sub)
         if private.append_dialogue and private.dialogs.insert(current_sub) then
             private.menu:update()
@@ -150,9 +150,9 @@ local function make_subtitles_observer()
     end
 
     local function append_secondary_sub()
-        local current_secondary = Subtitle:now('secondary')
+        local current_secondary = subtitle.make_current('secondary')
         private.all_secondary_dialogs.insert(current_secondary)
-        if private.append_dialogue and private.secondary_dialogs.insert(Subtitle:now('secondary')) then
+        if private.append_dialogue and private.secondary_dialogs.insert(subtitle.make_current('secondary')) then
             private.menu:update()
         end
     end
@@ -250,16 +250,16 @@ local function make_subtitles_observer()
     end
 
     function public.collect_from_all_dialogues(n_lines)
-        local current_sub = Subtitle:now()
-        local current_secondary_sub = Subtitle:now('secondary')
+        local current_sub = subtitle.make_current()
+        local current_secondary_sub = subtitle.make_current('secondary')
         private.all_dialogs.insert(current_sub)
         private.all_secondary_dialogs.insert(current_secondary_sub)
         if current_sub == nil then
-            return Subtitle:new() -- return a default empty new Subtitle to let consumer handle
+            return subtitle.Subtitle:new() -- return a default empty new Subtitle to let consumer handle
         end
         local combined = private.all_dialogs.collect_n_subs(current_sub, n_lines)
         local secondary_text = private.all_secondary_dialogs.get_overlapping_text(combined)
-        return Subtitle:new {
+        return subtitle.Subtitle:new {
             ['text'] = combined["text"],
             ['secondary'] = secondary_text,
             ['start'] = combined['start'],
@@ -271,13 +271,13 @@ local function make_subtitles_observer()
         --- Return all recorded subtitle lines as one subtitle object.
         --- The caller has to call subs_observer.clear() afterwards.
         if private.dialogs.is_empty() then
-            private.dialogs.insert(Subtitle:now())
+            private.dialogs.insert(subtitle.make_current())
         end
         if private.secondary_dialogs.is_empty() then
-            private.secondary_dialogs.insert(Subtitle:now('secondary'))
+            private.secondary_dialogs.insert(subtitle.make_current('secondary'))
         end
-        local combined = Subtitle:from_text(private.dialogs.get_text(), public.get_timing('start'), public.get_timing('end'))
-        return Subtitle:new {
+        local combined = subtitle.make_subtitle(private.dialogs.get_text(), public.get_timing('start'), public.get_timing('end'))
+        return subtitle.Subtitle:new {
             ['text'] = combined['text'],
             ['secondary'] = private.secondary_dialogs.get_overlapping_text(combined),
             ['start'] = combined['start'],
@@ -292,7 +292,7 @@ local function make_subtitles_observer()
     end
 
     function public.set_manual_timing_to_sub(position)
-        local sub = Subtitle:now()
+        local sub = subtitle.make_current()
         if sub then
             private.user_timings.set(position, sub[position] - mp.get_property("audio-delay"))
             h.notify(h.capitalize_first_letter(position) .. " time has been set.")
@@ -304,7 +304,7 @@ local function make_subtitles_observer()
 
     function public.set_to_current_sub()
         public.clear()
-        if Subtitle:now() then
+        if subtitle.make_current() then
             start_appending()
             h.notify("Timings have been set to the current sub.", "info", 2)
         else
@@ -336,8 +336,8 @@ local function make_subtitles_observer()
     end
 
     function public.all_subs_until_now()
-        private.all_dialogs.insert(Subtitle:now())
-        private.all_secondary_dialogs.insert(Subtitle:now('secondary'))
+        private.all_dialogs.insert(subtitle.make_current())
+        private.all_secondary_dialogs.insert(subtitle.make_current('secondary'))
         return private.all_dialogs.get_subs_list(), private.all_secondary_dialogs.get_subs_list()
     end
 
