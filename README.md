@@ -379,6 +379,9 @@ and the target sentence doesn't span multiple subs.
 * <kbd>Ctrl+m</kbd> - Append to the media fields of the newly added Anki card.
 * <kbd>Ctrl+Shift+m</kbd> - Overwrite media fields of the newly added Anki card.
 
+When updating [targeted-sentence cards](https://ajatt.top/blog/discussing-various-card-templates.html#targeted-sentence-cards),
+mpvacious preserves highlighting around the first exact occurrence of the stored target in the new sentence.
+
 **Clipboard:**
 
 * <kbd>Ctrl+c</kbd> - Copy current subtitle string to the system clipboard.
