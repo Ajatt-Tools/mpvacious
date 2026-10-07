@@ -37,25 +37,29 @@ local function subtitle_delay(is_secondary, mp_api)
     return mp_api.get_property_native(delay_property) - mp_api.get_property_native('audio-delay')
 end
 
+--- Create a subtitle from its text and start/end timestamps.
 local function make_subtitle(text, start_time, end_time)
     return Subtitle:from_text(text, start_time, end_time)
 end
 
-local function make_current(is_secondary)
-    return Subtitle:now(is_secondary)
+--- Collect the visible subtitle with audio-relative delays applied.
+--- mp_api defaults to mp; callers may supply an mp-compatible API.
+local function make_current(is_secondary, mp_api)
+    return Subtitle:now(is_secondary, mp_api)
 end
 
 --- Return the currently displayed primary or secondary subtitle with mpv delays applied.
-function Subtitle:now(is_secondary)
+function Subtitle:now(is_secondary, mp_api)
+    mp_api = mp_api or mp
     local prefix = is_secondary and "secondary-" or ""
     local this = self:new {
-        ['text'] = mp.get_property(prefix .. "sub-text"),
-        ['start'] = mp.get_property_number(prefix .. "sub-start"),
-        ['end'] = mp.get_property_number(prefix .. "sub-end"),
+        ['text'] = mp_api.get_property(prefix .. "sub-text"),
+        ['start'] = mp_api.get_property_number(prefix .. "sub-start"),
+        ['end'] = mp_api.get_property_number(prefix .. "sub-end"),
         ['is_secondary'] = (is_secondary and true or false),
     }
     if this:is_valid() then
-        return this:delay(subtitle_delay(is_secondary))
+        return this:delay(subtitle_delay(is_secondary, mp_api))
     else
         return nil
     end
