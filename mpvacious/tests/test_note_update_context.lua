@@ -54,6 +54,32 @@ local function test_make_new_note_data(test_context)
     h.assert_equals(new_data.SentKanji, expected.SentKanji)
 end
 
+--- Return literal highlighted targets and sentences that must not match as patterns.
+local function make_literal_target_test_cases()
+    return {
+        { target = 'a.b', sentence = 'axb', expected = 'axb' },
+        { target = 'a.b', sentence = 'before a.b after', expected = 'before <b>a.b</b> after' },
+        { target = '(word)', sentence = 'before (word) after', expected = 'before <b>(word)</b> after' },
+        { target = '50%', sentence = '50% complete', expected = '<b>50%</b> complete' },
+        { target = '[word]', sentence = '[word] here', expected = '<b>[word]</b> here' },
+        { target = 'a+b?', sentence = 'a+b? here', expected = '<b>a+b?</b> here' },
+        { target = 'word', sentence = 'word and word', expected = '<b>word</b> and word' },
+        { target = 'absent', sentence = 'unchanged', expected = 'unchanged' },
+    }
+end
+
+--- Preserve literal target markup without replacing unrelated sentence characters.
+local function test_literal_target_highlighting(test_context)
+    for _, case in ipairs(make_literal_target_test_cases()) do
+        local fields = test_context.make_new_note_data(
+                { SentKanji = '<b>' .. case.target .. '</b>' },
+                { SentKanji = case.sentence },
+                { overwrite = true, disable_forvo = true }
+        )
+        h.assert_equals(fields.SentKanji, case.expected)
+    end
+end
+
 --- Test equivalent apostrophe entities do not duplicate a sentence field.
 local function test_html_escaping(test_context)
     -- HTML escaping
@@ -490,6 +516,7 @@ local function run_tests(context)
     test_join_fields_duplicates(context)
     test_html_escaping(context)
     test_make_new_note_data(context)
+    test_literal_target_highlighting(context)
 end
 
 return {
