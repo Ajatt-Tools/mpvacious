@@ -98,7 +98,6 @@ local function make_exporter()
         local n_cards = self.quick_creation_opts:get_cards()
         -- this now returns a table
         local last_note_ids = self.ankiconnect.get_last_note_ids(n_cards)
-        n_cards = #last_note_ids
 
         --first element is the earliest
         if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(accept_notes_made_within_last_minutes) then
