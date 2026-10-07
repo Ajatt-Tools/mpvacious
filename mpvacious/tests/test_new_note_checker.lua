@@ -5,7 +5,7 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 New-note checker tests.
 ]]
 
-local fixtures = require('test_fixtures')
+local fixtures = require('tests.fixtures')
 local make_new_note_checker = require('anki.new_note_checker')
 local h = require('helpers')
 

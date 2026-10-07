@@ -6,7 +6,7 @@ Note update context tests.
 ]]
 
 local h = require('helpers')
-local fixtures = require('test_fixtures')
+local fixtures = require('tests.fixtures')
 local note_update_context = require('anki.note_update_context')
 
 

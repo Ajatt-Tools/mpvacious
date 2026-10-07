@@ -7,7 +7,7 @@ Encoder tests.
 
 local h = require('helpers')
 local encoder = require('encoder.encoder')
-local fixtures = require('test_fixtures')
+local fixtures = require('tests.fixtures')
 
 --- Record reporter messages without printing expected test failures.
 local function make_encoder_test_logger(state)

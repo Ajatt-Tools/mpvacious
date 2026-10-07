@@ -6,7 +6,7 @@ AnkiConnect tests
 ]]
 
 local h = require('helpers')
-local fixtures = require('test_fixtures')
+local fixtures = require('tests.fixtures')
 local ankiconnect = require('anki.ankiconnect')
 
 --- Return the successful reordered multi-note response scenario.

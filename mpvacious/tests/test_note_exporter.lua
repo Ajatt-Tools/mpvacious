@@ -5,7 +5,7 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Note exporter tests.
 ]]
 
-local fixtures = require('test_fixtures')
+local fixtures = require('tests.fixtures')
 local h = require('helpers')
 local note_exporter = require('anki.note_exporter')
 
