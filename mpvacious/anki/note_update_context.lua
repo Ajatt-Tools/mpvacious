@@ -254,10 +254,13 @@ local function make_note_update_context(components)
 
         local _, opentag, target, closetag, _ = stored_data[config().sentence_field]:match('^(.-)(<[^>]+>)(.-)(</[^>]+>)(.-)$')
         if target then
-            local prefix, _, suffix = new_data[config().sentence_field]:match(table.concat { '^(.-)(', target, ')(.-)$' })
-            if prefix and suffix then
-                new_data[config().sentence_field] = table.concat { prefix, opentag, target, closetag, suffix }
-            end
+            -- Treat the target and replacement markup literally, preserving the first match only.
+            new_data[config().sentence_field] = h.str_replace(
+                    new_data[config().sentence_field],
+                    target,
+                    (opentag .. target .. closetag),
+                    1
+            )
         end
         return new_data
     end
