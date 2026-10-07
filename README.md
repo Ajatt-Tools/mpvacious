@@ -598,6 +598,7 @@ Also see: [Running tests](#running-tests).
 ## Running tests
 
 The fastest way to run tests is with Lua or `luajit` directly (no mpv or media file required):
+Run these commands from the repository root.
 
 ```bash
 lua tests/run.lua
@@ -610,7 +611,14 @@ Alternatively, tests can be run inside mpv (requires a media file to trigger scr
 MPVACIOUS_TEST=TRUE mpv 'path/to/some/file.mkv'
 ```
 
+For a headless run without a local media file, with mpvacious installed as an mpv script:
+
+```bash
+MPVACIOUS_TEST=TRUE mpv --vo=null --ao=null --frames=1 'av://lavfi:testsrc=duration=2:size=320x240:rate=1'
+```
+
 The results will be printed to the console.
+Confirm that mpv prints `TESTS PASSED`.
 
 ## Custom Subtitle Filtering
 
