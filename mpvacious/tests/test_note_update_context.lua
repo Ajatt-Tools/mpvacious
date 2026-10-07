@@ -454,14 +454,15 @@ local function test_blank_update_subtitle()
 end
 
 --- Create the mp API for metadata and duration tests.
-local function make_update_test_mp_api()
+local function make_update_test_mp_api(filename)
+    filename = filename or 'episode.mkv'
     return {
         --- Return the test media filename.
         get_property = function(name)
             if name == 'filename' then
-                return 'episode.mkv'
+                return filename
             elseif name == 'path' then
-                return '/videos/episode.mkv'
+                return '/videos/' .. filename
             end
         end,
         --- Return the test media duration.
@@ -495,6 +496,32 @@ local function test_media_metadata()
     assert_update_test_media_metadata(make_update_test_mp_api())
 end
 
+--- Preserve literal percent signs in filenames and paths, including repeated placeholders.
+local function test_literal_tag_substitutions()
+    for _, case in ipairs {
+        { filename = '100% fun.mkv', name = '100%_fun' },
+        { filename = 'part%1.mkv', name = 'part%1' },
+        { filename = 'part%%.mkv', name = 'part%%' },
+    } do
+        local context = make_update_test_context {
+            result = make_update_test_result(), jobs = {}, mp = make_update_test_mp_api(case.filename),
+        }
+        h.assert_equals(context.substitute_fmt('%n|%f|%n'),
+                case.name .. '|/videos/' .. case.filename .. '|' .. case.name)
+    end
+end
+
+--- Preserve the environment value literally during its placeholder substitution.
+local function test_environment_tag_substitution()
+    local context = make_update_test_context {
+        result = make_update_test_result(), jobs = {}, mp = make_update_test_mp_api(),
+    }
+    local env_tags = os.getenv('SUBS2SRS_TAGS') or ''
+    -- Full-path substitution still follows environment substitution, as in production.
+    local expected = h.str_replace(env_tags, '%f', '/videos/episode.mkv')
+    h.assert_equals(context.substitute_fmt('%e'), h.remove_leading_trailing_spaces(expected))
+end
+
 --- Run context tests without requiring mpv-backed components.
 local function run_tests(context)
     context = context or make_field_merge_test_context()
@@ -511,6 +538,8 @@ local function run_tests(context)
     test_update_notification_field_read_failure()
     test_blank_update_subtitle()
     test_media_metadata()
+    test_literal_tag_substitutions()
+    test_environment_tag_substitution()
     test_update_media_merge()
     test_join_fields(context)
     test_join_fields_duplicates(context)
