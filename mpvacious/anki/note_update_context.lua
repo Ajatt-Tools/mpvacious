@@ -66,30 +66,31 @@ local function make_substitute_fmt(cfg_mgr, mp_api)
 
     --- Replace the filename placeholder in a tag.
     local function substitute_filename(tag, filename)
-        return tag:gsub("%%n", filename)
+        return h.str_replace(tag, '%n', filename)
     end
 
     --- Replace the episode-number placeholder in a tag.
     local function substitute_episode_number(tag, episode)
-        return tag:gsub("%%d", episode)
+        return h.str_replace(tag, '%d', episode)
     end
 
     --- Replace the playback-time placeholder in a tag.
     local function substitute_time_pos(tag)
         local time_pos = h.human_readable_time(mp_api.get_property_number('time-pos'))
-        return tag:gsub("%%t", time_pos)
+        return h.str_replace(tag, '%t', time_pos)
     end
 
     --- Replace the environment-tag placeholder in a tag.
     local function substitute_envvar(tag)
         local env_tags = os.getenv('SUBS2SRS_TAGS') or ''
-        return tag:gsub("%%e", env_tags)
+        -- Environment values may contain percent signs that are not capture references.
+        return h.str_replace(tag, '%e', env_tags)
     end
 
     --- Replace the full-path placeholder in a tag.
     local function substitute_fullpath(tag)
         local full_path = mp_api.get_property("path") or ''
-        return tag:gsub("%%f", full_path)
+        return h.str_replace(tag, '%f', full_path)
     end
 
     --- Remove the configured episode-number portion from a filename.
