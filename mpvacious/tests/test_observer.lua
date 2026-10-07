@@ -8,6 +8,7 @@ Subtitle observer tests.
 local h = require('helpers')
 local subtitle = require('subtitles.subtitle')
 local subtitles_observer = require('subtitles.observer')
+local Menu = require('menu.menu')
 
 local function make_test_secondary_sub(text, start_time, end_time)
     local sub = subtitle.Subtitle.new{
@@ -51,10 +52,30 @@ local function test_autoclip_method_state_is_isolated()
     h.assert_equals(second.autocopy_current_method(), 'clipboard')
 end
 
+--- A menu-wrapped autocopy toggle redraws the enabled and disabled status.
+local function test_autocopy_toggle_refreshes_open_menu()
+    local observer = subtitles_observer.new()
+    local redraws = 0
+    local menu = Menu:new { active = true, overlay = {
+        update = function() redraws = redraws + 1 end,
+    } }
+    menu.make_osd = function()
+        return { get_text = observer.autocopy_is_enabled_str }
+    end
+    local toggle = menu:with_update { observer.toggle_autocopy }
+    for _, expected in ipairs { 'enabled', 'disabled' } do
+        toggle()
+        h.assert_equals(menu.overlay.data, expected)
+        h.assert_equals(observer.autocopy_is_enabled_str(), expected)
+    end
+    h.assert_equals(redraws, 2)
+end
+
 local function run_tests()
     test_instances_keep_recorded_subs_isolated()
     test_import_subs_separates_tracks_and_clear_resets_selection()
     test_autoclip_method_state_is_isolated()
+    test_autocopy_toggle_refreshes_open_menu()
 end
 
 return {

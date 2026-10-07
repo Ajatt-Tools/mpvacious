@@ -2,12 +2,13 @@
 Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
-Subtitle class provides methods for storing and comparing subtitle lines.
+Subtitle construction, comparison, and timing tests.
 ]]
 
 local h = require('helpers')
 local subtitle = require('subtitles.subtitle')
 
+--- Compare subtitle events within the timing tolerance.
 local function test_is_same_event()
     h.assert_equals(subtitle.make_subtitle("Same line", 0, 2):is_same_event(subtitle.make_subtitle("Same line", 0, 2)), true)
     h.assert_equals(subtitle.make_subtitle("Same line", 0, 2):is_same_event(subtitle.make_subtitle("Same line", 0.04, 2.04)), true)
@@ -15,12 +16,14 @@ local function test_is_same_event()
     h.assert_equals(subtitle.make_subtitle("Same line", 0, 2):is_same_event(subtitle.make_subtitle("Other line", 0, 2)), false)
 end
 
+--- Verify equality delegates to subtitle event comparison.
 local function test_eq_uses_same_event()
     -- __eq delegates to is_same_event: same text and timing within tolerance.
     h.assert_equals(subtitle.make_subtitle("A", 0, 2) == subtitle.make_subtitle("A", 0.04, 2.04), true)
     h.assert_equals(subtitle.make_subtitle("A", 0, 2) == subtitle.make_subtitle("A", 3, 4), false)
 end
 
+--- Distinguish overlapping, touching, and disjoint subtitle windows.
 local function test_time_overlap()
     local cases = {
         -- {first, second, overlaps, overlaps_or_touches}
@@ -36,6 +39,7 @@ local function test_time_overlap()
     end
 end
 
+--- Verify duration and symmetric overlap calculations.
 local function test_duration_and_overlap_duration()
     local first = subtitle.make_subtitle("A", 0, 2)
     local cases = {
@@ -51,6 +55,7 @@ local function test_duration_and_overlap_duration()
     end
 end
 
+--- Allow only matching forward subtitle expansions without a gap.
 local function test_can_expand_with()
     h.assert_equals(subtitle.make_subtitle("A", 0, 1):can_expand_with(subtitle.make_subtitle("A", 1, 2)), true)
     h.assert_equals(subtitle.make_subtitle("A", 0, 2):can_expand_with(subtitle.make_subtitle("A", 1, 3)), true)
@@ -59,20 +64,24 @@ local function test_can_expand_with()
     h.assert_equals(subtitle.make_subtitle("A", 0, 1):can_expand_with(subtitle.make_subtitle("B", 0.5, 2)), false)
 end
 
+--- Expand the end timestamp without changing the start.
 local function test_expand_end_time()
     local expanded = subtitle.make_subtitle("A", 0, 1):expand_end_time(subtitle.make_subtitle("A", 1, 3))
     h.assert_equals(expanded['start'], 0)
     h.assert_equals(expanded['end'], 3)
 end
 
+--- Supply independent subtitle and audio delays for timing tests.
 local function make_mp_stub_for_tests()
     local delays = { ['sub-delay'] = 10, ['secondary-sub-delay'] = 3, ['audio-delay'] = 1 }
+    --- Return the requested timing offset.
     local function get_property_native(name)
         return delays[name]
     end
     return { get_property_native = get_property_native }
 end
 
+--- Apply each subtitle track's delay relative to audio.
 local function test_subtitle_delay()
     local mp_stub = make_mp_stub_for_tests()
     local cases = {
@@ -86,6 +95,45 @@ local function test_subtitle_delay()
     end
 end
 
+--- Supply visible primary and secondary subtitle properties without changing mp.
+local function make_current_subtitle_test_api(visible)
+    local properties = {
+        ['sub-text'] = 'Primary', ['secondary-sub-text'] = 'Secondary',
+        ['sub-start'] = 1, ['sub-end'] = 2,
+        ['secondary-sub-start'] = 4, ['secondary-sub-end'] = 6,
+        ['sub-delay'] = 10, ['secondary-sub-delay'] = 3, ['audio-delay'] = 1,
+    }
+    return {
+        get_property = function(name) return properties[name] end,
+        get_property_number = function(name)
+            if visible then return properties[name] end
+            return nil
+        end,
+        get_property_native = function(name) return properties[name] end,
+    }
+end
+
+--- Collect visible tracks with delays applied and reject absent subtitle timings.
+local function test_make_current()
+    for _, case in ipairs {
+        { secondary = false, visible = true, text = 'Primary', start_time = 10, end_time = 11 },
+        { secondary = true, visible = true, text = 'Secondary', start_time = 6, end_time = 8 },
+        { secondary = false, visible = false },
+        { secondary = true, visible = false },
+    } do
+        local current = subtitle.make_current(case.secondary, make_current_subtitle_test_api(case.visible))
+        if case.visible then
+            h.assert_equals(current.text, case.text)
+            h.assert_equals(current['start'], case.start_time)
+            h.assert_equals(current['end'], case.end_time)
+            h.assert_equals(current.is_secondary, case.secondary)
+        else
+            h.assert_equals(current, nil)
+        end
+    end
+end
+
+--- Run subtitle comparison, construction, and timing tests.
 local function run_tests()
     test_is_same_event()
     test_eq_uses_same_event()
@@ -94,6 +142,7 @@ local function run_tests()
     test_can_expand_with()
     test_expand_end_time()
     test_subtitle_delay()
+    test_make_current()
 end
 
 return {
