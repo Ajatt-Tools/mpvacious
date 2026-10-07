@@ -378,7 +378,7 @@ global_binds_menu = BindsMenu:new { subs2srs = self, menu_controller = menu_cont
 global_binds_menu.bindings_switch = switch.new {
     { key = "a", name = "mpvacious-menu-open", fn = _run { open_advanced_menu }, text = "Open advanced menu", force = true },
     { key = "g", name = "mpvacious-quick-card-menu-open", fn = _run { quick_menu_open }, text = "Open quick menu" },
-    { key = "ctrl+t", name = "mpvacious-autocopy-toggle", fn = subs_observer.toggle_autocopy, text = "Toggle autocopy" },
+    { key = "ctrl+t", name = "mpvacious-autocopy-toggle", fn = menu:with_update { subs_observer.toggle_autocopy }, text = "Toggle autocopy" },
     { key = "Ctrl+n", name = "mpvacious-export-note", fn = menu:with_update { note_exporter.export_to_anki, false }, text = "Add a new note", force = true },
 
     -- Clipboard
