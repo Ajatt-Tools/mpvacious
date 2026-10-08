@@ -382,6 +382,9 @@ and the target sentence doesn't span multiple subs.
 When updating [targeted-sentence cards](https://ajatt.top/blog/discussing-various-card-templates.html#targeted-sentence-cards),
 mpvacious preserves highlighting around the first exact occurrence of the stored target in the new sentence.
 
+If the configured note type cannot be found or its first field cannot be read,
+new-note export stops before creating media and retains your subtitle selection for a retry.
+
 **Clipboard:**
 
 * <kbd>Ctrl+c</kbd> - Copy current subtitle string to the system clipboard.
