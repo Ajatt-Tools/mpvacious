@@ -19,12 +19,18 @@ local function make_forvo_test_context(config, responses)
     return downloader, state
 end
 
---- Return the existing pronunciation configuration for one supported source format.
+--- Return pronunciation settings with independent source and destination formats.
 local function make_forvo_test_config(case)
     return {
-        use_forvo = 'yes', vocab_field = 'Word', vocab_audio_field = 'VocabAudio', audio_field = 'SentenceAudio',
-        audio_format = case.audio_format, audio_extension = '.' .. case.source_format,
-        audio_codec = case.codec, audio_bitrate = '32k', audio_template = '[sound:%s]',
+        use_forvo = 'yes',
+        vocab_field = 'Word',
+        vocab_audio_field = 'VocabAudio',
+        audio_field = 'SentenceAudio',
+        audio_format = case.audio_format,
+        audio_extension = case.output_extension or '.' .. case.source_format,
+        audio_codec = case.codec,
+        audio_bitrate = '32k',
+        audio_template = '[sound:%s]',
     }
 end
 
@@ -55,18 +61,33 @@ local function assert_forvo_test_encoding(state, case, filename)
     } })
 end
 
---- Verify current download, encoding, and cleanup behavior using injected dependencies.
-local function test_existing_pronunciation_flow()
-    for _, case in ipairs {
+--- Return source-selection cases for all configured pronunciation destination extensions.
+local function make_pronunciation_format_test_cases()
+    local cases = {
         { source_format = 'mp3', audio_format = 'mp3', codec = 'libmp3lame' },
-        { source_format = 'ogg', audio_format = 'opus', codec = 'libopus' },
-    } do
-        local downloader, state = make_forvo_test_context(make_forvo_test_config(case), {
-            { status = 0, stdout = make_forvo_test_page() }, { status = 0 },
+    }
+    for _, extension in ipairs { '.ogg', '.opus', '.m4a', '.webm', '.caf' } do
+        table.insert(cases, {
+            source_format = 'ogg',
+            audio_format = 'opus',
+            codec = 'libopus',
+            output_extension = extension,
+        })
+    end
+    return cases
+end
+
+--- Verify download-source selection is independent of the destination extension.
+local function test_existing_pronunciation_flow()
+    for _, case in ipairs(make_pronunciation_format_test_cases()) do
+        local config = make_forvo_test_config(case)
+        local downloader, state = make_forvo_test_context(config, {
+            { status = 0, stdout = make_forvo_test_page() },
+            { status = 0 },
         })
         local fields = { SentenceAudio = '[sound:sentence.ogg]' }
         downloader.append(fields, { Word = 'word', VocabAudio = '' })
-        local filename = 'forvo_word.' .. case.source_format
+        local filename = 'forvo_word' .. config.audio_extension
         h.assert_equals(fields, { SentenceAudio = '[sound:sentence.ogg]', VocabAudio = '[sound:' .. filename .. ']' })
         assert_forvo_test_requests(state, case, filename)
         assert_forvo_test_encoding(state, case, filename)
