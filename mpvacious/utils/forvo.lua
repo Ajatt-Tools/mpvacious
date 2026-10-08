@@ -85,14 +85,29 @@ local function make_forvo(components)
         return string.format('forvo_%s%s', self.platform_api.windows and os.time() or word, config().audio_extension)
     end
 
+    --- Return the pronunciation search page or a fetch error.
+    local function fetch_pronunciation_page(word)
+        -- Search this word on forvo.
+        local curl_args = { '-s', string.format('https://forvo.com/search/%s/ja', url_encode(word)) }
+        local response = self.platform_api.curl_request { args = curl_args }
+        -- Only a successful request with a nonempty page can contain usable pronunciation data.
+        if not command_succeeded(response) or not h.is_non_empty_str(response.stdout) then
+            return nil, "forvo pronunciation webpage fetch failed"
+        end
+        return response.stdout, nil
+    end
+
     local function get_pronunciation_url(word)
         -- Forvo offers MP3 and OGG sources, regardless of the destination container.
         local file_format = 'ogg'
         if config().audio_format == 'mp3' then
             file_format = 'mp3'
         end
-        local curl_args = { '-s', string.format('https://forvo.com/search/%s/ja', url_encode(word)) }
-        local forvo_page = self.platform_api.curl_request { args = curl_args }.stdout
+
+        local forvo_page, error = fetch_pronunciation_page(word)
+        if error then
+            return nil, error
+        end
         local play_params = string.match(forvo_page, "Play%((.-)%);")
 
         if play_params then
@@ -103,7 +118,11 @@ local function make_forvo(components)
     end
 
     local function get_forvo_pronunciation(word)
-        local audio_url = get_pronunciation_url(word)
+        local audio_url, error = get_pronunciation_url(word)
+        if error then
+            self.logger.warn(error)
+            return
+        end
 
         if h.is_empty(audio_url) then
             self.logger.warn(string.format("Seems like Forvo doesn't have audio for word %s.", word))
