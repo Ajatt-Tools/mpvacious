@@ -8,6 +8,7 @@ Note exporter tests.
 local fixtures = require('tests.fixtures')
 local h = require('helpers')
 local note_exporter = require('anki.note_exporter')
+local ankiconnect = require('anki.ankiconnect')
 local subtitles_observer = require('subtitles.observer')
 local subtitle = require('subtitles.subtitle')
 
@@ -50,7 +51,7 @@ end
 local function make_update_test_exporter(result, jobs, subtitle, options)
     options = options or {}
     return note_exporter.new().init {
-        ankiconnect = fixtures.make_update_ankiconnect(result, make_exporter_test_stored_fields),
+        ankiconnect = options.ankiconnect or fixtures.make_update_ankiconnect(result, make_exporter_test_stored_fields),
         quick_creation_opts = fixtures.make_quick_creation_options(result, { record_clear = true }),
         subs_observer = fixtures.make_subtitle_observer(result, subtitle or make_valid_update_test_subtitle()),
         encoder = fixtures.make_update_encoder(jobs, options.media),
@@ -251,6 +252,28 @@ local function test_export_captures_request()
     h.assert_equals(result.clear_count, 1)
 end
 
+--- Pending exports retain their original destination when the live profile changes.
+local function test_export_captures_destination()
+    local result, jobs = {}, {}
+    local config = make_update_test_config()
+    config.deck_name = 'Original deck'
+    config.allow_duplicates = false
+    local client = fixtures.make_note_add_client(result, ankiconnect.new, config)
+    local exporter = make_update_test_exporter(result, jobs, nil, { config = config, ankiconnect = client })
+    exporter.export_to_anki(false)
+    h.assert_equals(result.note_requests, nil)
+    config.deck_name = 'Different deck'
+    config.model_name = 'Different model'
+    config.allow_duplicates = true
+    complete_export_test_media(jobs)
+    h.assert_equals(#result.note_requests, 1)
+    local note = result.note_requests[1].params.note
+    h.assert_equals(note.deckName, 'Original deck')
+    h.assert_equals(note.modelName, 'Test model')
+    h.assert_equals(note.options.allowDuplicate, false)
+    h.assert_equals(note.fields.SentKanji, 'new sentence')
+end
+
 --- Build a file-transition fixture using the real subtitle selection implementation.
 local function make_file_change_test_context()
     local observer = subtitles_observer.new()
@@ -299,6 +322,7 @@ local function run_tests()
     test_export_media_failures()
     test_export_skipped_media()
     test_export_captures_request()
+    test_export_captures_destination()
     test_reset_for_file_change()
 end
 

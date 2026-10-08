@@ -168,11 +168,12 @@ function this.make_update_ankiconnect(state, fields_for_note)
             end
         end,
         --- Record an ordinary note export.
-        add_note = function(fields, tag, gui)
+        add_note = function(job)
             state.add_count = (state.add_count or 0) + 1
-            state.fields = fields
-            state.tag = tag
-            state.gui = gui
+            state.fields = job.note_fields
+            state.tag = job.tag
+            state.gui = job.gui
+            state.note_opts = job.opts
         end,
         --- Record the Anki Browser query.
         gui_browse = function(query)
@@ -339,6 +340,26 @@ function this.make_mp_property_reader(properties)
         get_property_number = get_property,
         get_property_native = get_property,
     }
+end
+
+--- Use the real note-request builder while recording transport calls without network access.
+function this.make_note_add_client(state, make_client, config)
+    local client = make_client()
+    client.init(this.make_config_manager(config))
+    --- Supply preflight model metadata for exporter integration tests.
+    client.get_first_field = function()
+        return config.sentence_field, nil
+    end
+    --- Supply a fake destination for deferred encoder jobs.
+    client.get_media_dir_path = function()
+        return '/anki-test-media', nil
+    end
+    --- Capture the actual AnkiConnect request without completing a network operation.
+    client.execute = function(options)
+        state.note_requests = state.note_requests or {}
+        table.insert(state.note_requests, options.request)
+    end
+    return client
 end
 
 return this

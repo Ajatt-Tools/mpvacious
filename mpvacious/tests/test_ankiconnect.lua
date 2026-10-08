@@ -201,7 +201,41 @@ local function test_append_media_reports_write_result()
     h.assert_equals(tagged_note_id, 123)
 end
 
---- Run field-fetch contract tests without contacting Anki.
+--- Captured job options select the destination for both direct and GUI additions.
+local function test_add_note_captured_options()
+    local current = { deck_name = 'Current deck', model_name = 'Current model', allow_duplicates = true }
+    local captured = { deck_name = 'Captured deck', model_name = 'Captured model', allow_duplicates = false }
+    for _, gui in ipairs { false, true } do
+        local state = {}
+        local client = fixtures.make_note_add_client(state, ankiconnect.new, current)
+        local fields = { Sentence = 'captured sentence' }
+        client.add_note { note_fields = fields, tag = 'source', gui = gui, opts = captured }
+        local request = state.note_requests[1]
+        local action = 'addNote'
+        if gui then action = 'guiAddCards' end
+        h.assert_equals(request.action, action)
+        h.assert_equals(request.params.note.deckName, 'Captured deck')
+        h.assert_equals(request.params.note.modelName, 'Captured model')
+        h.assert_equals(request.params.note.options, { allowDuplicate = false, duplicateScope = 'deck' })
+        h.assert_equals(request.params.note.fields, fields)
+        h.assert_equals(request.params.note.tags, { 'source' })
+    end
+end
+
+--- Jobs without explicit options use the client's current configuration.
+local function test_add_note_default_options()
+    local config = { deck_name = 'Current deck', model_name = 'Current model', allow_duplicates = true }
+    local state = {}
+    local client = fixtures.make_note_add_client(state, ankiconnect.new, config)
+    client.add_note { note_fields = { Sentence = 'sentence' }, tag = '', gui = false }
+    local note = state.note_requests[1].params.note
+    h.assert_equals(note.deckName, 'Current deck')
+    h.assert_equals(note.modelName, 'Current model')
+    h.assert_equals(note.options.allowDuplicate, true)
+    h.assert_equals(note.tags, {})
+end
+
+--- Run field-fetch and note-add contract tests without contacting Anki.
 local function run_tests()
     test_get_notes_fields()
     test_get_media_dir_path()
@@ -209,6 +243,8 @@ local function run_tests()
     test_get_first_field()
     test_append_media_reports_write_error()
     test_append_media_reports_write_result()
+    test_add_note_captured_options()
+    test_add_note_default_options()
 end
 
 return {
