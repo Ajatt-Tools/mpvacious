@@ -273,4 +273,35 @@ function this.make_new_note_checker_logger(state)
     }
 end
 
+--- Record Forvo I/O without accessing the network, filesystem, or real encoder.
+function this.make_forvo_dependencies(state, responses)
+    return {
+        platform = {
+            windows = false,
+            --- Return a fake temporary directory without creating it.
+            tmp_dir = function() return '/forvo-test-tmp' end,
+            --- Record a request and return its supplied response.
+            curl_request = function(options)
+                table.insert(state.requests, options.args)
+                return responses[#state.requests]
+            end,
+        },
+        --- Record encoding arguments and simulate successful completion.
+        subprocess = function(options)
+            table.insert(state.encodings, options.args)
+            return { status = 0 }
+        end,
+        --- Record temporary-file cleanup without removing a real file.
+        remove_file = function(path)
+            table.insert(state.removed, path)
+        end,
+        logger = {
+            --- Capture expected warnings without printing misleading test errors.
+            warn = function(message)
+                table.insert(state.warnings, message)
+            end,
+        },
+    }
+end
+
 return this

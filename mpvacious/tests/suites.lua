@@ -18,6 +18,7 @@ local modules = {
     'tests.test_encoder',
     'tests.test_subtitle',
     'tests.test_note_update_context',
+    'tests.test_forvo',
 }
 
 local function load_test_suites()
