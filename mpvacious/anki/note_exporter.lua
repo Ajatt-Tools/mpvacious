@@ -38,8 +38,8 @@ local function make_exporter()
         return pub
     end
 
-    --- Create and start media jobs for an ordinary note export.
-    local function start_export_media(subtitle)
+    --- Preflight and create export media jobs without starting them.
+    local function create_export_media(subtitle)
         local first_field, field_error = self.ankiconnect.get_first_field(config().model_name)
         if field_error then
             -- A missing note type must not start encoding or discard the selection.
@@ -52,8 +52,6 @@ local function make_exporter()
         self.encoder.set_output_dir(media_dir)
         local snapshot = self.encoder.snapshot.create_job(subtitle)
         local audio = self.encoder.audio.create_job(subtitle, self.note_update_context.audio_padding())
-        snapshot.run_async()
-        audio.run_async()
         return { snapshot = snapshot, audio = audio, first_field = first_field }, nil
     end
 
@@ -71,6 +69,25 @@ local function make_exporter()
         return note_fields
     end
 
+    --- Report media errors after both jobs have completed.
+    local function on_media_creation_failure(errors)
+        self.notify('Failed to create media: ' .. table.concat(errors, '; '), 'error', 5)
+    end
+
+    --- Add the captured note only after every requested media job completes successfully.
+    local function start_export_media(media, note_fields, gui)
+        local tag = self.note_update_context.substitute_fmt(config().note_tag)
+        local completion = note_update_context
+                .make_completion_collector()
+                .count(2)
+                .on_success(h.as_callback(self.ankiconnect.add_note, note_fields, tag, gui))
+                .on_failure(on_media_creation_failure)
+        -- The shared countdown is ready before any job, including a skipped job, can finish.
+        self.subs_observer.clear()
+        media.snapshot.on_finish(completion.callback_for('snapshot')).run_async()
+        media.audio.on_finish(completion.callback_for('audio')).run_async()
+    end
+
     --- Export the current subtitle as a new Anki note.
     function pub.export_to_anki(gui)
         pub.maybe_reload_config()
@@ -82,15 +99,13 @@ local function make_exporter()
             sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
         end
 
-        local media, error = start_export_media(sub)
+        local media, error = create_export_media(sub)
         if error then
             -- Keep the observer's selection for a retry when Anki is unavailable.
             self.notify(error, 'error', 5)
             return pub
         end
-        local note_fields = make_export_note_fields(sub, media)
-        self.ankiconnect.add_note(note_fields, self.note_update_context.substitute_fmt(config().note_tag), gui)
-        self.subs_observer.clear()
+        start_export_media(media, make_export_note_fields(sub, media), gui)
         return pub
     end
 

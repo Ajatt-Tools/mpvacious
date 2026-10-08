@@ -534,4 +534,5 @@ end
 return {
     new = make_note_update_context,
     join_field_content = join_field_content,
+    make_completion_collector = make_completion_collector,
 }
