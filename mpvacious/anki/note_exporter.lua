@@ -169,6 +169,7 @@ local function make_exporter()
             encoder = self.encoder,
             forvo = self.forvo,
             cfg_mgr = self.cfg_mgr,
+            mp = components.mp,
         })
         return pub
     end

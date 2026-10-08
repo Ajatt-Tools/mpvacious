@@ -45,16 +45,36 @@ local function make_exporter_test_stored_fields()
 end
 
 --- Create an initialized exporter for update tests.
-local function make_update_test_exporter(result, jobs, subtitle)
+local function make_update_test_exporter(result, jobs, subtitle, options)
+    options = options or {}
     return note_exporter.new().init {
         ankiconnect = fixtures.make_update_ankiconnect(result, make_exporter_test_stored_fields),
         quick_creation_opts = fixtures.make_quick_creation_options(result, { record_clear = true }),
         subs_observer = fixtures.make_subtitle_observer(result, subtitle or make_valid_update_test_subtitle()),
-        encoder = fixtures.make_update_encoder(jobs),
+        encoder = fixtures.make_update_encoder(jobs, options.media),
         forvo = fixtures.make_forvo(),
-        cfg_mgr = fixtures.make_config_manager(make_update_test_config()),
+        cfg_mgr = fixtures.make_config_manager(options.config or make_update_test_config()),
         notify = fixtures.make_notifier(result),
+        mp = options.mp,
     }
+end
+
+--- Deliver a media job's success path or failure to its registered callback.
+local function complete_export_test_job(job, error)
+    local path = job.filename
+    if error then
+        path = nil
+    end
+    job.callback(path, error)
+end
+
+--- Complete requested export jobs, leaving synchronously skipped jobs alone.
+local function complete_export_test_media(jobs)
+    for _, job in ipairs(jobs) do
+        if job.filename then
+            complete_export_test_job(job, nil)
+        end
+    end
 end
 
 --- Test that note writes wait for both media jobs.
@@ -93,12 +113,18 @@ local function test_export_to_anki()
     h.assert_equals(#jobs, 2)
     h.assert_equals(jobs[1].started, true)
     h.assert_equals(jobs[2].started, true)
+    h.assert_equals(result.fields, nil)
+    h.assert_equals(result.clear_count, 1)
+    jobs[2].callback('audio.ogg', nil)
+    h.assert_equals(result.fields, nil)
+    jobs[1].callback('snapshot.avif', nil)
     h.assert_equals(result.fields.SentKanji, "new sentence")
     h.assert_equals(result.fields.SentAudio, "[sound:audio.ogg]")
     h.assert_equals(result.fields.Image, '<img alt="snapshot" src="snapshot.avif">')
     h.assert_equals(result.tag, "")
     h.assert_equals(result.gui, false)
     h.assert_equals(result.clear_count, 1)
+    h.assert_equals(result.add_count, 1)
 end
 
 --- Keep the subtitle and skip note creation until Anki's media directory is available.
@@ -117,6 +143,7 @@ local function test_export_without_media_directory()
     result.media_dir_error = nil
     exporter.export_to_anki(false)
     h.assert_equals(#jobs, 2)
+    complete_export_test_media(jobs)
     h.assert_equals(result.fields.SentKanji, 'new sentence')
     h.assert_equals(result.clear_count, 1)
 end
@@ -135,6 +162,7 @@ local function test_export_without_first_field()
     result.first_field_error = nil
     exporter.export_to_anki(false)
     h.assert_equals(#jobs, 2)
+    complete_export_test_media(jobs)
     h.assert_equals(result.fields.SentKanji, 'new sentence')
     h.assert_equals(result.clear_count, 1)
 end
@@ -142,9 +170,83 @@ end
 --- An unset first field still receives the fallback required by Anki.
 local function test_export_populates_first_field()
     local result = { append_count = 0, clear_count = 0, first_field = 'Word' }
-    make_update_test_exporter(result, {}).export_to_anki(false)
+    local jobs = {}
+    make_update_test_exporter(result, jobs).export_to_anki(false)
+    complete_export_test_media(jobs)
     h.assert_equals(result.fields.Word, '[empty]')
     h.assert_equals(result.fields.SentKanji, 'new sentence')
+end
+
+--- Complete a failed media pair without allowing any note addition.
+local function assert_export_media_failure(case)
+    local result = { clear_count = 0 }
+    local jobs = {}
+    make_update_test_exporter(result, jobs).export_to_anki(false)
+    complete_export_test_job(jobs[1], case.snapshot_error)
+    h.assert_equals(result.fields, nil)
+    h.assert_equals(result.notification, nil)
+    complete_export_test_job(jobs[2], case.audio_error)
+    h.assert_equals(result.fields, nil)
+    h.assert_equals(result.add_count, nil)
+    h.assert_equals(result.notification, 'Failed to create media: ' .. case.expected)
+    h.assert_equals(result.notification_level, 'error')
+    h.assert_equals(result.clear_count, 1)
+end
+
+--- Each requested media failure prevents adding a note after the entire batch finishes.
+local function test_export_media_failures()
+    for _, case in ipairs {
+        { snapshot_error = 'image failed', expected = 'snapshot: image failed' },
+        { audio_error = 'audio failed', expected = 'audio: audio failed' },
+        {
+            snapshot_error = 'image failed',
+            audio_error = 'audio failed',
+            expected = 'snapshot: image failed; audio: audio failed',
+        },
+    } do
+        assert_export_media_failure(case)
+    end
+end
+
+--- Skipped tracks count as completions without adding nonexistent filenames to fields.
+local function test_export_skipped_media()
+    for _, media in ipairs {
+        { skip_snapshot = true },
+        { skip_audio = true },
+        { skip_snapshot = true, skip_audio = true },
+    } do
+        local result = { clear_count = 0 }
+        local jobs = {}
+        make_update_test_exporter(result, jobs, nil, { media = media }).export_to_anki(true)
+        complete_export_test_media(jobs)
+        h.assert_equals(result.add_count, 1)
+        h.assert_equals(result.gui, true)
+        h.assert_equals(result.fields.Image ~= nil, not media.skip_snapshot)
+        h.assert_equals(result.fields.SentAudio ~= nil, not media.skip_audio)
+        h.assert_equals(result.clear_count, 1)
+    end
+end
+
+--- Completion writes the captured fields and tag without clearing a later subtitle selection.
+local function test_export_captures_request()
+    local result = { clear_count = 0 }
+    local jobs = {}
+    local subtitle = make_valid_update_test_subtitle()
+    local config = make_update_test_config()
+    config.note_tag = '%t'
+    local properties = { filename = 'episode.mkv', ['time-pos'] = 65, duration = 200 }
+    local exporter = make_update_test_exporter(result, jobs, subtitle, {
+        config = config,
+        mp = fixtures.make_mp_property_reader(properties),
+    })
+    exporter.export_to_anki(false)
+    subtitle.text = 'later subtitle selection'
+    properties['time-pos'] = 125
+    complete_export_test_media(jobs)
+    h.assert_equals(result.fields.SentKanji, 'new sentence')
+    h.assert_equals(result.tag, '01m05s000ms')
+    h.assert_equals(subtitle.text, 'later subtitle selection')
+    h.assert_equals(result.clear_count, 1)
 end
 
 --- Run exporter tests.
@@ -155,6 +257,9 @@ local function run_tests()
     test_export_without_media_directory()
     test_export_without_first_field()
     test_export_populates_first_field()
+    test_export_media_failures()
+    test_export_skipped_media()
+    test_export_captures_request()
 end
 
 return {

@@ -30,6 +30,9 @@ function this.make_pending_media_job(filename, jobs)
     --- Record when the simulated job starts.
     function job.run_async()
         job.started = true
+        if filename == nil and job.callback then
+            job.callback(nil, nil)
+        end
     end
     --- Save the completion callback for the test to invoke.
     function job.on_finish(callback)
@@ -49,11 +52,20 @@ local function make_media_job_factory(filename, jobs)
 end
 
 --- Return an encoder whose audio and snapshot jobs are recorded in `jobs`.
-function this.make_update_encoder(jobs)
+function this.make_update_encoder(jobs, options)
+    options = options or {}
+    local snapshot_filename = 'snapshot.avif'
+    local audio_filename = 'audio.ogg'
+    if options.skip_snapshot then
+        snapshot_filename = nil
+    end
+    if options.skip_audio then
+        audio_filename = nil
+    end
     return {
         set_output_dir = h.noop,
-        snapshot = { create_job = make_media_job_factory('snapshot.avif', jobs) },
-        audio = { create_job = make_media_job_factory('audio.ogg', jobs) },
+        snapshot = { create_job = make_media_job_factory(snapshot_filename, jobs) },
+        audio = { create_job = make_media_job_factory(audio_filename, jobs) },
     }
 end
 
@@ -157,6 +169,7 @@ function this.make_update_ankiconnect(state, fields_for_note)
         end,
         --- Record an ordinary note export.
         add_note = function(fields, tag, gui)
+            state.add_count = (state.add_count or 0) + 1
             state.fields = fields
             state.tag = tag
             state.gui = gui
@@ -304,6 +317,19 @@ function this.make_forvo_dependencies(state, responses)
                 table.insert(state.warnings, message)
             end,
         },
+    }
+end
+
+--- Return isolated mp property readers backed by supplied test values.
+function this.make_mp_property_reader(properties)
+    --- Read the current value, allowing a test to advance its own playback clock.
+    local function get_property(name)
+        return properties[name]
+    end
+    return {
+        get_property = get_property,
+        get_property_number = get_property,
+        get_property_native = get_property,
     }
 end
 
