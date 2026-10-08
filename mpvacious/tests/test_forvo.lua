@@ -42,21 +42,21 @@ end
 --- Check source requests and temporary-file cleanup for one existing format.
 local function assert_forvo_test_requests(state, case, filename)
     h.assert_equals(state.requests, {
-        { '-s', 'https://forvo.com/search/word/ja' },
+        { '-f', '-s', 'https://forvo.com/search/word/ja' },
         { 'https://audio00.forvo.com/' .. case.source_format .. '/clip.' .. case.source_format,
-          '-s', '-L', '-o', '/forvo-test-tmp/' .. filename },
+          '-f', '-s', '-L', '-o', '/forvo-test-tmp/' .. filename },
     })
     h.assert_equals(state.removed, { '/forvo-test-tmp/' .. filename })
     h.assert_equals(state.warnings, {})
 end
 
---- Check that introducing injection does not change existing encoder arguments.
+--- Check the selected codec, destination muxer, and output filename.
 local function assert_forvo_test_encoding(state, case, filename)
     h.assert_equals(state.encodings, { {
         'mpv', '/forvo-test-tmp/' .. filename, '--loop-file=no', '--keep-open=no', '--video=no',
         '--no-ocopy-metadata', '--no-sub', '--audio-channels=mono', '--oacopts-add=vbr=on',
         '--oacopts-add=application=voip', '--oacopts-add=compression_level=10',
-        '--af-append=silenceremove=1:0:-50dB', '--oac=' .. case.codec, '--of=' .. case.audio_format,
+        '--af-append=silenceremove=1:0:-50dB', '--oac=' .. case.codec, '--of=' .. case.output_muxer,
         '--oacopts-add=b=32k', '-o=/anki-test-media/' .. filename,
     } })
 end
@@ -64,14 +64,16 @@ end
 --- Return source-selection cases for all configured pronunciation destination extensions.
 local function make_pronunciation_format_test_cases()
     local cases = {
-        { source_format = 'mp3', audio_format = 'mp3', codec = 'libmp3lame' },
+        { source_format = 'mp3', audio_format = 'mp3', codec = 'libmp3lame', output_muxer = 'mp3' },
     }
+    local muxers = { ogg = 'ogg', opus = 'ogg', m4a = 'mp4', webm = 'webm', caf = 'caf' }
     for _, extension in ipairs { '.ogg', '.opus', '.m4a', '.webm', '.caf' } do
         table.insert(cases, {
             source_format = 'ogg',
             audio_format = 'opus',
             codec = 'libopus',
             output_extension = extension,
+            output_muxer = muxers[extension:sub(2)],
         })
     end
     return cases
@@ -121,11 +123,100 @@ local function test_disabled_forvo()
     h.assert_equals(state.warnings, {})
 end
 
---- Run the isolated downloader's baseline behavior tests.
+--- Return failed requests, missing source parameters, and empty decoded filenames.
+local function make_invalid_page_test_cases()
+    return {
+        {},
+        { response = false },
+        { response = {} },
+        { response = { status = 22, stdout = make_forvo_test_page() } },
+        { response = { status = 0 } },
+        { response = { status = 0, stdout = false } },
+        { response = { status = 0, stdout = {} } },
+        { response = { status = 0, stdout = '' } },
+        { response = { status = 0, stdout = 'Play();' } },
+        { response = { status = 0, stdout = "Play('');" } },
+        { response = { status = 0, stdout = "Play('Y2xpcC5tcDM=');" } },
+        { response = { status = 0, stdout = "Play('','%%%');" } },
+        { response = { status = 0, stdout = "Play('','a');" } },
+    }
+end
+
+--- Invalid page data must not start downloads, encoding, or field changes.
+local function test_invalid_pronunciation_pages()
+    local config = make_forvo_test_config { source_format = 'ogg', audio_format = 'opus', codec = 'libopus' }
+    for _, case in ipairs(make_invalid_page_test_cases()) do
+        local downloader, state = make_forvo_test_context(config, { case.response })
+        local fields = { SentenceAudio = '[sound:sentence.ogg]' }
+        downloader.append(fields, { Word = 'word', VocabAudio = '' })
+        h.assert_equals(fields, { SentenceAudio = '[sound:sentence.ogg]' })
+        h.assert_equals(#state.requests, 1)
+        h.assert_equals(state.encodings, {})
+        h.assert_equals(state.removed, {})
+        h.assert_equals(#state.warnings, 1)
+    end
+end
+
+--- Failed or missing download responses leave fields unchanged and clean up temporary files.
+local function test_failed_pronunciation_downloads()
+    local config = make_forvo_test_config { source_format = 'ogg', audio_format = 'opus', codec = 'libopus' }
+    for _, case in ipairs { {}, { response = false }, { response = {} }, { response = { status = 22 } } } do
+        local downloader, state = make_forvo_test_context(config, {
+            { status = 0, stdout = make_forvo_test_page() }, case.response,
+        })
+        local fields = {}
+        downloader.append(fields, { Word = 'word', VocabAudio = '' })
+        h.assert_equals(fields, {})
+        h.assert_equals(#state.requests, 2)
+        h.assert_equals(state.encodings, {})
+        h.assert_equals(state.removed, { '/forvo-test-tmp/forvo_word.ogg' })
+        h.assert_equals(state.warnings, { "Couldn't download audio for word word from Forvo." })
+    end
+end
+
+--- Missing or failed encoder responses do not append broken pronunciation references.
+local function test_failed_pronunciation_encoding()
+    local config = make_forvo_test_config { source_format = 'ogg', audio_format = 'opus', codec = 'libopus' }
+    for _, case in ipairs { {}, { response = false }, { response = {} }, { response = { status = 1 } } } do
+        local downloader, state = make_forvo_test_context(config, {
+            { status = 0, stdout = make_forvo_test_page() }, { status = 0 },
+        })
+        state.encoding_response = function() return case.response end
+        local fields = {}
+        downloader.append(fields, { Word = 'word', VocabAudio = '' })
+        h.assert_equals(fields, {})
+        h.assert_equals(#state.encodings, 1)
+        h.assert_equals(state.removed, { '/forvo-test-tmp/forvo_word.ogg' })
+        h.assert_equals(#state.warnings, 1)
+    end
+end
+
+--- Valid Base64 filenames remain usable when Forvo omits trailing padding.
+local function test_unpadded_pronunciation_sources()
+    for _, case in ipairs {
+        { source_format = 'mp3', audio_format = 'mp3', codec = 'libmp3lame' },
+        { source_format = 'ogg', audio_format = 'opus', codec = 'libopus' },
+    } do
+        local page = make_forvo_test_page():gsub('=', '')
+        local downloader, state = make_forvo_test_context(make_forvo_test_config(case), {
+            { status = 0, stdout = page }, { status = 0 },
+        })
+        local fields = {}
+        downloader.append(fields, { Word = 'word', VocabAudio = '' })
+        h.assert_equals(fields.VocabAudio, '[sound:forvo_word.' .. case.source_format .. ']')
+        h.assert_equals(state.warnings, {})
+    end
+end
+
+--- Run the isolated downloader's behavior and response-validation tests.
 local function run_tests()
     test_existing_pronunciation_flow()
     test_missing_pronunciation()
     test_disabled_forvo()
+    test_invalid_pronunciation_pages()
+    test_failed_pronunciation_downloads()
+    test_failed_pronunciation_encoding()
+    test_unpadded_pronunciation_sources()
 end
 
 return { run_tests = run_tests }

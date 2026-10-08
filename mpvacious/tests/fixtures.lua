@@ -289,6 +289,9 @@ function this.make_forvo_dependencies(state, responses)
         --- Record encoding arguments and simulate successful completion.
         subprocess = function(options)
             table.insert(state.encodings, options.args)
+            if state.encoding_response then
+                return state.encoding_response()
+            end
             return { status = 0 }
         end,
         --- Record temporary-file cleanup without removing a real file.
