@@ -30,6 +30,16 @@ local function make_exporter()
         return pub
     end
 
+    --- Discard subtitle selection and quick options when the source file changes.
+    function pub.reset_for_file_change()
+        if self.subs_observer == nil then
+            return pub
+        end
+        self.subs_observer.clear()
+        self.quick_creation_opts:clear_options()
+        return pub
+    end
+
     --- Reload configuration before creating a card when configured.
     function pub.maybe_reload_config()
         if config().reload_config_before_card_creation then

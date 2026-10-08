@@ -642,3 +642,5 @@ local main = (function()
 end)()
 
 mp.register_event("file-loaded", main)
+-- A selection belongs to its source file, even if no export command has been invoked.
+mp.register_event("start-file", note_exporter.reset_for_file_change)
