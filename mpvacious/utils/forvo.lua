@@ -97,13 +97,16 @@ local function make_forvo(components)
         return response.stdout, nil
     end
 
+    --- Select the Forvo source format independently of the output container.
+    local function forvo_file_format()
+        if config().audio_format == 'mp3' then
+            return 'mp3'
+        end
+        return 'ogg'
+    end
+
     local function get_pronunciation_url(word)
         -- Forvo offers MP3 and OGG sources, regardless of the destination container.
-        local file_format = 'ogg'
-        if config().audio_format == 'mp3' then
-            file_format = 'mp3'
-        end
-
         local forvo_page, error = fetch_pronunciation_page(word)
         if error then
             return nil, error
@@ -113,7 +116,7 @@ local function make_forvo(components)
         if play_params then
             local iter = string.gmatch(play_params, "'(.-)'")
             local formats = { mp3 = iter(), ogg = iter() }
-            return string.format('https://audio00.forvo.com/%s/%s', file_format, base64.dec(formats[file_format]))
+            return string.format('https://audio00.forvo.com/%s/%s', forvo_file_format(), base64.dec(formats[forvo_file_format()]))
         end
     end
 
