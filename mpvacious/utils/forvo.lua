@@ -78,6 +78,18 @@ local function make_forvo(components)
         return self.cfg_mgr.config()
     end
 
+    --- Select the output muxer independently of the Forvo download format.
+    local function output_file_format()
+        local extension = config().audio_extension:sub(2)
+        if extension == 'm4a' then
+            return 'mp4'
+        end
+        if extension == 'opus' then
+            return 'ogg'
+        end
+        return extension
+    end
+
     local function reencode(source_path, dest_path)
         local args = {
             'mpv',
@@ -93,7 +105,7 @@ local function make_forvo(components)
             '--oacopts-add=compression_level=10',
             '--af-append=silenceremove=1:0:-50dB',
             table.concat { '--oac=', config().audio_codec },
-            table.concat { '--of=', config().audio_format },
+            table.concat { '--of=', output_file_format() },
             table.concat { '--oacopts-add=b=', config().audio_bitrate },
             table.concat { '-o=', dest_path }
         }
