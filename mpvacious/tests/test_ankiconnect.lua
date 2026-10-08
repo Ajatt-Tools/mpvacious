@@ -117,6 +117,40 @@ local function test_get_note_fields()
     end
 end
 
+--- Return model lookup responses covering missing and malformed first fields.
+local function make_first_field_test_cases()
+    return {
+        { result = { { flds = { { ord = 1, name = 'Other' }, { ord = 0, name = 'First' } } } }, field = 'First' },
+        { error = 'connection failed', expected_error = 'connection failed' },
+        { }, { result = {} }, { result = false }, { result = { false } },
+        { result = { {} } }, { result = { { flds = false } } }, { result = { { flds = {} } } },
+        { result = { { flds = { false } } } },
+        { result = { { flds = { { ord = 1, name = 'Other' } } } } },
+        { result = { { flds = { { ord = 0, name = '' } } } } },
+        { result = { { flds = { { ord = 0, name = 42 } } } } },
+    }
+end
+
+--- Return a field/error tuple without crashing on missing note types or malformed responses.
+local function test_get_first_field()
+    for _, case in ipairs(make_first_field_test_cases()) do
+        local client = ankiconnect.new()
+        client.execute = function(options)
+            h.assert_equals(options.request.action, 'findModelsByName')
+            h.assert_equals(options.request.params.modelNames, { 'Test' })
+            return options
+        end
+        client.parse_result = function() return case.result, case.error end
+        local field, error = client.get_first_field('Test')
+        h.assert_equals(field, case.field)
+        local expected_error = case.expected_error
+        if not case.field and not expected_error then
+            expected_error = 'AnkiConnect returned no valid first field for note type Test'
+        end
+        h.assert_equals(error, expected_error)
+    end
+end
+
 --- Forward a failed asynchronous Anki write to the update context.
 local function test_append_media_reports_write_error()
     local logged_error
@@ -172,6 +206,7 @@ local function run_tests()
     test_get_notes_fields()
     test_get_media_dir_path()
     test_get_note_fields()
+    test_get_first_field()
     test_append_media_reports_write_error()
     test_append_media_reports_write_result()
 end

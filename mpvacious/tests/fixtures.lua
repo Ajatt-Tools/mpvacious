@@ -135,7 +135,10 @@ function this.make_update_ankiconnect(state, fields_for_note)
         end,
         --- Return the sentence field used in update notifications.
         get_first_field = function()
-            return 'SentKanji'
+            if state.first_field_error then
+                return nil, state.first_field_error
+            end
+            return state.first_field or 'SentKanji', nil
         end,
         --- Record a write and optionally defer its completion for asynchronous tests.
         append_media = function(note_id, fields, _, on_finish)

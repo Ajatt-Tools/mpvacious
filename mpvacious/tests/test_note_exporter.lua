@@ -121,12 +121,40 @@ local function test_export_without_media_directory()
     h.assert_equals(result.clear_count, 1)
 end
 
+--- Failed model lookup aborts before media creation and keeps the selection for a retry.
+local function test_export_without_first_field()
+    local result = { append_count = 0, clear_count = 0, first_field_error = 'Note type missing' }
+    local jobs = {}
+    local exporter = make_update_test_exporter(result, jobs)
+    exporter.export_to_anki(false)
+    h.assert_equals(#jobs, 0)
+    h.assert_equals(result.fields, nil)
+    h.assert_equals(result.clear_count, 0)
+    h.assert_equals(result.notification, 'Note type missing')
+    h.assert_equals(result.notification_level, 'error')
+    result.first_field_error = nil
+    exporter.export_to_anki(false)
+    h.assert_equals(#jobs, 2)
+    h.assert_equals(result.fields.SentKanji, 'new sentence')
+    h.assert_equals(result.clear_count, 1)
+end
+
+--- An unset first field still receives the fallback required by Anki.
+local function test_export_populates_first_field()
+    local result = { append_count = 0, clear_count = 0, first_field = 'Word' }
+    make_update_test_exporter(result, {}).export_to_anki(false)
+    h.assert_equals(result.fields.Word, '[empty]')
+    h.assert_equals(result.fields.SentKanji, 'new sentence')
+end
+
 --- Run exporter tests.
 local function run_tests()
     test_update_notes_after_media_created()
     test_invalid_subtitle_does_not_start_update()
     test_export_to_anki()
     test_export_without_media_directory()
+    test_export_without_first_field()
+    test_export_populates_first_field()
 end
 
 return {

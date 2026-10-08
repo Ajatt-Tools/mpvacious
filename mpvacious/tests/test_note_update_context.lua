@@ -442,6 +442,19 @@ local function test_update_notification_field_read_failure()
     h.assert_equals(result.notification, 'Updated note #11.')
 end
 
+--- A missing note type in the notification preview does not hide a successful write.
+local function test_update_notification_model_lookup_failure()
+    local result = make_update_test_result()
+    result.first_field_error = 'Note type missing'
+    local jobs = {}
+    local context, subtitle = make_update_test_context { result = result, jobs = jobs }
+    context.perform_update({ note_ids = { 11 }, overwrite = true, subtitle = subtitle })
+    complete_update_test_media_jobs(jobs)
+    h.assert_equals(result.appended_note_ids, { 11 })
+    h.assert_equals(result.preview_reads, {})
+    h.assert_equals(result.notification, 'Updated note #11.')
+end
+
 --- Test blank update subtitles preserve the stored sentence.
 local function test_blank_update_subtitle()
     local result = make_update_test_result()
@@ -536,6 +549,7 @@ local function run_tests(context)
     test_update_field_read_failures()
     test_update_preflight_field_reads()
     test_update_notification_field_read_failure()
+    test_update_notification_model_lookup_failure()
     test_blank_update_subtitle()
     test_media_metadata()
     test_literal_tag_substitutions()
