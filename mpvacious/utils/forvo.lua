@@ -25,14 +25,20 @@ local function url_encode(url)
     return url
 end
 
-local function curl_save(source_url, save_location)
+local function curl_save(source_url, save_location, platform_api)
     local curl_args = { source_url, '-s', '-L', '-o', save_location }
-    return platform.curl_request { args = curl_args }.status == 0
+    return platform_api.curl_request { args = curl_args }.status == 0
 end
 
-local function make_forvo()
+--- Create a pronunciation downloader with optional platform, encoding, cleanup, and logging dependencies.
+local function make_forvo(components)
+    components = components or {}
     local self = {
         output_dir_path = nil,
+        platform_api = components.platform or platform,
+        subprocess = components.subprocess or h.subprocess,
+        remove_file = components.remove_file or os.remove,
+        logger = components.logger or msg,
     }
     local pub = {}
 
@@ -61,7 +67,7 @@ local function make_forvo()
             table.concat { '--oacopts-add=b=', config().audio_bitrate },
             table.concat { '-o=', dest_path }
         }
-        return h.subprocess { args = args }
+        return self.subprocess { args = args }
     end
 
     local function reencode_and_store(source_path, filename)
@@ -71,13 +77,13 @@ local function make_forvo()
     end
 
     local function make_forvo_filename(word)
-        return string.format('forvo_%s%s', platform.windows and os.time() or word, config().audio_extension)
+        return string.format('forvo_%s%s', self.platform_api.windows and os.time() or word, config().audio_extension)
     end
 
     local function get_pronunciation_url(word)
         local file_format = config().audio_extension:sub(2)
         local curl_args = { '-s', string.format('https://forvo.com/search/%s/ja', url_encode(word)) }
-        local forvo_page = platform.curl_request { args = curl_args }.stdout
+        local forvo_page = self.platform_api.curl_request { args = curl_args }.stdout
         local play_params = string.match(forvo_page, "Play%((.-)%);")
 
         if play_params then
@@ -91,21 +97,21 @@ local function make_forvo()
         local audio_url = get_pronunciation_url(word)
 
         if h.is_empty(audio_url) then
-            msg.warn(string.format("Seems like Forvo doesn't have audio for word %s.", word))
+            self.logger.warn(string.format("Seems like Forvo doesn't have audio for word %s.", word))
             return
         end
 
         local filename = make_forvo_filename(word)
-        local tmp_filepath = utils.join_path(platform.tmp_dir(), filename)
+        local tmp_filepath = utils.join_path(self.platform_api.tmp_dir(), filename)
 
         local result
-        if curl_save(audio_url, tmp_filepath) and reencode_and_store(tmp_filepath, filename) then
+        if curl_save(audio_url, tmp_filepath, self.platform_api) and reencode_and_store(tmp_filepath, filename) then
             result = string.format(config().audio_template, filename)
         else
-            msg.warn(string.format("Couldn't download audio for word %s from Forvo.", word))
+            self.logger.warn(string.format("Couldn't download audio for word %s from Forvo.", word))
         end
 
-        os.remove(tmp_filepath)
+        self.remove_file(tmp_filepath)
         return result
     end
 
