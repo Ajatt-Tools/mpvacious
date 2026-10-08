@@ -213,13 +213,21 @@ end
 --- Return quick-creation options with optional clearing observation.
 function this.make_quick_creation_options(state, options)
     options = options or {}
+    local lines = options.lines
+    local cards = options.cards or 1
     return {
         --- Return the chosen number of lines.
         get_lines = function()
-            return options.lines
+            return lines
+        end,
+        --- Return the chosen number of target cards.
+        get_cards = function()
+            return cards
         end,
         --- Record clearing when requested by the test.
         clear_options = function()
+            lines = nil
+            cards = 1
             if options.record_clear then
                 state.clear_count = (state.clear_count or 0) + 1
             end

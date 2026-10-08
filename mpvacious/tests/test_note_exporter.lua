@@ -8,6 +8,8 @@ Note exporter tests.
 local fixtures = require('tests.fixtures')
 local h = require('helpers')
 local note_exporter = require('anki.note_exporter')
+local subtitles_observer = require('subtitles.observer')
+local subtitle = require('subtitles.subtitle')
 
 --- Create a valid subtitle fixture for update tests.
 local function make_valid_update_test_subtitle()
@@ -249,6 +251,43 @@ local function test_export_captures_request()
     h.assert_equals(result.clear_count, 1)
 end
 
+--- Build a file-transition fixture using the real subtitle selection implementation.
+local function make_file_change_test_context()
+    local observer = subtitles_observer.new()
+    observer.import_subs { subtitle.make_subtitle('Old file selection', 20, 22) }
+    local options = fixtures.make_quick_creation_options({}, { lines = 3, cards = 5 })
+    local state, jobs = {}, {}
+    local exporter = note_exporter.new().init {
+        ankiconnect = fixtures.make_update_ankiconnect(state, make_exporter_test_stored_fields),
+        quick_creation_opts = options,
+        subs_observer = observer,
+        encoder = fixtures.make_update_encoder(jobs),
+        forvo = fixtures.make_forvo(),
+        cfg_mgr = fixtures.make_config_manager(make_update_test_config()),
+    }
+    return exporter, observer, options, state, jobs
+end
+
+--- File changes discard the old selection and quick options without creating notes or media.
+local function test_reset_for_file_change()
+    local uninitialized = note_exporter.new()
+    h.assert_equals(uninitialized.reset_for_file_change(), uninitialized)
+    local exporter, observer, options, state, jobs = make_file_change_test_context()
+    h.assert_equals(observer.get_timing('start'), 20)
+    h.assert_equals(options:get_lines(), 3)
+    h.assert_equals(exporter.reset_for_file_change(), exporter)
+    h.assert_equals(observer.get_selected_primary_text(), '')
+    h.assert_equals(observer.has_recorded_dialogs(), false)
+    h.assert_equals(observer.get_timing('start'), -1)
+    h.assert_equals(observer.get_timing('end'), -1)
+    h.assert_equals(observer.user_altered(), false)
+    h.assert_equals(options:get_lines(), nil)
+    h.assert_equals(options:get_cards(), 1)
+    h.assert_equals(state.add_count, nil)
+    h.assert_equals(state.append_count, nil)
+    h.assert_equals(#jobs, 0)
+end
+
 --- Run exporter tests.
 local function run_tests()
     test_update_notes_after_media_created()
@@ -260,6 +299,7 @@ local function run_tests()
     test_export_media_failures()
     test_export_skipped_media()
     test_export_captures_request()
+    test_reset_for_file_change()
 end
 
 return {
