@@ -25,9 +25,14 @@ local function url_encode(url)
     return url
 end
 
+--- Accept only explicit successful command results.
+local function command_succeeded(result)
+    return type(result) == 'table' and result.status == 0
+end
+
 local function curl_save(source_url, save_location, platform_api)
     local curl_args = { source_url, '-s', '-L', '-o', save_location }
-    return platform_api.curl_request { args = curl_args }.status == 0
+    return command_succeeded(platform_api.curl_request { args = curl_args })
 end
 
 --- Create a pronunciation downloader with optional platform, encoding, cleanup, and logging dependencies.
@@ -73,7 +78,7 @@ local function make_forvo(components)
     local function reencode_and_store(source_path, filename)
         local reencoded_path = utils.join_path(self.output_dir_path, filename)
         local result = reencode(source_path, reencoded_path)
-        return result.status == 0
+        return command_succeeded(result)
     end
 
     local function make_forvo_filename(word)
