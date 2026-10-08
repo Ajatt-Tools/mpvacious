@@ -182,23 +182,24 @@ local function make_ankiconnect(components)
         self.execute { request = args, completion_fn = self.make_result_parser_async(result_notify) }
     end
 
-    self.add_note = function(note_fields, tag, gui)
+    --- Add a job containing table note_fields, str tag, bool gui, and table opts (an optional captured configuration).
+    self.add_note = function(job)
         -- https://git.sr.ht/~foosoft/anki-connect#codeaddnotecode
         -- "result" is integer
-        local action = gui and 'guiAddCards' or 'addNote'
+        local action = job.gui and 'guiAddCards' or 'addNote'
         local args = {
             action = action,
             version = 6,
             params = {
                 note = {
-                    deckName = self.config.deck_name,
-                    modelName = self.config.model_name,
-                    fields = note_fields,
+                    deckName = config().deck_name,
+                    modelName = config().model_name,
+                    fields = job.note_fields,
                     options = {
-                        allowDuplicate = self.config.allow_duplicates,
+                        allowDuplicate = config().allow_duplicates,
                         duplicateScope = "deck",
                     },
-                    tags = h.is_empty(tag) and {} or { tag, },
+                    tags = h.is_empty(job.tag) and {} or { job.tag, },
                 }
             }
         }

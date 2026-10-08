@@ -86,11 +86,15 @@ local function make_exporter()
 
     --- Add the captured note only after every requested media job completes successfully.
     local function start_export_media(media, note_fields, gui)
-        local tag = self.note_update_context.substitute_fmt(config().note_tag)
+        local job = {
+            tag = self.note_update_context.substitute_fmt(config().note_tag),
+            note_fields = note_fields,
+            gui = gui,
+        }
         local completion = note_update_context
                 .make_completion_collector()
                 .count(2)
-                .on_success(h.as_callback(self.ankiconnect.add_note, note_fields, tag, gui))
+                .on_success(h.as_callback(self.ankiconnect.add_note, job))
                 .on_failure(on_media_creation_failure)
         -- The shared countdown is ready before any job, including a skipped job, can finish.
         self.subs_observer.clear()
