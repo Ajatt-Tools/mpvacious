@@ -35,6 +35,16 @@ local function curl_save(source_url, save_location, platform_api)
     return command_succeeded(platform_api.curl_request { args = curl_args })
 end
 
+--- Parse the selected pronunciation source from a successfully fetched page.
+local function pronunciation_url_from_page(page, file_format)
+    local play_params = string.match(page, "Play%((.-)%);")
+    if play_params then
+        local iter = string.gmatch(play_params, "'(.-)'")
+        local formats = { mp3 = iter(), ogg = iter() }
+        return string.format('https://audio00.forvo.com/%s/%s', file_format, base64.dec(formats[file_format]))
+    end
+end
+
 --- Create a pronunciation downloader with optional platform, encoding, cleanup, and logging dependencies.
 local function make_forvo(components)
     components = components or {}
@@ -111,13 +121,7 @@ local function make_forvo(components)
         if error then
             return nil, error
         end
-        local play_params = string.match(forvo_page, "Play%((.-)%);")
-
-        if play_params then
-            local iter = string.gmatch(play_params, "'(.-)'")
-            local formats = { mp3 = iter(), ogg = iter() }
-            return string.format('https://audio00.forvo.com/%s/%s', forvo_file_format(), base64.dec(formats[forvo_file_format()]))
-        end
+        return pronunciation_url_from_page(forvo_page, forvo_file_format())
     end
 
     local function get_forvo_pronunciation(word)
