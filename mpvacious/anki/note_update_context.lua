@@ -389,16 +389,17 @@ local function make_note_update_context(components)
         }
     end
 
+    --- Report media failures only after every job in the batch completes.
+    local function on_media_creation_failure(errors)
+        self.notify('Failed to create media: ' .. table.concat(errors, '; '), 'error', 5)
+    end
+
     --- Start media jobs and schedule the resulting note write.
     local function start_update_media(request, future)
-        --- Report media failures only after every job in the batch completes.
-        local function on_failure(errors)
-            self.notify('Failed to create media: ' .. table.concat(errors, '; '), 'error', 5)
-        end
         local completion_for = make_completion_collector()
                 .count(2)
                 .on_success(h.as_callback(change_fields, request, future.new_data))
-                .on_failure(on_failure)
+                .on_failure(on_media_creation_failure)
         future.snapshot.on_finish(completion_for.callback_for('snapshot')).run_async()
         future.audio.on_finish(completion_for.callback_for('audio')).run_async()
     end
