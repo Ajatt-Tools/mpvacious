@@ -276,6 +276,8 @@ as they greatly reduce the size of the generated files.
 Forvo pronunciation downloads use MP3 sources or OGG sources
 depending on the `audio_format` config option.
 The configured Opus container does not change which source format is downloaded.
+If Forvo data is unavailable or malformed,
+mpvacious warns and skips the pronunciation without changing the generated note fields.
 
 If you still use AnkiMobile (the [proprietary](https://www.gnu.org/proprietary/) Anki app),
 set `opus_container` to `m4a` or `webm`. I'll allow iOS to play Opus files, while still maintaining
