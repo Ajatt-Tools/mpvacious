@@ -35,13 +35,28 @@ local function curl_save(source_url, save_location, platform_api)
     return command_succeeded(platform_api.curl_request { args = curl_args })
 end
 
+--- Decode an available source parameter without passing missing data to Base64.
+local function decode_pronunciation_filename(encoded)
+    if not h.is_non_empty_str(encoded) then
+        return nil
+    end
+    local filename = base64.dec(encoded)
+    if h.is_non_empty_str(filename) then
+        return filename
+    end
+    return nil
+end
+
 --- Parse the selected pronunciation source from a successfully fetched page.
 local function pronunciation_url_from_page(page, file_format)
     local play_params = string.match(page, "Play%((.-)%);")
     if play_params then
         local iter = string.gmatch(play_params, "'(.-)'")
         local formats = { mp3 = iter(), ogg = iter() }
-        return string.format('https://audio00.forvo.com/%s/%s', file_format, base64.dec(formats[file_format]))
+        local filename = decode_pronunciation_filename(formats[file_format])
+        if filename then
+            return string.format('https://audio00.forvo.com/%s/%s', file_format, filename)
+        end
     end
 end
 
