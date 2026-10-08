@@ -51,6 +51,24 @@ local function decode_note_fields(result, note_ids)
     return fields_by_note_id, nil
 end
 
+--- Decode the first model field without assuming a successful lookup found a model.
+local function decode_first_field(result, model_name)
+    local error = string.format('AnkiConnect returned no valid first field for note type %s', model_name)
+    if type(result) ~= 'table' or type(result[1]) ~= 'table' then
+        return nil, error
+    end
+    local fields = result[1].flds
+    if type(fields) ~= 'table' then
+        return nil, error
+    end
+    for _, field in pairs(fields) do
+        if type(field) == 'table' and field.ord == 0 and h.is_non_empty_str(field.name) then
+            return field.name, nil
+        end
+    end
+    return nil, error
+end
+
 --- Create an AnkiConnect client for note and media requests.
 local function make_ankiconnect(components)
     components = components or {}
@@ -273,6 +291,7 @@ local function make_ankiconnect(components)
         return fields_by_note_id[note_id], nil
     end
 
+    --- Return the first model field's name or a lookup/response error.
     self.get_first_field = function(model_name)
         local request = {
             action = "findModelsByName",
@@ -284,16 +303,10 @@ local function make_ankiconnect(components)
         local ret = self.execute { request = request }
         local result, error = self.parse_result(ret)
 
-        if error == nil then
-            for _, field in pairs(result[1].flds) do
-                if field.ord == 0 then
-                    return field.name
-                end
-            end
-        else
-            msg.error(string.format("Couldn't retrieve the first field's name of note type %s: %s", model_name, error))
-            return nil
+        if error then
+            return nil, error
         end
+        return decode_first_field(result, model_name)
     end
 
     self.gui_browse = function(query)

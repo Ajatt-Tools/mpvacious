@@ -278,7 +278,11 @@ local function make_note_update_context(components)
 
     --- Notify the user about one updated note.
     local function notify_single_updated_note(note_id)
-        local first_field = self.ankiconnect.get_first_field(config().model_name)
+        local first_field, field_error = self.ankiconnect.get_first_field(config().model_name)
+        if field_error then
+            -- Note fields were already written. Failure to load the preview is not an update failure.
+            return self.notify(string.format("Updated note #%s.", tostring(note_id)))
+        end
         local note_fields, error = self.ankiconnect.get_note_fields(note_id)
         if error then
             -- The update succeeded. An unavailable notification preview must not hide that success.

@@ -40,6 +40,11 @@ local function make_exporter()
 
     --- Create and start media jobs for an ordinary note export.
     local function start_export_media(subtitle)
+        local first_field, field_error = self.ankiconnect.get_first_field(config().model_name)
+        if field_error then
+            -- A missing note type must not start encoding or discard the selection.
+            return nil, field_error
+        end
         local media_dir, error = self.ankiconnect.get_media_dir_path()
         if error then
             return nil, error
@@ -49,20 +54,19 @@ local function make_exporter()
         local audio = self.encoder.audio.create_job(subtitle, self.note_update_context.audio_padding())
         snapshot.run_async()
         audio.run_async()
-        return { snapshot = snapshot, audio = audio }, nil
+        return { snapshot = snapshot, audio = audio, first_field = first_field }, nil
     end
 
     --- Build note fields and ensure the first model field is populated.
-    local function make_export_note_fields(subtitle, snapshot, audio)
-        local first_field = self.ankiconnect.get_first_field(config().model_name)
+    local function make_export_note_fields(subtitle, media)
         local note_fields = self.note_update_context.construct_note_fields {
             primary_text = subtitle['text'],
             secondary_text = subtitle['secondary'],
-            snapshot_filename = snapshot.filename,
-            audio_filename = audio.filename,
+            snapshot_filename = media.snapshot.filename,
+            audio_filename = media.audio.filename,
         }
-        if not h.is_empty(first_field) and h.is_empty(note_fields[first_field]) then
-            note_fields[first_field] = "[empty]"
+        if h.is_empty(note_fields[media.first_field]) then
+            note_fields[media.first_field] = "[empty]"
         end
         return note_fields
     end
@@ -84,7 +88,7 @@ local function make_exporter()
             self.notify(error, 'error', 5)
             return pub
         end
-        local note_fields = make_export_note_fields(sub, media.snapshot, media.audio)
+        local note_fields = make_export_note_fields(sub, media)
         self.ankiconnect.add_note(note_fields, self.note_update_context.substitute_fmt(config().note_tag), gui)
         self.subs_observer.clear()
         return pub
