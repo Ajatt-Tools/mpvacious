@@ -75,12 +75,17 @@ local function make_ankiconnect(components)
     local logger = components.logger or msg
     local self = {}
 
+    --- Return the active configuration.
+    local function config()
+        return self.cfg_mgr.config()
+    end
+
     --- Parameters: request, completion_fn, suppress_log
     --- completion_fn = fn(success, result, error)
     --- https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst#mp-functions
     self.execute = function(o)
-        if not h.is_empty(self.config.ankiconnect_api_key) then
-            o.request.key = self.config.ankiconnect_api_key
+        if not h.is_empty(config().ankiconnect_api_key) then
+            o.request.key = config().ankiconnect_api_key
         end
 
         -- utils.format_json returns a string
@@ -91,7 +96,7 @@ local function make_ankiconnect(components)
             return o.completion_fn and o.completion_fn()
         else
             return platform.json_curl_request {
-                url = self.config.ankiconnect_url,
+                url = config().ankiconnect_url,
                 request_json = request_json,
                 completion_fn = o.completion_fn,
                 suppress_log = o.suppress_log,
@@ -312,7 +317,7 @@ local function make_ankiconnect(components)
 
     self.gui_browse = function(query)
         --- query is a string, e.g. "deck:current", "nid:12345"
-        if not self.config.disable_gui_browse then
+        if not config().disable_gui_browse then
             local request = {
                 action = 'guiBrowse',
                 version = 6,
@@ -369,8 +374,8 @@ local function make_ankiconnect(components)
     end
 
     self.init = function(cfg_mgr)
-        cfg_mgr.fail_if_not_ready()
-        self.config = cfg_mgr.config()
+        self.cfg_mgr = cfg_mgr
+        self.cfg_mgr.fail_if_not_ready()
     end
 
     return self
