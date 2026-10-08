@@ -273,6 +273,10 @@ Otherwise, I recommend sticking with `opus` for audio,
 and `avif` or `webp` for images,
 as they greatly reduce the size of the generated files.
 
+Forvo pronunciation downloads use MP3 sources or OGG sources
+depending on the `audio_format` config option.
+The configured Opus container does not change which source format is downloaded.
+
 If you still use AnkiMobile (the [proprietary](https://www.gnu.org/proprietary/) Anki app),
 set `opus_container` to `m4a` or `webm`. I'll allow iOS to play Opus files, while still maintaining
 compatibility with non-Apple devices. For ancient iOS devices, set `opus_container` to
