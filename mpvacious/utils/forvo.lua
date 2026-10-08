@@ -81,7 +81,11 @@ local function make_forvo(components)
     end
 
     local function get_pronunciation_url(word)
-        local file_format = config().audio_extension:sub(2)
+        -- Forvo offers MP3 and OGG sources, regardless of the destination container.
+        local file_format = 'ogg'
+        if config().audio_format == 'mp3' then
+            file_format = 'mp3'
+        end
         local curl_args = { '-s', string.format('https://forvo.com/search/%s/ja', url_encode(word)) }
         local forvo_page = self.platform_api.curl_request { args = curl_args }.stdout
         local play_params = string.match(forvo_page, "Play%((.-)%);")
