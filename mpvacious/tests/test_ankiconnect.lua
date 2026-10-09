@@ -278,6 +278,59 @@ local function test_execute_default_transport()
     h.assert_equals(request.key, 'different-key')
 end
 
+--- Successful additions browse the original server and honor its Browser preference.
+local function test_add_note_browses_captured_destination()
+    for _, case in ipairs {
+        { captured_disabled = false, current_disabled = false, expected_calls = 2 },
+        { captured_disabled = false, current_disabled = true, expected_calls = 2 },
+        { captured_disabled = true, current_disabled = false, expected_calls = 1 },
+    } do
+        local config = {
+            deck_name = 'Original deck', model_name = 'Original model', allow_duplicates = false,
+            ankiconnect_url = 'http://original-server:8765', ankiconnect_api_key = 'original-key',
+            disable_gui_browse = case.captured_disabled,
+        }
+        local state = {}
+        local client = fixtures.make_note_add_client(state, ankiconnect.new, config, {
+            platform = fixtures.make_recording_anki_platform(state),
+        })
+        client.add_note {
+            note_fields = { Sentence = 'text' }, tag = '', gui = false, opts = h.deep_copy(config),
+        }
+        config.ankiconnect_url = 'http://different-server:8765'
+        config.ankiconnect_api_key = 'different-key'
+        config.disable_gui_browse = case.current_disabled
+        client.parse_result = function() return 123, nil end
+        state.transport_calls[1].completion_fn(true, {}, nil)
+        h.assert_equals(#state.transport_calls, case.expected_calls)
+        h.assert_equals(#state.note_requests, case.expected_calls)
+        if not case.captured_disabled then
+            local request = state.note_requests[2]
+            h.assert_equals(request.action, 'guiBrowse')
+            h.assert_equals(request.params.query, 'nid:123')
+            h.assert_equals(request.key, 'original-key')
+            h.assert_equals(state.transport_calls[2].url, 'http://original-server:8765')
+            h.assert_equals(state.transport_calls[2].request_json:match('"key"%s*:%s*"([^"]*)"'), 'original-key')
+        end
+    end
+end
+
+--- Ordinary Browser requests still use the current profile when no settings are supplied.
+local function test_gui_browse_default_options()
+    local config = { ankiconnect_url = 'http://current-server:8765', ankiconnect_api_key = 'current-key' }
+    local state = {}
+    local client = fixtures.make_note_add_client(state, ankiconnect.new, config, {
+        platform = fixtures.make_recording_anki_platform(state),
+    })
+    client.gui_browse('nid:456')
+    h.assert_equals(state.transport_calls[1].url, config.ankiconnect_url)
+    h.assert_equals(state.note_requests[1].key, config.ankiconnect_api_key)
+    h.assert_equals(state.note_requests[1].params.query, 'nid:456')
+    config.disable_gui_browse = true
+    client.gui_browse('nid:789')
+    h.assert_equals(#state.transport_calls, 1)
+end
+
 --- Run field-fetch, note-add, and transport contract tests without contacting Anki.
 local function run_tests()
     test_get_notes_fields()
@@ -290,6 +343,8 @@ local function run_tests()
     test_add_note_default_options()
     test_execute_captured_transport()
     test_execute_default_transport()
+    test_add_note_browses_captured_destination()
+    test_gui_browse_default_options()
 end
 
 return {
