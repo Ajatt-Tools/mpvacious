@@ -378,4 +378,43 @@ function this.make_recording_anki_platform(state)
     }
 end
 
+--- Create a backend with deterministic codec support and replaceable configuration.
+function this.make_backend_codec_test_context(make_backend, config, supported)
+    local state = { config = config }
+    local support = {
+        avif_encoders = { 'libsvtav1', 'libaom-av1' },
+        ffmpeg_support = { snapshot = supported },
+        mpv_support = { snapshot = supported },
+    }
+    local cfg_mgr = {
+        fail_if_not_ready = h.noop,
+        --- Return the scenario's current configuration after simulated reloads.
+        config = function() return state.config end,
+    }
+    return make_backend(cfg_mgr, support), state
+end
+
+--- Extract the snapshot codec from either backend's generated command.
+function this.backend_test_command_codec(args)
+    for index, arg in ipairs(args) do
+        if arg == '-c:v' then
+            return args[index + 1]
+        end
+        if arg:match('^%-%-ovc=') then
+            return arg:sub(7)
+        end
+    end
+    error('backend test command contains no snapshot codec')
+end
+
+--- Return only the method names exposed by a backend instance.
+function this.backend_test_public_keys(backend)
+    local keys = {}
+    for key in pairs(backend) do
+        table.insert(keys, key)
+    end
+    table.sort(keys)
+    return keys
+end
+
 return this

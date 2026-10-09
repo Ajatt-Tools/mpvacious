@@ -8,6 +8,10 @@ Encoder tests.
 local h = require('helpers')
 local encoder = require('encoder.encoder')
 local fixtures = require('tests.fixtures')
+local defaults = require('config.defaults')
+local config_utils = require('config.utils')
+local ffmpeg_backend = require('encoder.ffmpeg')
+local mpv_backend = require('encoder.mpv')
 
 --- Record reporter messages without printing expected test failures.
 local function make_encoder_test_logger(state)
@@ -75,23 +79,98 @@ local function test_report_creation_result()
     end
 end
 
---- Verify separately initialized encoders retain their own backend and config.
+--- Build validated codec settings for backend initialization scenarios.
+local function make_backend_test_config(snapshot_format, animation_format, use_ffmpeg)
+    local config = defaults.get_default()
+    config.snapshot_format = snapshot_format
+    config.animated_snapshot_format = animation_format
+    config.use_ffmpeg = use_ffmpeg
+    config_utils.validate_config(config)
+    return config
+end
+
+--- Assert the codecs used by public still and animated command builders.
+local function assert_backend_test_codecs(backend, still_codec, animated_codec)
+    local still = backend.make_static_snapshot_args('source.mkv', 'still.image', 1)
+    local animated = backend.make_animated_snapshot_args('source.mkv', 'animated.image', 0, 1)
+    h.assert_equals(fixtures.backend_test_command_codec(still), still_codec)
+    h.assert_equals(fixtures.backend_test_command_codec(animated), animated_codec)
+end
+
+--- Verify separately initialized encoders retain independent backend behavior.
 local function test_encoder_instances_are_isolated()
-    local first_config = fixtures.make_update_config { use_ffmpeg = false }
-    local second_config = fixtures.make_update_config { use_ffmpeg = true }
+    local first_config = make_backend_test_config('webp', 'webp', false)
+    local second_config = make_backend_test_config('jpg', 'webp', true)
     local first = encoder.new()
     local second = encoder.new()
     first.init(fixtures.make_config_manager(first_config))
     second.init(fixtures.make_config_manager(second_config))
     h.assert_equals(first.encoder() == second.encoder(), false)
-    h.assert_equals(first.encoder().config == first_config, true)
-    h.assert_equals(second.encoder().config == second_config, true)
+    assert_backend_test_codecs(first.encoder(), 'libwebp', 'libwebp')
+    assert_backend_test_codecs(second.encoder(), 'mjpeg', 'libwebp')
+end
+
+--- Check selection, fallback, and non-AVIF codecs without exposing private state.
+local function assert_backend_codec_test_case(make_backend, case)
+    local config = make_backend_test_config(case.still, case.animated, false)
+    local original = h.deep_copy(config)
+    local backend = fixtures.make_backend_codec_test_context(make_backend, config, case.supported)
+    h.assert_equals(fixtures.backend_test_public_keys(backend), {
+        'init', 'make_animated_snapshot_args', 'make_audio_args', 'make_static_snapshot_args',
+    })
+    backend.init()
+    backend.init()
+    assert_backend_test_codecs(backend, case.expected_still, case.expected_animated)
+    h.assert_equals(config, original)
+end
+
+--- Verify both backends initialize local codecs and leave configuration untouched.
+local function test_backend_codec_initialization()
+    local cases = {
+        { still = 'avif', animated = 'avif', supported = { ['libsvtav1'] = true, ['libaom-av1'] = true },
+          expected_still = 'libsvtav1', expected_animated = 'libsvtav1' },
+        { still = 'avif', animated = 'avif', supported = {},
+          expected_still = 'libaom-av1', expected_animated = 'libaom-av1' },
+        { still = 'avif', animated = 'webp', supported = { ['libsvtav1'] = true },
+          expected_still = 'libsvtav1', expected_animated = 'libwebp' },
+        { still = 'jpg', animated = 'avif', supported = { ['libsvtav1'] = true },
+          expected_still = 'mjpeg', expected_animated = 'libsvtav1' },
+        { still = 'webp', animated = 'webp', supported = { ['libsvtav1'] = true },
+          expected_still = 'libwebp', expected_animated = 'libwebp' },
+    }
+    for _, make_backend in ipairs { ffmpeg_backend.new, mpv_backend.new } do
+        for _, case in ipairs(cases) do
+            assert_backend_codec_test_case(make_backend, case)
+        end
+    end
+end
+
+--- Verify reloads refresh private codecs when the manager replaces its config table.
+local function test_backend_codecs_refresh_on_reload()
+    for _, make_backend in ipairs { ffmpeg_backend.new, mpv_backend.new } do
+        local config = make_backend_test_config('avif', 'avif', false)
+        local backend, state = fixtures.make_backend_codec_test_context(
+                make_backend, config, { ['libsvtav1'] = true }
+        )
+        backend.init()
+        assert_backend_test_codecs(backend, 'libsvtav1', 'libsvtav1')
+        state.config = make_backend_test_config('jpg', 'webp', false)
+        local original = h.deep_copy(state.config)
+        backend.init()
+        assert_backend_test_codecs(backend, 'mjpeg', 'libwebp')
+        h.assert_equals(state.config, original)
+        state.config = make_backend_test_config('avif', 'avif', false)
+        backend.init()
+        assert_backend_test_codecs(backend, 'libsvtav1', 'libsvtav1')
+    end
 end
 
 --- Run encoder completion-contract tests.
 local function run_tests()
     test_report_creation_result()
     test_encoder_instances_are_isolated()
+    test_backend_codec_initialization()
+    test_backend_codecs_refresh_on_reload()
 end
 
 return {
