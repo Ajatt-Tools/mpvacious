@@ -14,37 +14,10 @@ local exec = require('encoder.executables')
 local function make_ffmpeg_encoder(cfg_mgr)
     local self = { }
     self.cfg_mgr = cfg_mgr
-    self.config = cfg_mgr.config()
 
-    self.prepend = function(...)
-        return {
-            exec.ffmpeg, "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet", "-sn",
-            ...,
-        }
-    end
-
-    self.choose_avif_encoder = function()
-        for _, codec_name in ipairs(codec_support.avif_encoders) do
-            if codec_support.ffmpeg_support['snapshot'][codec_name] then
-                return codec_name
-            end
-        end
-        return nil
-    end
-
-    self.init = function()
-        self.snapshot_codec = self.config.snapshot_codec
-        self.animated_snapshot_codec = self.config.animated_snapshot_codec
-        local chosen_avif_codec = self.choose_avif_encoder()
-        if h.is_empty(chosen_avif_codec) then
-            return
-        end
-        if self.config.snapshot_format == 'avif' then
-            self.snapshot_codec = chosen_avif_codec
-        end
-        if self.config.animated_snapshot_format == 'avif' then
-            self.animated_snapshot_codec = chosen_avif_codec
-        end
+    --- Return the active pronunciation configuration.
+    local function config()
+        return self.cfg_mgr.config()
     end
 
     --- Return the selected AVIF codec or the configured fallback.
@@ -82,20 +55,51 @@ local function make_ffmpeg_encoder(cfg_mgr)
         end
     end
 
+    self.prepend = function(...)
+        return {
+            exec.ffmpeg, "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet", "-sn",
+            ...,
+        }
+    end
+
+    self.choose_avif_encoder = function()
+        for _, codec_name in ipairs(codec_support.avif_encoders) do
+            if codec_support.ffmpeg_support['snapshot'][codec_name] then
+                return codec_name
+            end
+        end
+        return nil
+    end
+
+    self.init = function()
+        self.snapshot_codec = config().snapshot_codec
+        self.animated_snapshot_codec = config().animated_snapshot_codec
+        local chosen_avif_codec = self.choose_avif_encoder()
+        if h.is_empty(chosen_avif_codec) then
+            return
+        end
+        if config().snapshot_format == 'avif' then
+            self.snapshot_codec = chosen_avif_codec
+        end
+        if config().animated_snapshot_format == 'avif' then
+            self.animated_snapshot_codec = chosen_avif_codec
+        end
+    end
+
     self.make_static_snapshot_args = function(source_path, output_path, timestamp)
         local encoder_args
-        if self.config.snapshot_format == 'avif' then
-            encoder_args = make_avif_encoder_args(self.config.snapshot_quality, true)
-        elseif self.config.snapshot_format == 'webp' then
+        if config().snapshot_format == 'avif' then
+            encoder_args = make_avif_encoder_args(config().snapshot_quality, true)
+        elseif config().snapshot_format == 'webp' then
             encoder_args = {
                 '-c:v', self.snapshot_codec,
                 '-compression_level', '6',
-                '-quality', tostring(self.config.snapshot_quality),
+                '-quality', tostring(config().snapshot_quality),
             }
         else
             encoder_args = {
                 '-c:v', self.snapshot_codec,
-                '-q:v', tostring(eutils.quality_to_jpeg_qscale(self.config.snapshot_quality)),
+                '-q:v', tostring(eutils.quality_to_jpeg_qscale(config().snapshot_quality)),
             }
         end
 
@@ -104,7 +108,7 @@ local function make_ffmpeg_encoder(cfg_mgr)
                 '-ss', eutils.toms(timestamp),
                 '-i', source_path,
                 '-map_metadata', '-1',
-                '-vf', eutils.static_scale_filter(self.config),
+                '-vf', eutils.static_scale_filter(config()),
                 '-frames:v', '1',
                 h.unpack(encoder_args)
         )
@@ -114,14 +118,14 @@ local function make_ffmpeg_encoder(cfg_mgr)
 
     self.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
         local encoder_args
-        if self.config.animated_snapshot_format == 'avif' then
-            encoder_args = make_avif_encoder_args(self.config.animated_snapshot_quality, false)
+        if config().animated_snapshot_format == 'avif' then
+            encoder_args = make_avif_encoder_args(config().animated_snapshot_quality, false)
         else
             -- Documentation: https://www.ffmpeg.org/ffmpeg-all.html#libwebp
             encoder_args = {
                 '-c:v', self.animated_snapshot_codec,
                 '-compression_level', '6',
-                '-quality', tostring(self.config.animated_snapshot_quality),
+                '-quality', tostring(config().animated_snapshot_quality),
             }
         end
 
@@ -134,8 +138,8 @@ local function make_ffmpeg_encoder(cfg_mgr)
                 '-loop', '0',
                 '-vf', string.format(
                         'fps=%d,%s',
-                        self.config.animated_snapshot_fps,
-                        eutils.animated_scale_filter(self.config)
+                        config().animated_snapshot_fps,
+                        eutils.animated_scale_filter(config())
                 ),
                 h.unpack(encoder_args)
         )
@@ -179,12 +183,12 @@ local function make_ffmpeg_encoder(cfg_mgr)
         local filters = ''
 
         filters = separate_filters(filters, new_args, args)
-        if self.config.tie_volumes then
+        if config().tie_volumes then
             filters = add_filter(filters, string.format("volume=%.1f", mp.get_property_native('volume') / 100.0))
         end
 
         local user_args = {}
-        for arg in string.gmatch(self.config.ffmpeg_audio_args, "%S+") do
+        for arg in string.gmatch(config().ffmpeg_audio_args, "%S+") do
             table.insert(user_args, arg)
         end
         filters = separate_filters(filters, new_args, user_args)
@@ -225,13 +229,13 @@ local function make_ffmpeg_encoder(cfg_mgr)
 
         local function make_encoding_args(loudnorm_args)
             local encoder_args
-            if self.config.audio_format == 'opus' then
+            if config().audio_format == 'opus' then
                 encoder_args = {
-                    '-c:a', self.config.audio_codec,
+                    '-c:a', config().audio_codec,
                     '-application', 'voip',
                     '-apply_phase_inv', '0', -- Improves mono audio.
                 }
-                if self.config.opus_container == 'm4a' then
+                if config().opus_container == 'm4a' then
                     table.insert(encoder_args, '-f')
                     table.insert(encoder_args, 'mp4')
                 end
@@ -239,13 +243,13 @@ local function make_ffmpeg_encoder(cfg_mgr)
                 -- https://wiki.hydrogenaud.io/index.php?title=LAME#Recommended_encoder_settings:
                 -- "For very low bitrates, up to 100kbps, ABR is most often the best solution."
                 encoder_args = {
-                    '-c:a', self.config.audio_codec,
+                    '-c:a', config().audio_codec,
                     '-compression_level', '0',
                     '-abr', '1',
                 }
             end
 
-            encoder_args = { '-b:a', tostring(self.config.audio_bitrate), h.unpack(encoder_args) }
+            encoder_args = { '-b:a', tostring(config().audio_bitrate), h.unpack(encoder_args) }
             if loudnorm_args then
                 table.insert(encoder_args, '-af')
                 table.insert(encoder_args, loudnorm_args)
@@ -255,12 +259,12 @@ local function make_ffmpeg_encoder(cfg_mgr)
             args_consumer(args)
         end
 
-        if not self.config.loudnorm then
+        if not config().loudnorm then
             make_encoding_args(nil)
             return
         end
 
-        local loudnorm_targets = eutils.make_loudnorm_targets(self.config)
+        local loudnorm_targets = eutils.make_loudnorm_targets(config())
         local args = make_ffargs(
                 '-loglevel', 'info',
                 '-af', loudnorm_targets .. ':print_format=json'

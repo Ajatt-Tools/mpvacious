@@ -14,7 +14,11 @@ local exec = require('encoder.executables')
 local function make_mpv_encoder(cfg_mgr)
     local self = { }
     self.cfg_mgr = cfg_mgr
-    self.config = cfg_mgr.config()
+
+    --- Return the active pronunciation configuration.
+    local function config()
+        return self.cfg_mgr.config()
+    end
 
     self.choose_avif_encoder = function()
         for _, codec_name in ipairs(codec_support.avif_encoders) do
@@ -26,16 +30,16 @@ local function make_mpv_encoder(cfg_mgr)
     end
 
     self.init = function()
-        self.snapshot_codec = self.config.snapshot_codec
-        self.animated_snapshot_codec = self.config.animated_snapshot_codec
+        self.snapshot_codec = config().snapshot_codec
+        self.animated_snapshot_codec = config().animated_snapshot_codec
         local chosen_avif_codec = self.choose_avif_encoder()
         if h.is_empty(chosen_avif_codec) then
             return
         end
-        if self.config.snapshot_format == 'avif' then
+        if config().snapshot_format == 'avif' then
             self.snapshot_codec = chosen_avif_codec
         end
-        if self.config.animated_snapshot_format == 'avif' then
+        if config().animated_snapshot_format == 'avif' then
             self.animated_snapshot_codec = chosen_avif_codec
         end
     end
@@ -55,19 +59,19 @@ local function make_mpv_encoder(cfg_mgr)
 
     self.make_static_snapshot_args = function(source_path, output_path, timestamp)
         local encoder_args
-        if self.config.snapshot_format == 'avif' then
+        if config().snapshot_format == 'avif' then
             encoder_args = {
                 '--ovc=' .. self.snapshot_codec,
                 -- cpu-used < 6 can take a lot of time to encode.
                 '--ovcopts-add=cpu-used=6',
-                string.format('--ovcopts-add=crf=%d', eutils.quality_to_crf_avif(self.config.snapshot_quality)),
+                string.format('--ovcopts-add=crf=%d', eutils.quality_to_crf_avif(config().snapshot_quality)),
                 '--ovcopts-add=still-picture=1',
             }
-        elseif self.config.snapshot_format == 'webp' then
+        elseif config().snapshot_format == 'webp' then
             encoder_args = {
                 '--ovc=' .. self.snapshot_codec,
                 '--ovcopts-add=compression_level=6',
-                string.format('--ovcopts-add=quality=%d', self.config.snapshot_quality),
+                string.format('--ovcopts-add=quality=%d', config().snapshot_quality),
             }
         else
             encoder_args = {
@@ -75,7 +79,7 @@ local function make_mpv_encoder(cfg_mgr)
                 '--vf-add=scale=out_range=jpeg',
                 string.format(
                         '--ovcopts=global_quality=%d*QP2LAMBDA,flags=+qscale',
-                        eutils.quality_to_jpeg_qscale(self.config.snapshot_quality)
+                        eutils.quality_to_jpeg_qscale(config().snapshot_quality)
                 ),
             }
         end
@@ -85,7 +89,7 @@ local function make_mpv_encoder(cfg_mgr)
                 '--audio=no',
                 '--frames=1',
                 '--start=' .. eutils.toms(timestamp),
-                string.format('--vf-add=lavfi=[%s]', eutils.static_scale_filter(self.config)),
+                string.format('--vf-add=lavfi=[%s]', eutils.static_scale_filter(config())),
                 '-o=' .. output_path,
                 h.unpack(encoder_args)
         )
@@ -93,18 +97,18 @@ local function make_mpv_encoder(cfg_mgr)
 
     self.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
         local encoder_args
-        if self.config.animated_snapshot_format == 'avif' then
+        if config().animated_snapshot_format == 'avif' then
             encoder_args = {
                 '--ovc=' .. self.animated_snapshot_codec,
                 -- cpu-used < 6 can take a lot of time to encode.
                 '--ovcopts-add=cpu-used=6',
-                string.format('--ovcopts-add=crf=%d', eutils.quality_to_crf_avif(self.config.animated_snapshot_quality)),
+                string.format('--ovcopts-add=crf=%d', eutils.quality_to_crf_avif(config().animated_snapshot_quality)),
             }
         else
             encoder_args = {
                 '--ovc=' .. self.animated_snapshot_codec,
                 '--ovcopts-add=compression_level=6',
-                string.format('--ovcopts-add=quality=%d', self.config.animated_snapshot_quality),
+                string.format('--ovcopts-add=quality=%d', config().animated_snapshot_quality),
             }
         end
 
@@ -114,8 +118,8 @@ local function make_mpv_encoder(cfg_mgr)
                 '--start=' .. eutils.toms(start_timestamp),
                 '--end=' .. eutils.toms(end_timestamp),
                 '--ofopts-add=loop=0',
-                string.format('--vf-add=fps=%d', self.config.animated_snapshot_fps),
-                string.format('--vf-add=lavfi=[%s]', eutils.animated_scale_filter(self.config)),
+                string.format('--vf-add=fps=%d', config().animated_snapshot_fps),
+                string.format('--vf-add=lavfi=[%s]', eutils.animated_scale_filter(config())),
                 '-o=' .. output_path,
                 h.unpack(encoder_args)
         )
@@ -141,11 +145,11 @@ local function make_mpv_encoder(cfg_mgr)
                     '--end=' .. eutils.toms(end_timestamp),
                     string.format(
                             '--volume=%d',
-                            self.config.tie_volumes and mp.get_property('volume') or 100
+                            config().tie_volumes and mp.get_property('volume') or 100
                     ),
                     ...
             )
-            for arg in string.gmatch(self.config.mpv_audio_args, "%S+") do
+            for arg in string.gmatch(config().mpv_audio_args, "%S+") do
                 table.insert(args, arg)
             end
             return args
@@ -153,27 +157,27 @@ local function make_mpv_encoder(cfg_mgr)
 
         local function make_encoding_args(loudnorm_args)
             local encoder_args
-            if self.config.audio_format == 'opus' then
+            if config().audio_format == 'opus' then
                 encoder_args = {
-                    '--oac=' .. self.config.audio_codec,
+                    '--oac=' .. config().audio_codec,
                     '--oacopts-add=application=voip',
                     '--oacopts-add=apply_phase_inv=0', -- Improves mono audio.
                 }
-                if self.config.opus_container == 'm4a' then
+                if config().opus_container == 'm4a' then
                     table.insert(encoder_args, '--of=mp4')
                 end
             else
                 -- https://wiki.hydrogenaud.io/index.php?title=LAME#Recommended_encoder_settings:
                 -- "For very low bitrates, up to 100kbps, ABR is most often the best solution."
                 encoder_args = {
-                    '--oac=' .. self.config.audio_codec,
+                    '--oac=' .. config().audio_codec,
                     '--oacopts-add=compression_level=0',
                     '--oacopts-add=abr=1',
                 }
             end
 
             local args = make_mpvargs(
-                    '--oacopts-add=b=' .. self.config.audio_bitrate,
+                    '--oacopts-add=b=' .. config().audio_bitrate,
                     '-o=' .. output_path,
                     h.unpack(encoder_args)
             )
@@ -183,12 +187,12 @@ local function make_mpv_encoder(cfg_mgr)
             args_consumer(args)
         end
 
-        if not self.config.loudnorm then
+        if not config().loudnorm then
             make_encoding_args(nil)
             return
         end
 
-        local loudnorm_targets = eutils.make_loudnorm_targets(self.config)
+        local loudnorm_targets = eutils.make_loudnorm_targets(config())
         h.subprocess {
             args = make_mpvargs(
                     '-v',
