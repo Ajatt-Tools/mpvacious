@@ -187,13 +187,10 @@ local function make_ankiconnect(components)
         self.execute { request = args, completion_fn = self.make_result_parser_async(result_notify) }
     end
 
-    --- Add a job containing table note_fields, str tag, bool gui, and table opts (an optional captured configuration).
-    self.add_note = function(job)
-        -- https://git.sr.ht/~foosoft/anki-connect#codeaddnotecode
-        -- "result" is integer
-        local action = job.gui and 'guiAddCards' or 'addNote'
-        local args = {
-            action = action,
+    --- Build the add-note payload from a captured export job.
+    local function make_add_note_request(job)
+        return {
+            action = job.gui and 'guiAddCards' or 'addNote',
             version = 6,
             params = {
                 note = {
@@ -205,9 +202,15 @@ local function make_ankiconnect(components)
                         duplicateScope = "deck",
                     },
                     tags = h.is_empty(job.tag) and {} or { job.tag, },
-                }
-            }
+                },
+            },
         }
+    end
+
+    --- Add a job containing table note_fields, str tag, bool gui, and table opts (an optional captured configuration).
+    self.add_note = function(job)
+        -- https://git.sr.ht/~foosoft/anki-connect#codeaddnotecode
+        -- "result" is integer
         local result_notify = function(note_id, error)
             if not error then
                 h.notify(string.format("Note added. ID = %s.", note_id))
@@ -216,7 +219,10 @@ local function make_ankiconnect(components)
                 h.notify(string.format("Error: %s.", error), "error", 2)
             end
         end
-        self.execute { request = args, completion_fn = self.make_result_parser_async(result_notify) }
+        self.execute {
+            request = make_add_note_request(job),
+            completion_fn = self.make_result_parser_async(result_notify),
+        }
     end
 
     --- Parameters; query, completion_fn, suppress_log
@@ -360,6 +366,7 @@ local function make_ankiconnect(components)
             }
         }
 
+        --- Tag successful writes and forward their result/error to the batch collector.
         local on_finish_wrap = function(result, error)
             if not error then
                 self.add_tag(note_id, tag)
