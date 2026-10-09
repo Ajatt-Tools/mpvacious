@@ -21,6 +21,16 @@ local function make_ffmpeg_encoder(cfg_mgr, support)
 
     self.cfg_mgr = cfg_mgr
 
+    --- Select the first supported AVIF encoder for private codec initialization.
+    function self.choose_avif_encoder()
+        for _, codec_name in ipairs(support.avif_encoders) do
+            if support.ffmpeg_support['snapshot'][codec_name] then
+                return codec_name
+            end
+        end
+        return nil
+    end
+
     --- Return the active encoding configuration.
     local function config()
         return self.cfg_mgr.config()
@@ -92,26 +102,39 @@ local function make_ffmpeg_encoder(cfg_mgr, support)
         return filters
     end
 
-    ------------------------------------------------------------
-    --- Public
-
     --- Prepend common FFmpeg process arguments.
-    self.prepend = function(...)
+    local function prepend(...)
         return {
             exec.ffmpeg, "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet", "-sn",
             ...,
         }
     end
 
-    --- Select the first supported AVIF encoder for private codec initialization.
-    self.choose_avif_encoder = function()
-        for _, codec_name in ipairs(support.avif_encoders) do
-            if support.ffmpeg_support['snapshot'][codec_name] then
-                return codec_name
-            end
+    --- Merge configured audio filters and arguments into a private command.
+    local function append_user_audio_args(args)
+        local new_args = {}
+        local filters = ''
+
+        filters = separate_filters(filters, new_args, args)
+        if config().tie_volumes then
+            filters = add_filter(filters, string.format("volume=%.1f", mp.get_property_native('volume') / 100.0))
         end
-        return nil
+
+        local user_args = {}
+        for arg in string.gmatch(config().ffmpeg_audio_args, "%S+") do
+            table.insert(user_args, arg)
+        end
+        filters = separate_filters(filters, new_args, user_args)
+
+        if #filters > 0 then
+            table.insert(new_args, '-af')
+            table.insert(new_args, filters)
+        end
+        return new_args
     end
+
+    ------------------------------------------------------------
+    --- Public
 
     --- Refresh backend-local codecs without modifying configuration.
     public.init = function()
@@ -136,7 +159,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support)
             }
         end
 
-        local args = self.prepend(
+        local args = prepend(
                 '-an',
                 '-ss', eutils.toms(timestamp),
                 '-i', source_path,
@@ -163,7 +186,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support)
             }
         end
 
-        local args = self.prepend(
+        local args = prepend(
                 '-an',
                 '-ss', eutils.toms(start_timestamp),
                 '-to', eutils.toms(end_timestamp),
@@ -181,29 +204,6 @@ local function make_ffmpeg_encoder(cfg_mgr, support)
         return args
     end
 
-    --- Merge configured audio filters and arguments into a private command.
-    self.append_user_audio_args = function(args)
-        local new_args = {}
-        local filters = ''
-
-        filters = separate_filters(filters, new_args, args)
-        if config().tie_volumes then
-            filters = add_filter(filters, string.format("volume=%.1f", mp.get_property_native('volume') / 100.0))
-        end
-
-        local user_args = {}
-        for arg in string.gmatch(config().ffmpeg_audio_args, "%S+") do
-            table.insert(user_args, arg)
-        end
-        filters = separate_filters(filters, new_args, user_args)
-
-        if #filters > 0 then
-            table.insert(new_args, '-af')
-            table.insert(new_args, filters)
-        end
-        return new_args
-    end
-
     --- Build audio arguments and deliver them after optional loudness analysis.
     public.make_audio_args = function(
             source_path, output_path, start_timestamp, end_timestamp, args_consumer
@@ -217,8 +217,8 @@ local function make_ffmpeg_encoder(cfg_mgr, support)
         end
 
         local function make_ffargs(...)
-            return self.append_user_audio_args(
-                    self.prepend(
+            return append_user_audio_args(
+                    prepend(
                             '-vn',
                             '-ss', eutils.toms(start_timestamp),
                             '-to', eutils.toms(end_timestamp),

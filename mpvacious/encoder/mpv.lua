@@ -21,16 +21,8 @@ local function make_mpv_encoder(cfg_mgr, support)
 
     self.cfg_mgr = cfg_mgr
 
-    --- Return the active encoding configuration.
-    local function config()
-        return self.cfg_mgr.config()
-    end
-
-    ------------------------------------------------------------
-    --- Public
-
     --- Select the first supported AVIF encoder for private codec initialization.
-    self.choose_avif_encoder = function()
+    function self.choose_avif_encoder()
         for _, codec_name in ipairs(support.avif_encoders) do
             if support.mpv_support['snapshot'][codec_name] then
                 return codec_name
@@ -39,13 +31,13 @@ local function make_mpv_encoder(cfg_mgr, support)
         return nil
     end
 
-    --- Refresh backend-local codecs without modifying configuration.
-    public.init = function()
-        eutils.set_codecs(self, config())
+    --- Return the active encoding configuration.
+    local function config()
+        return self.cfg_mgr.config()
     end
 
     --- Prepend private mpv process arguments for the supplied source.
-    self.prepend_common_args = function(source_path, ...)
+    local function prepend_common_args(source_path, ...)
         return {
             exec.mpv,
             source_path,
@@ -56,6 +48,14 @@ local function make_mpv_encoder(cfg_mgr, support)
             '--no-ocopy-metadata',
             ...,
         }
+    end
+
+    ------------------------------------------------------------
+    --- Public
+
+    --- Refresh backend-local codecs without modifying configuration.
+    public.init = function()
+        eutils.set_codecs(self, config())
     end
 
     --- Build the command for a still snapshot using initialized codecs.
@@ -86,7 +86,7 @@ local function make_mpv_encoder(cfg_mgr, support)
             }
         end
 
-        return self.prepend_common_args(
+        return prepend_common_args(
                 source_path,
                 '--audio=no',
                 '--frames=1',
@@ -115,7 +115,7 @@ local function make_mpv_encoder(cfg_mgr, support)
             }
         end
 
-        return self.prepend_common_args(
+        return prepend_common_args(
                 source_path,
                 '--audio=no',
                 '--start=' .. eutils.toms(start_timestamp),
@@ -140,7 +140,7 @@ local function make_mpv_encoder(cfg_mgr, support)
         end
 
         local function make_mpvargs(...)
-            local args = self.prepend_common_args(
+            local args = prepend_common_args(
                     source_path,
                     '--video=no',
                     '--aid=' .. audio_track_id,
