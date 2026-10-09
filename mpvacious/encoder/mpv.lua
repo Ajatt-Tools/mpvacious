@@ -11,14 +11,17 @@ local h = require('helpers')
 local eutils = require('encoder.utils')
 local exec = require('encoder.executables')
 
-local function make_mpv_encoder(cfg_mgr)
+local function make_mpv_encoder(cfg_mgr, support)
+    support = support or codec_support
     local self = { }
-    self.cfg_mgr = cfg_mgr
+    local public = {}
 
     ------------------------------------------------------------
     --- Private
 
-    --- Return the active pronunciation configuration.
+    self.cfg_mgr = cfg_mgr
+
+    --- Return the active encoding configuration.
     local function config()
         return self.cfg_mgr.config()
     end
@@ -26,19 +29,22 @@ local function make_mpv_encoder(cfg_mgr)
     ------------------------------------------------------------
     --- Public
 
+    --- Select the first supported AVIF encoder for private codec initialization.
     self.choose_avif_encoder = function()
-        for _, codec_name in ipairs(codec_support.avif_encoders) do
-            if codec_support.mpv_support['snapshot'][codec_name] then
+        for _, codec_name in ipairs(support.avif_encoders) do
+            if support.mpv_support['snapshot'][codec_name] then
                 return codec_name
             end
         end
         return nil
     end
 
-    self.init = function()
+    --- Refresh backend-local codecs without modifying configuration.
+    public.init = function()
         eutils.set_codecs(self, config())
     end
 
+    --- Prepend private mpv process arguments for the supplied source.
     self.prepend_common_args = function(source_path, ...)
         return {
             exec.mpv,
@@ -52,7 +58,8 @@ local function make_mpv_encoder(cfg_mgr)
         }
     end
 
-    self.make_static_snapshot_args = function(source_path, output_path, timestamp)
+    --- Build the command for a still snapshot using initialized codecs.
+    public.make_static_snapshot_args = function(source_path, output_path, timestamp)
         local encoder_args
         if config().snapshot_format == 'avif' then
             encoder_args = {
@@ -90,7 +97,8 @@ local function make_mpv_encoder(cfg_mgr)
         )
     end
 
-    self.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
+    --- Build the command for an animated snapshot using initialized codecs.
+    public.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
         local encoder_args
         if config().animated_snapshot_format == 'avif' then
             encoder_args = {
@@ -120,7 +128,8 @@ local function make_mpv_encoder(cfg_mgr)
         )
     end
 
-    self.make_audio_args = function(source_path, output_path,
+    --- Build audio arguments and deliver them after optional loudness analysis.
+    public.make_audio_args = function(source_path, output_path,
                                     start_timestamp, end_timestamp, args_consumer)
         local audio_track = h.get_active_track('audio')
         local audio_track_id = mp.get_property("aid")
@@ -211,7 +220,7 @@ local function make_mpv_encoder(cfg_mgr)
         }
     end
 
-    return self
+    return public
 end
 
 return {

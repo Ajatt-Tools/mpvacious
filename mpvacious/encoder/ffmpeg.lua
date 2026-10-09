@@ -11,14 +11,17 @@ local h = require('helpers')
 local eutils = require('encoder.utils')
 local exec = require('encoder.executables')
 
-local function make_ffmpeg_encoder(cfg_mgr)
+local function make_ffmpeg_encoder(cfg_mgr, support)
+    support = support or codec_support
     local self = { }
-    self.cfg_mgr = cfg_mgr
+    local public = {}
 
     ------------------------------------------------------------
     --- Private
 
-    --- Return the active pronunciation configuration.
+    self.cfg_mgr = cfg_mgr
+
+    --- Return the active encoding configuration.
     local function config()
         return self.cfg_mgr.config()
     end
@@ -92,6 +95,7 @@ local function make_ffmpeg_encoder(cfg_mgr)
     ------------------------------------------------------------
     --- Public
 
+    --- Prepend common FFmpeg process arguments.
     self.prepend = function(...)
         return {
             exec.ffmpeg, "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet", "-sn",
@@ -99,20 +103,23 @@ local function make_ffmpeg_encoder(cfg_mgr)
         }
     end
 
+    --- Select the first supported AVIF encoder for private codec initialization.
     self.choose_avif_encoder = function()
-        for _, codec_name in ipairs(codec_support.avif_encoders) do
-            if codec_support.ffmpeg_support['snapshot'][codec_name] then
+        for _, codec_name in ipairs(support.avif_encoders) do
+            if support.ffmpeg_support['snapshot'][codec_name] then
                 return codec_name
             end
         end
         return nil
     end
 
-    self.init = function()
+    --- Refresh backend-local codecs without modifying configuration.
+    public.init = function()
         eutils.set_codecs(self, config())
     end
 
-    self.make_static_snapshot_args = function(source_path, output_path, timestamp)
+    --- Build the command for a still snapshot using initialized codecs.
+    public.make_static_snapshot_args = function(source_path, output_path, timestamp)
         local encoder_args
         if config().snapshot_format == 'avif' then
             encoder_args = make_avif_encoder_args(config().snapshot_quality, true)
@@ -142,7 +149,8 @@ local function make_ffmpeg_encoder(cfg_mgr)
         return args
     end
 
-    self.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
+    --- Build the command for an animated snapshot using initialized codecs.
+    public.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
         local encoder_args
         if config().animated_snapshot_format == 'avif' then
             encoder_args = make_avif_encoder_args(config().animated_snapshot_quality, false)
@@ -173,6 +181,7 @@ local function make_ffmpeg_encoder(cfg_mgr)
         return args
     end
 
+    --- Merge configured audio filters and arguments into a private command.
     self.append_user_audio_args = function(args)
         local new_args = {}
         local filters = ''
@@ -195,7 +204,8 @@ local function make_ffmpeg_encoder(cfg_mgr)
         return new_args
     end
 
-    self.make_audio_args = function(
+    --- Build audio arguments and deliver them after optional loudness analysis.
+    public.make_audio_args = function(
             source_path, output_path, start_timestamp, end_timestamp, args_consumer
     )
         local audio_track = h.get_active_track('audio')
@@ -282,7 +292,7 @@ local function make_ffmpeg_encoder(cfg_mgr)
         }
     end
 
-    return self
+    return public
 end
 
 return {
