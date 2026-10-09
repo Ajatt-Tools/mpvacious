@@ -12,9 +12,11 @@ local fixtures = require('tests.fixtures')
 --- Record reporter messages without printing expected test failures.
 local function make_encoder_test_logger(state)
     return {
+        --- Record a successful media-creation message.
         info = function(message)
             state.level, state.message, state.count = 'info', message, state.count + 1
         end,
+        --- Record an expected media-creation failure message.
         error = function(message)
             state.level, state.message, state.count = 'error', message, state.count + 1
         end,
@@ -33,10 +35,12 @@ local function assert_creation_result_test_case(case)
     local completed_path, completed_error, previewed_path
     local log = { count = 0 }
     local components = {
+        --- Return the scenario's file-existence result for the expected path.
         file_exists = function(path)
             h.assert_equals(path, 'output.ogg')
             return case.exists
         end,
+        --- Record an audio preview without launching playback.
         play_audio = function(path)
             previewed_path = path
         end,

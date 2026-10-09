@@ -354,8 +354,8 @@ function this.make_note_add_client(state, make_client, config, components)
     client.get_media_dir_path = function()
         return '/anki-test-media', nil
     end
-    --- Capture the actual AnkiConnect request without completing a network operation.
     local execute = client.execute
+    --- Record the request and optionally serialize it through the injected fake transport.
     client.execute = function(options)
         state.note_requests = state.note_requests or {}
         table.insert(state.note_requests, options.request)

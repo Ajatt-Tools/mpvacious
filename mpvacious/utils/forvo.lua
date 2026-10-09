@@ -30,6 +30,7 @@ local function command_succeeded(result)
     return type(result) == 'table' and result.status == 0
 end
 
+--- Download pronunciation media and report the synchronous command outcome.
 local function curl_save(source_url, save_location, platform_api)
     local curl_args = { source_url, '-f', '-s', '-L', '-o', save_location }
     return command_succeeded(platform_api.curl_request { args = curl_args })
@@ -74,6 +75,7 @@ local function make_forvo(components)
 
     --- Private
 
+    --- Return the active pronunciation configuration.
     local function config()
         return self.cfg_mgr.config()
     end
@@ -90,6 +92,7 @@ local function make_forvo(components)
         return extension
     end
 
+    --- Reencode downloaded audio with the configured codec and destination muxer.
     local function reencode(source_path, dest_path)
         local args = {
             'mpv',
@@ -112,12 +115,14 @@ local function make_forvo(components)
         return self.subprocess { args = args }
     end
 
+    --- Reencode a source into the collection media directory and check completion.
     local function reencode_and_store(source_path, filename)
         local reencoded_path = utils.join_path(self.output_dir_path, filename)
         local result = reencode(source_path, reencoded_path)
         return command_succeeded(result)
     end
 
+    --- Name a pronunciation file using the platform convention and destination extension.
     local function make_forvo_filename(word)
         return string.format('forvo_%s%s', self.platform_api.windows and os.time() or word, config().audio_extension)
     end
@@ -142,6 +147,7 @@ local function make_forvo(components)
         return 'ogg'
     end
 
+    --- Fetch and parse the selected source URL, propagating page-fetch errors.
     local function get_pronunciation_url(word)
         -- Forvo offers MP3 and OGG sources, regardless of the destination container.
         local forvo_page, error = fetch_pronunciation_page(word)
@@ -151,6 +157,7 @@ local function make_forvo(components)
         return pronunciation_url_from_page(forvo_page, forvo_file_format())
     end
 
+    --- Download and reencode pronunciation media, warning on failure and cleaning up the source.
     local function get_forvo_pronunciation(word)
         local audio_url, error = get_pronunciation_url(word)
         if error then
@@ -179,6 +186,7 @@ local function make_forvo(components)
 
     --- Public
 
+    --- Add pronunciation markup when the configured vocabulary fields need audio.
     function pub.append(new_data, stored_data)
         if config().use_forvo == 'no' then
             -- forvo functionality was disabled in the config file
@@ -210,10 +218,12 @@ local function make_forvo(components)
         return new_data
     end
 
+    --- Set the collection media directory for pronunciation output.
     function pub.set_output_dir(dir_path)
         self.output_dir_path = dir_path
     end
 
+    --- Initialize this downloader with a ready configuration manager.
     function pub.init(cfg_mgr)
         self.cfg_mgr = cfg_mgr
         self.cfg_mgr.fail_if_not_ready()

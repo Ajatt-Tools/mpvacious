@@ -9,6 +9,7 @@ local h = require('helpers')
 local subtitle = require('subtitles.subtitle')
 local speech_collector = require('subtitles.collector')
 
+--- Verify exact boundary overlap counts for empty, partial, and complete matches.
 local function test_count_overlapping_lines()
     local cases = {
         -- {recorded_lines, lines_to_append, expected}
@@ -31,6 +32,7 @@ local function test_count_overlapping_lines()
     end
 end
 
+--- Verify adjacent subtitles do not duplicate shared boundary lines.
 local function test_speech_collector_removes_boundary_overlap()
     local collector = speech_collector.new()
     collector.append_sub(subtitle.make_subtitle("First line", 0, 1))
@@ -38,6 +40,7 @@ local function test_speech_collector_removes_boundary_overlap()
     h.assert_equals(collector.get_all_as_string(), "First line\nSecond line")
 end
 
+--- Verify repetitions separated by a timing gap remain in the speech.
 local function test_speech_collector_keeps_repeated_text_after_gap()
     local collector = speech_collector.new()
     collector.append_sub(subtitle.make_subtitle("Same line", 0, 1))
@@ -45,24 +48,28 @@ local function test_speech_collector_keeps_repeated_text_after_gap()
     h.assert_equals(collector.get_all_as_string(), "Same line\nSame line")
 end
 
+--- Verify collected speech normalizes mixed newline conventions.
 local function test_speech_collector_normalizes_newlines()
     local collector = speech_collector.new()
     collector.append_sub(subtitle.make_subtitle("First line\r\nSecond line\rThird line", 0, 1))
     h.assert_equals(collector.get_all_as_string(), "First line\nSecond line\nThird line")
 end
 
+--- Verify interior empty lines survive subtitle collection.
 local function test_speech_collector_preserves_empty_lines()
     local collector = speech_collector.new()
     collector.append_sub(subtitle.make_subtitle("First line\n\nSecond line", 0, 1))
     h.assert_equals(collector.get_all_as_string(), "First line\n\nSecond line")
 end
 
+--- Verify collected speech omits a trailing newline.
 local function test_speech_collector_drops_trailing_newline()
     local collector = speech_collector.new()
     collector.append_sub(subtitle.make_subtitle("First line\nSecond line\n", 0, 1))
     h.assert_equals(collector.get_all_as_string(), "First line\nSecond line")
 end
 
+--- Run subtitle speech-collection regressions.
 local function run_tests()
     test_count_overlapping_lines()
     test_speech_collector_removes_boundary_overlap()

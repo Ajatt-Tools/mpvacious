@@ -21,6 +21,7 @@ local modules = {
     'tests.test_forvo',
 }
 
+--- Load each registered suite for the standalone and mpv-backed runners.
 local function load_test_suites()
     local suites = {}
     for _, module_name in ipairs(modules) do
@@ -30,14 +31,17 @@ local function load_test_suites()
     return suites
 end
 
+--- Create a runner using the shared ordered suite registry.
 local function make_test_suite_runner()
     local suites = load_test_suites()
     local self = {}
 
+    --- Return the loaded suites keyed by module name.
     function self.suites()
         return suites
     end
 
+    --- Run every registered suite in its declared order.
     function self.run_tests()
         for _, module_name in ipairs(modules) do
             print(string.format("Running %s tests...", module_name))

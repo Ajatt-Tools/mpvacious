@@ -8,6 +8,7 @@ Test helpers.
 local h = require('helpers')
 local utils = require('mp.utils')
 
+--- Build slice scenarios covering bounds, negative indices, and fractional indices.
 local function make_islice_cases()
     return {
         { input = { 1, 2, 3 }, expected = { 1, 2, 3 } },
@@ -28,12 +29,14 @@ local function make_islice_cases()
     }
 end
 
+--- Verify table slices against the boundary scenarios.
 local function test_islice()
     for _, case in ipairs(make_islice_cases()) do
         h.assert_equals(h.itable_slice(case.input, case.start_pos, case.end_pos), case.expected)
     end
 end
 
+--- Build ordered-list equality scenarios.
 local function make_list_equal_cases()
     return {
         { { 1, 2, 3 }, { 1, 2, 3 }, true }, -- identical lists
@@ -47,6 +50,7 @@ local function make_list_equal_cases()
     }
 end
 
+--- Verify list equality respects length, values, and order.
 local function test_list_equal()
     for _, case in ipairs(make_list_equal_cases()) do
         local first, second, expected = h.unpack(case)
@@ -54,6 +58,7 @@ local function test_list_equal()
     end
 end
 
+--- Build structural equality scenarios with reordered and shared tables.
 local function make_equal_table_values_cases(reordered, note_info)
     local shared = { value = 'same' }
     return {
@@ -80,6 +85,7 @@ local function test_equal_table_values()
     end
 end
 
+--- Build nonempty-string boundary scenarios including other Lua value types.
 local function make_is_non_empty_str_cases()
     return {
         { value = '/anki/media', expected = true },
@@ -99,6 +105,7 @@ local function test_is_non_empty_str()
     end
 end
 
+--- Build mixed newline normalization scenarios.
 local function make_normalize_newlines_cases()
     return {
         { "a\r\nb", "a\nb" },
@@ -108,6 +115,7 @@ local function make_normalize_newlines_cases()
     }
 end
 
+--- Verify carriage returns normalize to line feeds.
 local function test_normalize_newlines()
     for _, case in ipairs(make_normalize_newlines_cases()) do
         local text, expected = h.unpack(case)
@@ -115,6 +123,7 @@ local function test_normalize_newlines()
     end
 end
 
+--- Build line-splitting scenarios preserving empty lines.
 local function make_split_line_cases()
     return {
         { "a\nb", { "a", "b" } },
@@ -124,6 +133,7 @@ local function make_split_line_cases()
     }
 end
 
+--- Verify splitting preserves leading and trailing empty lines.
 local function test_split_lines()
     for _, case in ipairs(make_split_line_cases()) do
         local text, expected = h.unpack(case)
@@ -131,6 +141,7 @@ local function test_split_lines()
     end
 end
 
+--- Build line-limit scenarios with truncation and empty input.
 local function make_limit_lines_cases()
     return {
         -- {lines, max_lines, expected}
@@ -142,6 +153,7 @@ local function make_limit_lines_cases()
     }
 end
 
+--- Verify capped lines receive an ellipsis only when truncated.
 local function test_limit_lines()
     for _, case in ipairs(make_limit_lines_cases()) do
         local lines, max_lines, expected = h.unpack(case)
@@ -149,6 +161,7 @@ local function test_limit_lines()
     end
 end
 
+--- Build wrapping scenarios for whitespace, Unicode, and custom separators.
 local function make_str_wrap_cases()
     return {
         { text = "short", n_chars = 25, separator = [[\N]], expected = "short" },
@@ -170,12 +183,14 @@ local function make_str_wrap_cases()
     }
 end
 
+--- Verify wrapping preserves text boundaries and requested separators.
 local function test_str_wrap()
     for _, case in ipairs(make_str_wrap_cases()) do
         h.assert_equals(h.str_wrap(case.text, case.n_chars, case.separator), case.expected)
     end
 end
 
+--- Build subtitle trimming scenarios with annotations and whitespace.
 local function make_trim_cases()
     return {
         { "  hello  ", "hello" },
@@ -186,6 +201,7 @@ local function make_trim_cases()
     }
 end
 
+--- Verify subtitle trimming removes annotations and normalizes spacing.
 local function test_trim()
     for _, case in ipairs(make_trim_cases()) do
         local text, expected = h.unpack(case)
@@ -193,6 +209,7 @@ local function test_trim()
     end
 end
 
+--- Build normalization scenarios for markup, Unicode spaces, and quotation marks.
 local function make_normalized_subtitle_text_cases()
     return {
         { "<b>現実味</b>", "現実味" },
@@ -211,6 +228,7 @@ local function make_normalized_subtitle_text_cases()
     }
 end
 
+--- Verify subtitle normalization produces consistent plain text.
 local function test_normalize_subtitle_text()
     for _, case in ipairs(make_normalized_subtitle_text_cases()) do
         local text, expected = h.unpack(case)
@@ -218,6 +236,7 @@ local function test_normalize_subtitle_text()
     end
 end
 
+--- Verify substring searches treat Lua pattern characters literally.
 local function test_is_substr()
     -- Test is_substr
     h.assert_equals(h.is_substr("abcd", "bc"), true)
@@ -225,12 +244,14 @@ local function test_is_substr()
     h.assert_equals(h.is_substr("abcd", "^.*d.*$"), false)
 end
 
+--- Verify pattern-based searches evaluate Lua patterns.
 local function test_str_contains()
     -- Test str_contains
     h.assert_equals(h.str_contains("abcd", "^.*d.*$"), true)
     h.assert_equals(h.str_contains("abcd", "^.*z.*$"), false)
 end
 
+--- Verify consecutive whitespace collapses to a single space.
 local function test_collapse_whitespace()
     -- Test collapse_whitespace
     h.assert_equals(h.collapse_whitespace("a  b"), "a b")
@@ -240,6 +261,7 @@ local function test_collapse_whitespace()
     h.assert_equals(h.collapse_whitespace("a \t \n b"), "a b")
 end
 
+--- Verify HTML entities decode to their literal characters.
 local function test_unescape_special_characters()
     -- Test unescape_special_characters
     h.assert_equals(h.unescape_special_characters("that&apos;s"), "that's")
@@ -247,6 +269,7 @@ local function test_unescape_special_characters()
     h.assert_equals(h.unescape_special_characters("&lt;tag&gt;"), "<tag>")
 end
 
+--- Verify HTML escaping is idempotent and reversible for plain text.
 local function test_escape_special_characters()
     -- Test escape_special_characters
     h.assert_equals(h.escape_special_characters("that's"), "that&apos;s")
@@ -263,6 +286,7 @@ local function test_escape_special_characters()
     h.assert_equals(h.escape_special_characters(h.escape_special_characters("that's & \"ok\"")), "that&apos;s &amp; &quot;ok&quot;")
 end
 
+--- Build episode-number scenarios including movies without episode numbers.
 local function make_ep_num_cases()
     return {
         { filename = "A Whisker Away.mkv", expected = nil },
@@ -278,6 +302,7 @@ local function make_ep_num_cases()
     }
 end
 
+--- Verify episode extraction across filename conventions.
 local function test_get_episode_number()
     -- Test get_episode_number
     -- Use records instead of a filename → expected map because Lua table entries
@@ -289,6 +314,7 @@ local function test_get_episode_number()
     end
 end
 
+--- Verify shallow copying replaces destination values.
 local function test_shallow_copy()
     local t1 = { 1, 2, 3 }
     local t2 = { 3, 4, 5 }
@@ -296,6 +322,7 @@ local function test_shallow_copy()
     h.assert_equals(t2, t1)
 end
 
+--- Provide a linear reference implementation for insertion-point tests.
 local function find_insertion_point_linear(list, new)
     for idx, value in ipairs(list) do
         if new < value then
@@ -305,6 +332,7 @@ local function find_insertion_point_linear(list, new)
     return #list + 1
 end
 
+--- Build sorted insertion scenarios including duplicates and empty lists.
 local function make_insertion_cases()
     return {
         { { 1, 2, 4, 5 }, 3, 3 },
@@ -317,6 +345,7 @@ local function make_insertion_cases()
     }
 end
 
+--- Compare insertion points with expected indices and the linear reference.
 local function test_find_insertion_point()
     for _, case in ipairs(make_insertion_cases()) do
         local list, new_value, expected = h.unpack(case)
@@ -327,7 +356,9 @@ local function test_find_insertion_point()
     end
 end
 
+--- Verify adjacent-item windows remain within list boundaries.
 local function test_adjacent_items()
+    --- Extract item values from adjacent-item test results.
     local function _items(items)
         local ret = {}
         for _, val in ipairs(items) do
@@ -342,6 +373,7 @@ local function test_adjacent_items()
     h.assert_equals(_items(h.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 1, 3, 3)), { 1, 2, 3, 4, 5, 6, 7 })
 end
 
+--- Verify GNU configuration and script directory conventions.
 local function test_dirs()
     -- GNU only:
     if h.is_gnu() then
@@ -350,6 +382,7 @@ local function test_dirs()
     end
 end
 
+--- Verify character-count limits preserve Unicode and mark truncation.
 local function test_str_limit()
     -- Test str limit
     h.assert_equals(h.str_limit("abc", 3), "abc")
@@ -361,6 +394,7 @@ local function test_str_limit()
     h.assert_equals(h.str_limit("報連a", 2), "報連…") -- one narrow char remains after the cut
 end
 
+--- Verify display-width limits account for wide characters.
 local function test_str_limit_width()
     -- Test str_limit_width: CJK counts double, narrower chars count once.
     h.assert_equals(h.str_limit_width("abc", 3), "abc")
@@ -374,6 +408,7 @@ local function test_str_limit_width()
     h.assert_equals(h.str_limit_width("ЯЯЯЯ", 3), "ЯЯЯ…") -- 2-byte chars count as narrow
 end
 
+--- Verify values clamp to inclusive lower and upper bounds.
 local function test_clamp()
     -- Test clamp
     h.assert_equals(h.clamp(5, 1, 10), 5)
@@ -384,6 +419,7 @@ local function test_clamp()
     h.assert_equals(h.clamp(10, 1, 10), 10)
 end
 
+--- Verify version comparisons distinguish older, newer, and equal releases.
 local function test_version_needs_update()
     -- Test version comparison
     h.assert_equals(h.version_needs_update("v1.0.0", "v1.0.0"), nil)
@@ -396,6 +432,7 @@ local function test_version_needs_update()
     h.assert_equals(h.version_needs_update("v26.1.30.0", "v26.1.30.1"), false)
 end
 
+--- Verify merging preserves sorted order and duplicate values.
 local function test_join_two_sorted_lists()
     -- Test join_two_sorted_lists
     h.assert_equals(h.join_two_sorted_lists({ 1, 3, 5 }, { 2, 4, 6 }), { 1, 2, 3, 4, 5, 6 })
@@ -408,6 +445,7 @@ local function test_join_two_sorted_lists()
     h.assert_equals(h.join_two_sorted_lists({ 1, 1, 2 }, { 1, 3, 3 }), { 1, 1, 1, 2, 3, 3 })
 end
 
+--- Verify HTML tag removal preserves enclosed text.
 local function test_remove_html_tags()
     -- Test h.remove_html_tags(str)
     h.assert_equals(h.remove_html_tags("ヤツらの声に<b>現実味</b>が…"), "ヤツらの声に現実味が…")
@@ -416,6 +454,7 @@ local function test_remove_html_tags()
     h.assert_equals(h.remove_html_tags("<a href=\"test\">test</a>"), "test")
 end
 
+--- Verify literal replacement handles patterns, Unicode, and occurrence limits.
 local function test_str_replace()
     -- Test str_replace
     h.assert_equals(h.str_replace("a.b.a", ".", "-"), "a-b-a")
@@ -425,6 +464,7 @@ local function test_str_replace()
     h.assert_equals(h.str_replace("メイド喫茶", "メイド", "冥土"), "冥土喫茶")
 end
 
+--- Run the shared helper regression suite.
 local function run_tests()
     test_is_substr()
     test_str_contains()

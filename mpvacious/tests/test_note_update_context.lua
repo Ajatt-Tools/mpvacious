@@ -380,6 +380,7 @@ local function assert_update_test_field_failure(case)
     local result = make_update_test_result()
     local jobs = {}
     local context, subtitle = make_update_test_context { result = result, jobs = jobs }
+    --- Fail the bulk read before any note in the scenario has been written.
     result.read_fields = function(note_ids)
         h.assert_equals(result.appended_note_ids, {})
         h.assert_equals(note_ids, { 11, 12 })
@@ -410,6 +411,7 @@ local function test_update_preflight_field_reads()
     local result = make_update_test_result()
     local jobs = {}
     local context, subtitle = make_update_test_context { result = result, jobs = jobs }
+    --- Supply each target's original fields before any writes begin.
     result.read_fields = function(note_ids)
         h.assert_equals(result.appended_note_ids, {})
         h.assert_equals(note_ids, { 11, 12 })
@@ -431,6 +433,7 @@ local function test_update_notification_field_read_failure()
     local result = make_update_test_result()
     local jobs = {}
     local context, subtitle = make_update_test_context { result = result, jobs = jobs }
+    --- Fail only the notification preview after a successful update.
     result.read_preview = function()
         return nil, 'preview unavailable'
     end

@@ -92,6 +92,7 @@ end
 ------------------------------------------------------------
 --- public interface
 
+--- Create an encoder instance with independent backend and output-directory state.
 local function make_encoder()
     -- Contains the state of the encoder
     local self = {
@@ -107,16 +108,19 @@ local function make_encoder()
 
     --- Private
 
+    --- Return the active configuration for this encoder instance.
     local function config()
         return self.cfg_mgr.config()
     end
 
+    --- Encode an animated snapshot and forward command completion.
     local function create_animated_snapshot(start_timestamp, end_timestamp, source_path, output_path, on_finish_fn)
         -- Creates the animated snapshot and then calls on_finish_fn
         local args = self.encoder.make_animated_snapshot_args(source_path, output_path, start_timestamp, end_timestamp)
         h.subprocess { args = args, completion_fn = on_finish_fn }
     end
 
+    --- Create a still image using encoding or mpv's screenshot command.
     local function create_static_snapshot(timestamp, source_path, output_path, on_finish_fn)
         -- Creates a static snapshot, in other words an image, and then calls on_finish_fn
         if not config().screenshot then
@@ -128,6 +132,7 @@ local function make_encoder()
         end
     end
 
+    --- Create and validate the requested static or animated snapshot.
     local function create_snapshot(start_timestamp, end_timestamp, current_timestamp, filename, on_finish_fn)
         if h.is_empty(self.output_dir_path) then
             return msg.error("Output directory wasn't provided. Image file will not be created.")
@@ -149,6 +154,7 @@ local function make_encoder()
         end
     end
 
+    --- Encode padded audio and report its creation result with optional playback.
     local function create_audio(start_timestamp, end_timestamp, filename, padding, on_finish_fn)
         if h.is_empty(self.output_dir_path) then
             return msg.error("Output directory wasn't provided. Audio file will not be created.")
@@ -178,6 +184,7 @@ local function make_encoder()
         end
     end
 
+    --- Name the snapshot using its configured format and timing mode.
     local function make_snapshot_filename(start_time, end_time, timestamp)
         -- Generate a filename for the snapshot, taking care of its extension and whether it's animated or static
         if config().animated_snapshot_enabled then
@@ -187,27 +194,32 @@ local function make_encoder()
         end
     end
 
+    --- Name the audio clip using its timing window and configured extension.
     local function make_audio_filename(start_time, end_time)
         -- Generates a filename for the audio
         return filename_factory.make_filename(start_time, end_time, config().audio_extension)
     end
 
+    --- Prepare a deferred media job or a skipped job when no matching track/field exists.
     local function create_job(job_type, sub, audio_padding)
         local current_timestamp, on_finish_fn
         local job = {}
         if job_type == 'snapshot' and h.has_video_track() and not h.is_empty(config().image_field) then
             current_timestamp = mp.get_property_number("time-pos", 0)
             job.filename = make_snapshot_filename(sub['start'], sub['end'], current_timestamp)
+            --- Start snapshot creation using this job's captured timings.
             job.run_async = function()
                 create_snapshot(sub['start'], sub['end'], current_timestamp, job.filename, on_finish_fn)
             end
         elseif job_type == 'audioclip' and h.has_audio_track() and not h.is_empty(config().audio_field) then
             job.filename = make_audio_filename(sub['start'], sub['end'])
+            --- Start audio creation using this job's captured timings and padding.
             job.run_async = function()
                 create_audio(sub['start'], sub['end'], job.filename, audio_padding, on_finish_fn)
             end
         else
             job.filename = nil
+            --- Complete an intentionally skipped media job without an error.
             job.run_async = function()
                 print(job_type .. " will not be created.")
                 if type(on_finish_fn) == 'function' then
@@ -216,6 +228,7 @@ local function make_encoder()
                 end
             end
         end
+        --- Register the callback receiving the completed media path and error.
         job.on_finish = function(fn)
             on_finish_fn = fn
             return job
@@ -223,6 +236,7 @@ local function make_encoder()
         return job
     end
 
+    --- Select the configured FFmpeg or mpv encoding backend.
     local function choose_backend()
         if config().use_ffmpeg then
             return ffmpeg_encoder.new(self.cfg_mgr)
@@ -233,10 +247,12 @@ local function make_encoder()
 
     --- Public
 
+    --- Return the initialized encoding backend.
     function public.encoder()
         return self.encoder
     end
 
+    --- Initialize this encoder from the supplied configuration manager.
     function public.init(cfg_mgr)
         -- Sets the module to its preconfigured status
         cfg_mgr.fail_if_not_ready()
@@ -245,22 +261,26 @@ local function make_encoder()
         self.encoder.set_avif_encoder()
     end
 
+    --- Set the collection media directory for newly started jobs.
     function public.set_output_dir(dir_path)
         -- Set directory where media files should be saved.
         -- This function is called every time a card is created or updated.
         self.output_dir_path = dir_path
     end
 
+    --- Prepare a snapshot job for the supplied subtitle selection.
     function public.snapshot.create_job(sub)
         return create_job('snapshot', sub)
     end
 
+    --- Toggle animated snapshots in the active configuration.
     function public.snapshot.toggle_animation()
         -- Toggles on and off animated snapshot generation at runtime. It is called whenever ctrl+g is pressed
         config().animated_snapshot_enabled = not config().animated_snapshot_enabled
         h.notify("Animation " .. (config().animated_snapshot_enabled and "enabled" or "disabled"), "info", 2)
     end
 
+    --- Prepare an audio job for the supplied subtitle selection and padding.
     function public.audio.create_job(subtitle, padding)
         return create_job('audioclip', subtitle, padding)
     end

@@ -9,6 +9,7 @@ local h = require('helpers')
 local eutils = require('encoder.utils')
 local defaults = require('config.defaults')
 
+--- Run encoder timing and format utility regressions.
 local function run_tests()
     h.assert_equals(
             eutils.static_scale_filter({

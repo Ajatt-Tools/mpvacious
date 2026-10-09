@@ -21,6 +21,7 @@ local function make_test_secondary_sub(text, start_time, end_time)
     return sub
 end
 
+--- Verify recorded subtitle selections remain isolated between observer instances.
 local function test_instances_keep_recorded_subs_isolated()
     local first = subtitles_observer.new()
     local second = subtitles_observer.new()
@@ -30,6 +31,7 @@ local function test_instances_keep_recorded_subs_isolated()
     h.assert_equals(second.get_selected_primary_text(), "Second")
 end
 
+--- Verify imported tracks retain methods and clearing resets both selections.
 local function test_import_subs_separates_tracks_and_clear_resets_selection()
     local observer = subtitles_observer.new()
     observer.import_subs {
@@ -47,6 +49,7 @@ local function test_import_subs_separates_tracks_and_clear_resets_selection()
     h.assert_equals(observer.get_timing('start'), -1)
 end
 
+--- Verify cycling one observer's autocopy method does not alter another.
 local function test_autoclip_method_state_is_isolated()
     local first = subtitles_observer.new()
     local second = subtitles_observer.new()
@@ -60,8 +63,10 @@ local function test_autocopy_toggle_refreshes_open_menu()
     local observer = subtitles_observer.new()
     local redraws = 0
     local menu = Menu:new { active = true, overlay = {
+        --- Count overlay redraws without rendering an mpv overlay.
         update = function() redraws = redraws + 1 end,
     } }
+    --- Supply the observer's current autocopy status as menu text.
     menu.make_osd = function()
         return { get_text = observer.autocopy_is_enabled_str }
     end
@@ -74,6 +79,7 @@ local function test_autocopy_toggle_refreshes_open_menu()
     h.assert_equals(redraws, 2)
 end
 
+--- Run observer instance, selection, and menu-refresh regressions.
 local function run_tests()
     test_instances_keep_recorded_subs_isolated()
     test_import_subs_separates_tracks_and_clear_resets_selection()

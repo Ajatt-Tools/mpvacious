@@ -63,6 +63,7 @@ local function test_get_notes_fields()
     end
 end
 
+--- Build valid, missing, and failed media-directory response scenarios.
 local function make_get_media_dir_path_scenarios()
     return {
         { result = '/anki/media', expected_path = '/anki/media' },
@@ -77,10 +78,12 @@ end
 local function test_get_media_dir_path()
     for _, case in ipairs(make_get_media_dir_path_scenarios()) do
         local client = ankiconnect.new()
+        --- Verify the media-directory action without contacting Anki.
         client.execute = function(options)
             h.assert_equals(options.request.action, 'getMediaDirPath')
             return options
         end
+        --- Return the scenario's media-directory response.
         client.parse_result = function()
             return case.result, case.error
         end
@@ -90,6 +93,7 @@ local function test_get_media_dir_path()
     end
 end
 
+--- Build singleton field-read scenarios with valid and malformed responses.
 local function make_get_note_fields_scenarios()
     return {
         { result = { { noteId = 123, fields = { Sentence = { value = 'text' }, Audio = { value = '' } } } },
@@ -135,11 +139,13 @@ end
 local function test_get_first_field()
     for _, case in ipairs(make_first_field_test_cases()) do
         local client = ankiconnect.new()
+        --- Verify the requested model lookup without contacting Anki.
         client.execute = function(options)
             h.assert_equals(options.request.action, 'findModelsByName')
             h.assert_equals(options.request.params.modelNames, { 'Test' })
             return options
         end
+        --- Return the scenario's model response and error.
         client.parse_result = function() return case.result, case.error end
         local field, error = client.get_first_field('Test')
         h.assert_equals(field, case.field)
@@ -184,12 +190,15 @@ local function test_append_media_reports_write_result()
     local client = ankiconnect.new()
     local completed_result, completed_error, tagged_note_id
     client.gui_browse = h.noop
+    --- Supply a successful parsed write result.
     client.parse_result = function()
         return 'updated', nil
     end
+    --- Complete the fake write through the real response callback.
     client.execute = function(options)
         options.completion_fn(true, {}, nil)
     end
+    --- Record the note receiving the post-write tag.
     client.add_tag = function(note_id)
         tagged_note_id = note_id
     end
