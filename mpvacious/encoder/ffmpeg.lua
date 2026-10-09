@@ -15,6 +15,9 @@ local function make_ffmpeg_encoder(cfg_mgr)
     local self = { }
     self.cfg_mgr = cfg_mgr
 
+    ------------------------------------------------------------
+    --- Private
+
     --- Return the active pronunciation configuration.
     local function config()
         return self.cfg_mgr.config()
@@ -54,6 +57,40 @@ local function make_ffmpeg_encoder(cfg_mgr)
             return args
         end
     end
+
+    local function add_filter(filters, filter)
+        if #filters == 0 then
+            return filter
+        else
+            return string.format('%s,%s', filters, filter)
+        end
+    end
+
+    local function separate_filters(filters, new_args, args)
+        -- Would've strongly preferred
+        --     if args[i] == '-af' or args[i] == '-filter:a' then
+        --         i = i + 1
+        --         add_filter(args[i])
+        -- but https://lua.org/manual/5.4/manual.html#3.3.5 says that
+        -- "You should not change the value of the control variable during the loop."
+        local expect_filter = false
+        for i = 1, #args do
+            if args[i] == '-af' or args[i] == '-filter:a' then
+                expect_filter = true
+            else
+                if expect_filter then
+                    filters = add_filter(filters, args[i])
+                else
+                    table.insert(new_args, args[i])
+                end
+                expect_filter = false
+            end
+        end
+        return filters
+    end
+
+    ------------------------------------------------------------
+    --- Public
 
     self.prepend = function(...)
         return {
@@ -145,37 +182,6 @@ local function make_ffmpeg_encoder(cfg_mgr)
         )
         table.insert(args, output_path)
         return args
-    end
-
-    local function add_filter(filters, filter)
-        if #filters == 0 then
-            return filter
-        else
-            return string.format('%s,%s', filters, filter)
-        end
-    end
-
-    local function separate_filters(filters, new_args, args)
-        -- Would've strongly preferred
-        --     if args[i] == '-af' or args[i] == '-filter:a' then
-        --         i = i + 1
-        --         add_filter(args[i])
-        -- but https://lua.org/manual/5.4/manual.html#3.3.5 says that
-        -- "You should not change the value of the control variable during the loop."
-        local expect_filter = false
-        for i = 1, #args do
-            if args[i] == '-af' or args[i] == '-filter:a' then
-                expect_filter = true
-            else
-                if expect_filter then
-                    filters = add_filter(filters, args[i])
-                else
-                    table.insert(new_args, args[i])
-                end
-                expect_filter = false
-            end
-        end
-        return filters
     end
 
     self.append_user_audio_args = function(args)

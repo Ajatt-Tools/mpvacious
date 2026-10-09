@@ -15,10 +15,16 @@ local function make_mpv_encoder(cfg_mgr)
     local self = { }
     self.cfg_mgr = cfg_mgr
 
+    ------------------------------------------------------------
+    --- Private
+
     --- Return the active pronunciation configuration.
     local function config()
         return self.cfg_mgr.config()
     end
+
+    ------------------------------------------------------------
+    --- Public
 
     self.choose_avif_encoder = function()
         for _, codec_name in ipairs(codec_support.avif_encoders) do
@@ -202,7 +208,8 @@ local function make_mpv_encoder(cfg_mgr)
             ),
             completion_fn = eutils.parse_loudnorm(
                     loudnorm_targets,
-                    function(stdout, _) -- function takes stdout, stderr
+                    function(stdout, _)
+                        -- function takes stdout, stderr
                         local _, _, json = string.find(stdout, '%[ffmpeg%] ({.-})') -- returns: start, stop, json
                         if json then
                             json = string.gsub(json, '%[ffmpeg%]', '')
