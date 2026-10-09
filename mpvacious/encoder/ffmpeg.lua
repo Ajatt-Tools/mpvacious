@@ -46,15 +46,17 @@ local function make_ffmpeg_encoder(cfg_mgr)
         end
     end
 
-    local function make_avif_encoder_args(quality_value, is_still_picture)
-        local codec = (function()
-            if is_still_picture then
-                return self.config.snapshot_codec
-            else
-                return self.config.animated_snapshot_codec
-            end
-        end)()
+    --- Return the selected AVIF codec or the configured fallback.
+    local function get_avif_codec(is_still_picture)
+        if is_still_picture then
+            return self.config.snapshot_codec
+        else
+            return self.config.animated_snapshot_codec
+        end
+    end
 
+    local function make_avif_encoder_args(quality_value, is_still_picture)
+        local codec = get_avif_codec(is_still_picture)
         if codec == 'libsvtav1' then
             return {
                 '-c:v', codec,
@@ -269,7 +271,8 @@ local function make_ffmpeg_encoder(cfg_mgr)
             args = args,
             completion_fn = eutils.parse_loudnorm(
                     loudnorm_targets,
-                    function(_, stderr) -- function takes stdout, stderr
+                    function(_, stderr)
+                        -- function takes stdout, stderr
                         local _, _, json = string.find(stderr, '%[Parsed_loudnorm_0.-({.-})') -- returns: start, stop, json
                         mp.msg.info("json: " .. tostring(json))
                         return json
