@@ -36,18 +36,7 @@ local function make_mpv_encoder(cfg_mgr)
     end
 
     self.init = function()
-        self.snapshot_codec = config().snapshot_codec
-        self.animated_snapshot_codec = config().animated_snapshot_codec
-        local chosen_avif_codec = self.choose_avif_encoder()
-        if h.is_empty(chosen_avif_codec) then
-            return
-        end
-        if config().snapshot_format == 'avif' then
-            self.snapshot_codec = chosen_avif_codec
-        end
-        if config().animated_snapshot_format == 'avif' then
-            self.animated_snapshot_codec = chosen_avif_codec
-        end
+        eutils.set_codecs(self, config())
     end
 
     self.prepend_common_args = function(source_path, ...)

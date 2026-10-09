@@ -8,6 +8,7 @@ Encoder utilities.
 local utils = require('mp.utils')
 local msg = require('mp.msg')
 local defaults = require('config.defaults')
+local h = require('helpers')
 
 local this = {}
 
@@ -79,6 +80,21 @@ function this.make_loudnorm_targets(config)
             config.loudnorm_range,
             config.loudnorm_peak
     )
+end
+
+function this.set_codecs(encoder, config)
+    encoder.snapshot_codec = config.snapshot_codec
+    encoder.animated_snapshot_codec = config.animated_snapshot_codec
+    local chosen_avif_codec = encoder.choose_avif_encoder()
+    if h.is_empty(chosen_avif_codec) then
+        return
+    end
+    if config.snapshot_format == 'avif' then
+        encoder.snapshot_codec = chosen_avif_codec
+    end
+    if config.animated_snapshot_format == 'avif' then
+        encoder.animated_snapshot_codec = chosen_avif_codec
+    end
 end
 
 function this.parse_loudnorm(loudnorm_targets, json_extractor, loudnorm_consumer)
