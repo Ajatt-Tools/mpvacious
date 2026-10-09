@@ -62,7 +62,7 @@ local function make_config_mgr()
             if h.is_empty(self.encoder.encoder()) then
                 error("encoder is not initialized.")
             end
-            self.encoder.encoder().set_avif_encoder()
+            self.encoder.encoder().init()
         else
             msg.fatal("Attempt to load config when init hasn't been done.")
         end

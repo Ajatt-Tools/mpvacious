@@ -258,7 +258,7 @@ local function make_encoder()
         cfg_mgr.fail_if_not_ready()
         self.cfg_mgr = cfg_mgr
         self.encoder = choose_backend()
-        self.encoder.set_avif_encoder()
+        self.encoder.init()
     end
 
     --- Set the collection media directory for newly started jobs.

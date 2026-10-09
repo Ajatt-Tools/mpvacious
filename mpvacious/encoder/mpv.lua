@@ -25,16 +25,18 @@ local function make_mpv_encoder(cfg_mgr)
         return nil
     end
 
-    self.set_avif_encoder = function()
-        local chosen = self.choose_avif_encoder()
-        if h.is_empty(chosen) then
+    self.init = function()
+        self.snapshot_codec = self.config.snapshot_codec
+        self.animated_snapshot_codec = self.config.animated_snapshot_codec
+        local chosen_avif_codec = self.choose_avif_encoder()
+        if h.is_empty(chosen_avif_codec) then
             return
         end
         if self.config.snapshot_format == 'avif' then
-            self.config.snapshot_codec = chosen
+            self.snapshot_codec = chosen_avif_codec
         end
         if self.config.animated_snapshot_format == 'avif' then
-            self.config.animated_snapshot_codec = chosen
+            self.animated_snapshot_codec = chosen_avif_codec
         end
     end
 
@@ -55,7 +57,7 @@ local function make_mpv_encoder(cfg_mgr)
         local encoder_args
         if self.config.snapshot_format == 'avif' then
             encoder_args = {
-                '--ovc=' .. self.config.snapshot_codec,
+                '--ovc=' .. self.snapshot_codec,
                 -- cpu-used < 6 can take a lot of time to encode.
                 '--ovcopts-add=cpu-used=6',
                 string.format('--ovcopts-add=crf=%d', eutils.quality_to_crf_avif(self.config.snapshot_quality)),
@@ -63,13 +65,13 @@ local function make_mpv_encoder(cfg_mgr)
             }
         elseif self.config.snapshot_format == 'webp' then
             encoder_args = {
-                '--ovc=' .. self.config.snapshot_codec,
+                '--ovc=' .. self.snapshot_codec,
                 '--ovcopts-add=compression_level=6',
                 string.format('--ovcopts-add=quality=%d', self.config.snapshot_quality),
             }
         else
             encoder_args = {
-                '--ovc=' .. self.config.snapshot_codec,
+                '--ovc=' .. self.snapshot_codec,
                 '--vf-add=scale=out_range=jpeg',
                 string.format(
                         '--ovcopts=global_quality=%d*QP2LAMBDA,flags=+qscale',
@@ -93,14 +95,14 @@ local function make_mpv_encoder(cfg_mgr)
         local encoder_args
         if self.config.animated_snapshot_format == 'avif' then
             encoder_args = {
-                '--ovc=' .. self.config.animated_snapshot_codec,
+                '--ovc=' .. self.animated_snapshot_codec,
                 -- cpu-used < 6 can take a lot of time to encode.
                 '--ovcopts-add=cpu-used=6',
                 string.format('--ovcopts-add=crf=%d', eutils.quality_to_crf_avif(self.config.animated_snapshot_quality)),
             }
         else
             encoder_args = {
-                '--ovc=' .. self.config.animated_snapshot_codec,
+                '--ovc=' .. self.animated_snapshot_codec,
                 '--ovcopts-add=compression_level=6',
                 string.format('--ovcopts-add=quality=%d', self.config.animated_snapshot_quality),
             }

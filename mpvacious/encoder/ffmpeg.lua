@@ -32,34 +32,35 @@ local function make_ffmpeg_encoder(cfg_mgr)
         return nil
     end
 
-    self.set_avif_encoder = function()
-        local chosen = self.choose_avif_encoder()
-        if h.is_empty(chosen) then
+    self.init = function()
+        self.snapshot_codec = self.config.snapshot_codec
+        self.animated_snapshot_codec = self.config.animated_snapshot_codec
+        local chosen_avif_codec = self.choose_avif_encoder()
+        if h.is_empty(chosen_avif_codec) then
             return
         end
-
         if self.config.snapshot_format == 'avif' then
-            self.config.snapshot_codec = chosen
+            self.snapshot_codec = chosen_avif_codec
         end
         if self.config.animated_snapshot_format == 'avif' then
-            self.config.animated_snapshot_codec = chosen
+            self.animated_snapshot_codec = chosen_avif_codec
         end
     end
 
     --- Return the selected AVIF codec or the configured fallback.
     local function get_avif_codec(is_still_picture)
         if is_still_picture then
-            return self.config.snapshot_codec
+            return self.snapshot_codec
         else
-            return self.config.animated_snapshot_codec
+            return self.animated_snapshot_codec
         end
     end
 
     local function make_avif_encoder_args(quality_value, is_still_picture)
-        local codec = get_avif_codec(is_still_picture)
-        if codec == 'libsvtav1' then
+        local avif_codec = get_avif_codec(is_still_picture)
+        if avif_codec == 'libsvtav1' then
             return {
-                '-c:v', codec,
+                '-c:v', avif_codec,
                 '-preset', '8',
                 -- Avif quality can be controlled with crf.
                 '-crf', tostring(eutils.quality_to_crf_avif(quality_value)),
@@ -67,7 +68,7 @@ local function make_ffmpeg_encoder(cfg_mgr)
             }
         else
             local args = {
-                '-c:v', codec,
+                '-c:v', avif_codec,
                 -- cpu-used < 6 can take a lot of time to encode.
                 '-cpu-used', '6',
                 -- Avif quality can be controlled with crf.
@@ -87,13 +88,13 @@ local function make_ffmpeg_encoder(cfg_mgr)
             encoder_args = make_avif_encoder_args(self.config.snapshot_quality, true)
         elseif self.config.snapshot_format == 'webp' then
             encoder_args = {
-                '-c:v', self.config.snapshot_codec,
+                '-c:v', self.snapshot_codec,
                 '-compression_level', '6',
                 '-quality', tostring(self.config.snapshot_quality),
             }
         else
             encoder_args = {
-                '-c:v', self.config.snapshot_codec,
+                '-c:v', self.snapshot_codec,
                 '-q:v', tostring(eutils.quality_to_jpeg_qscale(self.config.snapshot_quality)),
             }
         end
@@ -118,7 +119,7 @@ local function make_ffmpeg_encoder(cfg_mgr)
         else
             -- Documentation: https://www.ffmpeg.org/ffmpeg-all.html#libwebp
             encoder_args = {
-                '-c:v', self.config.animated_snapshot_codec,
+                '-c:v', self.animated_snapshot_codec,
                 '-compression_level', '6',
                 '-quality', tostring(self.config.animated_snapshot_quality),
             }
