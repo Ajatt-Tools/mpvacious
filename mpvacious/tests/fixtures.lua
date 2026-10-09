@@ -343,8 +343,8 @@ function this.make_mp_property_reader(properties)
 end
 
 --- Use the real note-request builder while recording transport calls without network access.
-function this.make_note_add_client(state, make_client, config)
-    local client = make_client()
+function this.make_note_add_client(state, make_client, config, components)
+    local client = make_client(components)
     client.init(this.make_config_manager(config))
     --- Supply preflight model metadata for exporter integration tests.
     client.get_first_field = function()
@@ -355,11 +355,27 @@ function this.make_note_add_client(state, make_client, config)
         return '/anki-test-media', nil
     end
     --- Capture the actual AnkiConnect request without completing a network operation.
+    local execute = client.execute
     client.execute = function(options)
         state.note_requests = state.note_requests or {}
         table.insert(state.note_requests, options.request)
+        if components and components.platform then
+            return execute(options)
+        end
     end
     return client
+end
+
+--- Record real-client JSON transport calls without sending network requests.
+function this.make_recording_anki_platform(state)
+    return {
+        --- Capture transport arguments without triggering a completion callback.
+        json_curl_request = function(options)
+            state.transport_calls = state.transport_calls or {}
+            table.insert(state.transport_calls, options)
+            return {}
+        end,
+    }
 end
 
 return this

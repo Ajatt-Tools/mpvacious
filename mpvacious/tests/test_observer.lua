@@ -10,8 +10,9 @@ local subtitle = require('subtitles.subtitle')
 local subtitles_observer = require('subtitles.observer')
 local Menu = require('menu.menu')
 
+--- Construct a secondary subtitle with the real class methods and metatable.
 local function make_test_secondary_sub(text, start_time, end_time)
-    local sub = subtitle.Subtitle.new{
+    local sub = subtitle.Subtitle:new {
         text = text,
         ['start'] = start_time,
         ['end'] = end_time,
@@ -37,6 +38,8 @@ local function test_import_subs_separates_tracks_and_clear_resets_selection()
     }
     h.assert_equals(observer.get_selected_primary_text(), "Primary")
     h.assert_equals(observer.recorded_secondary_subs()[1]['text'], "Secondary")
+    h.assert_equals(observer.recorded_secondary_subs()[1]:duration(), 1)
+    h.assert_equals(observer.collect_from_current().secondary, 'Secondary')
     h.assert_equals(observer.get_timing('start'), 0)
     observer.clear()
     h.assert_equals(observer.has_recorded_dialogs(), false)

@@ -252,26 +252,45 @@ local function test_export_captures_request()
     h.assert_equals(result.clear_count, 1)
 end
 
---- Pending exports retain their original destination when the live profile changes.
-local function test_export_captures_destination()
-    local result, jobs = {}, {}
+--- Return note and transport settings representing the original export profile.
+local function make_export_destination_test_config()
     local config = make_update_test_config()
     config.deck_name = 'Original deck'
     config.allow_duplicates = false
-    local client = fixtures.make_note_add_client(result, ankiconnect.new, config)
-    local exporter = make_update_test_exporter(result, jobs, nil, { config = config, ankiconnect = client })
-    exporter.export_to_anki(false)
-    h.assert_equals(result.note_requests, nil)
-    config.deck_name = 'Different deck'
-    config.model_name = 'Different model'
-    config.allow_duplicates = true
-    complete_export_test_media(jobs)
+    config.ankiconnect_url = 'http://original-server:8765'
+    config.ankiconnect_api_key = 'original-key'
+    return config
+end
+
+--- Verify the captured request payload and transport use the same original profile.
+local function assert_export_destination_test_request(result)
     h.assert_equals(#result.note_requests, 1)
     local note = result.note_requests[1].params.note
     h.assert_equals(note.deckName, 'Original deck')
     h.assert_equals(note.modelName, 'Test model')
     h.assert_equals(note.options.allowDuplicate, false)
     h.assert_equals(note.fields.SentKanji, 'new sentence')
+    h.assert_equals(result.transport_calls[1].url, 'http://original-server:8765')
+    h.assert_equals(result.note_requests[1].key, 'original-key')
+end
+
+--- Pending exports retain their original destination when the live profile changes.
+local function test_export_captures_destination()
+    local result, jobs = {}, {}
+    local config = make_export_destination_test_config()
+    local client = fixtures.make_note_add_client(result, ankiconnect.new, config, {
+        platform = fixtures.make_recording_anki_platform(result),
+    })
+    local exporter = make_update_test_exporter(result, jobs, nil, { config = config, ankiconnect = client })
+    exporter.export_to_anki(false)
+    h.assert_equals(result.note_requests, nil)
+    config.deck_name = 'Different deck'
+    config.model_name = 'Different model'
+    config.allow_duplicates = true
+    config.ankiconnect_url = 'http://different-server:8765'
+    config.ankiconnect_api_key = 'different-key'
+    complete_export_test_media(jobs)
+    assert_export_destination_test_request(result)
 end
 
 --- Build a file-transition fixture using the real subtitle selection implementation.

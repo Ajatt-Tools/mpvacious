@@ -235,7 +235,41 @@ local function test_add_note_default_options()
     h.assert_equals(note.tags, {})
 end
 
---- Run field-fetch and note-add contract tests without contacting Anki.
+--- Captured transport settings override both the live URL and key, including a blank key.
+local function test_execute_captured_transport()
+    for _, case in ipairs { { key = 'original-key', expected_key = 'original-key' }, { key = '' } } do
+        local state = {}
+        local client = ankiconnect.new { platform = fixtures.make_recording_anki_platform(state) }
+        client.init(fixtures.make_config_manager {
+            ankiconnect_url = 'http://different-server:8765',
+            ankiconnect_api_key = 'different-key',
+        })
+        local request = { action = 'version', version = 6 }
+        client.execute {
+            request = request,
+            opts = { ankiconnect_url = 'http://original-server:8765', ankiconnect_api_key = case.key },
+        }
+        h.assert_equals(state.transport_calls[1].url, 'http://original-server:8765')
+        h.assert_equals(request.key, case.expected_key)
+        h.assert_equals(state.transport_calls[1].request_json:match('"key"%s*:%s*"([^"]*)"'), case.expected_key)
+    end
+end
+
+--- Requests without captured transport settings follow the current configuration.
+local function test_execute_default_transport()
+    local config = { ankiconnect_url = 'http://original-server:8765', ankiconnect_api_key = 'original-key' }
+    local state = {}
+    local client = ankiconnect.new { platform = fixtures.make_recording_anki_platform(state) }
+    client.init(fixtures.make_config_manager(config))
+    config.ankiconnect_url = 'http://different-server:8765'
+    config.ankiconnect_api_key = 'different-key'
+    local request = { action = 'version', version = 6 }
+    client.execute { request = request }
+    h.assert_equals(state.transport_calls[1].url, 'http://different-server:8765')
+    h.assert_equals(request.key, 'different-key')
+end
+
+--- Run field-fetch, note-add, and transport contract tests without contacting Anki.
 local function run_tests()
     test_get_notes_fields()
     test_get_media_dir_path()
@@ -245,6 +279,8 @@ local function run_tests()
     test_append_media_reports_write_result()
     test_add_note_captured_options()
     test_add_note_default_options()
+    test_execute_captured_transport()
+    test_execute_default_transport()
 end
 
 return {
