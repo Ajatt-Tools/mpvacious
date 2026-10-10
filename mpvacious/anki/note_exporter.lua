@@ -5,6 +5,7 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
 local h = require('helpers')
 local note_update_context = require('anki.note_update_context')
+local snapshot = require('config.snapshot')
 
 --- Create the public Anki note export command adapter.
 local function make_exporter()
@@ -91,10 +92,12 @@ local function make_exporter()
             note_fields = note_fields,
             gui = gui,
         }
+        -- Create a fresh client with detached settings for this transaction.
+        local ankiconnect = self.ankiconnect.new(snapshot.new(self.cfg_mgr))
         local completion = note_update_context
                 .make_completion_collector()
                 .count(2)
-                .on_success(h.as_callback(self.ankiconnect.add_note, job))
+                .on_success(h.as_callback(ankiconnect.add_note, job))
                 .on_failure(on_media_creation_failure)
         -- The shared countdown is ready before any job, including a skipped job, can finish.
         self.subs_observer.clear()

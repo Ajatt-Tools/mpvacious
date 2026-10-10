@@ -73,6 +73,7 @@ end
 local function make_ankiconnect(components)
     components = components or {}
     local logger = components.logger or msg
+    local platform_api = components.platform or platform
     local self = {}
 
     --- Return the active configuration.
@@ -95,7 +96,7 @@ local function make_ankiconnect(components)
         if error ~= nil or request_json == "null" then
             return o.completion_fn and o.completion_fn()
         else
-            return platform.json_curl_request {
+            return platform_api.json_curl_request {
                 url = config().ankiconnect_url,
                 request_json = request_json,
                 completion_fn = o.completion_fn,
@@ -207,7 +208,7 @@ local function make_ankiconnect(components)
         }
     end
 
-    --- Add a job containing table note_fields, str tag, bool gui, and table opts (an optional captured configuration).
+    --- Add captured note_fields, tag, and gui mode using this client's configuration.
     self.add_note = function(job)
         -- https://git.sr.ht/~foosoft/anki-connect#codeaddnotecode
         -- "result" is integer
@@ -380,9 +381,16 @@ local function make_ankiconnect(components)
         self.execute { request = request, completion_fn = self.make_result_parser_async(on_finish_wrap) }
     end
 
+    --- Initialize this client with its live or transaction-local configuration provider.
     self.init = function(cfg_mgr)
         self.cfg_mgr = cfg_mgr
         self.cfg_mgr.fail_if_not_ready()
+        return self
+    end
+
+    --- Create a fresh client with a supplied configuration and the same I/O dependencies.
+    self.new = function(cfg_mgr)
+        return make_ankiconnect(components).init(cfg_mgr)
     end
 
     return self
