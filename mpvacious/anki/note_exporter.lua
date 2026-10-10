@@ -80,31 +80,6 @@ local function make_exporter()
         return note_fields
     end
 
-    --- Report media errors after both jobs have completed.
-    local function on_media_creation_failure(errors)
-        self.notify('Failed to create media: ' .. table.concat(errors, '; '), 'error', 5)
-    end
-
-    --- Add the captured note only after every requested media job completes successfully.
-    local function start_export_media(media, note_fields, gui)
-        local job = {
-            tag = self.note_update_context.substitute_fmt(config().note_tag),
-            note_fields = note_fields,
-            gui = gui,
-        }
-        -- Create a fresh client with detached settings for this transaction.
-        local ankiconnect = self.ankiconnect.new(snapshot.new(self.cfg_mgr))
-        local completion = note_update_context
-                .make_completion_collector()
-                .count(2)
-                .on_success(h.as_callback(ankiconnect.add_note, job))
-                .on_failure(on_media_creation_failure)
-        -- The shared countdown is ready before any job, including a skipped job, can finish.
-        self.subs_observer.clear()
-        media.snapshot.on_finish(completion.callback_for('snapshot')).run_async()
-        media.audio.on_finish(completion.callback_for('audio')).run_async()
-    end
-
     --- Export the current subtitle as a new Anki note.
     function pub.export_to_anki(gui)
         pub.maybe_reload_config()
