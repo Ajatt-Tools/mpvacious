@@ -545,6 +545,20 @@ local function make_note_update_context(components)
         return pub
     end
 
+    --- Create a context with independent Anki and encoder instances using one provider.
+    function pub.new(cfg_mgr)
+        return make_note_update_context {
+            cfg_mgr = cfg_mgr,
+            ankiconnect = self.ankiconnect.new(cfg_mgr),
+            encoder = self.encoder.new(cfg_mgr),
+            forvo = self.forvo.new(cfg_mgr),
+            subs_observer = self.subs_observer,
+            quick_creation_opts = self.quick_creation_opts,
+            mp = mp_api,
+            notify = self.notify,
+        }
+    end
+
     return pub
 end
 
