@@ -93,7 +93,12 @@ end
 --- public interface
 
 --- Create an encoder instance with independent backend and output-directory state.
-local function make_encoder()
+local function make_encoder(components)
+    components = components or {}
+    local subprocess = components.subprocess or h.subprocess
+    local has_video_track = components.has_video_track or h.has_video_track
+    local filenames = components.filename_factory or filename_factory
+    local mp_api = components.mp or mp
     -- Contains the state of the encoder
     local self = {
         config = nil,
@@ -117,7 +122,7 @@ local function make_encoder()
     local function create_animated_snapshot(start_timestamp, end_timestamp, source_path, output_path, on_finish_fn)
         -- Creates the animated snapshot and then calls on_finish_fn
         local args = self.encoder.make_animated_snapshot_args(source_path, output_path, start_timestamp, end_timestamp)
-        h.subprocess { args = args, completion_fn = on_finish_fn }
+        subprocess { args = args, completion_fn = on_finish_fn }
     end
 
     --- Create a still image using encoding or mpv's screenshot command.
@@ -125,10 +130,10 @@ local function make_encoder()
         -- Creates a static snapshot, in other words an image, and then calls on_finish_fn
         if not config().screenshot then
             local args = self.encoder.make_static_snapshot_args(source_path, output_path, timestamp)
-            h.subprocess { args = args, completion_fn = on_finish_fn }
+            subprocess { args = args, completion_fn = on_finish_fn }
         else
             local args = { 'screenshot-to-file', output_path, 'video', }
-            mp.command_native_async(args, on_finish_fn)
+            mp_api.command_native_async(args, on_finish_fn)
         end
     end
 
@@ -140,7 +145,7 @@ local function make_encoder()
 
         -- Calls the proper function depending on whether or not the snapshot should be animated
         if not h.is_empty(config().image_field) then
-            local source_path = mp.get_property("path")
+            local source_path = mp_api.get_property("path")
             local output_path = utils.join_path(self.output_dir_path, filename)
 
             local on_finish_wrap = report_creation_result(output_path).on_finish(on_finish_fn)
@@ -161,7 +166,7 @@ local function make_encoder()
         end
 
         if not h.is_empty(config().audio_field) then
-            local source_path = mp.get_property("path")
+            local source_path = mp_api.get_property("path")
             local output_path = utils.join_path(self.output_dir_path, filename)
 
             if padding > 0 then
@@ -173,7 +178,7 @@ local function make_encoder()
                 local completion = report_creation_result(output_path)
                         .on_finish(on_finish_fn)
                         .preview_audio(config().preview_audio)
-                h.subprocess { args = args, completion_fn = completion.run }
+                subprocess { args = args, completion_fn = completion.run }
             end
 
             self.encoder.make_audio_args(
@@ -188,24 +193,24 @@ local function make_encoder()
     local function make_snapshot_filename(start_time, end_time, timestamp)
         -- Generate a filename for the snapshot, taking care of its extension and whether it's animated or static
         if config().animated_snapshot_enabled then
-            return filename_factory.make_filename(start_time, end_time, config().animated_snapshot_extension)
+            return filenames.make_filename(start_time, end_time, config().animated_snapshot_extension)
         else
-            return filename_factory.make_filename(timestamp, config().snapshot_extension)
+            return filenames.make_filename(timestamp, config().snapshot_extension)
         end
     end
 
     --- Name the audio clip using its timing window and configured extension.
     local function make_audio_filename(start_time, end_time)
         -- Generates a filename for the audio
-        return filename_factory.make_filename(start_time, end_time, config().audio_extension)
+        return filenames.make_filename(start_time, end_time, config().audio_extension)
     end
 
     --- Prepare a deferred media job or a skipped job when no matching track/field exists.
     local function create_job(job_type, sub, audio_padding)
         local current_timestamp, on_finish_fn
         local job = {}
-        if job_type == 'snapshot' and h.has_video_track() and not h.is_empty(config().image_field) then
-            current_timestamp = mp.get_property_number("time-pos", 0)
+        if job_type == 'snapshot' and has_video_track() and not h.is_empty(config().image_field) then
+            current_timestamp = mp_api.get_property_number("time-pos", 0)
             job.filename = make_snapshot_filename(sub['start'], sub['end'], current_timestamp)
             --- Start snapshot creation using this job's captured timings.
             job.run_async = function()
@@ -259,6 +264,7 @@ local function make_encoder()
         self.cfg_mgr = cfg_mgr
         self.encoder = choose_backend()
         self.encoder.init()
+        return public
     end
 
     --- Set the collection media directory for newly started jobs.
@@ -283,6 +289,11 @@ local function make_encoder()
     --- Prepare an audio job for the supplied subtitle selection and padding.
     function public.audio.create_job(subtitle, padding)
         return create_job('audioclip', subtitle, padding)
+    end
+
+    --- Create an independently initialized encoder for another configuration provider.
+    function public.new(cfg_mgr)
+        return make_encoder(components).init(cfg_mgr)
     end
 
     return public
