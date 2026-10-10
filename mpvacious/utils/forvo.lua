@@ -225,8 +225,14 @@ local function make_forvo(components)
 
     --- Initialize this downloader with a ready configuration manager.
     function pub.init(cfg_mgr)
+        cfg_mgr.fail_if_not_ready()
         self.cfg_mgr = cfg_mgr
-        self.cfg_mgr.fail_if_not_ready()
+        return pub
+    end
+
+    --- Create an independent downloader retaining constructor I/O dependencies.
+    function pub.new(cfg_mgr)
+        return make_forvo(components).init(cfg_mgr)
     end
 
     return pub
