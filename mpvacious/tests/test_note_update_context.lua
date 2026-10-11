@@ -538,6 +538,47 @@ local function test_environment_tag_substitution()
     h.assert_equals(context.substitute_fmt('%e'), h.remove_leading_trailing_spaces(expected))
 end
 
+--- Assert every target receives the invocation tag rather than later playback metadata.
+local function assert_update_invocation_tag_test_results(result, case)
+    local expected = case.name .. '|/videos/' .. case.filename .. '|01m05s000ms|' .. case.name
+    for _, note_id in ipairs(case.note_ids) do
+        h.assert_equals(result.tags_by_note[note_id], expected)
+    end
+    h.assert_equals(result.clear_count, 1)
+end
+
+--- Advance playback between media completions while retaining the original update tag.
+local function assert_update_invocation_tag_test_case(case)
+    local result, jobs = make_update_test_result(), {}
+    local properties = { filename = case.filename, path = '/videos/' .. case.filename, ['time-pos'] = 65 }
+    local config = make_update_test_config(true)
+    config.note_tag = '%n|%f|%t|%n'
+    local context, subtitle = make_update_test_context {
+        result = result, jobs = jobs, config = config, mp = fixtures.make_mp_property_reader(properties),
+    }
+    local request = { note_ids = case.note_ids, overwrite = case.overwrite, subtitle = subtitle }
+    local original_request = h.deep_copy(request)
+    context.perform_update(request)
+    properties.filename, properties.path, properties['time-pos'] = 'later.mkv', '/later/later.mkv', 125
+    jobs[1].callback('snapshot.avif', nil)
+    h.assert_equals(result.tags_by_note, nil)
+    properties.filename, properties.path, properties['time-pos'] = 'last.mkv', '/last/last.mkv', 185
+    jobs[2].callback('audio.ogg', nil)
+    assert_update_invocation_tag_test_results(result, case)
+    h.assert_equals(request, original_request)
+end
+
+--- Capture literal filename/path values and playback time for single and multi-note updates.
+local function test_update_captures_invocation_tag()
+    for _, case in ipairs {
+        { filename = 'episode.mkv', name = 'episode', note_ids = { 11 }, overwrite = false },
+        { filename = '100% fun.mkv', name = '100%_fun', note_ids = { 11, 12 }, overwrite = true },
+        { filename = 'part%1.mkv', name = 'part%1', note_ids = { 11, 12 }, overwrite = false },
+    } do
+        assert_update_invocation_tag_test_case(case)
+    end
+end
+
 --- Run context tests without requiring mpv-backed components.
 local function run_tests(context)
     context = context or make_field_merge_test_context()
@@ -557,6 +598,7 @@ local function run_tests(context)
     test_media_metadata()
     test_literal_tag_substitutions()
     test_environment_tag_substitution()
+    test_update_captures_invocation_tag()
     test_update_media_merge()
     test_join_fields(context)
     test_join_fields_duplicates(context)

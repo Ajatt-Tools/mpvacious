@@ -186,9 +186,11 @@ function this.make_update_ankiconnect(state, fields_for_note, cfg_mgr)
             return state.first_field or 'SentKanji', nil
         end,
         --- Record a write and optionally defer its completion for asynchronous tests.
-        append_media = function(note_id, fields, _, on_finish)
+        append_media = function(note_id, fields, tag, on_finish)
             state.write_cfg_mgrs = state.write_cfg_mgrs or {}
             table.insert(state.write_cfg_mgrs, cfg_mgr)
+            state.tags_by_note = state.tags_by_note or {}
+            state.tags_by_note[note_id] = tag
             state.append_count = (state.append_count or 0) + 1
             state.appended_note_ids = state.appended_note_ids or {}
             state.fields_by_note = state.fields_by_note or {}
