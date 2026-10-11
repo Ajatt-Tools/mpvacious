@@ -578,4 +578,74 @@ function this.make_update_transport_test_client(state, make_client, cfg_mgr)
     return client
 end
 
+--- Return complete measured statistics in the backend's expected JSON shape.
+local function loudnorm_test_json()
+    return '{"input_i":"-20","input_lra":"3","input_tp":"-2","input_thresh":"-30","target_offset":"1"}'
+end
+
+--- Supply deterministic loudness statistics without depending on the standalone JSON stub.
+local function parse_loudnorm_test_json(state, json)
+    h.assert_equals(json, loudnorm_test_json())
+    state.parsed_json_count = (state.parsed_json_count or 0) + 1
+    return {
+        input_i = '-20', input_lra = '3', input_tp = '-2', input_thresh = '-30', target_offset = '1',
+    }
+end
+
+--- Create a backend with deferred analysis and isolated track, property, logging, and JSON boundaries.
+function this.make_loudnorm_test_context(make_backend, cfg_mgr)
+    local state = { analysis = {}, encoding = {}, warnings = {} }
+    local components = {
+        mp = this.make_mp_property_reader { aid = '2', volume = 100 },
+        --- Supply a known internal audio track without changing shared mp functions.
+        get_active_track = function() return { ['ff-index'] = 1, external = false } end,
+        --- Save analysis callbacks without launching an encoder process.
+        subprocess = function(options) table.insert(state.analysis, options) end,
+        --- Decode the controlled successful analysis result.
+        parse_json = function(json) return parse_loudnorm_test_json(state, json) end,
+        logger = {
+            info = h.noop,
+            --- Capture expected normalization fallbacks without printing test errors.
+            warn = function(message) table.insert(state.warnings, message) end,
+        },
+    }
+    local backend = make_backend(cfg_mgr, nil, components)
+    backend.init()
+    backend.make_audio_args(
+            'source.mkv', 'output' .. cfg_mgr.config().audio_extension, 1, 2,
+            this.make_loudnorm_test_consumer(state)
+    )
+    return backend, state
+end
+
+--- Record the command delivered after deferred loudness analysis completes.
+function this.make_loudnorm_test_consumer(state)
+    return function(args) table.insert(state.encoding, args) end
+end
+
+--- Complete analysis with controlled successful output or an explicit process failure.
+function this.complete_loudnorm_test_analysis(state, success)
+    local result = { status = 1, stdout = '', stderr = '' }
+    if success then
+        result = {
+            status = 0,
+            stdout = '[ffmpeg] ' .. loudnorm_test_json(),
+            stderr = '[Parsed_loudnorm_0 @ test] ' .. loudnorm_test_json(),
+        }
+    end
+    state.analysis[1].completion_fn(success, result, nil)
+end
+
+--- Read a generated FFmpeg option or an equals-delimited mpv option.
+function this.encoder_test_option_value(args, option)
+    for index, arg in ipairs(args) do
+        if arg == option then
+            return args[index + 1]
+        elseif arg:sub(1, #option + 1) == option .. '=' then
+            return arg:sub(#option + 2)
+        end
+    end
+    return nil
+end
+
 return this

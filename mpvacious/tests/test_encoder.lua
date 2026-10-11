@@ -224,7 +224,104 @@ local function test_encoder_constructor_requires_ready_manager()
     assert_backend_test_codecs(original.encoder(), 'mjpeg', 'libwebp')
 end
 
---- Run encoder completion, constructor, and backend codec tests.
+--- Build a normalization profile with distinctive original encoding and user arguments.
+local function make_loudnorm_profile_test_config(audio_format)
+    local config = make_backend_test_config('jpg', 'webp', false)
+    config.audio_format = audio_format
+    config.opus_container = 'm4a'
+    config.audio_bitrate = '32k'
+    config.loudnorm = true
+    config.ffmpeg_audio_args = '-ar 24000 -af highpass=f=80'
+    config.mpv_audio_args = '--audio-samplerate=24000 --speed=1.25'
+    config_utils.validate_config(config)
+    return config
+end
+
+--- Change all settings consulted between analysis and final command generation.
+local function change_loudnorm_profile_test_config(config)
+    local audio_format = 'opus'
+    if config.audio_format == 'opus' then audio_format = 'mp3' end
+    h.shallow_copy({
+        audio_format = audio_format, opus_container = 'webm', audio_bitrate = '96k',
+        loudnorm = false, loudnorm_target = -9, loudnorm_range = 4, loudnorm_peak = -0.5,
+        ffmpeg_audio_args = '-ar 48000 -af lowpass=f=5000',
+        mpv_audio_args = '--audio-samplerate=48000 --speed=2',
+    }, config)
+    config_utils.validate_config(config)
+end
+
+--- Assert successful and fallback analysis both retain the original normalization targets.
+local function assert_loudnorm_profile_test_filter(args, case, success)
+    local filter = fixtures.encoder_test_option_value(args, case.filter_option)
+    h.assert_equals(h.is_substr(filter, 'loudnorm=I=-16:LRA=11:TP=-1.5:dual_mono=true'), true)
+    h.assert_equals(h.is_substr(filter, 'measured_I=-20'), success)
+    if case.make_backend == ffmpeg_backend.new then
+        h.assert_equals(h.is_substr(filter, 'highpass=f=80'), true)
+        h.assert_equals(h.is_substr(filter, 'lowpass=f=5000'), false)
+    else
+        h.assert_equals(fixtures.encoder_test_option_value(args, '--speed'), '1.25')
+    end
+end
+
+--- Verify original codecs, containers, bitrate, custom arguments, and analysis outcomes.
+local function assert_loudnorm_profile_test_command(state, case, config, success)
+    h.assert_equals(#state.encoding, 1)
+    local args = state.encoding[1]
+    h.assert_equals(fixtures.encoder_test_option_value(args, case.codec_option), config.audio_codec)
+    h.assert_equals(fixtures.encoder_test_option_value(args, case.bitrate_option), '32k')
+    h.assert_equals(fixtures.encoder_test_option_value(args, case.rate_option), '24000')
+    if config.audio_format == 'opus' then
+        h.assert_equals(fixtures.encoder_test_option_value(args, case.container_option), 'mp4')
+    end
+    assert_loudnorm_profile_test_filter(args, case, success)
+    local warnings = {}
+    if not success then
+        warnings = { 'Failed to measure loudnorm stats, falling back on dynamic loudnorm.' }
+    end
+    h.assert_equals(state.warnings, warnings)
+    local parsed_count = 0
+    if success then parsed_count = 1 end
+    h.assert_equals(state.parsed_json_count or 0, parsed_count)
+end
+
+--- Complete deferred analysis after a profile change and compare against an unchanged reference.
+local function assert_loudnorm_profile_isolation_test_case(case, audio_format, success)
+    local live = make_loudnorm_profile_test_config(audio_format)
+    local original = h.deep_copy(live)
+    local _, reference = fixtures.make_loudnorm_test_context(
+            case.make_backend, fixtures.make_config_manager(h.deep_copy(original))
+    )
+    fixtures.complete_loudnorm_test_analysis(reference, success)
+    local _, state = fixtures.make_loudnorm_test_context(
+            case.make_backend, snapshot.new(fixtures.make_config_manager(live))
+    )
+    h.assert_equals(#state.analysis, 1)
+    h.assert_equals(state.encoding, {})
+    h.assert_equals(state.analysis[1].args, reference.analysis[1].args)
+    change_loudnorm_profile_test_config(live)
+    fixtures.complete_loudnorm_test_analysis(state, success)
+    h.assert_equals(state.encoding, reference.encoding)
+    assert_loudnorm_profile_test_command(state, case, original, success)
+end
+
+--- Verify both backend command stages retain captured profiles on success and fallback.
+local function test_loudnorm_profile_isolation()
+    local cases = {
+        { make_backend = ffmpeg_backend.new, codec_option = '-c:a', bitrate_option = '-b:a',
+          container_option = '-f', filter_option = '-af', rate_option = '-ar' },
+        { make_backend = mpv_backend.new, codec_option = '--oac', bitrate_option = '--oacopts-add=b',
+          container_option = '--of', filter_option = '--af-append', rate_option = '--audio-samplerate' },
+    }
+    for _, case in ipairs(cases) do
+        for _, audio_format in ipairs { 'opus', 'mp3' } do
+            for _, success in ipairs { true, false } do
+                assert_loudnorm_profile_isolation_test_case(case, audio_format, success)
+            end
+        end
+    end
+end
+
+--- Run encoder completion, constructor, codec, and deferred normalization tests.
 local function run_tests()
     test_report_creation_result()
     test_encoder_instances_are_isolated()
@@ -233,6 +330,7 @@ local function run_tests()
     test_encoder_instance_constructors()
     test_encoder_instance_output_directories()
     test_encoder_constructor_requires_ready_manager()
+    test_loudnorm_profile_isolation()
 end
 
 return {
