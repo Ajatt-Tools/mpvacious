@@ -576,6 +576,20 @@ local function make_note_update_context(components)
         return pub
     end
 
+    --- Collect and update supplied note IDs through this context.
+    function pub.update_notes(note_ids, overwrite)
+        local request = {
+            note_ids = note_ids,
+            overwrite = overwrite,
+            subtitle = pub.collect_subtitle(),
+        }
+        if not request.subtitle:is_valid() then
+            return self.notify("Nothing to export. Have you set the timings?", "warn", 2)
+        end
+        pub.perform_update(request)
+        return pub
+    end
+
     --- Export the current subtitle as a new Anki note.
     function pub.export_note(gui)
         local sub = self.subs_observer.collect_from_current()

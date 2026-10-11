@@ -17,20 +17,6 @@ local function make_exporter()
         return self.cfg_mgr.config()
     end
 
-    --- Update the specified notes with the current subtitle selection.
-    function pub.update_notes(note_ids, overwrite)
-        local request = {
-            note_ids = note_ids,
-            overwrite = overwrite,
-            subtitle = self.note_update_context.collect_subtitle(),
-        }
-        if not request.subtitle:is_valid() then
-            return self.notify("Nothing to export. Have you set the timings?", "warn", 2)
-        end
-        self.note_update_context.perform_update(request)
-        return pub
-    end
-
     --- Discard subtitle selection and quick options when the source file changes.
     function pub.reset_for_file_change()
         if self.subs_observer == nil then
