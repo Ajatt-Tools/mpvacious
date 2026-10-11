@@ -574,8 +574,9 @@ local function make_note_update_context(components)
             self.notify(error, 'error', 5)
             return pub
         end
-        start_update_media(request, future)
         clear_update_state()
+        -- Skipped jobs can complete synchronously and callbacks may select new subtitles.
+        start_update_media(request, future)
         return pub
     end
 
