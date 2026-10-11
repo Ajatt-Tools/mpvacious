@@ -97,9 +97,14 @@ function this.set_codecs(encoder, config)
     end
 end
 
-function this.parse_loudnorm(loudnorm_targets, json_extractor, loudnorm_consumer)
+--- Parse measured normalization settings, retaining target settings on analysis failure.
+function this.parse_loudnorm(loudnorm_targets, json_extractor, loudnorm_consumer, components)
+    components = components or {}
+    local parse_json = components.parse_json or utils.parse_json
+    local logger = components.logger or msg
+    --- Report analysis fallback through the caller's logger.
     local function warn()
-        msg.warn('Failed to measure loudnorm stats, falling back on dynamic loudnorm.')
+        logger.warn('Failed to measure loudnorm stats, falling back on dynamic loudnorm.')
     end
 
     return function(success, result)
@@ -125,7 +130,7 @@ function this.parse_loudnorm(loudnorm_targets, json_extractor, loudnorm_consumer
             end
         end
 
-        local stats = utils.parse_json(json)
+        local stats = parse_json(json)
         add_arg('measured_I', stats.input_i)
         add_arg('measured_LRA', stats.input_lra)
         add_arg('measured_TP', stats.input_tp)

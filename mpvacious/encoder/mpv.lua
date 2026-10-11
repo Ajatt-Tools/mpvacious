@@ -11,8 +11,14 @@ local h = require('helpers')
 local eutils = require('encoder.utils')
 local exec = require('encoder.executables')
 
-local function make_mpv_encoder(cfg_mgr, support)
+--- Create an mpv backend with optional codec support and isolated I/O dependencies.
+local function make_mpv_encoder(cfg_mgr, support, components)
     support = support or codec_support
+    components = components or {}
+    local subprocess = components.subprocess or h.subprocess
+    local get_active_track = components.get_active_track or h.get_active_track
+    local mp_api = components.mp or mp
+    local logger = components.logger or mp.msg
     local self = { }
     local public = {}
 
@@ -131,8 +137,8 @@ local function make_mpv_encoder(cfg_mgr, support)
     --- Build audio arguments and deliver them after optional loudness analysis.
     public.make_audio_args = function(source_path, output_path,
                                     start_timestamp, end_timestamp, args_consumer)
-        local audio_track = h.get_active_track('audio')
-        local audio_track_id = mp.get_property("aid")
+        local audio_track = get_active_track('audio')
+        local audio_track_id = mp_api.get_property("aid")
 
         if audio_track and audio_track.external == true then
             source_path = audio_track['external-filename']
@@ -149,7 +155,7 @@ local function make_mpv_encoder(cfg_mgr, support)
                     '--end=' .. eutils.toms(end_timestamp),
                     string.format(
                             '--volume=%d',
-                            config().tie_volumes and mp.get_property('volume') or 100
+                            config().tie_volumes and mp_api.get_property('volume') or 100
                     ),
                     ...
             )
@@ -197,7 +203,7 @@ local function make_mpv_encoder(cfg_mgr, support)
         end
 
         local loudnorm_targets = eutils.make_loudnorm_targets(config())
-        h.subprocess {
+        subprocess {
             args = make_mpvargs(
                     '-v',
                     '--af-append=' .. loudnorm_targets .. ':print_format=json',
@@ -211,11 +217,12 @@ local function make_mpv_encoder(cfg_mgr, support)
                         local _, _, json = string.find(stdout, '%[ffmpeg%] ({.-})') -- returns: start, stop, json
                         if json then
                             json = string.gsub(json, '%[ffmpeg%]', '')
-                            mp.msg.info("json: " .. tostring(json))
+                            logger.info("json: " .. tostring(json))
                         end
                         return json
                     end,
-                    make_encoding_args
+                    make_encoding_args,
+                    components
             )
         }
     end

@@ -11,8 +11,14 @@ local h = require('helpers')
 local eutils = require('encoder.utils')
 local exec = require('encoder.executables')
 
-local function make_ffmpeg_encoder(cfg_mgr, support)
+--- Create an FFmpeg backend with optional codec support and isolated I/O dependencies.
+local function make_ffmpeg_encoder(cfg_mgr, support, components)
     support = support or codec_support
+    components = components or {}
+    local subprocess = components.subprocess or h.subprocess
+    local get_active_track = components.get_active_track or h.get_active_track
+    local mp_api = components.mp or mp
+    local logger = components.logger or mp.msg
     local self = { }
     local public = {}
 
@@ -117,7 +123,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support)
 
         filters = separate_filters(filters, new_args, args)
         if config().tie_volumes then
-            filters = add_filter(filters, string.format("volume=%.1f", mp.get_property_native('volume') / 100.0))
+            filters = add_filter(filters, string.format("volume=%.1f", mp_api.get_property_native('volume') / 100.0))
         end
 
         local user_args = {}
@@ -208,7 +214,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support)
     public.make_audio_args = function(
             source_path, output_path, start_timestamp, end_timestamp, args_consumer
     )
-        local audio_track = h.get_active_track('audio')
+        local audio_track = get_active_track('audio')
         local audio_track_id = audio_track and audio_track['ff-index'] or 'a'
 
         if audio_track and audio_track.external == true then
@@ -277,17 +283,18 @@ local function make_ffmpeg_encoder(cfg_mgr, support)
         table.insert(args, '-f')
         table.insert(args, 'null')
         table.insert(args, '-')
-        h.subprocess {
+        subprocess {
             args = args,
             completion_fn = eutils.parse_loudnorm(
                     loudnorm_targets,
                     function(_, stderr)
                         -- function takes stdout, stderr
                         local _, _, json = string.find(stderr, '%[Parsed_loudnorm_0.-({.-})') -- returns: start, stop, json
-                        mp.msg.info("json: " .. tostring(json))
+                        logger.info("json: " .. tostring(json))
                         return json
                     end,
-                    make_encoding_args
+                    make_encoding_args,
+                    components
             )
         }
     end
