@@ -25,11 +25,12 @@ function this.make_note_fields_client(state, make_client, scenario)
 end
 
 --- Create a deferred media job and record its completion callback and start.
-function this.make_pending_media_job(filename, jobs)
+function this.make_pending_media_job(filename, jobs, on_start)
     local job = { filename = filename }
     --- Record when the simulated job starts.
     function job.run_async()
         job.started = true
+        if on_start then on_start() end
         if filename == nil and job.callback then
             job.callback(nil, nil)
         end
@@ -47,7 +48,7 @@ end
 local function make_media_job_factory(filename, jobs, state)
     --- Create a pending job when the encoder requests one.
     return function()
-        local job = this.make_pending_media_job(filename, jobs)
+        local job = this.make_pending_media_job(filename, jobs, state.on_start)
         job.cfg_mgr = state.cfg_mgr
         job.output_dir = state.output_dir
         return job
@@ -57,7 +58,7 @@ end
 --- Return an encoder whose audio and snapshot jobs are recorded in `jobs`.
 function this.make_update_encoder(jobs, options, cfg_mgr)
     options = options or {}
-    local state = { cfg_mgr = cfg_mgr }
+    local state = { cfg_mgr = cfg_mgr, on_start = options.on_start }
     local snapshot_filename = 'snapshot.avif'
     local audio_filename = 'audio.ogg'
     if options.skip_snapshot then
@@ -278,6 +279,10 @@ function this.make_quick_creation_options(state, options)
         --- Return the chosen number of target cards.
         get_cards = function()
             return cards
+        end,
+        --- Set later interactive options from reentrancy tests without changing production APIs.
+        set_options_for_test = function(new_lines, new_cards)
+            lines, cards = new_lines, new_cards
         end,
         --- Record clearing when requested by the test.
         clear_options = function()
@@ -648,6 +653,45 @@ function this.encoder_test_option_value(args, option)
         end
     end
     return nil
+end
+
+--- Model a selected subtitle that can be replaced by a synchronous completion callback.
+function this.make_reentrant_update_test_observer(state)
+    return {
+        --- Return the scenario's current selected subtitle.
+        collect_from_current = function() return state.selection end,
+        --- Leave text preparation unchanged for the lifecycle test.
+        clipboard_prepare = function(text) return text end,
+        user_altered = function() return false end,
+        --- Clear only the selection present when the request begins.
+        clear = function()
+            state.selection = nil
+            state.clear_count = (state.clear_count or 0) + 1
+        end,
+    }
+end
+
+--- Record interactive state at each media-job start.
+function this.make_update_start_test_recorder(state, quick_options)
+    return function()
+        table.insert(state.job_starts, {
+            selection = state.selection,
+            lines = quick_options:get_lines(),
+            cards = quick_options:get_cards(),
+        })
+    end
+end
+
+--- Install a later selection and options when a successful request completes reentrantly.
+function this.make_reentrant_update_test_notifier(state, quick_options)
+    return function(message, level)
+        state.notification, state.notification_level = message, level
+        if level ~= 'error' then
+            state.selection_at_finish = state.selection
+            state.selection = state.later_selection
+            quick_options.set_options_for_test(7, 9)
+        end
+    end
 end
 
 return this

@@ -8,6 +8,7 @@ Note update context tests.
 local h = require('helpers')
 local fixtures = require('tests.fixtures')
 local note_update_context = require('anki.note_update_context')
+local subtitle_module = require('subtitles.subtitle')
 
 
 --- Create an update configuration with the selected merge order.
@@ -227,18 +228,22 @@ end
 --- Create a context and subtitle fixture from named update-test options.
 local function make_update_test_context(options)
     local result = options.result
-    local subtitle = { text = 'new sentence', secondary = '' }
+    local subtitle = options.subtitle or { text = 'new sentence', secondary = '' }
     result.fields_by_note = {}
     result.field_requests = {}
     result.preview_reads = {}
     return note_update_context.new {
         ankiconnect = fixtures.make_update_ankiconnect(result, make_context_test_stored_fields),
-        quick_creation_opts = fixtures.make_quick_creation_options(result, { lines = options.lines }),
-        subs_observer = fixtures.make_subtitle_observer(result, subtitle, { user_altered = options.user_altered }),
-        encoder = fixtures.make_update_encoder(options.jobs),
+        quick_creation_opts = options.quick_options or fixtures.make_quick_creation_options(result, {
+            lines = options.lines,
+        }),
+        subs_observer = options.observer or fixtures.make_subtitle_observer(result, subtitle, {
+            user_altered = options.user_altered,
+        }),
+        encoder = options.encoder or fixtures.make_update_encoder(options.jobs),
         forvo = fixtures.make_forvo(),
         cfg_mgr = fixtures.make_config_manager(options.config or make_update_test_config(true)),
-        notify = fixtures.make_notifier(result),
+        notify = options.notify or fixtures.make_notifier(result),
         mp = options.mp,
     }, subtitle
 end
@@ -579,6 +584,89 @@ local function test_update_captures_invocation_tag()
     end
 end
 
+--- Return separate original and later selections for lifecycle scenarios.
+local function make_reentrant_update_test_state()
+    local initial = subtitle_module.make_subtitle('Initial selection', 0, 1)
+    local state = make_update_test_result()
+    state.selection, state.original_selection = initial, initial
+    state.later_selection = subtitle_module.make_subtitle('Later selection', 3, 4)
+    state.job_starts = {}
+    return state
+end
+
+--- Build a context whose completion callback installs new interactive state.
+local function make_reentrant_update_test_context(state, media)
+    local jobs = {}
+    local quick_options = fixtures.make_quick_creation_options(state, { lines = 3, cards = 5, record_clear = true })
+    local encoder_options = h.shallow_copy(media, {
+        on_start = fixtures.make_update_start_test_recorder(state, quick_options),
+    })
+    local context = make_update_test_context {
+        result = state, jobs = jobs, subtitle = state.original_selection,
+        quick_options = quick_options,
+        observer = fixtures.make_reentrant_update_test_observer(state),
+        encoder = fixtures.make_update_encoder(jobs, encoder_options),
+        notify = fixtures.make_reentrant_update_test_notifier(state, quick_options),
+    }
+    return context, jobs, quick_options
+end
+
+--- Assert a completion callback's later selection and options survive the original request.
+local function assert_reentrant_update_test_state(state, quick_options)
+    h.assert_equals(state.selection, state.later_selection)
+    h.assert_equals(quick_options:get_lines(), 7)
+    h.assert_equals(quick_options:get_cards(), 9)
+    h.assert_equals(state.selection_at_finish, nil)
+    h.assert_equals(state.clear_count, 2)
+    h.assert_equals(state.appended_note_ids, { 11 })
+end
+
+--- Run a lifecycle scenario with synchronous skips or deferred media/write completion.
+local function assert_update_start_lifecycle_test_case(case)
+    local state = make_reentrant_update_test_state()
+    if case.defer_write then state.write_callbacks = {} end
+    local context, jobs, quick_options = make_reentrant_update_test_context(state, case.media)
+    context.perform_update { note_ids = { 11 }, overwrite = true, subtitle = state.original_selection }
+    h.assert_equals(state.job_starts, { { cards = 1 }, { cards = 1 } })
+    for _, job in ipairs(jobs) do
+        if job.filename then job.callback(job.filename, nil) end
+    end
+    if case.defer_write then
+        h.assert_equals(state.notification, nil)
+        state.write_callbacks[11](nil, nil)
+    end
+    assert_reentrant_update_test_state(state, quick_options)
+end
+
+--- Clear old interactive state before any job can invoke synchronous or reentrant callbacks.
+local function test_update_clears_state_before_job_start()
+    for _, case in ipairs {
+        { media = { skip_snapshot = true, skip_audio = true } },
+        { media = { skip_snapshot = true, skip_audio = true }, defer_write = true },
+        { media = { skip_snapshot = true } },
+        { media = { skip_audio = true } },
+        { media = {}, defer_write = true },
+    } do
+        assert_update_start_lifecycle_test_case(case)
+    end
+end
+
+--- Preserve both selection and quick options when preparation fails before job startup.
+local function test_update_preflight_preserves_interactive_state()
+    local state = make_reentrant_update_test_state()
+    state.media_dir_error = 'AnkiConnect unavailable'
+    local context, jobs, quick_options = make_reentrant_update_test_context(state, {})
+    context.perform_update { note_ids = { 11 }, overwrite = true, subtitle = state.original_selection }
+    h.assert_equals(state.selection, state.original_selection)
+    h.assert_equals(quick_options:get_lines(), 3)
+    h.assert_equals(quick_options:get_cards(), 5)
+    h.assert_equals(state.clear_count, 0)
+    h.assert_equals(jobs, {})
+    h.assert_equals(state.job_starts, {})
+    h.assert_equals(state.appended_note_ids, {})
+    h.assert_equals(state.notification, 'AnkiConnect unavailable')
+end
+
 --- Run context tests without requiring mpv-backed components.
 local function run_tests(context)
     context = context or make_field_merge_test_context()
@@ -599,6 +687,8 @@ local function run_tests(context)
     test_literal_tag_substitutions()
     test_environment_tag_substitution()
     test_update_captures_invocation_tag()
+    test_update_clears_state_before_job_start()
+    test_update_preflight_preserves_interactive_state()
     test_update_media_merge()
     test_join_fields(context)
     test_join_fields_duplicates(context)
