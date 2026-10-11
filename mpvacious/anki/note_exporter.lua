@@ -88,6 +88,7 @@ local function make_exporter()
             forvo = self.forvo,
             cfg_mgr = self.cfg_mgr,
             mp = components.mp,
+            notify = self.notify,
         })
         return pub
     end

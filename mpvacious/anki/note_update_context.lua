@@ -398,7 +398,7 @@ local function make_note_update_context(components)
     --- Add the captured note only after every requested media job completes successfully.
     local function start_export_media(media, note_fields, gui)
         local job = {
-            tag = self.note_update_context.substitute_fmt(config().note_tag),
+            tag = self.substitute_fmt(config().note_tag),
             note_fields = note_fields,
             gui = gui,
         }
@@ -430,7 +430,7 @@ local function make_note_update_context(components)
 
     --- Build note fields and ensure the first model field is populated.
     local function make_export_note_fields(subtitle, media)
-        local note_fields = self.note_update_context.construct_note_fields {
+        local note_fields = pub.construct_note_fields {
             primary_text = subtitle['text'],
             secondary_text = subtitle['secondary'],
             snapshot_filename = media.snapshot.filename,
@@ -455,7 +455,7 @@ local function make_note_update_context(components)
         end
         self.encoder.set_output_dir(media_dir)
         local snapshot = self.encoder.snapshot.create_job(subtitle)
-        local audio = self.encoder.audio.create_job(subtitle, self.note_update_context.audio_padding())
+        local audio = self.encoder.audio.create_job(subtitle, pub.audio_padding())
         return { snapshot = snapshot, audio = audio, first_field = first_field }, nil
     end
 
