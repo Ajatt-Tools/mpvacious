@@ -53,6 +53,14 @@ local function make_exporter()
         return pub
     end
 
+    --- Dispatch a timer-driven or direct update without changing reload behavior.
+    function pub.update_notes(note_ids, overwrite)
+        self.note_update_context
+            .new(snapshot.new(self.cfg_mgr))
+            .update_notes(note_ids, overwrite)
+        return pub
+    end
+
     --- Update notes selected in the Anki Browser.
     function pub.update_selected_note(overwrite)
         pub.maybe_reload_config()
