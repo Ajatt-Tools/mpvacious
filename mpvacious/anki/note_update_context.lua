@@ -8,6 +8,7 @@ Prepare and perform one Anki note update request.
 local mp = require('mp')
 local h = require('helpers')
 local dec_counter = require('utils.dec_counter')
+local accept_notes_made_within_last_minutes = 10
 
 --- Normalize two fields before joining them.
 --- Instead of comparing fields literally, normalize them to match different representations.
@@ -588,6 +589,18 @@ local function make_note_update_context(components)
         end
         pub.perform_update(request)
         return pub
+    end
+
+    --- Select and update recent notes using this context's Anki destination.
+    function pub.update_last_note(overwrite)
+        local n_cards = self.quick_creation_opts:get_cards()
+        -- this now returns a table
+        local last_note_ids = self.ankiconnect.get_last_note_ids(n_cards)
+        -- Recent note IDs are ordered earliest to latest.
+        if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(accept_notes_made_within_last_minutes) then
+            return self.notify("Couldn't find the target note.", 'warn', 2)
+        end
+        return pub.update_notes(last_note_ids, overwrite)
     end
 
     --- Export the current subtitle as a new Anki note.

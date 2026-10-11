@@ -44,21 +44,12 @@ local function make_exporter()
         return pub
     end
 
-    --- Update the most recently created Anki notes.
+    --- Dispatch recent-note lookup and updating through one captured context.
     function pub.update_last_note(overwrite)
-        local accept_notes_made_within_last_minutes = 10
         pub.maybe_reload_config()
-
-        local n_cards = self.quick_creation_opts:get_cards()
-        -- this now returns a table
-        local last_note_ids = self.ankiconnect.get_last_note_ids(n_cards)
-
-        --first element is the earliest
-        if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(accept_notes_made_within_last_minutes) then
-            return h.notify("Couldn't find the target note.", "warn", 2)
-        end
-
-        pub.update_notes(last_note_ids, overwrite)
+        self.note_update_context
+            .new(snapshot.new(self.cfg_mgr))
+            .update_last_note(overwrite)
         return pub
     end
 
