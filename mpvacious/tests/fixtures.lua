@@ -44,16 +44,20 @@ function this.make_pending_media_job(filename, jobs)
 end
 
 --- Return a media-job factory for one output filename.
-local function make_media_job_factory(filename, jobs)
+local function make_media_job_factory(filename, jobs, state)
     --- Create a pending job when the encoder requests one.
     return function()
-        return this.make_pending_media_job(filename, jobs)
+        local job = this.make_pending_media_job(filename, jobs)
+        job.cfg_mgr = state.cfg_mgr
+        job.output_dir = state.output_dir
+        return job
     end
 end
 
 --- Return an encoder whose audio and snapshot jobs are recorded in `jobs`.
-function this.make_update_encoder(jobs, options)
+function this.make_update_encoder(jobs, options, cfg_mgr)
     options = options or {}
+    local state = { cfg_mgr = cfg_mgr }
     local snapshot_filename = 'snapshot.avif'
     local audio_filename = 'audio.ogg'
     if options.skip_snapshot then
@@ -62,31 +66,60 @@ function this.make_update_encoder(jobs, options)
     if options.skip_audio then
         audio_filename = nil
     end
-    return {
-        set_output_dir = h.noop,
-        snapshot = { create_job = make_media_job_factory(snapshot_filename, jobs) },
-        audio = { create_job = make_media_job_factory(audio_filename, jobs) },
+    local encoder = {
+        snapshot = { create_job = make_media_job_factory(snapshot_filename, jobs, state) },
+        audio = { create_job = make_media_job_factory(audio_filename, jobs, state) },
     }
+    --- Set only this fake encoder's output directory.
+    function encoder.set_output_dir(dir_path)
+        state.output_dir = dir_path
+    end
+    --- Construct independent fake jobs using the same scenario recording list.
+    function encoder.new(request_cfg_mgr)
+        request_cfg_mgr.fail_if_not_ready()
+        return this.make_update_encoder(jobs, options, request_cfg_mgr)
+    end
+    return encoder
 end
 
 --- Return a Forvo fake that preserves fields without producing media.
-function this.make_forvo()
-    return {
-        set_output_dir = h.noop,
+function this.make_forvo(state, cfg_mgr)
+    state = state or {}
+    local output_dir
+    local downloader = {
         --- Leave generated fields unchanged.
         append = function(fields)
+            if cfg_mgr then
+                state.forvo_calls = state.forvo_calls or {}
+                table.insert(state.forvo_calls, { cfg_mgr = cfg_mgr, output_dir = output_dir })
+            end
             return fields
         end,
     }
+    --- Set only this fake downloader's destination.
+    function downloader.set_output_dir(dir_path)
+        output_dir = dir_path
+    end
+    --- Construct a fresh pronunciation fake for the supplied provider.
+    function downloader.new(request_cfg_mgr)
+        request_cfg_mgr.fail_if_not_ready()
+        return this.make_forvo(state, request_cfg_mgr)
+    end
+    return downloader
 end
 
 --- Return a config manager that exposes the supplied test configuration.
-function this.make_config_manager(config)
+function this.make_config_manager(config, profiles)
+    profiles = profiles or { active = 'test', profiles = 'test' }
     return {
         fail_if_not_ready = h.noop,
         --- Return the test configuration.
         config = function()
             return config
+        end,
+        --- Return profile metadata that a transaction snapshot can capture.
+        profiles = function()
+            return profiles
         end,
     }
 end
@@ -118,14 +151,14 @@ local function make_update_test_fields_by_id(note_ids, fields_for_note)
 end
 
 --- Return an AnkiConnect fake that records update requests and delegates test-specific fields.
-function this.make_update_ankiconnect(state, fields_for_note)
+function this.make_update_ankiconnect(state, fields_for_note, cfg_mgr)
     return {
         --- Return the test media directory.
         get_media_dir_path = function()
             if state.media_dir_error then
                 return nil, state.media_dir_error
             end
-            return '/tmp', nil
+            return state.media_dir_path or '/tmp', nil
         end,
         --- Record bulk field reads before returning test-specific fields or errors.
         get_notes_fields = function(note_ids)
@@ -154,6 +187,8 @@ function this.make_update_ankiconnect(state, fields_for_note)
         end,
         --- Record a write and optionally defer its completion for asynchronous tests.
         append_media = function(note_id, fields, _, on_finish)
+            state.write_cfg_mgrs = state.write_cfg_mgrs or {}
+            table.insert(state.write_cfg_mgrs, cfg_mgr)
             state.append_count = (state.append_count or 0) + 1
             state.appended_note_ids = state.appended_note_ids or {}
             state.fields_by_note = state.fields_by_note or {}
@@ -173,11 +208,28 @@ function this.make_update_ankiconnect(state, fields_for_note)
             state.fields = job.note_fields
             state.tag = job.tag
             state.gui = job.gui
-            state.note_opts = job.opts
+            if cfg_mgr then
+                state.note_config = h.deep_copy(cfg_mgr.config())
+            end
         end,
         --- Record the Anki Browser query.
         gui_browse = function(query)
             state.browse_query = query
+        end,
+        --- Create a fresh note-add fake retaining only the scenario's recording state.
+        new = function(request_cfg_mgr)
+            state.client_cfg_mgrs = state.client_cfg_mgrs or {}
+            table.insert(state.client_cfg_mgrs, request_cfg_mgr)
+            return this.make_update_ankiconnect(state, fields_for_note, request_cfg_mgr)
+        end,
+        --- Return scenario recent-note IDs while recording the requested count.
+        get_last_note_ids = function(n_cards)
+            state.requested_cards = n_cards
+            return state.last_note_ids or {}
+        end,
+        --- Return scenario Browser selection without accessing Anki.
+        get_selected_note_ids = function()
+            return state.selected_note_ids or {}
         end,
     }
 end
@@ -342,20 +394,10 @@ function this.make_mp_property_reader(properties)
     }
 end
 
---- Use the real note-request builder while recording transport calls without network access.
-function this.make_note_add_client(state, make_client, config, components)
-    local client = make_client(components)
-    client.init(this.make_config_manager(config))
-    --- Supply preflight model metadata for exporter integration tests.
-    client.get_first_field = function()
-        return config.sentence_field, nil
-    end
-    --- Supply a fake destination for deferred encoder jobs.
-    client.get_media_dir_path = function()
-        return '/anki-test-media', nil
-    end
+--- Record requests and optionally serialize them through the injected fake transport.
+local function record_note_add_test_requests(client, state, components)
     local execute = client.execute
-    --- Record the request and optionally serialize it through the injected fake transport.
+    --- Record the request without contacting Anki.
     client.execute = function(options)
         state.note_requests = state.note_requests or {}
         table.insert(state.note_requests, options.request)
@@ -363,7 +405,30 @@ function this.make_note_add_client(state, make_client, config, components)
             return execute(options)
         end
     end
+end
+
+--- Construct a recording client and preserve its fake dependencies across new instances.
+local function make_note_add_test_client(state, make_client, cfg_mgr, components)
+    local client = make_client(components).init(cfg_mgr)
+    --- Supply preflight model metadata for exporter integration tests.
+    client.get_first_field = function()
+        return cfg_mgr.config().sentence_field, nil
+    end
+    --- Supply a fake destination for deferred encoder jobs.
+    client.get_media_dir_path = function()
+        return '/anki-test-media', nil
+    end
+    record_note_add_test_requests(client, state, components)
+    --- Construct a recording transaction client rather than losing fake transport hooks.
+    client.new = function(request_cfg_mgr)
+        return make_note_add_test_client(state, make_client, request_cfg_mgr, components)
+    end
     return client
+end
+
+--- Use the real note-request builder while recording transport calls without network access.
+function this.make_note_add_client(state, make_client, config, components)
+    return make_note_add_test_client(state, make_client, this.make_config_manager(config), components)
 end
 
 --- Record real-client JSON transport calls without sending network requests.
@@ -415,6 +480,102 @@ function this.backend_test_public_keys(backend)
     end
     table.sort(keys)
     return keys
+end
+
+--- Record encoder commands without executing them or completing filesystem-dependent callbacks.
+function this.make_recording_encoder_components(state)
+    return {
+        mp = this.make_mp_property_reader { path = 'encoder-test.mkv', ['time-pos'] = 0 },
+        --- Record a media command for output-directory assertions.
+        subprocess = function(options)
+            table.insert(state.commands, options.args)
+        end,
+        --- Supply a video track without changing the shared mp API.
+        has_video_track = function() return true end,
+        filename_factory = {
+            --- Avoid the file-loaded filename cache during standalone tests.
+            make_filename = function() return 'encoder-test.jpg' end,
+        },
+    }
+end
+
+--- Extract the output path from a generated mpv or FFmpeg test command.
+function this.encoder_test_output_path(args)
+    for _, arg in pairs(args) do
+        if arg:match('^%-o=') then
+            return arg:sub(4)
+        end
+    end
+    return args[#args]
+end
+
+--- Build raw notesInfo responses for the scenario's requested target IDs.
+local function make_update_transport_test_fields(state, note_ids)
+    local notes = {}
+    for _, note_id in ipairs(note_ids) do
+        local fields = {}
+        for name, value in pairs(state.stored_fields[note_id]) do
+            fields[name] = { value = value }
+        end
+        table.insert(notes, { noteId = note_id, fields = fields })
+    end
+    return notes
+end
+
+--- Return synchronous fake responses while deferring real-client write completions.
+local function update_transport_test_response(state, options)
+    local request = state.anki_requests[#state.anki_requests].request
+    if request.action == 'getMediaDirPath' then
+        return { test_result = state.media_dirs[options.url] }
+    elseif request.action == 'notesInfo' then
+        return { test_result = make_update_transport_test_fields(state, request.params.notes) }
+    elseif request.action == 'findModelsByName' then
+        return { test_result = { { flds = { { ord = 0, name = 'SentKanji' } } } } }
+    elseif request.action == 'findNotes' or request.action == 'guiSelectedNotes' then
+        return { test_result = state.target_ids }
+    elseif request.action == 'updateNoteFields' then
+        state.anki_write_callbacks = state.anki_write_callbacks or {}
+        state.anki_write_callbacks[request.params.note.id] = options.completion_fn
+    end
+    return {}
+end
+
+--- Capture serialized transport calls without network I/O.
+local function make_update_transport_test_platform(state)
+    return {
+        --- Record the destination and return the scenario's response.
+        json_curl_request = function(options)
+            state.anki_transport = state.anki_transport or {}
+            table.insert(state.anki_transport, options)
+            return update_transport_test_response(state, options)
+        end,
+    }
+end
+
+--- Record real request construction and provide parsing independent of the JSON stub.
+local function attach_update_transport_test_hooks(client, state, cfg_mgr)
+    local execute = client.execute
+    --- Record each request and its instance provider before real serialization.
+    client.execute = function(options)
+        state.anki_requests = state.anki_requests or {}
+        table.insert(state.anki_requests, { request = options.request, cfg_mgr = cfg_mgr })
+        return execute(options)
+    end
+    --- Supply already-decoded fake results in standalone and mpv tests.
+    client.parse_result = function(result)
+        return result.test_result, nil
+    end
+end
+
+--- Create recording update clients and retain fake hooks in transaction-local instances.
+function this.make_update_transport_test_client(state, make_client, cfg_mgr)
+    local client = make_client { platform = make_update_transport_test_platform(state) }.init(cfg_mgr)
+    attach_update_transport_test_hooks(client, state, cfg_mgr)
+    --- Construct a fresh client without losing recording and response hooks.
+    client.new = function(request_cfg_mgr)
+        return this.make_update_transport_test_client(state, make_client, request_cfg_mgr)
+    end
+    return client
 end
 
 return this

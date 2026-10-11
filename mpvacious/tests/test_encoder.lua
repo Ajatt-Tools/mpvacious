@@ -12,6 +12,9 @@ local defaults = require('config.defaults')
 local config_utils = require('config.utils')
 local ffmpeg_backend = require('encoder.ffmpeg')
 local mpv_backend = require('encoder.mpv')
+local snapshot = require('config.snapshot')
+local subtitle = require('subtitles.subtitle')
+local executables = require('encoder.executables')
 
 --- Record reporter messages without printing expected test failures.
 local function make_encoder_test_logger(state)
@@ -165,12 +168,71 @@ local function test_backend_codecs_refresh_on_reload()
     end
 end
 
---- Run encoder completion-contract tests.
+--- Verify instance construction returns public methods and selects the supplied backend.
+local function assert_encoder_constructor_test_case(use_ffmpeg)
+    local original_config = make_backend_test_config('webp', 'webp', not use_ffmpeg)
+    local original = encoder.new()
+    h.assert_equals(original.init(fixtures.make_config_manager(original_config)), original)
+    local config = make_backend_test_config('jpg', 'webp', use_ffmpeg)
+    local fresh = original.new(snapshot.new(fixtures.make_config_manager(config)))
+    h.assert_equals(fresh == original, false)
+    h.assert_equals(fresh.encoder() == original.encoder(), false)
+    config.snapshot_format, config.snapshot_codec = 'webp', 'libwebp'
+    assert_backend_test_codecs(fresh.encoder(), 'mjpeg', 'libwebp')
+    assert_backend_test_codecs(original.encoder(), 'libwebp', 'libwebp')
+    local command = fresh.encoder().make_static_snapshot_args('source.mkv', 'still.jpg', 1)
+    local executable = executables.mpv
+    if use_ffmpeg then executable = executables.ffmpeg end
+    h.assert_equals(command[1], executable)
+end
+
+--- Verify both backend choices work through the encoder's instance constructor.
+local function test_encoder_instance_constructors()
+    for _, use_ffmpeg in ipairs { false, true } do
+        assert_encoder_constructor_test_case(use_ffmpeg)
+    end
+end
+
+--- Verify reconstructed encoders preserve fake I/O but own separate output directories.
+local function test_encoder_instance_output_directories()
+    for _, use_ffmpeg in ipairs { false, true } do
+        local state = { commands = {} }
+        local config = make_backend_test_config('jpg', 'webp', use_ffmpeg)
+        local cfg_mgr = fixtures.make_config_manager(config)
+        local original = encoder.new(fixtures.make_recording_encoder_components(state)).init(cfg_mgr)
+        original.set_output_dir('/original-media')
+        local fresh = original.new(snapshot.new(cfg_mgr))
+        fresh.set_output_dir('/request-media')
+        original.set_output_dir('/later-media')
+        local sub = subtitle.make_subtitle('Line', 0, 1)
+        fresh.snapshot.create_job(sub).run_async()
+        original.snapshot.create_job(sub).run_async()
+        h.assert_equals(#state.commands, 2)
+        h.assert_equals(fixtures.encoder_test_output_path(state.commands[1]), '/request-media/encoder-test.jpg')
+        h.assert_equals(fixtures.encoder_test_output_path(state.commands[2]), '/later-media/encoder-test.jpg')
+    end
+end
+
+--- Reject construction from an unready manager without changing the original encoder.
+local function test_encoder_constructor_requires_ready_manager()
+    local original = encoder.new().init(fixtures.make_config_manager(make_backend_test_config('jpg', 'webp', false)))
+    local cfg_mgr = fixtures.make_config_manager({})
+    cfg_mgr.fail_if_not_ready = h.as_callback(error, 'config not loaded')
+    local success, error = pcall(original.new, cfg_mgr)
+    h.assert_equals(success, false)
+    h.assert_equals(h.is_substr(error, 'config not loaded'), true)
+    assert_backend_test_codecs(original.encoder(), 'mjpeg', 'libwebp')
+end
+
+--- Run encoder completion, constructor, and backend codec tests.
 local function run_tests()
     test_report_creation_result()
     test_encoder_instances_are_isolated()
     test_backend_codec_initialization()
     test_backend_codecs_refresh_on_reload()
+    test_encoder_instance_constructors()
+    test_encoder_instance_output_directories()
+    test_encoder_constructor_requires_ready_manager()
 end
 
 return {

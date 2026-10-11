@@ -9,6 +9,7 @@ local h = require('helpers')
 local base64 = require('utils.base64')
 local fixtures = require('tests.fixtures')
 local forvo = require('utils.forvo')
+local snapshot = require('config.snapshot')
 
 --- Create an isolated downloader with fake responses and a fresh recording state.
 local function make_forvo_test_context(config, responses)
@@ -51,13 +52,14 @@ local function assert_forvo_test_requests(state, case, filename)
 end
 
 --- Check the selected codec, destination muxer, and output filename.
-local function assert_forvo_test_encoding(state, case, filename)
+local function assert_forvo_test_encoding(state, case, filename, output_dir)
+    output_dir = output_dir or '/anki-test-media'
     h.assert_equals(state.encodings, { {
         'mpv', '/forvo-test-tmp/' .. filename, '--loop-file=no', '--keep-open=no', '--video=no',
         '--no-ocopy-metadata', '--no-sub', '--audio-channels=mono', '--oacopts-add=vbr=on',
         '--oacopts-add=application=voip', '--oacopts-add=compression_level=10',
         '--af-append=silenceremove=1:0:-50dB', '--oac=' .. case.codec, '--of=' .. case.output_muxer,
-        '--oacopts-add=b=32k', '-o=/anki-test-media/' .. filename,
+        '--oacopts-add=b=32k', '-o=' .. output_dir .. '/' .. filename,
     } })
 end
 
@@ -208,7 +210,65 @@ local function test_unpadded_pronunciation_sources()
     end
 end
 
---- Run the isolated downloader's behavior and response-validation tests.
+--- Construct a new downloader with captured settings and the original fake I/O dependencies.
+local function make_forvo_constructor_test_context(case)
+    local original_config = make_forvo_test_config { source_format = 'mp3', audio_format = 'mp3', codec = 'libmp3lame' }
+    local original, state = make_forvo_test_context(original_config, {
+        { status = 0, stdout = make_forvo_test_page() }, { status = 0 },
+        { status = 0, stdout = make_forvo_test_page() }, { status = 0 },
+        { status = 0, stdout = 'No pronunciation' },
+    })
+    h.assert_equals(original.init(fixtures.make_config_manager(original_config)), original)
+    local config = make_forvo_test_config(case)
+    local fresh = original.new(snapshot.new(fixtures.make_config_manager(config)))
+    h.assert_equals(fresh == original, false)
+    config.use_forvo, config.audio_extension, config.audio_codec = 'no', '.changed', 'changed'
+    original.set_output_dir('/later-media')
+    fresh.set_output_dir('/request-media')
+    return original, fresh, state
+end
+
+--- Verify later parent operations do not use the child's settings or output directory.
+local function assert_forvo_parent_constructor_test_flow(original, fresh, state)
+    local fields = {}
+    original.append(fields, { Word = 'word', VocabAudio = '' })
+    h.assert_equals(fields.VocabAudio, '[sound:forvo_word.mp3]')
+    h.assert_equals(state.requests[4][1], 'https://audio00.forvo.com/mp3/clip.mp3')
+    local command = state.encodings[2]
+    h.assert_equals(command[#command], '-o=/later-media/forvo_word.mp3')
+    h.assert_equals(#state.removed, 2)
+    fresh.append({}, { Word = 'missing', VocabAudio = '' })
+    h.assert_equals(state.warnings, { "Seems like Forvo doesn't have audio for word missing." })
+end
+
+--- Verify reconstruction preserves all fake I/O and isolates configuration and directories.
+local function test_forvo_instance_constructors()
+    for _, case in ipairs(make_pronunciation_format_test_cases()) do
+        local original, fresh, state = make_forvo_constructor_test_context(case)
+        local filename = 'forvo_word' .. (case.output_extension or '.' .. case.source_format)
+        local fields = { SentenceAudio = '[sound:sentence.ogg]' }
+        fresh.append(fields, { Word = 'word', VocabAudio = '' })
+        h.assert_equals(fields.VocabAudio, '[sound:' .. filename .. ']')
+        assert_forvo_test_requests(state, case, filename)
+        assert_forvo_test_encoding(state, case, filename, '/request-media')
+        assert_forvo_parent_constructor_test_flow(original, fresh, state)
+    end
+end
+
+--- Reject an unready provider while retaining the original downloader's settings.
+local function test_forvo_constructor_requires_ready_manager()
+    local config = make_forvo_test_config { source_format = 'ogg', audio_format = 'opus', codec = 'libopus' }
+    local original, state = make_forvo_test_context(config, { { status = 0, stdout = 'No pronunciation' } })
+    local cfg_mgr = fixtures.make_config_manager({})
+    cfg_mgr.fail_if_not_ready = h.as_callback(error, 'config not loaded')
+    local success, error = pcall(original.new, cfg_mgr)
+    h.assert_equals(success, false)
+    h.assert_equals(h.is_substr(error, 'config not loaded'), true)
+    original.append({}, { Word = 'word', VocabAudio = '' })
+    h.assert_equals(#state.requests, 1)
+end
+
+--- Run the isolated downloader's behavior, constructor, and response-validation tests.
 local function run_tests()
     test_existing_pronunciation_flow()
     test_missing_pronunciation()
@@ -217,6 +277,8 @@ local function run_tests()
     test_failed_pronunciation_downloads()
     test_failed_pronunciation_encoding()
     test_unpadded_pronunciation_sources()
+    test_forvo_instance_constructors()
+    test_forvo_constructor_requires_ready_manager()
 end
 
 return { run_tests = run_tests }

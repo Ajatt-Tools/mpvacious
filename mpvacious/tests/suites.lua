@@ -15,6 +15,7 @@ local modules = {
     'tests.test_sub_list',
     'tests.test_collector',
     'tests.test_config_utils',
+    'tests.test_snapshot',
     'tests.test_encoder',
     'tests.test_subtitle',
     'tests.test_note_update_context',

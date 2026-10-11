@@ -11,6 +11,8 @@ local note_exporter = require('anki.note_exporter')
 local ankiconnect = require('anki.ankiconnect')
 local subtitles_observer = require('subtitles.observer')
 local subtitle = require('subtitles.subtitle')
+local base64 = require('utils.base64')
+local forvo = require('utils.forvo')
 
 --- Create a valid subtitle fixture for update tests.
 local function make_valid_update_test_subtitle()
@@ -55,7 +57,7 @@ local function make_update_test_exporter(result, jobs, subtitle, options)
         quick_creation_opts = fixtures.make_quick_creation_options(result, { record_clear = true }),
         subs_observer = fixtures.make_subtitle_observer(result, subtitle or make_valid_update_test_subtitle()),
         encoder = fixtures.make_update_encoder(jobs, options.media),
-        forvo = fixtures.make_forvo(),
+        forvo = options.forvo or fixtures.make_forvo(result),
         cfg_mgr = fixtures.make_config_manager(options.config or make_update_test_config()),
         notify = fixtures.make_notifier(result),
         mp = options.mp,
@@ -293,6 +295,177 @@ local function test_export_captures_destination()
     assert_export_destination_test_request(result)
 end
 
+--- Return settings whose field, pronunciation, and transport values change during an update.
+local function make_transaction_update_test_config(append_media)
+    return h.shallow_copy({
+        append_media = append_media,
+        disable_gui_browse = false,
+        note_tag = 'original-tag',
+        card_overwrite_safeguard = 1,
+        use_forvo = 'always',
+        vocab_field = 'Word',
+        vocab_audio_field = 'VocabAudio',
+        audio_format = 'opus',
+        audio_codec = 'libopus',
+        audio_extension = '.ogg',
+        audio_bitrate = '32k',
+    }, make_export_destination_test_config())
+end
+
+--- Build raw stored fields and endpoint-specific media directories for recording clients.
+local function make_transaction_update_test_state(note_ids)
+    local state = { target_ids = note_ids, stored_fields = {}, media_dirs = {
+        ['http://original-server:8765'] = '/original-media',
+        ['http://different-server:8765'] = '/different-media',
+    } }
+    for _, note_id in ipairs(note_ids) do
+        state.stored_fields[note_id] = {
+            SentKanji = 'stored sentence', SentAudio = '[sound:stored.ogg]',
+            Image = '<img src="stored.jpg">', Word = 'word', VocabAudio = '',
+        }
+    end
+    return state
+end
+
+--- Construct an exporter using real Anki request serialization with fake responses.
+local function make_transaction_update_test_exporter(state, jobs, config, pronunciation)
+    local cfg_mgr = fixtures.make_config_manager(config)
+    local client = fixtures.make_update_transport_test_client(state, ankiconnect.new, cfg_mgr)
+    return make_update_test_exporter(state, jobs, nil, {
+        config = config, ankiconnect = client, forvo = pronunciation,
+        mp = fixtures.make_mp_property_reader { filename = 'episode.mkv', ['time-pos'] = 65, duration = 200 },
+    })
+end
+
+--- Change live settings after media starts without modifying captured providers.
+local function change_transaction_update_test_profile(config)
+    h.shallow_copy({
+        sentence_field = 'DifferentSentence', audio_field = 'DifferentAudio', image_field = 'DifferentImage',
+        model_name = 'Different model', append_media = not config.append_media,
+        ankiconnect_url = 'http://different-server:8765', ankiconnect_api_key = 'different-key',
+        disable_gui_browse = true, note_tag = 'different-tag', use_forvo = 'no',
+        audio_format = 'mp3', audio_codec = 'libmp3lame', audio_extension = '.mp3', audio_bitrate = '96k',
+    }, config)
+end
+
+--- Construct real Forvo behavior with recording page, download, encoding, and cleanup boundaries.
+local function make_transaction_update_test_pronunciation(config)
+    local state = { requests = {}, encodings = {}, removed = {}, warnings = {} }
+    local page = string.format("Play('%s','%s');", base64.enc('clip.mp3'), base64.enc('clip.ogg'))
+    local dependencies = fixtures.make_forvo_dependencies(state, {
+        { status = 0, stdout = page }, { status = 0 },
+    })
+    return forvo.new(dependencies).init(fixtures.make_config_manager(config)), state
+end
+
+--- Assert original fields and pronunciation settings were used after a live profile change.
+local function assert_transaction_update_test_write(state, pronunciation, note_id, append_media)
+    local request = state.anki_requests[#state.anki_requests].request
+    h.assert_equals(request.action, 'updateNoteFields')
+    h.assert_equals(request.params.note.id, note_id)
+    local fields = request.params.note.fields
+    local expected = 'new sentence<br>stored sentence'
+    if append_media then expected = 'stored sentence<br>new sentence' end
+    h.assert_equals(fields.SentKanji, expected)
+    h.assert_equals(fields.DifferentSentence, nil)
+    -- Reverse merge keeps stored ancillary fields. Encoding must retain its settings in either order.
+    if append_media then
+        h.assert_equals(fields.VocabAudio, '[sound:forvo_word.ogg]')
+    end
+    h.assert_equals(pronunciation.requests[2][1], 'https://audio00.forvo.com/ogg/clip.ogg')
+    local args = pronunciation.encodings[1]
+    h.assert_equals(args[#args], '-o=/original-media/forvo_word.ogg')
+    h.assert_equals(args[#args - 1], '--oacopts-add=b=32k')
+    h.assert_equals(args[#args - 3], '--oac=libopus')
+    h.assert_equals(pronunciation.warnings, {})
+end
+
+--- Assert every serialized read, write, tag, and Browser request uses its own captured provider.
+local function assert_transaction_update_test_transport(state)
+    for index, options in ipairs(state.anki_transport) do
+        local record = state.anki_requests[index]
+        local config = record.cfg_mgr.config()
+        h.assert_equals(options.url, config.ankiconnect_url)
+        h.assert_equals(options.request_json:match('"key"%s*:%s*"([^"]*)"'), config.ankiconnect_api_key)
+        if record.request.action == 'findModelsByName' then
+            h.assert_equals(record.request.params.modelNames, { config.model_name })
+        elseif record.request.action == 'addTags' then
+            h.assert_equals(record.request.params.tags, config.note_tag)
+        end
+    end
+end
+
+--- Exercise one entry point across both media and deferred Anki-write profile changes.
+local function assert_transaction_update_test_case(case)
+    local note_id = h.minutes_ago(0) + 1
+    local state, jobs = make_transaction_update_test_state({ note_id }), {}
+    local config = make_transaction_update_test_config(case.append_media)
+    local pronunciation, pronunciation_state = make_transaction_update_test_pronunciation(config)
+    local exporter = make_transaction_update_test_exporter(state, jobs, config, pronunciation)
+    if case.command == 'update_notes' then
+        exporter.update_notes({ note_id }, false)
+    else
+        exporter[case.command](false)
+    end
+    change_transaction_update_test_profile(config)
+    complete_export_test_media(jobs)
+    assert_transaction_update_test_write(state, pronunciation_state, note_id, case.append_media)
+    config.ankiconnect_url, config.ankiconnect_api_key = 'http://third-server:8765', 'third-key'
+    state.anki_write_callbacks[note_id](true, {}, nil)
+    assert_transaction_update_test_transport(state)
+    h.assert_equals(state.notification, 'Updated note: stored sentence.')
+    h.assert_equals(state.clear_count, 2) -- Selection and quick options are cleared once each.
+end
+
+--- Verify direct, recent, and selected updates retain original settings through completion.
+local function test_update_transactions_capture_profile()
+    for _, case in ipairs {
+        { command = 'update_notes', append_media = true },
+        { command = 'update_notes', append_media = false },
+        { command = 'update_last_note', append_media = true },
+        { command = 'update_selected_note', append_media = true },
+    } do
+        assert_transaction_update_test_case(case)
+    end
+end
+
+--- Complete one media pair without completing later requests' pending jobs.
+local function complete_transaction_update_test_pair(jobs, first_index)
+    complete_export_test_job(jobs[first_index], nil)
+    complete_export_test_job(jobs[first_index + 1], nil)
+end
+
+--- Assert encoder, Forvo, and Anki providers remain paired within overlapping requests.
+local function assert_concurrent_update_test_ownership(state, jobs)
+    h.assert_equals(jobs[1].cfg_mgr == jobs[2].cfg_mgr, true)
+    h.assert_equals(jobs[3].cfg_mgr == jobs[4].cfg_mgr, true)
+    h.assert_equals(jobs[1].cfg_mgr == jobs[3].cfg_mgr, false)
+    h.assert_equals(jobs[1].output_dir, '/original-media')
+    h.assert_equals(jobs[3].output_dir, '/different-media')
+    h.assert_equals(state.forvo_calls[1].cfg_mgr == jobs[1].cfg_mgr, true)
+    h.assert_equals(state.forvo_calls[2].cfg_mgr == jobs[3].cfg_mgr, true)
+    h.assert_equals(state.forvo_calls[1].output_dir, '/original-media')
+    h.assert_equals(state.forvo_calls[2].output_dir, '/different-media')
+end
+
+--- Verify overlapping updates own different providers and pronunciation destinations.
+local function test_update_transactions_isolate_media_directories()
+    local state, jobs = make_transaction_update_test_state({ 11, 12 }), {}
+    local config = make_transaction_update_test_config(true)
+    local exporter = make_transaction_update_test_exporter(state, jobs, config)
+    exporter.update_notes({ 11 }, true)
+    config.ankiconnect_url, config.ankiconnect_api_key = 'http://different-server:8765', 'different-key'
+    config.note_tag = 'second-tag'
+    exporter.update_notes({ 12 }, true)
+    complete_transaction_update_test_pair(jobs, 1)
+    complete_transaction_update_test_pair(jobs, 3)
+    assert_concurrent_update_test_ownership(state, jobs)
+    h.assert_equals(state.notification, nil)
+    state.anki_write_callbacks[12](true, {}, nil)
+    state.anki_write_callbacks[11](true, {}, nil)
+    assert_transaction_update_test_transport(state)
+end
+
 --- Build a file-transition fixture using the real subtitle selection implementation.
 local function make_file_change_test_context()
     local observer = subtitles_observer.new()
@@ -342,6 +515,8 @@ local function run_tests()
     test_export_skipped_media()
     test_export_captures_request()
     test_export_captures_destination()
+    test_update_transactions_capture_profile()
+    test_update_transactions_isolate_media_directories()
     test_reset_for_file_change()
 end
 

@@ -7,6 +7,7 @@ AnkiConnect tests
 
 local h = require('helpers')
 local fixtures = require('tests.fixtures')
+local snapshot = require('config.snapshot')
 local ankiconnect = require('anki.ankiconnect')
 
 --- Return the successful reordered multi-note response scenario.
@@ -210,15 +211,16 @@ local function test_append_media_reports_write_result()
     h.assert_equals(tagged_note_id, 123)
 end
 
---- Captured job options select the destination for both direct and GUI additions.
-local function test_add_note_captured_options()
-    local current = { deck_name = 'Current deck', model_name = 'Current model', allow_duplicates = true }
-    local captured = { deck_name = 'Captured deck', model_name = 'Captured model', allow_duplicates = false }
+--- A transaction client's settings select the destination for direct and GUI additions.
+local function test_add_note_transaction_settings()
     for _, gui in ipairs { false, true } do
+        local config = { deck_name = 'Captured deck', model_name = 'Captured model', allow_duplicates = false }
         local state = {}
-        local client = fixtures.make_note_add_client(state, ankiconnect.new, current)
+        local original = fixtures.make_note_add_client(state, ankiconnect.new, config)
+        local client = original.new(snapshot.new(fixtures.make_config_manager(config)))
+        config.deck_name, config.model_name, config.allow_duplicates = 'Current deck', 'Current model', true
         local fields = { Sentence = 'captured sentence' }
-        client.add_note { note_fields = fields, tag = 'source', gui = gui, opts = captured }
+        client.add_note { note_fields = fields, tag = 'source', gui = gui }
         local request = state.note_requests[1]
         local action = 'addNote'
         if gui then action = 'guiAddCards' end
@@ -231,8 +233,8 @@ local function test_add_note_captured_options()
     end
 end
 
---- Jobs without explicit options use the client's current configuration.
-local function test_add_note_default_options()
+--- Ordinary clients use their current configuration without a snapshot.
+local function test_add_note_current_config()
     local config = { deck_name = 'Current deck', model_name = 'Current model', allow_duplicates = true }
     local state = {}
     local client = fixtures.make_note_add_client(state, ankiconnect.new, config)
@@ -244,28 +246,28 @@ local function test_add_note_default_options()
     h.assert_equals(note.tags, {})
 end
 
---- Captured transport settings override both the live URL and key, including a blank key.
-local function test_execute_captured_transport()
+--- Fresh transaction clients retain captured URL/key settings, including a blank key.
+local function test_execute_transaction_transport()
     for _, case in ipairs { { key = 'original-key', expected_key = 'original-key' }, { key = '' } } do
         local state = {}
-        local client = ankiconnect.new { platform = fixtures.make_recording_anki_platform(state) }
-        client.init(fixtures.make_config_manager {
-            ankiconnect_url = 'http://different-server:8765',
-            ankiconnect_api_key = 'different-key',
-        })
+        local config = { ankiconnect_url = 'http://original-server:8765', ankiconnect_api_key = case.key }
+        local cfg_mgr = fixtures.make_config_manager(config)
+        local original = ankiconnect.new { platform = fixtures.make_recording_anki_platform(state) }.init(cfg_mgr)
+        local client = original.new(snapshot.new(cfg_mgr))
+        h.assert_equals(client == original, false)
+        config.ankiconnect_url, config.ankiconnect_api_key = 'http://different-server:8765', 'different-key'
         local request = { action = 'version', version = 6 }
-        client.execute {
-            request = request,
-            opts = { ankiconnect_url = 'http://original-server:8765', ankiconnect_api_key = case.key },
-        }
+        client.execute { request = request }
         h.assert_equals(state.transport_calls[1].url, 'http://original-server:8765')
         h.assert_equals(request.key, case.expected_key)
         h.assert_equals(state.transport_calls[1].request_json:match('"key"%s*:%s*"([^"]*)"'), case.expected_key)
+        original.execute { request = { action = 'version', version = 6 } }
+        h.assert_equals(state.transport_calls[2].url, 'http://different-server:8765')
     end
 end
 
---- Requests without captured transport settings follow the current configuration.
-local function test_execute_default_transport()
+--- Ordinary client requests follow the current configuration.
+local function test_execute_current_transport()
     local config = { ankiconnect_url = 'http://original-server:8765', ankiconnect_api_key = 'original-key' }
     local state = {}
     local client = ankiconnect.new { platform = fixtures.make_recording_anki_platform(state) }
@@ -278,45 +280,61 @@ local function test_execute_default_transport()
     h.assert_equals(request.key, 'different-key')
 end
 
+--- Return the original settings for delayed add-response scenarios.
+local function make_browse_destination_test_config(disabled)
+    return {
+        deck_name = 'Original deck', model_name = 'Original model', allow_duplicates = false,
+        ankiconnect_url = 'http://original-server:8765', ankiconnect_api_key = 'original-key',
+        disable_gui_browse = disabled,
+    }
+end
+
+--- Verify delayed Browser requests use the captured destination and preference.
+local function assert_browse_destination_test_calls(state, case)
+    h.assert_equals(#state.transport_calls, case.expected_calls)
+    h.assert_equals(#state.note_requests, case.expected_calls)
+    if not case.captured_disabled then
+        local request = state.note_requests[2]
+        h.assert_equals(request.action, 'guiBrowse')
+        h.assert_equals(request.params.query, 'nid:123')
+        h.assert_equals(request.key, 'original-key')
+        h.assert_equals(state.transport_calls[2].url, 'http://original-server:8765')
+        h.assert_equals(state.transport_calls[2].request_json:match('"key"%s*:%s*"([^"]*)"'), 'original-key')
+    end
+end
+
+--- Verify one transaction survives profile changes before an add response arrives.
+local function assert_add_note_browse_test_case(case)
+    local config = make_browse_destination_test_config(case.captured_disabled)
+    local state = {}
+    local original = fixtures.make_note_add_client(state, ankiconnect.new, config, {
+        platform = fixtures.make_recording_anki_platform(state),
+    })
+    local client = original.new(snapshot.new(fixtures.make_config_manager(config)))
+    client.add_note { note_fields = { Sentence = 'text' }, tag = '', gui = false }
+    config.ankiconnect_url = 'http://different-server:8765'
+    config.ankiconnect_api_key = 'different-key'
+    config.disable_gui_browse = case.current_disabled
+    --- Supply a parsed successful response without requiring standalone JSON parsing.
+    client.parse_result = function() return 123, nil end
+    state.transport_calls[1].completion_fn(true, {}, nil)
+    assert_browse_destination_test_calls(state, case)
+end
+
 --- Successful additions browse the original server and honor its Browser preference.
 local function test_add_note_browses_captured_destination()
     for _, case in ipairs {
         { captured_disabled = false, current_disabled = false, expected_calls = 2 },
         { captured_disabled = false, current_disabled = true, expected_calls = 2 },
         { captured_disabled = true, current_disabled = false, expected_calls = 1 },
+        { captured_disabled = true, current_disabled = true, expected_calls = 1 },
     } do
-        local config = {
-            deck_name = 'Original deck', model_name = 'Original model', allow_duplicates = false,
-            ankiconnect_url = 'http://original-server:8765', ankiconnect_api_key = 'original-key',
-            disable_gui_browse = case.captured_disabled,
-        }
-        local state = {}
-        local client = fixtures.make_note_add_client(state, ankiconnect.new, config, {
-            platform = fixtures.make_recording_anki_platform(state),
-        })
-        client.add_note {
-            note_fields = { Sentence = 'text' }, tag = '', gui = false, opts = h.deep_copy(config),
-        }
-        config.ankiconnect_url = 'http://different-server:8765'
-        config.ankiconnect_api_key = 'different-key'
-        config.disable_gui_browse = case.current_disabled
-        client.parse_result = function() return 123, nil end
-        state.transport_calls[1].completion_fn(true, {}, nil)
-        h.assert_equals(#state.transport_calls, case.expected_calls)
-        h.assert_equals(#state.note_requests, case.expected_calls)
-        if not case.captured_disabled then
-            local request = state.note_requests[2]
-            h.assert_equals(request.action, 'guiBrowse')
-            h.assert_equals(request.params.query, 'nid:123')
-            h.assert_equals(request.key, 'original-key')
-            h.assert_equals(state.transport_calls[2].url, 'http://original-server:8765')
-            h.assert_equals(state.transport_calls[2].request_json:match('"key"%s*:%s*"([^"]*)"'), 'original-key')
-        end
+        assert_add_note_browse_test_case(case)
     end
 end
 
---- Ordinary Browser requests still use the current profile when no settings are supplied.
-local function test_gui_browse_default_options()
+--- Ordinary Browser requests follow their client's current profile.
+local function test_gui_browse_current_config()
     local config = { ankiconnect_url = 'http://current-server:8765', ankiconnect_api_key = 'current-key' }
     local state = {}
     local client = fixtures.make_note_add_client(state, ankiconnect.new, config, {
@@ -339,12 +357,12 @@ local function run_tests()
     test_get_first_field()
     test_append_media_reports_write_error()
     test_append_media_reports_write_result()
-    test_add_note_captured_options()
-    test_add_note_default_options()
-    test_execute_captured_transport()
-    test_execute_default_transport()
+    test_add_note_transaction_settings()
+    test_add_note_current_config()
+    test_execute_transaction_transport()
+    test_execute_current_transport()
     test_add_note_browses_captured_destination()
-    test_gui_browse_default_options()
+    test_gui_browse_current_config()
 end
 
 return {
