@@ -61,28 +61,12 @@ local function make_exporter()
         return pub
     end
 
-    --- Update notes selected in the Anki Browser.
+    --- Dispatch selected-note lookup and updating through one captured context.
     function pub.update_selected_note(overwrite)
         pub.maybe_reload_config()
-
-        local selected_note_ids = self.ankiconnect.get_selected_note_ids()
-
-        if h.is_empty(selected_note_ids) then
-            return h.notify("Couldn't find the target note(s). Did you select the notes you want in Anki?", "warn", 3)
-        end
-
-        if #selected_note_ids > config().card_overwrite_safeguard then
-            return h.notify(
-                    string.format(
-                            "More than %i notes selected\nnot recommended, but you can change the limit in your config",
-                            config().card_overwrite_safeguard
-                    ),
-                    "warn",
-                    4
-            )
-        end
-
-        pub.update_notes(selected_note_ids, overwrite)
+        self.note_update_context
+            .new(snapshot.new(self.cfg_mgr))
+            .update_selected_note(overwrite)
         return pub
     end
 

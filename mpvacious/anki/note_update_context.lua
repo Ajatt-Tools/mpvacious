@@ -591,6 +591,26 @@ local function make_note_update_context(components)
         return pub
     end
 
+    --- Update notes selected in the Anki Browser.
+    function pub.update_selected_note(overwrite)
+        local selected_note_ids = self.ankiconnect.get_selected_note_ids()
+
+        if h.is_empty(selected_note_ids) then
+            return self.notify("Couldn't find the target note(s). Did you select the notes you want in Anki?", "warn", 3)
+        end
+
+        if #selected_note_ids > config().card_overwrite_safeguard then
+            local msg = string.format(
+                    "More than %i notes selected\nnot recommended, but you can change the limit in your config",
+                    config().card_overwrite_safeguard
+            )
+            return self.notify(msg, "warn", 4)
+        end
+
+        pub.update_notes(selected_note_ids, overwrite)
+        return pub
+    end
+
     --- Select and update recent notes using this context's Anki destination.
     function pub.update_last_note(overwrite)
         local n_cards = self.quick_creation_opts:get_cards()
