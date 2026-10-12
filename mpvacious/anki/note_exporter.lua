@@ -17,6 +17,23 @@ local function make_exporter()
         return self.cfg_mgr.config()
     end
 
+    --- Bind field and media dependencies into a note-update context.
+    local function make_update_context(components)
+        return note_update_context.new({
+            ankiconnect = self.ankiconnect,
+            quick_creation_opts = self.quick_creation_opts,
+            subs_observer = self.subs_observer,
+            encoder = self.encoder,
+            forvo = self.forvo,
+            cfg_mgr = self.cfg_mgr,
+            mp = components.mp,
+            notify = self.notify,
+        })
+    end
+
+    ------------------------------------------------------------
+    --- Public
+
     --- Discard subtitle selection and quick options when the source file changes.
     function pub.reset_for_file_change()
         if self.subs_observer == nil then
@@ -80,16 +97,7 @@ local function make_exporter()
         self.encoder = components.encoder
         self.forvo = components.forvo
         self.notify = components.notify or h.notify
-        self.note_update_context = note_update_context.new({
-            ankiconnect = self.ankiconnect,
-            quick_creation_opts = self.quick_creation_opts,
-            subs_observer = self.subs_observer,
-            encoder = self.encoder,
-            forvo = self.forvo,
-            cfg_mgr = self.cfg_mgr,
-            mp = components.mp,
-            notify = self.notify,
-        })
+        self.note_update_context = make_update_context(components)
         return pub
     end
 
