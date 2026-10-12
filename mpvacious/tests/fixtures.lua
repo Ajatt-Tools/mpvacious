@@ -295,12 +295,13 @@ function this.make_quick_creation_options(state, options)
     }
 end
 
---- Return a notification callback that records the last message and level.
+--- Return a notification callback that records the last message, level, and duration.
 function this.make_notifier(state)
     --- Record one notification for later assertions.
-    return function(message, level)
+    return function(message, level, duration)
         state.notification = message
         state.notification_level = level
+        state.notification_duration = duration
     end
 end
 

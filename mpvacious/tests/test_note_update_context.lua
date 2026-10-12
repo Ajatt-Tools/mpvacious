@@ -8,6 +8,7 @@ Note update context tests.
 local h = require("helpers")
 local fixtures = require("tests.fixtures")
 local note_update_context = require("anki.note_update_context")
+local snapshot = require("config.snapshot")
 local subtitle_module = require("subtitles.subtitle")
 
 --- Create an update configuration with the selected merge order.
@@ -290,6 +291,77 @@ local function test_collect_subtitle()
     local multi_context, multi_subtitle = make_update_test_context { result = multi_result, jobs = {}, lines = 3 }
     h.assert_equals(multi_context.collect_subtitle(), multi_subtitle)
     h.assert_equals(multi_result.collected_lines, 3)
+end
+
+--- Check lookup results without collecting subtitles, reading fields, or starting an update.
+local function assert_target_lookup_test_case(case, method)
+    local result, jobs = make_update_test_result(), {}
+    result.last_note_ids, result.selected_note_ids = case.recent_ids, case.selected_ids
+    local config = make_update_test_config(true)
+    config.card_overwrite_safeguard = 3
+    local context = make_update_test_context {
+        result = result,
+        jobs = jobs,
+        config = config,
+        quick_options = fixtures.make_quick_creation_options(result, { cards = case.cards }),
+    }
+    local ids, warning, duration = context[method]()
+    h.assert_equals(ids, case.expected_ids)
+    h.assert_equals(warning, case.warning)
+    h.assert_equals(duration, nil)
+    h.assert_equals(result.requested_cards, case.cards)
+    h.assert_equals(result.current_collections, 0)
+    h.assert_equals(result.field_requests, {})
+    h.assert_equals(result.clear_count, 0)
+    h.assert_equals(result.notification, nil)
+    h.assert_equals(jobs, {})
+end
+
+--- Validate missing and expired recent notes while preserving count and ordering.
+local function test_find_recent_note_ids()
+    local recent, older = h.minutes_ago(1), h.minutes_ago(11)
+    for _, case in ipairs {
+        { cards = 1, warning = "Couldn't find the target note." },
+        { recent_ids = {}, cards = 2, warning = "Couldn't find the target note." },
+        { recent_ids = { older }, cards = 1, warning = "Couldn't find the target note." },
+        { recent_ids = { older, recent }, cards = 2, warning = "Couldn't find the target note." },
+        { recent_ids = { recent }, cards = 1, expected_ids = { recent } },
+        { recent_ids = { recent - 1, recent }, cards = 2, expected_ids = { recent - 1, recent } },
+    } do
+        assert_target_lookup_test_case(case, "find_recent_note_ids")
+    end
+end
+
+--- Validate Browser selections against the captured safeguard without notifying.
+local function test_find_selected_note_ids()
+    local missing = "Couldn't find the target note(s). Did you select the notes you want in Anki?"
+    for _, case in ipairs {
+        { warning = missing },
+        { selected_ids = {}, warning = missing },
+        { selected_ids = { 13 }, expected_ids = { 13 } },
+        { selected_ids = { 11, 12, 13 }, expected_ids = { 11, 12, 13 } },
+        {
+            selected_ids = { 11, 12, 13, 14 },
+            warning = "More than 3 notes selected\nnot recommended, but you can change the limit in your config",
+        },
+    } do
+        assert_target_lookup_test_case(case, "find_selected_note_ids")
+    end
+end
+
+--- Keep the selected-note limit from the snapshot when the live profile changes.
+local function test_selected_lookup_retains_snapshot_safeguard()
+    local result = make_update_test_result()
+    result.selected_note_ids = { 11, 12 }
+    local config = make_update_test_config(true)
+    config.card_overwrite_safeguard = 3
+    local context = make_update_test_context { result = result, jobs = {}, config = config }
+    local captured = context.new(snapshot.new(fixtures.make_config_manager(config)))
+    config.card_overwrite_safeguard = 1
+    local ids, warning = captured.find_selected_note_ids()
+    h.assert_equals(ids, { 11, 12 })
+    h.assert_equals(warning, nil)
+    h.assert_equals(result.clear_count, 0)
 end
 
 --- Test media completion writes each note and notifies the user.
@@ -762,6 +834,9 @@ local function run_tests(context)
     context = context or make_field_merge_test_context()
     test_join_field_content()
     test_collect_subtitle()
+    test_find_recent_note_ids()
+    test_find_selected_note_ids()
+    test_selected_lookup_retains_snapshot_safeguard()
     test_update_completion()
     test_update_media_failures()
     test_update_without_media_directory()

@@ -60,29 +60,26 @@ end
 --- Check the selected codec, destination muxer, and output filename.
 local function assert_forvo_test_encoding(state, case, filename, output_dir)
     output_dir = output_dir or "/anki-test-media"
-    h.assert_equals(
-        state.encodings,
+    h.assert_equals(state.encodings, {
         {
-            {
-                "mpv",
-                "/forvo-test-tmp/" .. filename,
-                "--loop-file=no",
-                "--keep-open=no",
-                "--video=no",
-                "--no-ocopy-metadata",
-                "--no-sub",
-                "--audio-channels=mono",
-                "--oacopts-add=vbr=on",
-                "--oacopts-add=application=voip",
-                "--oacopts-add=compression_level=10",
-                "--af-append=silenceremove=1:0:-50dB",
-                "--oac=" .. case.codec,
-                "--of=" .. case.output_muxer,
-                "--oacopts-add=b=32k",
-                "-o=" .. output_dir .. "/" .. filename,
-            },
-        }
-    )
+            "mpv",
+            "/forvo-test-tmp/" .. filename,
+            "--loop-file=no",
+            "--keep-open=no",
+            "--video=no",
+            "--no-ocopy-metadata",
+            "--no-sub",
+            "--audio-channels=mono",
+            "--oacopts-add=vbr=on",
+            "--oacopts-add=application=voip",
+            "--oacopts-add=compression_level=10",
+            "--af-append=silenceremove=1:0:-50dB",
+            "--oac=" .. case.codec,
+            "--of=" .. case.output_muxer,
+            "--oacopts-add=b=32k",
+            "-o=" .. output_dir .. "/" .. filename,
+        },
+    })
 end
 
 --- Return source-selection cases for all configured pronunciation destination extensions.

@@ -54,7 +54,8 @@ local function make_update_test_exporter(result, jobs, subtitle, options)
     options = options or {}
     return note_exporter.new().init {
         ankiconnect = options.ankiconnect or fixtures.make_update_ankiconnect(result, make_exporter_test_stored_fields),
-        quick_creation_opts = fixtures.make_quick_creation_options(result, { record_clear = true }),
+        quick_creation_opts = options.quick_options
+            or fixtures.make_quick_creation_options(result, { record_clear = true }),
         subs_observer = fixtures.make_subtitle_observer(result, subtitle or make_valid_update_test_subtitle()),
         encoder = fixtures.make_update_encoder(jobs, options.media),
         forvo = options.forvo or fixtures.make_forvo(result),
@@ -108,6 +109,91 @@ local function test_invalid_subtitle_does_not_start_update()
     h.assert_equals(#jobs, 0)
     h.assert_equals(result.append_count, 0)
     h.assert_equals(result.clear_count, 0)
+end
+
+--- Preserve the public return value and interactive state when target lookup fails.
+local function assert_lookup_warning_test_case(case)
+    local result, jobs = { append_count = 0, clear_count = 0 }, {}
+    result.last_note_ids, result.selected_note_ids = case.recent_ids, case.selected_ids
+    local config = make_update_test_config()
+    config.card_overwrite_safeguard = 3
+    local exporter = make_update_test_exporter(result, jobs, nil, { config = config })
+    h.assert_equals(rawequal(exporter[case.method](true), exporter), true)
+    h.assert_equals(result.notification, case.warning)
+    h.assert_equals(result.notification_level, "warn")
+    h.assert_equals(result.notification_duration, 4)
+    h.assert_equals(result.current_collections, nil)
+    h.assert_equals(result.field_requests, nil)
+    h.assert_equals(result.clear_count, 0)
+    h.assert_equals(result.append_count, 0)
+    h.assert_equals(jobs, {})
+end
+
+--- Use a unified warning duration for missing, expired, and excessive lookup targets.
+local function test_lookup_warnings()
+    for _, case in ipairs {
+        { method = "update_last_note", recent_ids = {}, warning = "Couldn't find the target note." },
+        {
+            method = "update_last_note",
+            recent_ids = { h.minutes_ago(11) },
+            warning = "Couldn't find the target note.",
+        },
+        {
+            method = "update_selected_note",
+            selected_ids = {},
+            warning = "Couldn't find the target note(s). Did you select the notes you want in Anki?",
+        },
+        {
+            method = "update_selected_note",
+            selected_ids = { 11, 12, 13, 14 },
+            warning = "More than 3 notes selected\nnot recommended, but you can change the limit in your config",
+        },
+    } do
+        assert_lookup_warning_test_case(case)
+    end
+end
+
+--- Dispatch validated IDs and overwrite mode without replacing their captured context.
+local function assert_lookup_dispatch_test_case(case)
+    local result, jobs = { append_count = 0, clear_count = 0 }, {}
+    result.last_note_ids, result.selected_note_ids = case.recent_ids, case.selected_ids
+    local config = make_update_test_config()
+    config.card_overwrite_safeguard = 3
+    local exporter = make_update_test_exporter(result, jobs, nil, { config = config })
+    h.assert_equals(rawequal(exporter[case.method](case.overwrite), exporter), true)
+    h.assert_equals(#jobs, 2)
+    h.assert_equals(result.field_requests, nil)
+    h.assert_equals(#result.client_cfg_mgrs, 1)
+    h.assert_equals(rawequal(jobs[1].cfg_mgr, result.client_cfg_mgrs[1]), true)
+    complete_export_test_media(jobs)
+    h.assert_equals(result.field_requests, { case.expected_ids })
+    h.assert_equals(result.append_count, #case.expected_ids)
+    for _, note_id in ipairs(case.expected_ids) do
+        h.assert_equals(result.fields_by_note[note_id].SentKanji, case.sentence)
+    end
+end
+
+--- Retain immediate recent and selected updates using the original captured provider.
+local function test_lookup_dispatch()
+    local recent = h.minutes_ago(1)
+    for _, case in ipairs {
+        {
+            method = "update_last_note",
+            recent_ids = { recent },
+            expected_ids = { recent },
+            overwrite = true,
+            sentence = "new sentence",
+        },
+        {
+            method = "update_selected_note",
+            selected_ids = { 11, 12, 13 },
+            expected_ids = { 11, 12, 13 },
+            overwrite = false,
+            sentence = "new sentence<br>old sentence",
+        },
+    } do
+        assert_lookup_dispatch_test_case(case)
+    end
 end
 
 --- Test ordinary exports use the context to create and write note fields.
@@ -526,6 +612,8 @@ end
 local function run_tests()
     test_update_notes_after_media_created()
     test_invalid_subtitle_does_not_start_update()
+    test_lookup_warnings()
+    test_lookup_dispatch()
     test_export_to_anki()
     test_export_without_media_directory()
     test_export_without_first_field()
