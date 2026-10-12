@@ -206,11 +206,11 @@ local function make_encoder(components)
     end
 
     --- Prepare a deferred media job or a skipped job when no matching track/field exists.
-    local function create_job(job_type, sub, audio_padding)
+    local function create_job(job_type, sub, audio_padding, snapshot_timestamp)
         local current_timestamp, on_finish_fn
         local job = {}
         if job_type == "snapshot" and has_video_track() and not h.is_empty(config().image_field) then
-            current_timestamp = mp_api.get_property_number("time-pos", 0)
+            current_timestamp = snapshot_timestamp or mp_api.get_property_number("time-pos", 0)
             job.filename = make_snapshot_filename(sub["start"], sub["end"], current_timestamp)
             --- Start snapshot creation using this job's captured timings.
             job.run_async = function()
@@ -274,9 +274,9 @@ local function make_encoder(components)
         self.output_dir_path = dir_path
     end
 
-    --- Prepare a snapshot job for the supplied subtitle selection.
-    function public.snapshot.create_job(sub)
-        return create_job("snapshot", sub)
+    --- Prepare a snapshot job, using current playback time when no timestamp is supplied.
+    function public.snapshot.create_job(sub, timestamp)
+        return create_job("snapshot", sub, nil, timestamp)
     end
 
     --- Toggle animated snapshots in the active configuration.
