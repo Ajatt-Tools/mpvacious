@@ -14,10 +14,16 @@ EXAMPLE_CONFIG      := $(PROJECT)/config/default_config.conf
 EXAMPLE_CONFIG_COPY := $(RELEASE_DIR)/$(PACKAGE).conf
 VERSION_FILE        := $(PROJECT)/version.json
 
-.PHONY: all docs install uninstall clean version
+.PHONY: all docs install uninstall clean version format format-check
 
 all: $(ZIP) $(EXAMPLE_CONFIG_COPY)
 docs: $(DOCS)
+
+format:
+	bash scripts/format.sh
+
+format-check:
+	bash scripts/format.sh --check
 
 version:
 	[ -n "$(VERSION)" ] || exit 1
