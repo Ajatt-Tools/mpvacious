@@ -600,40 +600,35 @@ local function make_note_update_context(components)
         return pub
     end
 
-    --- Update notes selected in the Anki Browser.
-    function pub.update_selected_note(overwrite)
+    --- Return selected IDs or a warning when selection is empty or exceeds the safeguard.
+    function pub.find_selected_note_ids()
         local selected_note_ids = self.ankiconnect.get_selected_note_ids()
 
         if h.is_empty(selected_note_ids) then
-            return self.notify(
-                "Couldn't find the target note(s). Did you select the notes you want in Anki?",
-                "warn",
-                3
-            )
+            return nil, "Couldn't find the target note(s). Did you select the notes you want in Anki?"
         end
 
         if #selected_note_ids > config().card_overwrite_safeguard then
-            local msg = string.format(
+            local err_msg = string.format(
                 "More than %i notes selected\nnot recommended, but you can change the limit in your config",
                 config().card_overwrite_safeguard
             )
-            return self.notify(msg, "warn", 4)
+            return nil, err_msg
         end
 
-        pub.update_notes(selected_note_ids, overwrite)
-        return pub
+        return selected_note_ids, nil
     end
 
-    --- Select and update recent notes using this context's Anki destination.
-    function pub.update_last_note(overwrite)
+    --- Return requested recent IDs or a warning when the oldest target exceeds the age limit.
+    function pub.find_recent_note_ids()
         local n_cards = self.quick_creation_opts:get_cards()
-        -- this now returns a table
+        -- This returns a table of recent note IDs.
         local last_note_ids = self.ankiconnect.get_last_note_ids(n_cards)
         -- Recent note IDs are ordered earliest to latest.
         if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(accept_notes_made_within_last_minutes) then
-            return self.notify("Couldn't find the target note.", "warn", 2)
+            return nil, "Couldn't find the target note."
         end
-        return pub.update_notes(last_note_ids, overwrite)
+        return last_note_ids, nil
     end
 
     --- Export the current subtitle as a new Anki note.

@@ -7,6 +7,8 @@ local h = require("helpers")
 local note_update_context = require("anki.note_update_context")
 local snapshot = require("config.snapshot")
 
+local LOOKUP_WARNING_DURATION_SECONDS = 4
+
 --- Create the public Anki note export command adapter.
 local function make_exporter()
     local self = {}
@@ -62,7 +64,13 @@ local function make_exporter()
     --- Dispatch recent-note lookup and updating through one captured context.
     function pub.update_last_note(overwrite)
         pub.maybe_reload_config()
-        self.note_update_context.new(snapshot.new(self.cfg_mgr)).update_last_note(overwrite)
+        local context = self.note_update_context.new(snapshot.new(self.cfg_mgr))
+        local note_ids, error = context.find_recent_note_ids()
+        if error then
+            self.notify(error, "warn", LOOKUP_WARNING_DURATION_SECONDS)
+            return pub
+        end
+        context.update_notes(note_ids, overwrite)
         return pub
     end
 
@@ -75,7 +83,13 @@ local function make_exporter()
     --- Dispatch selected-note lookup and updating through one captured context.
     function pub.update_selected_note(overwrite)
         pub.maybe_reload_config()
-        self.note_update_context.new(snapshot.new(self.cfg_mgr)).update_selected_note(overwrite)
+        local context = self.note_update_context.new(snapshot.new(self.cfg_mgr))
+        local note_ids, error = context.find_selected_note_ids()
+        if error then
+            self.notify(error, "warn", LOOKUP_WARNING_DURATION_SECONDS)
+            return pub
+        end
+        context.update_notes(note_ids, overwrite)
         return pub
     end
 
