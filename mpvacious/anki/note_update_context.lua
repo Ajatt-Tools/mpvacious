@@ -461,6 +461,13 @@ local function make_note_update_context(components)
         return { snapshot = snapshot, audio = audio, first_field = first_field }, nil
     end
 
+    local function nullify_subtitle_text(request)
+        request = h.shallow_copy(request)
+        request.subtitle = request.subtitle:clone()
+        request.subtitle['text'] = nil
+        return request
+    end
+
     ------------------------------------------------------------
     --- Public
 
@@ -566,7 +573,8 @@ local function make_note_update_context(components)
             -- modify the other fields we can. The user might be trying to add
             -- audio to a card which they've manually transcribed (either the video
             -- has no subtitles or it has image subtitles).
-            request.subtitle['text'] = nil
+            -- Clone only blank subtitles so normalization never modifies caller-owned data.
+            request = nullify_subtitle_text(request)
         end
         local future, error = create_update_media(request)
         if error then

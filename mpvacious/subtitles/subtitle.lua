@@ -25,6 +25,11 @@ function Subtitle:new(o)
     return o
 end
 
+--- Return a shallow copy preserving subtitle fields and class methods.
+function Subtitle:clone()
+    return Subtitle:new(h.shallow_copy(self))
+end
+
 function Subtitle:from_text(text, start_time, end_time)
     return self:new { ['text'] = text, ['start'] = start_time, ['end'] = end_time }
 end
