@@ -607,6 +607,18 @@ Try these libre code editors with [lua](https://wiki.archlinux.org/title/Lua) su
 Make sure to use an automatic code formatter.
 Also see: [Running tests](#running-tests).
 
+### Lua formatting
+
+Install [StyLua](https://github.com/JohnnyMorganz/StyLua)
+from Arch Linux's [official repositories](https://archlinux.org/packages/?name=stylua):
+
+```bash
+sudo pacman -S stylua
+```
+
+Before committing, run `make format` to format code.
+Use `make format-check` to check without modifying files.
+
 ## Running tests
 
 The fastest way to run tests is with Lua or `luajit` directly (no mpv or media file required):
