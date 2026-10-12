@@ -145,6 +145,7 @@ local function make_mpv_encoder(cfg_mgr, support, components)
             audio_track_id = 'auto'
         end
 
+        --- Build audio arguments using the captured source, track, and timing window.
         local function make_mpvargs(...)
             local args = prepend_common_args(
                     source_path,
@@ -165,6 +166,7 @@ local function make_mpv_encoder(cfg_mgr, support, components)
             return args
         end
 
+        --- Deliver the final audio command with configured codec and normalization options.
         local function make_encoding_args(loudnorm_args)
             local encoder_args
             if config().audio_format == 'opus' then

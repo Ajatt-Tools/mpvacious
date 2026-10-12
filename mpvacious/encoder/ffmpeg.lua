@@ -51,6 +51,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         end
     end
 
+    --- Build codec-specific AVIF options for a still or animated snapshot.
     local function make_avif_encoder_args(quality_value, is_still_picture)
         local avif_codec = get_avif_codec(is_still_picture)
         if avif_codec == 'libsvtav1' then
@@ -222,6 +223,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
             audio_track_id = 'a'
         end
 
+        --- Build audio arguments using the captured source, track, and timing window.
         local function make_ffargs(...)
             return append_user_audio_args(
                     prepend(
@@ -238,6 +240,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
             )
         end
 
+        --- Deliver the final audio command with configured codec and normalization options.
         local function make_encoding_args(loudnorm_args)
             local encoder_args
             if config().audio_format == 'opus' then

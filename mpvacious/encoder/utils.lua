@@ -82,6 +82,7 @@ function this.make_loudnorm_targets(config)
     )
 end
 
+--- Initialize backend-local snapshot codecs without modifying configuration.
 function this.set_codecs(encoder, config)
     encoder.snapshot_codec = config.snapshot_codec
     encoder.animated_snapshot_codec = config.animated_snapshot_codec

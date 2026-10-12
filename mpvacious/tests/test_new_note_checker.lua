@@ -49,6 +49,7 @@ local function assert_checker_test_case(case)
     h.assert_equals(state.errors, expected_errors)
 end
 
+--- Build field-read failure and note-eligibility scenarios for one-time inspection.
 local function make_test_cases()
     return {
         { error = "Ankiconnect isn't running", fetches = 1, updates = 0 },

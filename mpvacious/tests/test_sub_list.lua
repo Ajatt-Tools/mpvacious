@@ -226,6 +226,7 @@ local function test_collect_n_subs_covered_line()
     h.assert_equals(combined['end'], 3)
 end
 
+--- Build overlap scenarios at ordinary and short-cue timing thresholds.
 local function make_overlap_thresholds_cases()
     return {
         { sub = subtitle.make_subtitle('', 1, 3), window = subtitle.make_subtitle('', 0, 2), expected = true }, -- 50%
