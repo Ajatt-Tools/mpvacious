@@ -14,15 +14,13 @@ local subtitle = require("subtitles.subtitle")
 local base64 = require("utils.base64")
 local forvo = require("utils.forvo")
 
---- Create a valid subtitle fixture for update tests.
+--- Create a valid subtitle fixture retaining the real class methods and timings.
 local function make_valid_update_test_subtitle()
-    return {
+    return subtitle.Subtitle:new {
         text = "new sentence",
         secondary = "",
-        --- Mark the subtitle fixture as valid.
-        is_valid = function()
-            return true
-        end,
+        ["start"] = 0,
+        ["end"] = 1,
     }
 end
 
@@ -83,7 +81,7 @@ local function complete_export_test_media(jobs)
     end
 end
 
---- Test that note writes wait for both media jobs.
+--- Wait for both media jobs and pass original stored fields to pronunciation merging.
 local function test_update_notes_after_media_created()
     local result = { append_count = 0, clear_count = 0 }
     local jobs = {}
@@ -91,7 +89,9 @@ local function test_update_notes_after_media_created()
     h.assert_equals(#jobs, 2)
     jobs[1].callback()
     h.assert_equals(result.append_count, 0)
+    h.assert_equals(result.forvo_stored_data, nil)
     jobs[2].callback()
+    h.assert_equals(result.forvo_stored_data, { SentKanji = "old sentence" })
     h.assert_equals(result.append_count, 1)
     h.assert_equals(result.field_requests, { { 1 } })
     h.assert_equals(result.preview_reads, { 1 })
@@ -99,6 +99,22 @@ local function test_update_notes_after_media_created()
     h.assert_equals(result.fields.SentKanji, "new sentence")
     h.assert_equals(result.fields.SentAudio, "[sound:audio.ogg]")
     h.assert_equals(result.fields.Image, '<img alt="snapshot" src="snapshot.avif">')
+end
+
+--- Update media for a blank real subtitle without replacing its stored sentence or source text.
+local function test_blank_subtitle_update()
+    local result, jobs = { append_count = 0, clear_count = 0 }, {}
+    local sub = subtitle.Subtitle:new { text = "", secondary = "", ["start"] = 0, ["end"] = 1 }
+    local exporter = make_update_test_exporter(result, jobs, sub)
+    h.assert_equals(rawequal(exporter.update_notes({ 13 }, true), exporter), true)
+    h.assert_equals(rawget(sub, "text"), "")
+    h.assert_equals(result.append_count, 0)
+    complete_export_test_media(jobs)
+    h.assert_equals(result.fields.SentKanji, "old sentence")
+    h.assert_equals(result.fields.SentAudio, "[sound:audio.ogg]")
+    h.assert_equals(result.fields.Image, '<img alt="snapshot" src="snapshot.avif">')
+    h.assert_equals(rawget(sub, "text"), "")
+    h.assert_equals(sub:duration(), 1)
 end
 
 --- Test that invalid subtitles do not start an update.
@@ -611,6 +627,7 @@ end
 --- Run exporter tests.
 local function run_tests()
     test_update_notes_after_media_created()
+    test_blank_subtitle_update()
     test_invalid_subtitle_does_not_start_update()
     test_lookup_warnings()
     test_lookup_dispatch()

@@ -83,13 +83,14 @@ function this.make_update_encoder(jobs, options, cfg_mgr)
     return encoder
 end
 
---- Return a Forvo fake that preserves fields without producing media.
+--- Return a request-local Forvo fake recording configuration and stored fields.
 function this.make_forvo(state, cfg_mgr)
     state = state or {}
     local output_dir
     local downloader = {
         --- Leave generated fields unchanged.
-        append = function(fields)
+        append = function(fields, stored_fields)
+            state.forvo_stored_data = stored_fields
             if cfg_mgr then
                 state.forvo_calls = state.forvo_calls or {}
                 table.insert(state.forvo_calls, { cfg_mgr = cfg_mgr, output_dir = output_dir })
@@ -505,6 +506,16 @@ function this.make_recording_encoder_components(state)
             make_filename = function() return "encoder-test.jpg" end,
         },
     }
+end
+
+--- Extract a still-snapshot timestamp from either backend's command.
+function this.encoder_test_snapshot_timestamp(args)
+    for index, arg in ipairs(args) do
+        if arg == "-ss" then return args[index + 1] end
+        local timestamp = arg:match("^%-%-start=(.+)$")
+        if timestamp then return timestamp end
+    end
+    error("encoder test command contains no snapshot timestamp")
 end
 
 --- Extract the output path from a generated mpv or FFmpeg test command.

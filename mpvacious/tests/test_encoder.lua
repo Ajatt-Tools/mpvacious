@@ -254,6 +254,24 @@ local function test_encoder_instance_output_directories()
     end
 end
 
+--- Honor explicit snapshot times, including zero, and retain the current-time default.
+local function test_snapshot_job_captures_explicit_timestamp()
+    for _, use_ffmpeg in ipairs { false, true } do
+        local state = { commands = {} }
+        local components = fixtures.make_recording_encoder_components(state)
+        components.mp = fixtures.make_mp_property_reader { path = "encoder-test.mkv", ["time-pos"] = 125 }
+        local cfg_mgr = fixtures.make_config_manager(make_backend_test_config("jpg", "webp", use_ffmpeg))
+        local instance = encoder.new(components).init(snapshot.new(cfg_mgr))
+        instance.set_output_dir("/request-media")
+        instance.snapshot.create_job(subtitle.make_subtitle("Line", 0, 1), 65).run_async()
+        h.assert_equals(fixtures.encoder_test_snapshot_timestamp(state.commands[1]), "65.000")
+        instance.snapshot.create_job(subtitle.make_subtitle("Line", 0, 1), 0).run_async()
+        h.assert_equals(fixtures.encoder_test_snapshot_timestamp(state.commands[2]), "0.000")
+        instance.snapshot.create_job(subtitle.make_subtitle("Line", 0, 1)).run_async()
+        h.assert_equals(fixtures.encoder_test_snapshot_timestamp(state.commands[3]), "125.000")
+    end
+end
+
 --- Reject construction from an unready manager without changing the original encoder.
 local function test_encoder_constructor_requires_ready_manager()
     local original = encoder.new().init(fixtures.make_config_manager(make_backend_test_config("jpg", "webp", false)))
@@ -385,6 +403,7 @@ local function run_tests()
     test_backend_codecs_refresh_on_reload()
     test_encoder_instance_constructors()
     test_encoder_instance_output_directories()
+    test_snapshot_job_captures_explicit_timestamp()
     test_encoder_constructor_requires_ready_manager()
     test_loudnorm_profile_isolation()
 end
