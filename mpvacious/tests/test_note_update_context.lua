@@ -228,7 +228,7 @@ end
 --- Create a context and subtitle fixture from named update-test options.
 local function make_update_test_context(options)
     local result = options.result
-    local subtitle = options.subtitle or { text = 'new sentence', secondary = '' }
+    local subtitle = options.subtitle or subtitle_module.make_subtitle('new sentence', 0, 1)
     result.fields_by_note = {}
     result.field_requests = {}
     result.preview_reads = {}
@@ -463,15 +463,66 @@ local function test_update_notification_model_lookup_failure()
     h.assert_equals(result.notification, 'Updated note #11.')
 end
 
---- Test blank update subtitles preserve the stored sentence.
+--- Construct real blank subtitles retaining secondary text and timings.
+local function make_blank_update_test_subtitle(case)
+    local values = { text = case.text, secondary = 'translation', ['start'] = 1, ['end'] = 3, is_secondary = true }
+    return subtitle_module.Subtitle:new(values)
+end
+
+--- Verify blank updates preserve stored text or fail before touching interactive state.
+local function assert_blank_update_test_outcome(result, jobs, case)
+    if case.preflight_error then
+        h.assert_equals(jobs, {})
+        h.assert_equals(result.appended_note_ids, {})
+        h.assert_equals(result.clear_count, 0)
+        h.assert_equals(result.notification, case.preflight_error)
+    else
+        complete_update_test_media_jobs(jobs)
+        h.assert_equals(result.fields_by_note[13].SentKanji, 'stored 13')
+        h.assert_equals(result.fields_by_note[13].SentEng, 'translation')
+        h.assert_equals(result.clear_count, 1)
+    end
+end
+
+--- Check caller data directly because subtitle defaults can conceal a removed text key.
+local function assert_blank_update_test_request(request, sub, original)
+    h.assert_equals(rawequal(request.subtitle, sub), true)
+    h.assert_equals(rawget(sub, 'text'), rawget(original.subtitle, 'text'))
+    h.assert_equals(sub.secondary, 'translation')
+    h.assert_equals(sub['start'], 1)
+    h.assert_equals(sub['end'], 3)
+    h.assert_equals(sub.is_secondary, true)
+    h.assert_equals(request, original)
+end
+
+--- Exercise preparation and completion without modifying the caller's blank subtitle.
+local function assert_blank_update_test_case(case)
+    local result, jobs = make_update_test_result(), {}
+    result.media_dir_error = case.preflight_error
+    local sub = make_blank_update_test_subtitle(case)
+    local context = make_update_test_context { result = result, jobs = jobs, subtitle = sub }
+    local request = { note_ids = { 13 }, overwrite = case.overwrite, subtitle = sub }
+    local original = h.deep_copy(request)
+    context.perform_update(request)
+    assert_blank_update_test_request(request, sub, original)
+    assert_blank_update_test_outcome(result, jobs, case)
+    assert_blank_update_test_request(request, sub, original)
+end
+
+--- Preserve caller data for empty and absent text with successful or failed preparation.
 local function test_blank_update_subtitle()
-    local result = make_update_test_result()
-    local jobs = {}
-    local context, subtitle = make_update_test_context { result = result, jobs = jobs }
-    subtitle.text = ''
-    context.perform_update({ note_ids = { 13 }, overwrite = false, subtitle = subtitle })
-    complete_update_test_media_jobs(jobs)
-    h.assert_equals(result.fields_by_note[13].SentKanji, 'stored 13')
+    for _, case in ipairs {
+        { text = '', overwrite = false },
+        { text = '', overwrite = true },
+        { overwrite = true },
+        { overwrite = false },
+        { text = '', overwrite = true, preflight_error = 'AnkiConnect unavailable' },
+        { text = '', overwrite = false, preflight_error = 'AnkiConnect unavailable' },
+        { overwrite = false, preflight_error = 'AnkiConnect unavailable' },
+        { overwrite = true, preflight_error = 'AnkiConnect unavailable' },
+    } do
+        assert_blank_update_test_case(case)
+    end
 end
 
 --- Create the mp API for metadata and duration tests.

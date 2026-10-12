@@ -133,7 +133,29 @@ local function test_make_current()
     end
 end
 
---- Run subtitle comparison, construction, and timing tests.
+--- Verify clones preserve methods and all fields while owning their scalar values.
+local function test_clone()
+    for _, case in ipairs { { text = 'Primary' }, { text = '' }, {} } do
+        local original = subtitle.Subtitle:new {
+            text = case.text, secondary = 'Secondary', ['start'] = 1, ['end'] = 3,
+            is_secondary = true, extra = { source = 'test' },
+        }
+        local cloned = original:clone()
+        h.assert_equals(rawequal(cloned, original), false)
+        h.assert_equals(cloned, original)
+        h.assert_equals(rawget(cloned, 'text'), rawget(original, 'text'))
+        h.assert_equals(getmetatable(cloned), getmetatable(original))
+        h.assert_equals(cloned:duration(), 2)
+        h.assert_equals(rawequal(cloned.extra, original.extra), true)
+        cloned.text, cloned.secondary, cloned['end'] = 'Changed', 'Changed translation', 5
+        h.assert_equals(rawget(original, 'text'), case.text)
+        h.assert_equals(original.secondary, 'Secondary')
+        h.assert_equals(original:duration(), 2)
+        h.assert_equals(cloned:duration(), 4)
+    end
+end
+
+--- Run subtitle comparison, construction, cloning, and timing tests.
 local function run_tests()
     test_is_same_event()
     test_eq_uses_same_event()
@@ -143,6 +165,7 @@ local function run_tests()
     test_expand_end_time()
     test_subtitle_delay()
     test_make_current()
+    test_clone()
 end
 
 return {
