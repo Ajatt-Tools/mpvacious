@@ -5,9 +5,9 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Various helper functions.
 ]]
 
-local mp = require('mp')
-local msg = require('mp.msg')
-local utils = require('mp.utils')
+local mp = require("mp")
+local msg = require("mp.msg")
+local utils = require("mp.utils")
 local this = {}
 
 this.unpack = unpack or table.unpack
@@ -22,7 +22,7 @@ function this.noop()
 end
 
 function this.remove_all_spaces(str)
-    return str:gsub('%s*', '')
+    return str:gsub("%s*", "")
 end
 
 function this.as_callback(fn, ...)
@@ -35,7 +35,7 @@ end
 
 function this.table_get(table, key, default)
     if table[key] == nil then
-        return default or 'nil'
+        return default or "nil"
     else
         return table[key]
     end
@@ -88,15 +88,15 @@ function this.minutes_ago(m)
 end
 
 function this.is_wayland()
-    return os.getenv('WAYLAND_DISPLAY') ~= nil
+    return os.getenv("WAYLAND_DISPLAY") ~= nil
 end
 
 function this.is_win()
-    return mp.get_property('options/vo-mmcss-profile') ~= nil
+    return mp.get_property("options/vo-mmcss-profile") ~= nil
 end
 
 function this.is_mac()
-    return mp.get_property('options/macos-force-dedicated-gpu') ~= nil
+    return mp.get_property("options/macos-force-dedicated-gpu") ~= nil
 end
 
 function this.is_gnu()
@@ -126,13 +126,13 @@ function this.subprocess(o)
     if not o.suppress_log then
         msg.info("Executing: " .. args_as_str(o.args))
     end
-    local command_native = type(o.completion_fn) == 'function' and mp.command_native_async or mp.command_native
+    local command_native = type(o.completion_fn) == "function" and mp.command_native_async or mp.command_native
     local command_table = {
         name = "subprocess",
         playback_only = false,
         capture_stdout = true,
         capture_stderr = true,
-        args = o.args
+        args = o.args,
     }
     if not this.is_empty(o.override_settings) then
         for k, v in pairs(o.override_settings) do
@@ -153,12 +153,12 @@ function this.subprocess_detached(o)
 end
 
 function this.is_empty(var)
-    return var == nil or var == '' or (type(var) == 'table' and next(var) == nil)
+    return var == nil or var == "" or (type(var) == "table" and next(var) == nil)
 end
 
 --- Return whether a value is a string containing at least one character.
 function this.is_non_empty_str(value)
-    return type(value) == 'string' and value ~= ''
+    return type(value) == "string" and value ~= ""
 end
 
 function this.contains_non_latin_letters(str)
@@ -170,11 +170,11 @@ function this.capitalize_first_letter(string)
 end
 
 function this.remove_leading_trailing_spaces(str)
-    return str:gsub('^%s*(.-)%s*$', '%1')
+    return str:gsub("^%s*(.-)%s*$", "%1")
 end
 
 function this.remove_leading_trailing_dashes(str)
-    return str:gsub('^[%-_]*(.-)[%-_]*$', '%1')
+    return str:gsub("^[%-_]*(.-)[%-_]*$", "%1")
 end
 
 function this.remove_text_in_parentheses(str)
@@ -182,24 +182,24 @@ function this.remove_text_in_parentheses(str)
     -- No deletion is performed if there's no text after the parentheses.
     -- Note: the modifier `-´ matches zero or more occurrences.
     -- However, instead of matching the longest sequence, it matches the shortest one.
-    return str:gsub('(%b())(.)', '%2'):gsub('(（.-）)(.)', '%2')
+    return str:gsub("(%b())(.)", "%2"):gsub("(（.-）)(.)", "%2")
 end
 
 function this.remove_newlines(str, repl_char)
-    repl_char = repl_char or ' '
-    return str:gsub('[\n\r]+', repl_char)
+    repl_char = repl_char or " "
+    return str:gsub("[\n\r]+", repl_char)
 end
 
 --- Normalize CRLF and CR line endings to LF.
 function this.normalize_newlines(str)
-    return str:gsub('\r\n', '\n'):gsub('\r', '\n')
+    return str:gsub("\r\n", "\n"):gsub("\r", "\n")
 end
 
 --- Split text into lines on LF. Input must be LF-normalized (see normalize_newlines).
 --- Trailing empty lines are kept: "a\n" splits into {"a", ""}.
 function this.split_lines(str)
     local lines = {}
-    for line in (str .. '\n'):gmatch('(.-)\n') do
+    for line in (str .. "\n"):gmatch("(.-)\n") do
         table.insert(lines, line)
     end
     return lines
@@ -217,12 +217,12 @@ end
 
 function this.normalize_spaces(str)
     -- Replace sequences of ASCII spaces or full-width ideographic spaces with a single ASCII space.
-    return str:gsub('　+', ' '):gsub('  +', " ")
+    return str:gsub("　+", " "):gsub("  +", " ")
 end
 
 function this.collapse_whitespace(str)
     -- Replace sequences of any whitespace with a single ASCII space.
-    return str:gsub('%s+', ' ')
+    return str:gsub("%s+", " ")
 end
 
 function this.trim(str)
@@ -239,22 +239,22 @@ end
 -- (no key appears in any replacement's output), so unordered iteration via replace_key_value_pairs is safe.
 local SUBTITLE_NORMALIZATION_REPLACEMENTS = {
     -- Spaces that should compare equal to a regular space.
-    ['　'] = ' ', -- ideographic space
-    ['\194\160'] = ' ', -- non-breaking space
-    ['\226\128\175'] = ' ', -- narrow non-breaking space
+    ["　"] = " ", -- ideographic space
+    ["\194\160"] = " ", -- non-breaking space
+    ["\226\128\175"] = " ", -- narrow non-breaking space
     -- Invisible characters that should not affect comparison.
-    ['\226\128\139'] = '', -- zero-width space
-    ['\239\187\191'] = '', -- byte-order mark
+    ["\226\128\139"] = "", -- zero-width space
+    ["\239\187\191"] = "", -- byte-order mark
     -- Quote-like punctuation normalized to a plain double quote.
-    ['『'] = '"',
-    ['』'] = '"',
-    ['「'] = '"',
-    ['」'] = '"',
-    ['“'] = '"',
-    ['”'] = '"',
-    ['〝'] = '"',
-    ['〟'] = '"',
-    ['＂'] = '"',
+    ["『"] = '"',
+    ["』"] = '"',
+    ["「"] = '"',
+    ["」"] = '"',
+    ["“"] = '"',
+    ["”"] = '"',
+    ["〝"] = '"',
+    ["〟"] = '"',
+    ["＂"] = '"',
 }
 
 --- Normalize subtitle text for duplicate comparison.
@@ -311,28 +311,28 @@ end
 
 this.escape_special_characters = (function()
     local entities = {
-        ['&'] = '&amp;',
-        ['"'] = '&quot;',
-        ["'"] = '&apos;',
-        ['<'] = '&lt;',
-        ['>'] = '&gt;',
+        ["&"] = "&amp;",
+        ['"'] = "&quot;",
+        ["'"] = "&apos;",
+        ["<"] = "&lt;",
+        [">"] = "&gt;",
     }
     return function(text)
         -- Unescape first to ensure idempotency. Calling escape on already-escaped text should be a no-op.
         text = this.unescape_special_characters(text)
         -- Use gsub here to avoid double-replacing, resulting in: Expected 'that&apos;s', got 'that&amp;apos;s'
-        return text:gsub('[&"\'<>]', entities)
+        return text:gsub("[&\"'<>]", entities)
     end
 end)()
 
 this.unescape_special_characters = (function()
     local entities = {
-        ['&apos;'] = "'",
-        ['&#39;'] = "'",
-        ['&quot;'] = '"',
-        ['&lt;'] = '<',
-        ['&gt;'] = '>',
-        ['&amp;'] = '&',
+        ["&apos;"] = "'",
+        ["&#39;"] = "'",
+        ["&quot;"] = '"',
+        ["&lt;"] = "<",
+        ["&gt;"] = ">",
+        ["&amp;"] = "&",
     }
     return function(text)
         return this.replace_key_value_pairs(text, entities)
@@ -340,33 +340,39 @@ this.unescape_special_characters = (function()
 end)()
 
 function this.remove_extension(filename)
-    return filename:gsub('%.%w+$', '')
+    return filename:gsub("%.%w+$", "")
 end
 
 function this.remove_special_characters(str)
-    return str:gsub('[%c%p%s]', ''):gsub('　', '')
+    return str:gsub("[%c%p%s]", ""):gsub("　", "")
 end
 
 function this.remove_text_in_brackets(str)
-    return str:gsub('%b[]', ''):gsub('【.-】', '')
+    return str:gsub("%b[]", ""):gsub("【.-】", "")
 end
 
 function this.remove_filename_text_in_parentheses(str)
-    return str:gsub('%b()', ''):gsub('（.-）', '')
+    return str:gsub("%b()", ""):gsub("（.-）", "")
 end
 
 function this.remove_html_tags(str)
-    return str:gsub('<[^<>]+>', '')
+    return str:gsub("<[^<>]+>", "")
 end
 
 function this.remove_common_resolutions(str)
     -- Also removes empty leftover parentheses and brackets.
-    return str:gsub("2160p", ""):gsub("1080p", ""):gsub("720p", ""):gsub("576p", ""):gsub("480p", ""):gsub("%(%)", ""):gsub("%[%]", "")
+    return str:gsub("2160p", "")
+        :gsub("1080p", "")
+        :gsub("720p", "")
+        :gsub("576p", "")
+        :gsub("480p", "")
+        :gsub("%(%)", "")
+        :gsub("%[%]", "")
 end
 
 function this.human_readable_time(seconds)
-    if type(seconds) ~= 'number' or seconds < 0 then
-        return 'empty'
+    if type(seconds) ~= "number" or seconds < 0 then
+        return "empty"
     end
 
     local parts = {
@@ -379,7 +385,7 @@ function this.human_readable_time(seconds)
     local ret = string.format("%02dm%02ds%03dms", parts.m, parts.s, parts.ms)
 
     if parts.h > 0 then
-        ret = string.format('%dh%s', parts.h, ret)
+        ret = string.format("%dh%s", parts.h, ret)
     end
 
     return ret
@@ -410,7 +416,7 @@ function this.get_episode_number(filename)
 end
 
 function this.notify(message, level, duration)
-    level = level or 'info'
+    level = level or "info"
     duration = duration or 1
     msg[level](message)
     mp.osd_message(message, duration)
@@ -418,7 +424,7 @@ end
 
 function this.get_active_track(track_type)
     -- track_type == audio|sub
-    for _, track in pairs(mp.get_property_native('track-list')) do
+    for _, track in pairs(mp.get_property_native("track-list")) do
         if track.type == track_type and track.selected == true then
             return track
         end
@@ -427,11 +433,11 @@ function this.get_active_track(track_type)
 end
 
 function this.has_video_track()
-    return mp.get_property_native('vid') ~= false
+    return mp.get_property_native("vid") ~= false
 end
 
 function this.has_audio_track()
-    return mp.get_property_native('aid') ~= false
+    return mp.get_property_native("aid") ~= false
 end
 
 --- Return True if 'pattern' can be found in 'str'.
@@ -469,7 +475,7 @@ function this.file_exists(filepath)
 end
 
 function this.repr(value)
-    if type(value) == 'table' then
+    if type(value) == "table" then
         return utils.format_json(value)
     else
         return value
@@ -481,7 +487,7 @@ local function are_two_values_equal(first, last, seen)
     if type(first) ~= type(last) then
         return false
     end
-    if type(first) ~= 'table' then
+    if type(first) ~= "table" then
         return first == last
     end
     seen = seen or {}
@@ -513,7 +519,7 @@ function this.get_loaded_tracks(track_type)
     local function tracks_equal(track)
         return track.type == track_type
     end
-    return this.filter(mp.get_property_native('track-list'), tracks_equal)
+    return this.filter(mp.get_property_native("track-list"), tracks_equal)
 end
 
 function this.assert_equals(actual, expected)
@@ -524,7 +530,7 @@ end
 
 function this.deep_copy(obj, seen)
     -- Handle non-tables and previously-seen tables.
-    if type(obj) ~= 'table' then
+    if type(obj) ~= "table" then
         return obj
     end
     if seen and seen[obj] then
@@ -542,7 +548,7 @@ function this.deep_copy(obj, seen)
 end
 
 function this.shallow_copy(from, to)
-    if type(from) ~= 'table' then
+    if type(from) ~= "table" then
         return from
     end
     to = to or {}
@@ -653,14 +659,14 @@ function this.maybe_require(module_name)
 
     if not ok then
         this.notify(
-                string.format(
-                        "Failed to load module '%s' from '%s'. Error: %s",
-                        module_name,
-                        module_path,
-                        tostring(loaded_module)
-                ),
-                "error",
-                5
+            string.format(
+                "Failed to load module '%s' from '%s'. Error: %s",
+                module_name,
+                module_path,
+                tostring(loaded_module)
+            ),
+            "error",
+            5
         )
         return nil
     end
@@ -792,7 +798,7 @@ function this.str_to_lines(str, n_chars)
 
     local function flush_at_space()
         if last_space > 1 then
-            table.insert(lines, table.concat(current_line, '', 1, last_space - 1))
+            table.insert(lines, table.concat(current_line, "", 1, last_space - 1))
         end
         local remainder = {}
         current_line_length = 0
@@ -806,7 +812,7 @@ function this.str_to_lines(str, n_chars)
     end
 
     for _, char in this.utf8_iter(str) do
-        if char == '\n' then
+        if char == "\n" then
             flush_line()
         else
             local char_width = calc_char_width(char)
@@ -820,7 +826,7 @@ function this.str_to_lines(str, n_chars)
             end
             table.insert(current_line, char)
             current_line_length = current_line_length + char_width
-            if char:match('%s') then
+            if char:match("%s") then
                 last_space = #current_line
             end
         end
@@ -830,7 +836,7 @@ function this.str_to_lines(str, n_chars)
 end
 
 function this.str_wrap(str, n_chars, separator)
-    separator = separator or '\n'
+    separator = separator or "\n"
     return table.concat(this.str_to_lines(str, n_chars), separator)
 end
 
@@ -851,11 +857,11 @@ end
 --- Like pathlib.Path.read_text() but doesn't throw.
 --- Returns tuple[text, error].
 function this.read_text(file_path)
-    local handle = io.open(file_path, 'r')
+    local handle = io.open(file_path, "r")
     if this.is_empty(handle) then
         return nil, "Couldn't open: " .. file_path
     end
-    local text = handle:read('*all')
+    local text = handle:read("*all")
     handle:close()
     if this.is_empty(text) then
         return nil, "Empty file: " .. file_path
@@ -891,7 +897,7 @@ function this.version_needs_update(latest_version, installed_version)
         end
     end
 
-    return nil  -- versions are equal
+    return nil -- versions are equal
 end
 
 --- Return a shallow slice of an integer-indexed table.

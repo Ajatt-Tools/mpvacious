@@ -5,9 +5,9 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Subtitle list remembers selected subtitle lines.
 ]]
 
-local h = require('helpers')
-local subtitle = require('subtitles.subtitle')
-local speech_collector = require('subtitles.collector')
+local h = require("helpers")
+local subtitle = require("subtitles.subtitle")
+local speech_collector = require("subtitles.collector")
 local LOOKUP_WINDOW_SIZE = 25 -- how many recent subs to scan for duplicate events
 local MAX_SUB_GAP_SECONDS = 20 -- stop joining lines separated by a longer gap
 local SHORT_SUB_SECONDS = 1
@@ -31,7 +31,7 @@ end
 local function overlaps_enough(sub, window)
     local shorter_duration = math.min(sub:duration(), window:duration())
     return shorter_duration > 0
-            and sub:overlap_duration(window) >= shorter_duration * required_overlap_ratio(shorter_duration)
+        and sub:overlap_duration(window) >= shorter_duration * required_overlap_ratio(shorter_duration)
 end
 
 --- Create an ordered collection of selected subtitles.
@@ -41,7 +41,7 @@ local function make_sub_list()
 
     --- Return the start or end time of the selected subtitles.
     function public.get_time(position)
-        if position == 'start' then
+        if position == "start" then
             return subs_list[1][position]
         end
         return subs_list[#subs_list][position]
@@ -66,7 +66,7 @@ local function make_sub_list()
         local end_sub = start_sub
         local collected_count = 0
         for _, sub in ipairs(subs_list) do
-            if sub['start'] - end_sub['end'] >= MAX_SUB_GAP_SECONDS then
+            if sub["start"] - end_sub["end"] >= MAX_SUB_GAP_SECONDS then
                 break
             end
             if not (sub < start_sub) and collected_count < n_subs then
@@ -75,7 +75,7 @@ local function make_sub_list()
                 collected_count = collected_count + 1
             end
         end
-        return subtitle.make_subtitle(collector.get_all_as_string(), start_sub['start'], end_sub['end'])
+        return subtitle.make_subtitle(collector.get_all_as_string(), start_sub["start"], end_sub["end"])
     end
 
     --- Return the text of all subs overlapping the given time window, as one line.

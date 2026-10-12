@@ -5,10 +5,10 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Config utils.
 ]]
 
-local mp = require('mp')
-local h = require('helpers')
-local utils = require('mp.utils')
-local defaults = require('config.defaults')
+local mp = require("mp")
+local h = require("helpers")
+local utils = require("mp.utils")
+local defaults = require("config.defaults")
 
 --- Prefix a generated config with its profile name and creation date.
 local function format_default_config(name, config_text)
@@ -20,7 +20,7 @@ local function create_config_file(default_profile_name)
     -- default profile name is "subs2srs"
     local name = default_profile_name
     -- ~/.config/mpv/script-opts/subs2srs.conf
-    local config_filepath = utils.join_path(h.find_mpv_script_opts_directory(), string.format('%s.conf', name))
+    local config_filepath = utils.join_path(h.find_mpv_script_opts_directory(), string.format("%s.conf", name))
     local example_config_filepath = utils.join_path(h.find_mpvacious_dir(), "config/default_config.conf")
 
     local file_info = utils.file_info(config_filepath)
@@ -35,7 +35,7 @@ local function create_config_file(default_profile_name)
         return
     end
 
-    local handle = io.open(config_filepath, 'w')
+    local handle = io.open(config_filepath, "w")
     if handle == nil then
         h.notify(string.format("Warning: failed to write '%s.'", config_filepath), "warn", 5)
         return
@@ -56,10 +56,10 @@ local function validate_config(config)
     local function set_file_extension_for_opus()
         -- Default to OGG, then change if an extension is supported.
         -- https://en.wikipedia.org/wiki/Core_Audio_Format
-        config.audio_extension = '.ogg'
-        for _, extension in ipairs({ 'opus', 'm4a', 'webm', 'caf' }) do
+        config.audio_extension = ".ogg"
+        for _, extension in ipairs({ "opus", "m4a", "webm", "caf" }) do
             if extension == config.opus_container then
-                config.audio_extension = '.' .. config.opus_container
+                config.audio_extension = "." .. config.opus_container
                 break
             end
         end
@@ -67,38 +67,38 @@ local function validate_config(config)
 
     --- Derive the audio codec and extension from the configured format.
     local function set_audio_format()
-        if config.audio_format == 'opus' then
+        if config.audio_format == "opus" then
             -- https://opus-codec.org/
-            config.audio_codec = 'libopus'
+            config.audio_codec = "libopus"
             set_file_extension_for_opus()
         else
-            config.audio_codec = 'libmp3lame'
-            config.audio_extension = '.mp3'
+            config.audio_codec = "libmp3lame"
+            config.audio_extension = ".mp3"
         end
         return config
     end
 
     --- Derive still and animated image codecs and extensions.
     local function set_video_format()
-        if config.snapshot_format == 'avif' then
-            config.snapshot_extension = '.avif'
-            config.snapshot_codec = 'libaom-av1'
-        elseif config.snapshot_format == 'webp' then
-            config.snapshot_extension = '.webp'
-            config.snapshot_codec = 'libwebp'
+        if config.snapshot_format == "avif" then
+            config.snapshot_extension = ".avif"
+            config.snapshot_codec = "libaom-av1"
+        elseif config.snapshot_format == "webp" then
+            config.snapshot_extension = ".webp"
+            config.snapshot_codec = "libwebp"
         else
-            config.snapshot_extension = '.jpg'
-            config.snapshot_codec = 'mjpeg'
+            config.snapshot_extension = ".jpg"
+            config.snapshot_codec = "mjpeg"
         end
 
         -- Animated webp images can only have .webp extension.
         -- The user has no choice on this. Same logic for avif.
-        if config.animated_snapshot_format == 'avif' then
-            config.animated_snapshot_extension = '.avif'
-            config.animated_snapshot_codec = 'libaom-av1'
+        if config.animated_snapshot_format == "avif" then
+            config.animated_snapshot_extension = ".avif"
+            config.animated_snapshot_codec = "libaom-av1"
         else
-            config.animated_snapshot_extension = '.webp'
-            config.animated_snapshot_codec = 'libwebp'
+            config.animated_snapshot_extension = ".webp"
+            config.animated_snapshot_codec = "libwebp"
         end
         return config
     end
@@ -128,33 +128,34 @@ local function validate_config(config)
 
     --- Validate static snapshot dimensions and quality.
     local function check_image_settings()
-        ensure_in_range('snapshot_width')
-        ensure_in_range('snapshot_height')
-        conditionally_set_defaults('snapshot_width', 'snapshot_height', 'snapshot_quality')
+        ensure_in_range("snapshot_width")
+        ensure_in_range("snapshot_height")
+        conditionally_set_defaults("snapshot_width", "snapshot_height", "snapshot_quality")
     end
 
     --- Restore the default animation frame rate when invalid.
     local function ensure_correct_fps()
-        if config.animated_snapshot_fps == nil or config.animated_snapshot_fps <= 0 or config.animated_snapshot_fps > 30 then
+        if
+            config.animated_snapshot_fps == nil
+            or config.animated_snapshot_fps <= 0
+            or config.animated_snapshot_fps > 30
+        then
             config.animated_snapshot_fps = 10
         end
     end
 
     --- Validate animated snapshot dimensions, quality, and frame rate.
     local function check_animated_snapshot_settings()
-        ensure_in_range('animated_snapshot_width')
-        ensure_in_range('animated_snapshot_height')
-        conditionally_set_defaults('animated_snapshot_width', 'animated_snapshot_height', 'animated_snapshot_quality')
+        ensure_in_range("animated_snapshot_width")
+        ensure_in_range("animated_snapshot_height")
+        conditionally_set_defaults("animated_snapshot_width", "animated_snapshot_height", "animated_snapshot_quality")
         ensure_correct_fps()
     end
 
     --- Clamp the menu subtitle preview to its supported line range.
     local function check_menu_settings()
-        config.menu_max_shown_lines = h.clamp(
-                config.menu_max_shown_lines,
-                defaults.min_menu_max_shown_lines,
-                defaults.max_menu_max_shown_lines
-        )
+        config.menu_max_shown_lines =
+            h.clamp(config.menu_max_shown_lines, defaults.min_menu_max_shown_lines, defaults.max_menu_max_shown_lines)
     end
 
     --- Apply each validation and derived setting to this config.

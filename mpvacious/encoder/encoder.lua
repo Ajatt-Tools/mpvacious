@@ -5,20 +5,20 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Encoder creates audio clips and snapshots, both animated and static.
 ]]
 
-local mp = require('mp')
-local utils = require('mp.utils')
-local h = require('helpers')
-local filename_factory = require('utils.filename_factory')
-local msg = require('mp.msg')
-local exec = require('encoder.executables')
-local mpv_encoder = require('encoder.mpv')
-local ffmpeg_encoder = require('encoder.ffmpeg')
+local mp = require("mp")
+local utils = require("mp.utils")
+local h = require("helpers")
+local filename_factory = require("utils.filename_factory")
+local msg = require("mp.msg")
+local exec = require("encoder.executables")
+local mpv_encoder = require("encoder.mpv")
+local ffmpeg_encoder = require("encoder.ffmpeg")
 
 ------------------------------------------------------------
 --- utility functions
 
 local function pad_timings(padding, start_time, end_time)
-    local video_duration = mp.get_property_number('duration')
+    local video_duration = mp.get_property_number("duration")
     start_time = start_time - padding
     end_time = end_time + padding
 
@@ -36,8 +36,8 @@ end
 --- Play a generated audio clip in a separate mpv process.
 local function background_play(file_path, on_finish)
     return h.subprocess {
-        args = { exec.mpv, '--audio-display=no', '--force-window=no', '--keep-open=no', '--really-quiet', file_path },
-        completion_fn = on_finish
+        args = { exec.mpv, "--audio-display=no", "--force-window=no", "--keep-open=no", "--really-quiet", file_path },
+        completion_fn = on_finish,
     }
 end
 
@@ -69,18 +69,21 @@ local function report_creation_result(file_path, components)
         -- result is nil on success for screenshot-to-file.
         if success and (result == nil or result.status == 0) and components.file_exists(file_path) then
             components.logger.info(string.format("Created file: %s", file_path))
-            if type(private.on_finish_fn) == 'function' then
+            if type(private.on_finish_fn) == "function" then
                 private.on_finish_fn(file_path, nil)
             end
             if private.preview_audio then
-                components.play_audio(file_path, function()
-                    print("Played file: " .. file_path)
-                end)
+                components.play_audio(
+                    file_path,
+                    function()
+                        print("Played file: " .. file_path)
+                    end
+                )
             end
         else
             local reason = error or string.format("Couldn't create file: %s", file_path)
             components.logger.error(reason)
-            if type(private.on_finish_fn) == 'function' then
+            if type(private.on_finish_fn) == "function" then
                 private.on_finish_fn(nil, reason)
             end
         end
@@ -132,7 +135,7 @@ local function make_encoder(components)
             local args = self.encoder.make_static_snapshot_args(source_path, output_path, timestamp)
             subprocess { args = args, completion_fn = on_finish_fn }
         else
-            local args = { 'screenshot-to-file', output_path, 'video', }
+            local args = { "screenshot-to-file", output_path, "video" }
             mp_api.command_native_async(args, on_finish_fn)
         end
     end
@@ -175,15 +178,12 @@ local function make_encoder(components)
 
             --- Start encoding and forward its completion to the media reporter.
             local function start_encoding(args)
-                local completion = report_creation_result(output_path)
-                        .on_finish(on_finish_fn)
-                        .preview_audio(config().preview_audio)
+                local completion =
+                    report_creation_result(output_path).on_finish(on_finish_fn).preview_audio(config().preview_audio)
                 subprocess { args = args, completion_fn = completion.run }
             end
 
-            self.encoder.make_audio_args(
-                    source_path, output_path, start_timestamp, end_timestamp, start_encoding
-            )
+            self.encoder.make_audio_args(source_path, output_path, start_timestamp, end_timestamp, start_encoding)
         else
             print("Audio will not be created.")
         end
@@ -209,25 +209,25 @@ local function make_encoder(components)
     local function create_job(job_type, sub, audio_padding)
         local current_timestamp, on_finish_fn
         local job = {}
-        if job_type == 'snapshot' and has_video_track() and not h.is_empty(config().image_field) then
+        if job_type == "snapshot" and has_video_track() and not h.is_empty(config().image_field) then
             current_timestamp = mp_api.get_property_number("time-pos", 0)
-            job.filename = make_snapshot_filename(sub['start'], sub['end'], current_timestamp)
+            job.filename = make_snapshot_filename(sub["start"], sub["end"], current_timestamp)
             --- Start snapshot creation using this job's captured timings.
             job.run_async = function()
-                create_snapshot(sub['start'], sub['end'], current_timestamp, job.filename, on_finish_fn)
+                create_snapshot(sub["start"], sub["end"], current_timestamp, job.filename, on_finish_fn)
             end
-        elseif job_type == 'audioclip' and h.has_audio_track() and not h.is_empty(config().audio_field) then
-            job.filename = make_audio_filename(sub['start'], sub['end'])
+        elseif job_type == "audioclip" and h.has_audio_track() and not h.is_empty(config().audio_field) then
+            job.filename = make_audio_filename(sub["start"], sub["end"])
             --- Start audio creation using this job's captured timings and padding.
             job.run_async = function()
-                create_audio(sub['start'], sub['end'], job.filename, audio_padding, on_finish_fn)
+                create_audio(sub["start"], sub["end"], job.filename, audio_padding, on_finish_fn)
             end
         else
             job.filename = nil
             --- Complete an intentionally skipped media job without an error.
             job.run_async = function()
                 print(job_type .. " will not be created.")
-                if type(on_finish_fn) == 'function' then
+                if type(on_finish_fn) == "function" then
                     -- No media track or configured field: this is a skipped job, not a failure.
                     on_finish_fn(nil, nil)
                 end
@@ -276,7 +276,7 @@ local function make_encoder(components)
 
     --- Prepare a snapshot job for the supplied subtitle selection.
     function public.snapshot.create_job(sub)
-        return create_job('snapshot', sub)
+        return create_job("snapshot", sub)
     end
 
     --- Toggle animated snapshots in the active configuration.
@@ -288,7 +288,7 @@ local function make_encoder(components)
 
     --- Prepare an audio job for the supplied subtitle selection and padding.
     function public.audio.create_job(subtitle, padding)
-        return create_job('audioclip', subtitle, padding)
+        return create_job("audioclip", subtitle, padding)
     end
 
     --- Create an independently initialized encoder for another configuration provider.

@@ -9,7 +9,7 @@ Usage: luajit tests/run.lua
        (run from the project root directory)
 ]]
 
-require('tests.setup')
-local runner = require('tests.suites').new()
+require("tests.setup")
+local runner = require("tests.suites").new()
 runner.run_tests()
 print("ALL TESTS PASSED")

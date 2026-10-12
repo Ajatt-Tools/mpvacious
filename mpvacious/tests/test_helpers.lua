@@ -5,8 +5,8 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Test helpers.
 ]]
 
-local h = require('helpers')
-local utils = require('mp.utils')
+local h = require("helpers")
+local utils = require("mp.utils")
 
 --- Build slice scenarios covering bounds, negative indices, and fractional indices.
 local function make_islice_cases()
@@ -60,16 +60,19 @@ end
 
 --- Build structural equality scenarios with reordered and shared tables.
 local function make_equal_table_values_cases(reordered, note_info)
-    local shared = { value = 'same' }
+    local shared = { value = "same" }
     return {
         { first = note_info, last = reordered, expected = true },
         { first = reordered, last = note_info, expected = true },
-        { first = note_info, last = { noteId = 2, fields = { Sentence = { value = 'changed' } } }, expected = false },
+        { first = note_info, last = { noteId = 2, fields = { Sentence = { value = "changed" } } }, expected = false },
         { first = note_info, last = { noteId = 2, fields = note_info.fields, extra = true }, expected = false },
         { first = { 1, 2 }, last = { 2, 1 }, expected = false },
         { first = { false }, last = { {} }, expected = false },
-        { first = { a = shared, b = shared }, last = { a = { value = 'same' }, b = { value = 'same' } },
-          expected = true },
+        {
+            first = { a = shared, b = shared },
+            last = { a = { value = "same" }, b = { value = "same" } },
+            expected = true,
+        },
         { first = false, last = nil, expected = false },
         { first = nil, last = nil, expected = true },
     }
@@ -77,8 +80,8 @@ end
 
 --- Verify table equality ignores object-key order but respects values and array order.
 local function test_equal_table_values()
-    local note_info = { noteId = 2, fields = { Sentence = { value = 'second' }, Audio = { value = '' } } }
-    local reordered = { fields = { Audio = { value = '' }, Sentence = { value = 'second' } }, noteId = 2 }
+    local note_info = { noteId = 2, fields = { Sentence = { value = "second" }, Audio = { value = "" } } }
+    local reordered = { fields = { Audio = { value = "" }, Sentence = { value = "second" } }, noteId = 2 }
     h.assert_equals(reordered, note_info)
     for _, case in ipairs(make_equal_table_values_cases(reordered, note_info)) do
         h.assert_equals(h.equal(case.first, case.last), case.expected)
@@ -88,9 +91,9 @@ end
 --- Build nonempty-string boundary scenarios including other Lua value types.
 local function make_is_non_empty_str_cases()
     return {
-        { value = '/anki/media', expected = true },
-        { value = ' ', expected = true },
-        { value = '', expected = false },
+        { value = "/anki/media", expected = true },
+        { value = " ", expected = true },
+        { value = "", expected = false },
         { value = nil, expected = false },
         { value = 42, expected = false },
         { value = false, expected = false },
@@ -224,7 +227,10 @@ local function make_normalized_subtitle_text_cases()
         { "〝お〟", '"お"' },
         { "＂お＂", '"お"' },
         { "  a\t\nb  ", "a b" },
-        { "女の子の <b>女性</b>の　『お』から始まる…", "女の子の 女性の \"お\"から始まる…" },
+        {
+            "女の子の <b>女性</b>の　『お』から始まる…",
+            '女の子の 女性の "お"から始まる…',
+        },
     }
 end
 
@@ -265,7 +271,7 @@ end
 local function test_unescape_special_characters()
     -- Test unescape_special_characters
     h.assert_equals(h.unescape_special_characters("that&apos;s"), "that's")
-    h.assert_equals(h.unescape_special_characters("that&#39;s &amp; &quot;ok&quot;"), "that's & \"ok\"")
+    h.assert_equals(h.unescape_special_characters("that&#39;s &amp; &quot;ok&quot;"), 'that\'s & "ok"')
     h.assert_equals(h.unescape_special_characters("&lt;tag&gt;"), "<tag>")
 end
 
@@ -273,17 +279,20 @@ end
 local function test_escape_special_characters()
     -- Test escape_special_characters
     h.assert_equals(h.escape_special_characters("that's"), "that&apos;s")
-    h.assert_equals(h.escape_special_characters("that's & \"ok\""), "that&apos;s &amp; &quot;ok&quot;")
+    h.assert_equals(h.escape_special_characters('that\'s & "ok"'), "that&apos;s &amp; &quot;ok&quot;")
     h.assert_equals(h.escape_special_characters("<tag>"), "&lt;tag&gt;")
-    h.assert_equals(h.escape_special_characters('&"\'<>'), "&amp;&quot;&apos;&lt;&gt;")
+    h.assert_equals(h.escape_special_characters("&\"'<>"), "&amp;&quot;&apos;&lt;&gt;")
     h.assert_equals(h.escape_special_characters("a<b&c"), "a&lt;b&amp;c")
     h.assert_equals(h.escape_special_characters("&amp;"), "&amp;")
     h.assert_equals(h.escape_special_characters("hello world"), "hello world")
     h.assert_equals(h.escape_special_characters(""), "")
     -- Round-trip: unescape(escape(text)) should return the original text.
-    h.assert_equals(h.unescape_special_characters(h.escape_special_characters("that's & \"ok\"")), "that's & \"ok\"")
+    h.assert_equals(h.unescape_special_characters(h.escape_special_characters('that\'s & "ok"')), 'that\'s & "ok"')
     -- Idempotency: escaping an already-escaped string should be a no-op.
-    h.assert_equals(h.escape_special_characters(h.escape_special_characters("that's & \"ok\"")), "that&apos;s &amp; &quot;ok&quot;")
+    h.assert_equals(
+        h.escape_special_characters(h.escape_special_characters('that\'s & "ok"')),
+        "that&apos;s &amp; &quot;ok&quot;"
+    )
 end
 
 --- Build episode-number scenarios including movies without episode numbers.
@@ -292,11 +301,17 @@ local function make_ep_num_cases()
         { filename = "A Whisker Away.mkv", expected = nil },
         { filename = "[Placeholder] Gekijouban SHIROBAKO [Ma10p_1080p][x265_flac]", expected = nil },
         { filename = "[Placeholder] Sono Bisque Doll wa Koi wo Suru - 06 [54E495D0]", expected = "06" },
-        { filename = "(Hi10)_Kobayashi-san_Chi_no_Maid_Dragon_-_02_(BD_1080p)_(Placeholder)_(12C5D2B4)", expected = "02" },
+        {
+            filename = "(Hi10)_Kobayashi-san_Chi_no_Maid_Dragon_-_02_(BD_1080p)_(Placeholder)_(12C5D2B4)",
+            expected = "02",
+        },
         { filename = "[Placeholder] Koi to Yobu ni wa Kimochi Warui - 01 (1080p) [D517C9F0]", expected = "01" },
         { filename = "[Placeholder] Tsukimonogatari 01 [BD 1080p x264 10-bit FLAC] [5CD88145]", expected = "01" },
         { filename = "[Placeholder] 86 - Eighty Six - 01 (1080p) [1B13598F]", expected = "01" },
-        { filename = "[Placeholder] Fate Stay Night - Unlimited Blade Works - 00 (BD 1080p Hi10 FLAC) [95590B7F]", expected = "00" },
+        {
+            filename = "[Placeholder] Fate Stay Night - Unlimited Blade Works - 00 (BD 1080p Hi10 FLAC) [95590B7F]",
+            expected = "00",
+        },
         { filename = "House, M.D. S01E01 Pilot - Everybody Lies (1080p x265 Placeholder)", expected = "01" },
         { filename = "A Generic Episode-165", expected = "165" },
     }
@@ -368,7 +383,10 @@ local function test_adjacent_items()
     end
     h.assert_equals(_items(h.adjacent_items({ 1, 2, 3 }, 2, 1, 1)), { 1, 2, 3 })
     h.assert_equals(_items(h.adjacent_items({ 1, 2, 3 }, 2, 10, 10)), { 1, 2, 3 })
-    h.assert_equals(_items(h.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 10, 4, 4)), { 2, 3, 4, 5, 6, 7, 8, 9, 10 })
+    h.assert_equals(
+        _items(h.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 10, 4, 4)),
+        { 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+    )
     h.assert_equals(_items(h.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 9, 3, 3)), { 4, 5, 6, 7, 8, 9, 10 })
     h.assert_equals(_items(h.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 1, 3, 3)), { 1, 2, 3, 4, 5, 6, 7 })
 end
@@ -377,8 +395,8 @@ end
 local function test_dirs()
     -- GNU only:
     if h.is_gnu() then
-        h.assert_equals(h.find_mpv_scripts_dir(), utils.join_path(os.getenv("HOME") or "~", '.config/mpv/scripts'))
-        h.assert_equals(h.find_mpv_config_directory(), utils.join_path(os.getenv("HOME") or "~", '.config/mpv'))
+        h.assert_equals(h.find_mpv_scripts_dir(), utils.join_path(os.getenv("HOME") or "~", ".config/mpv/scripts"))
+        h.assert_equals(h.find_mpv_config_directory(), utils.join_path(os.getenv("HOME") or "~", ".config/mpv"))
     end
 end
 
@@ -449,9 +467,12 @@ end
 local function test_remove_html_tags()
     -- Test h.remove_html_tags(str)
     h.assert_equals(h.remove_html_tags("ヤツらの声に<b>現実味</b>が…"), "ヤツらの声に現実味が…")
-    h.assert_equals(h.remove_html_tags("ヤツらの声に<span>現実味</span>が…"), "ヤツらの声に現実味が…")
+    h.assert_equals(
+        h.remove_html_tags("ヤツらの声に<span>現実味</span>が…"),
+        "ヤツらの声に現実味が…"
+    )
     h.assert_equals(h.remove_html_tags("<b><b><b><b>"), "")
-    h.assert_equals(h.remove_html_tags("<a href=\"test\">test</a>"), "test")
+    h.assert_equals(h.remove_html_tags('<a href="test">test</a>'), "test")
 end
 
 --- Verify literal replacement handles patterns, Unicode, and occurrence limits.

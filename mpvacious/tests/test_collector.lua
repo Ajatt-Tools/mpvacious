@@ -5,9 +5,9 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Collect subtitle lines into a joined speech.
 ]]
 
-local h = require('helpers')
-local subtitle = require('subtitles.subtitle')
-local speech_collector = require('subtitles.collector')
+local h = require("helpers")
+local subtitle = require("subtitles.subtitle")
+local speech_collector = require("subtitles.collector")
 
 --- Verify exact boundary overlap counts for empty, partial, and complete matches.
 local function test_count_overlapping_lines()

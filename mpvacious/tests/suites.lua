@@ -6,20 +6,20 @@ Test suites
 ]]
 
 local modules = {
-    'tests.test_helpers',
-    'tests.test_observer',
-    'tests.test_encoder_utils',
-    'tests.test_new_note_checker',
-    'tests.test_ankiconnect',
-    'tests.test_note_exporter',
-    'tests.test_sub_list',
-    'tests.test_collector',
-    'tests.test_config_utils',
-    'tests.test_snapshot',
-    'tests.test_encoder',
-    'tests.test_subtitle',
-    'tests.test_note_update_context',
-    'tests.test_forvo',
+    "tests.test_helpers",
+    "tests.test_observer",
+    "tests.test_encoder_utils",
+    "tests.test_new_note_checker",
+    "tests.test_ankiconnect",
+    "tests.test_note_exporter",
+    "tests.test_sub_list",
+    "tests.test_collector",
+    "tests.test_config_utils",
+    "tests.test_snapshot",
+    "tests.test_encoder",
+    "tests.test_subtitle",
+    "tests.test_note_update_context",
+    "tests.test_forvo",
 }
 
 --- Load each registered suite for the standalone and mpv-backed runners.

@@ -5,14 +5,14 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Config management, validation, loading.
 ]]
 
-local mpopt = require('mp.options')
-local msg = require('mp.msg')
-local h = require('helpers')
-local defaults = require('config.defaults')
-local cfg_utils = require('config.utils')
+local mpopt = require("mp.options")
+local msg = require("mp.msg")
+local h = require("helpers")
+local defaults = require("config.defaults")
+local cfg_utils = require("config.utils")
 
-local default_profile_filename = 'subs2srs'
-local profiles_filename = 'subs2srs_profiles'
+local default_profile_filename = "subs2srs"
+local profiles_filename = "subs2srs_profiles"
 
 local function make_config_mgr()
     local self = {
@@ -70,7 +70,7 @@ local function make_config_mgr()
 
     function public.next_profile()
         local first, next, new
-        for profile in string.gmatch(self.profiles.profiles, '[^,]+') do
+        for profile in string.gmatch(self.profiles.profiles, "[^,]+") do
             if not first then
                 first = profile
             end
@@ -138,5 +138,5 @@ local function make_config_mgr()
 end
 
 return {
-    new = make_config_mgr
+    new = make_config_mgr,
 }

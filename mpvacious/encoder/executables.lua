@@ -3,15 +3,15 @@ Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 ]]
 
-local utils = require('mp.utils')
+local utils = require("mp.utils")
 
 local self = {}
 
 local function alt_path_dirs()
     return {
-        '/opt/homebrew/bin',
-        '/usr/local/bin',
-        utils.join_path(os.getenv("HOME") or "~", '.local/bin'),
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+        utils.join_path(os.getenv("HOME") or "~", ".local/bin"),
     }
 end
 

@@ -5,10 +5,10 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Platform-specific functions for Windows.
 ]]
 
-local mp = require('mp')
-local h = require('helpers')
-local utils = require('mp.utils')
-local base64 = require('utils.base64')
+local mp = require("mp")
+local h = require("helpers")
+local utils = require("mp.utils")
+local base64 = require("utils.base64")
 local self = {
     windows = true,
     healthy = true,
@@ -18,29 +18,34 @@ local self = {
 
 local tmp_files = {}
 
-mp.register_event('shutdown', function()
+mp.register_event("shutdown", function()
     for _, file in ipairs(tmp_files) do
         os.remove(file)
     end
 end)
 
 self.tmp_dir = function()
-    return os.getenv('TEMP')
+    return os.getenv("TEMP")
 end
 
 self.copy_to_clipboard = function(text)
     local args = {
-        "powershell", "-NoLogo", "-NoProfile", "-WindowStyle", "Hidden", "-Command",
+        "powershell",
+        "-NoLogo",
+        "-NoProfile",
+        "-WindowStyle",
+        "Hidden",
+        "-Command",
         string.format(
-                "Set-Clipboard ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('%s')))",
-                base64.enc(text)
-        )
+            "Set-Clipboard ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('%s')))",
+            base64.enc(text)
+        ),
     }
     return h.subprocess_detached { args = args, completion_fn = h.noop }
 end
 
 self.gen_random_tmp_file_path = function()
-    return utils.join_path(self.tmp_dir(), string.format('curl_tmp_%d.txt', math.random(10 ^ 9)))
+    return utils.join_path(self.tmp_dir(), string.format("curl_tmp_%d.txt", math.random(10 ^ 9)))
 end
 
 self.gen_unique_tmp_file_path = function()
@@ -54,9 +59,9 @@ end
 --- Parameters: args (args to curl), completion_fn, suppress_log
 self.curl_request = function(o)
     return h.subprocess {
-        args = h.join_lists({ 'curl' }, o.args),
+        args = h.join_lists({ "curl" }, o.args),
         completion_fn = o.completion_fn,
-        suppress_log = o.suppress_log
+        suppress_log = o.suppress_log,
     }
 end
 
@@ -68,19 +73,19 @@ self.json_curl_request = function(o)
     handle:close()
     table.insert(tmp_files, curl_tmpfile_path)
     local args = {
-        '-s',
+        "-s",
         o.url,
-        '-H',
-        'Content-Type: application/json; charset=UTF-8',
-        '-X',
-        'POST',
-        '--data-binary',
-        table.concat { '@', curl_tmpfile_path }
+        "-H",
+        "Content-Type: application/json; charset=UTF-8",
+        "-X",
+        "POST",
+        "--data-binary",
+        table.concat { "@", curl_tmpfile_path },
     }
     return self.curl_request {
         args = args,
         completion_fn = o.completion_fn,
-        suppress_log = o.suppress_log
+        suppress_log = o.suppress_log,
     }
 end
 

@@ -5,15 +5,15 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Config utils tests.
 ]]
 
-local h = require('helpers')
-local defaults = require('config.defaults')
-local cfg_utils = require('config.utils')
+local h = require("helpers")
+local defaults = require("config.defaults")
+local cfg_utils = require("config.utils")
 
 --- Run config default and validation tests.
 local function run_tests()
     h.assert_equals(defaults.get_default().menu_max_shown_lines, 1)
-    local formatted = cfg_utils.format_default_config('subs2srs', 'option=value\n')
-    h.assert_equals(formatted:match('^# Written by subs2srs on .-%.\n(.*)$'), 'option=value\n')
+    local formatted = cfg_utils.format_default_config("subs2srs", "option=value\n")
+    h.assert_equals(formatted:match("^# Written by subs2srs on .-%.\n(.*)$"), "option=value\n")
 
     --- Return the validated number of visible menu lines.
     local function validate_menu_max_shown_lines(value)

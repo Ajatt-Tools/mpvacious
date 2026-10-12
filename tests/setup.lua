@@ -18,10 +18,10 @@ package.path = "mpvacious/?.lua;" .. package.path
 local function json_escape_string(s)
     local replacements = {
         ['"'] = '\\"',
-        ['\\'] = '\\\\',
-        ['\n'] = '\\n',
-        ['\r'] = '\\r',
-        ['\t'] = '\\t',
+        ["\\"] = "\\\\",
+        ["\n"] = "\\n",
+        ["\r"] = "\\r",
+        ["\t"] = "\\t",
     }
     return '"' .. s:gsub('["\\\n\r\t]', replacements) .. '"'
 end
@@ -200,7 +200,7 @@ local mp_options_stub = {
 }
 
 -- Register stubs before any mpvacious module is required.
-package.loaded['mp'] = mp_stub
-package.loaded['mp.msg'] = mp_msg_stub
-package.loaded['mp.utils'] = mp_utils_stub
-package.loaded['mp.options'] = mp_options_stub
+package.loaded["mp"] = mp_stub
+package.loaded["mp.msg"] = mp_msg_stub
+package.loaded["mp.utils"] = mp_utils_stub
+package.loaded["mp.options"] = mp_options_stub

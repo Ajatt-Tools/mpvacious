@@ -5,20 +5,20 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 AnkiConnect requests
 ]]
 
-local utils = require('mp.utils')
-local msg = require('mp.msg')
-local h = require('helpers')
-local platform = require('platform.init')
+local utils = require("mp.utils")
+local msg = require("mp.msg")
+local h = require("helpers")
+local platform = require("platform.init")
 
 --- Extract plain fields from one notesInfo item without mutating it.
 --- Missing notes/fields are errors, but an empty string is a valid field value.
 local function extract_note_fields(raw_fields, note_id)
-    if type(raw_fields) ~= 'table' or h.is_empty(raw_fields) then
+    if type(raw_fields) ~= "table" or h.is_empty(raw_fields) then
         return nil, string.format("AnkiConnect returned no fields for note %s", tostring(note_id))
     end
     local fields = {}
     for name, field in pairs(raw_fields) do
-        if type(field) ~= 'table' or type(field.value) ~= 'string' then
+        if type(field) ~= "table" or type(field.value) ~= "string" then
             return nil, string.format("AnkiConnect returned invalid fields for note %s", tostring(note_id))
         end
         fields[name] = field.value
@@ -28,12 +28,12 @@ end
 
 --- Decode notesInfo items and verify every requested note ID is present.
 local function decode_note_fields(result, note_ids)
-    if type(result) ~= 'table' or h.is_empty(result) then
+    if type(result) ~= "table" or h.is_empty(result) then
         return nil, "AnkiConnect returned no requested notes"
     end
     local fields_by_note_id = {}
     for _, note_info in pairs(result) do
-        if type(note_info) ~= 'table' or note_info.noteId == nil then
+        if type(note_info) ~= "table" or note_info.noteId == nil then
             return nil, "AnkiConnect returned note fields without a note ID"
         end
         local fields, error = extract_note_fields(note_info.fields, note_info.noteId)
@@ -53,16 +53,16 @@ end
 
 --- Decode the first model field without assuming a successful lookup found a model.
 local function decode_first_field(result, model_name)
-    local error = string.format('AnkiConnect returned no valid first field for note type %s', model_name)
-    if type(result) ~= 'table' or type(result[1]) ~= 'table' then
+    local error = string.format("AnkiConnect returned no valid first field for note type %s", model_name)
+    if type(result) ~= "table" or type(result[1]) ~= "table" then
         return nil, error
     end
     local fields = result[1].flds
-    if type(fields) ~= 'table' then
+    if type(fields) ~= "table" then
         return nil, error
     end
     for _, field in pairs(fields) do
-        if type(field) == 'table' and field.ord == 0 and h.is_non_empty_str(field.name) then
+        if type(field) == "table" and field.ord == 0 and h.is_non_empty_str(field.name) then
             return field.name, nil
         end
     end
@@ -164,7 +164,7 @@ local function make_ankiconnect(components)
             return nil, error
         end
         if not h.is_non_empty_str(dir_path) then
-            return nil, 'AnkiConnect returned no media directory'
+            return nil, "AnkiConnect returned no media directory"
         end
         return dir_path, nil
     end
@@ -175,8 +175,8 @@ local function make_ankiconnect(components)
             version = 6,
             params = {
                 cards = {},
-                deck = deck_name
-            }
+                deck = deck_name,
+            },
         }
         local result_notify = function(_, error)
             if not error then
@@ -191,7 +191,7 @@ local function make_ankiconnect(components)
     --- Build the add-note payload from a captured export job.
     local function make_add_note_request(job)
         return {
-            action = job.gui and 'guiAddCards' or 'addNote',
+            action = job.gui and "guiAddCards" or "addNote",
             version = 6,
             params = {
                 note = {
@@ -202,7 +202,7 @@ local function make_ankiconnect(components)
                         allowDuplicate = config().allow_duplicates,
                         duplicateScope = "deck",
                     },
-                    tags = h.is_empty(job.tag) and {} or { job.tag, },
+                    tags = h.is_empty(job.tag) and {} or { job.tag },
                 },
             },
         }
@@ -234,19 +234,19 @@ local function make_ankiconnect(components)
             action = "findNotes",
             version = 6,
             params = {
-                query = o.query
-            }
+                query = o.query,
+            },
         }
         if o.completion_fn then
             return self.execute {
                 request = request,
-                suppress_log = (not not o.suppress_log),
-                completion_fn = self.make_result_parser_async(o.completion_fn)
+                suppress_log = not not o.suppress_log,
+                completion_fn = self.make_result_parser_async(o.completion_fn),
             }
         else
             return self.parse_result(self.execute {
                 request = request,
-                suppress_log = (not not o.suppress_log)
+                suppress_log = not not o.suppress_log,
             })
         end
     end
@@ -263,7 +263,7 @@ local function make_ankiconnect(components)
     self.get_selected_note_ids = function()
         local request = {
             action = "guiSelectedNotes",
-            version = 6
+            version = 6,
         }
         local ret = self.execute { request = request }
 
@@ -278,8 +278,8 @@ local function make_ankiconnect(components)
             action = "notesInfo",
             version = 6,
             params = {
-                notes = note_ids
-            }
+                notes = note_ids,
+            },
         }
         local ret = self.execute { request = request }
 
@@ -310,8 +310,8 @@ local function make_ankiconnect(components)
             action = "findModelsByName",
             version = 6,
             params = {
-                modelNames = { model_name }
-            }
+                modelNames = { model_name },
+            },
         }
         local ret = self.execute { request = request }
         local result, error = self.parse_result(ret)
@@ -326,11 +326,11 @@ local function make_ankiconnect(components)
         --- query is a string, e.g. "deck:current", "nid:12345"
         if not config().disable_gui_browse then
             local request = {
-                action = 'guiBrowse',
+                action = "guiBrowse",
                 version = 6,
                 params = {
-                    query = query
-                }
+                    query = query,
+                },
             }
             self.execute { request = request }
         end
@@ -339,12 +339,12 @@ local function make_ankiconnect(components)
     self.add_tag = function(note_id, tag)
         if not h.is_empty(tag) then
             local request = {
-                action = 'addTags',
+                action = "addTags",
                 version = 6,
                 params = {
                     notes = { note_id },
-                    tags = tag
-                }
+                    tags = tag,
+                },
             }
             self.execute { request = request }
         end
@@ -363,8 +363,8 @@ local function make_ankiconnect(components)
                 note = {
                     id = note_id,
                     fields = fields,
-                }
-            }
+                },
+            },
         }
 
         --- Tag successful writes and forward their result/error to the batch collector.

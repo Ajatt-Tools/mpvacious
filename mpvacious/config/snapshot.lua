@@ -5,7 +5,7 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Detached configuration provider for one transaction.
 ]]
 
-local h = require('helpers')
+local h = require("helpers")
 
 --- Capture a ready manager's settings and profile metadata once.
 --- Implement only what is required for transactions that use them.

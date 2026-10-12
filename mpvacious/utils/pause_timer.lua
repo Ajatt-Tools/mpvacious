@@ -5,7 +5,7 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Pause timer stops playback when reaching a set timing.
 ]]
 
-local mp = require('mp')
+local mp = require("mp")
 local stop_time = -1
 local check_stop
 

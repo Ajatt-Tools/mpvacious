@@ -5,15 +5,15 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Menu for mpvacious
 ]]
 
-local mp = require('mp')
-local msg = require('mp.msg')
-local h = require('helpers')
+local mp = require("mp")
+local msg = require("mp.msg")
+local h = require("helpers")
 
 local Menu = {
     name = "base menu",
     active = false,
     keybindings = {},
-    overlay = mp.create_osd_overlay and mp.create_osd_overlay('ass-events'),
+    overlay = mp.create_osd_overlay and mp.create_osd_overlay("ass-events"),
     menu_controller = nil,
 }
 
@@ -29,7 +29,7 @@ function Menu:with_update(params)
         local to_call = h.join_lists(params, { ... })
         local status, error = pcall(h.unpack(to_call))
         if not status then
-            msg['error'](error)
+            msg["error"](error)
         end
         return self:update()
     end

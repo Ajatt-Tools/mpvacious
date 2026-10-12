@@ -5,11 +5,11 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Utils for downloading pronunciations from Forvo
 ]]
 
-local utils = require('mp.utils')
-local msg = require('mp.msg')
-local h = require('helpers')
-local base64 = require('utils.base64')
-local platform = require('platform.init')
+local utils = require("mp.utils")
+local msg = require("mp.msg")
+local h = require("helpers")
+local base64 = require("utils.base64")
+local platform = require("platform.init")
 
 local function url_encode(url)
     -- https://gist.github.com/liukun/f9ce7d6d14fa45fe9b924a3eed5c3d99
@@ -27,12 +27,12 @@ end
 
 --- Accept only explicit successful command results.
 local function command_succeeded(result)
-    return type(result) == 'table' and result.status == 0
+    return type(result) == "table" and result.status == 0
 end
 
 --- Download pronunciation media and report the synchronous command outcome.
 local function curl_save(source_url, save_location, platform_api)
-    local curl_args = { source_url, '-f', '-s', '-L', '-o', save_location }
+    local curl_args = { source_url, "-f", "-s", "-L", "-o", save_location }
     return command_succeeded(platform_api.curl_request { args = curl_args })
 end
 
@@ -56,7 +56,7 @@ local function pronunciation_url_from_page(page, file_format)
         local formats = { mp3 = iter(), ogg = iter() }
         local filename = decode_pronunciation_filename(formats[file_format])
         if filename then
-            return string.format('https://audio00.forvo.com/%s/%s', file_format, filename)
+            return string.format("https://audio00.forvo.com/%s/%s", file_format, filename)
         end
     end
 end
@@ -83,11 +83,11 @@ local function make_forvo(components)
     --- Select the output muxer independently of the Forvo download format.
     local function output_file_format()
         local extension = config().audio_extension:sub(2)
-        if extension == 'm4a' then
-            return 'mp4'
+        if extension == "m4a" then
+            return "mp4"
         end
-        if extension == 'opus' then
-            return 'ogg'
+        if extension == "opus" then
+            return "ogg"
         end
         return extension
     end
@@ -95,22 +95,22 @@ local function make_forvo(components)
     --- Reencode downloaded audio with the configured codec and destination muxer.
     local function reencode(source_path, dest_path)
         local args = {
-            'mpv',
+            "mpv",
             source_path,
-            '--loop-file=no',
-            '--keep-open=no',
-            '--video=no',
-            '--no-ocopy-metadata',
-            '--no-sub',
-            '--audio-channels=mono',
-            '--oacopts-add=vbr=on',
-            '--oacopts-add=application=voip',
-            '--oacopts-add=compression_level=10',
-            '--af-append=silenceremove=1:0:-50dB',
-            table.concat { '--oac=', config().audio_codec },
-            table.concat { '--of=', output_file_format() },
-            table.concat { '--oacopts-add=b=', config().audio_bitrate },
-            table.concat { '-o=', dest_path }
+            "--loop-file=no",
+            "--keep-open=no",
+            "--video=no",
+            "--no-ocopy-metadata",
+            "--no-sub",
+            "--audio-channels=mono",
+            "--oacopts-add=vbr=on",
+            "--oacopts-add=application=voip",
+            "--oacopts-add=compression_level=10",
+            "--af-append=silenceremove=1:0:-50dB",
+            table.concat { "--oac=", config().audio_codec },
+            table.concat { "--of=", output_file_format() },
+            table.concat { "--oacopts-add=b=", config().audio_bitrate },
+            table.concat { "-o=", dest_path },
         }
         return self.subprocess { args = args }
     end
@@ -124,13 +124,13 @@ local function make_forvo(components)
 
     --- Name a pronunciation file using the platform convention and destination extension.
     local function make_forvo_filename(word)
-        return string.format('forvo_%s%s', self.platform_api.windows and os.time() or word, config().audio_extension)
+        return string.format("forvo_%s%s", self.platform_api.windows and os.time() or word, config().audio_extension)
     end
 
     --- Return the pronunciation search page or a fetch error.
     local function fetch_pronunciation_page(word)
         -- Search this word on forvo.
-        local curl_args = { '-f', '-s', string.format('https://forvo.com/search/%s/ja', url_encode(word)) }
+        local curl_args = { "-f", "-s", string.format("https://forvo.com/search/%s/ja", url_encode(word)) }
         local response = self.platform_api.curl_request { args = curl_args }
         -- Only a successful request with a nonempty page can contain usable pronunciation data.
         if not command_succeeded(response) or not h.is_non_empty_str(response.stdout) then
@@ -141,10 +141,10 @@ local function make_forvo(components)
 
     --- Select the Forvo source format independently of the output container.
     local function forvo_file_format()
-        if config().audio_format == 'mp3' then
-            return 'mp3'
+        if config().audio_format == "mp3" then
+            return "mp3"
         end
-        return 'ogg'
+        return "ogg"
     end
 
     --- Fetch and parse the selected source URL, propagating page-fetch errors.
@@ -188,12 +188,12 @@ local function make_forvo(components)
 
     --- Add pronunciation markup when the configured vocabulary fields need audio.
     function pub.append(new_data, stored_data)
-        if config().use_forvo == 'no' then
+        if config().use_forvo == "no" then
             -- forvo functionality was disabled in the config file
             return new_data
         end
 
-        if type(stored_data[config().vocab_audio_field]) ~= 'string' then
+        if type(stored_data[config().vocab_audio_field]) ~= "string" then
             -- there is no field configured to store forvo pronunciation
             return new_data
         end
@@ -203,7 +203,7 @@ local function make_forvo(components)
             return new_data
         end
 
-        if config().use_forvo == 'always' or h.is_empty(stored_data[config().vocab_audio_field]) then
+        if config().use_forvo == "always" or h.is_empty(stored_data[config().vocab_audio_field]) then
             local forvo_pronunciation = get_forvo_pronunciation(stored_data[config().vocab_field])
             if not h.is_empty(forvo_pronunciation) then
                 if config().vocab_audio_field == config().audio_field then

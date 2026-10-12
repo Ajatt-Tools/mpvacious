@@ -5,26 +5,37 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Note update context tests.
 ]]
 
-local h = require('helpers')
-local fixtures = require('tests.fixtures')
-local note_update_context = require('anki.note_update_context')
-local subtitle_module = require('subtitles.subtitle')
-
+local h = require("helpers")
+local fixtures = require("tests.fixtures")
+local note_update_context = require("anki.note_update_context")
+local subtitle_module = require("subtitles.subtitle")
 
 --- Create an update configuration with the selected merge order.
 local function make_update_test_config(append_media)
     return fixtures.make_update_config {
         secondary_field = "SentEng",
-        miscinfo_field = 'Notes',
+        miscinfo_field = "Notes",
         append_media = append_media,
     }
 end
 
 --- Test nested sentence fields retain the more complete normalized value.
 local function test_join_field_content()
-    h.assert_equals(note_update_context.join_field_content("ヤツらの声に現実味が…", "あの遠さはヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
-    h.assert_equals(note_update_context.join_field_content("あの遠さはヤツらの声に現実味が…", "ヤツらの声に現実味が…"), "あの遠さはヤツらの声に現実味が…")
-    h.assert_equals(note_update_context.join_field_content('new', 'old'), 'old<br>new')
+    h.assert_equals(
+        note_update_context.join_field_content(
+            "ヤツらの声に現実味が…",
+            "あの遠さはヤツらの声に現実味が…"
+        ),
+        "あの遠さはヤツらの声に現実味が…"
+    )
+    h.assert_equals(
+        note_update_context.join_field_content(
+            "あの遠さはヤツらの声に現実味が…",
+            "ヤツらの声に現実味が…"
+        ),
+        "あの遠さはヤツらの声に現実味が…"
+    )
+    h.assert_equals(note_update_context.join_field_content("new", "old"), "old<br>new")
 end
 
 --- Create a context with concrete test components for field-merge tests.
@@ -58,14 +69,14 @@ end
 --- Return literal highlighted targets and sentences that must not match as patterns.
 local function make_literal_target_test_cases()
     return {
-        { target = 'a.b', sentence = 'axb', expected = 'axb' },
-        { target = 'a.b', sentence = 'before a.b after', expected = 'before <b>a.b</b> after' },
-        { target = '(word)', sentence = 'before (word) after', expected = 'before <b>(word)</b> after' },
-        { target = '50%', sentence = '50% complete', expected = '<b>50%</b> complete' },
-        { target = '[word]', sentence = '[word] here', expected = '<b>[word]</b> here' },
-        { target = 'a+b?', sentence = 'a+b? here', expected = '<b>a+b?</b> here' },
-        { target = 'word', sentence = 'word and word', expected = '<b>word</b> and word' },
-        { target = 'absent', sentence = 'unchanged', expected = 'unchanged' },
+        { target = "a.b", sentence = "axb", expected = "axb" },
+        { target = "a.b", sentence = "before a.b after", expected = "before <b>a.b</b> after" },
+        { target = "(word)", sentence = "before (word) after", expected = "before <b>(word)</b> after" },
+        { target = "50%", sentence = "50% complete", expected = "<b>50%</b> complete" },
+        { target = "[word]", sentence = "[word] here", expected = "<b>[word]</b> here" },
+        { target = "a+b?", sentence = "a+b? here", expected = "<b>a+b?</b> here" },
+        { target = "word", sentence = "word and word", expected = "<b>word</b> and word" },
+        { target = "absent", sentence = "unchanged", expected = "unchanged" },
     }
 end
 
@@ -73,9 +84,9 @@ end
 local function test_literal_target_highlighting(test_context)
     for _, case in ipairs(make_literal_target_test_cases()) do
         local fields = test_context.make_new_note_data(
-                { SentKanji = '<b>' .. case.target .. '</b>' },
-                { SentKanji = case.sentence },
-                { overwrite = true, disable_forvo = true }
+            { SentKanji = "<b>" .. case.target .. "</b>" },
+            { SentKanji = case.sentence },
+            { overwrite = true, disable_forvo = true }
         )
         h.assert_equals(fields.SentKanji, case.expected)
     end
@@ -211,7 +222,7 @@ end
 
 --- Return note-specific stored fields for update-context tests.
 local function make_context_test_stored_fields(note_id)
-    return { SentKanji = 'stored ' .. tostring(note_id) }
+    return { SentKanji = "stored " .. tostring(note_id) }
 end
 
 --- Return fresh state shared by update-context test doubles.
@@ -221,14 +232,14 @@ end
 
 --- Complete both media jobs with their created filenames.
 local function complete_update_test_media_jobs(jobs)
-    jobs[1].callback('snapshot.avif', nil)
-    jobs[2].callback('audio.ogg', nil)
+    jobs[1].callback("snapshot.avif", nil)
+    jobs[2].callback("audio.ogg", nil)
 end
 
 --- Create a context and subtitle fixture from named update-test options.
 local function make_update_test_context(options)
     local result = options.result
-    local subtitle = options.subtitle or subtitle_module.make_subtitle('new sentence', 0, 1)
+    local subtitle = options.subtitle or subtitle_module.make_subtitle("new sentence", 0, 1)
     result.fields_by_note = {}
     result.field_requests = {}
     result.preview_reads = {}
@@ -245,19 +256,22 @@ local function make_update_test_context(options)
         cfg_mgr = fixtures.make_config_manager(options.config or make_update_test_config(true)),
         notify = options.notify or fixtures.make_notifier(result),
         mp = options.mp,
-    }, subtitle
+    },
+        subtitle
 end
 
 --- Test both configured media merge orders.
 local function test_update_media_merge()
     for _, scenario in ipairs {
-        { append_media = true, expected = 'stored 13<br>new sentence' },
-        { append_media = false, expected = 'new sentence<br>stored 13' },
+        { append_media = true, expected = "stored 13<br>new sentence" },
+        { append_media = false, expected = "new sentence<br>stored 13" },
     } do
         local result = make_update_test_result()
         local jobs = {}
         local context, subtitle = make_update_test_context {
-            result = result, jobs = jobs, config = make_update_test_config(scenario.append_media),
+            result = result,
+            jobs = jobs,
+            config = make_update_test_config(scenario.append_media),
         }
         context.perform_update({ note_ids = { 13 }, overwrite = false, subtitle = subtitle })
         complete_update_test_media_jobs(jobs)
@@ -285,42 +299,45 @@ local function test_update_completion()
     local context, subtitle = make_update_test_context { result = result, jobs = jobs }
     context.perform_update({ note_ids = { 11, 12 }, overwrite = true, subtitle = subtitle })
     h.assert_equals(#jobs, 2)
-    jobs[1].callback('snapshot.avif', nil)
+    jobs[1].callback("snapshot.avif", nil)
     h.assert_equals(result.appended_note_ids, {})
-    jobs[2].callback('audio.ogg', nil)
+    jobs[2].callback("audio.ogg", nil)
     h.assert_equals(result.appended_note_ids, { 11, 12 })
-    h.assert_equals(result.browse_query, 'nid:11 OR nid:12')
-    h.assert_equals(result.notification, 'Updated 2 notes.')
+    h.assert_equals(result.browse_query, "nid:11 OR nid:12")
+    h.assert_equals(result.notification, "Updated 2 notes.")
     h.assert_equals(result.clear_count, 1)
 end
 
 --- Verify a failed media job never starts field reads or writes.
 local function test_update_media_failures()
     for _, case in ipairs {
-        { snapshot_error = 'image conversion failed', expected = 'snapshot: image conversion failed' },
-        { audio_error = 'sound conversion failed', expected = 'audio: sound conversion failed' },
-        { snapshot_error = 'image conversion failed', audio_error = 'sound conversion failed',
-          expected = 'snapshot: image conversion failed; audio: sound conversion failed' },
+        { snapshot_error = "image conversion failed", expected = "snapshot: image conversion failed" },
+        { audio_error = "sound conversion failed", expected = "audio: sound conversion failed" },
+        {
+            snapshot_error = "image conversion failed",
+            audio_error = "sound conversion failed",
+            expected = "snapshot: image conversion failed; audio: sound conversion failed",
+        },
     } do
         local result = make_update_test_result()
         local jobs = {}
         local context, subtitle = make_update_test_context { result = result, jobs = jobs }
         context.perform_update({ note_ids = { 11 }, overwrite = true, subtitle = subtitle })
-        jobs[1].callback(case.snapshot_error and nil or 'snapshot.avif', case.snapshot_error)
+        jobs[1].callback(case.snapshot_error and nil or "snapshot.avif", case.snapshot_error)
         h.assert_equals(result.notification, nil)
-        jobs[2].callback(case.audio_error and nil or 'audio.ogg', case.audio_error)
+        jobs[2].callback(case.audio_error and nil or "audio.ogg", case.audio_error)
         h.assert_equals(result.field_requests, {})
         h.assert_equals(result.appended_note_ids, {})
         h.assert_equals(result.browse_query, nil)
-        h.assert_equals(result.notification, 'Failed to create media: ' .. case.expected)
-        h.assert_equals(result.notification_level, 'error')
+        h.assert_equals(result.notification, "Failed to create media: " .. case.expected)
+        h.assert_equals(result.notification_level, "error")
     end
 end
 
 --- A missing Anki media directory must not start jobs or discard the selection.
 local function test_update_without_media_directory()
     local result = make_update_test_result()
-    result.media_dir_error = 'AnkiConnect unavailable'
+    result.media_dir_error = "AnkiConnect unavailable"
     local jobs = {}
     local context, subtitle = make_update_test_context { result = result, jobs = jobs }
     context.perform_update({ note_ids = { 11 }, overwrite = true, subtitle = subtitle })
@@ -328,8 +345,8 @@ local function test_update_without_media_directory()
     h.assert_equals(result.field_requests, {})
     h.assert_equals(result.appended_note_ids, {})
     h.assert_equals(result.clear_count, 0)
-    h.assert_equals(result.notification_level, 'error')
-    h.assert_equals(result.notification, 'AnkiConnect unavailable')
+    h.assert_equals(result.notification_level, "error")
+    h.assert_equals(result.notification, "AnkiConnect unavailable")
 end
 
 --- A skipped media job has no filename and must not block the other job.
@@ -339,19 +356,25 @@ local function test_update_skipped_media_job()
     local context, subtitle = make_update_test_context { result = result, jobs = jobs }
     context.perform_update({ note_ids = { 11 }, overwrite = true, subtitle = subtitle })
     jobs[1].callback(nil, nil)
-    jobs[2].callback('audio.ogg', nil)
+    jobs[2].callback("audio.ogg", nil)
     h.assert_equals(result.appended_note_ids, { 11 })
-    h.assert_equals(result.notification, 'Updated note: stored 11.')
+    h.assert_equals(result.notification, "Updated note: stored 11.")
 end
 
 --- Verify delayed Anki write failures cannot trigger a success notification.
 local function test_update_write_outcomes()
     local cases = {
-        { errors = {}, results = { [11] = 'updated', [12] = 'updated' },
-          notification = 'Updated 2 notes.', browse_query = 'nid:11 OR nid:12' },
-        { errors = { [12] = 'denied' }, notification = 'Failed to update notes: note 12: denied' },
-        { errors = { [12] = 'denied', [11] = 'busy' },
-          notification = 'Failed to update notes: note 12: denied; note 11: busy' },
+        {
+            errors = {},
+            results = { [11] = "updated", [12] = "updated" },
+            notification = "Updated 2 notes.",
+            browse_query = "nid:11 OR nid:12",
+        },
+        { errors = { [12] = "denied" }, notification = "Failed to update notes: note 12: denied" },
+        {
+            errors = { [12] = "denied", [11] = "busy" },
+            notification = "Failed to update notes: note 12: denied; note 11: busy",
+        },
     }
     for _, case in ipairs(cases) do
         local result = make_update_test_result()
@@ -376,8 +399,8 @@ local function test_single_note_update_completion()
     local context, subtitle = make_update_test_context { result = result, jobs = jobs }
     context.perform_update({ note_ids = { 11 }, overwrite = true, subtitle = subtitle })
     complete_update_test_media_jobs(jobs)
-    h.assert_equals(result.browse_query, 'nid:11')
-    h.assert_equals(result.notification, 'Updated note: stored 11.')
+    h.assert_equals(result.browse_query, "nid:11")
+    h.assert_equals(result.notification, "Updated note: stored 11.")
 end
 
 --- Assert one failed bulk field request prevents every write in the batch.
@@ -389,7 +412,7 @@ local function assert_update_test_field_failure(case)
     result.read_fields = function(note_ids)
         h.assert_equals(result.appended_note_ids, {})
         h.assert_equals(note_ids, { 11, 12 })
-        return nil, 'read failed'
+        return nil, "read failed"
     end
     context.perform_update({ note_ids = { 11, 12 }, overwrite = case.overwrite, subtitle = subtitle })
     complete_update_test_media_jobs(jobs)
@@ -397,8 +420,8 @@ local function assert_update_test_field_failure(case)
     h.assert_equals(result.fields_by_note, {})
     h.assert_equals(result.field_requests, { { 11, 12 } })
     h.assert_equals(result.browse_query, nil)
-    h.assert_equals(result.notification_level, 'error')
-    h.assert_equals(result.notification, 'read failed')
+    h.assert_equals(result.notification_level, "error")
+    h.assert_equals(result.notification, "read failed")
 end
 
 --- Test one failed bulk read prevents both append and overwrite operations.
@@ -421,16 +444,17 @@ local function test_update_preflight_field_reads()
         h.assert_equals(result.appended_note_ids, {})
         h.assert_equals(note_ids, { 11, 12 })
         return {
-            [11] = { SentKanji = 'stored 11' },
-            [12] = { SentKanji = 'stored 12' },
-        }, nil
+            [11] = { SentKanji = "stored 11" },
+            [12] = { SentKanji = "stored 12" },
+        },
+            nil
     end
     context.perform_update({ note_ids = { 11, 12 }, overwrite = false, subtitle = subtitle })
     complete_update_test_media_jobs(jobs)
     h.assert_equals(result.field_requests, { { 11, 12 } })
-    h.assert_equals(result.fields_by_note[11].SentKanji, 'stored 11<br>new sentence')
-    h.assert_equals(result.fields_by_note[12].SentKanji, 'stored 12<br>new sentence')
-    h.assert_equals(result.notification, 'Updated 2 notes.')
+    h.assert_equals(result.fields_by_note[11].SentKanji, "stored 11<br>new sentence")
+    h.assert_equals(result.fields_by_note[12].SentKanji, "stored 12<br>new sentence")
+    h.assert_equals(result.notification, "Updated 2 notes.")
 end
 
 --- Test a failed notification-only preview read falls back to the updated note ID.
@@ -440,32 +464,32 @@ local function test_update_notification_field_read_failure()
     local context, subtitle = make_update_test_context { result = result, jobs = jobs }
     --- Fail only the notification preview after a successful update.
     result.read_preview = function()
-        return nil, 'preview unavailable'
+        return nil, "preview unavailable"
     end
     context.perform_update({ note_ids = { 11 }, overwrite = true, subtitle = subtitle })
     complete_update_test_media_jobs(jobs)
     h.assert_equals(result.appended_note_ids, { 11 })
     h.assert_equals(result.field_requests, { { 11 } })
     h.assert_equals(result.preview_reads, { 11 })
-    h.assert_equals(result.notification, 'Updated note #11.')
+    h.assert_equals(result.notification, "Updated note #11.")
 end
 
 --- A missing note type in the notification preview does not hide a successful write.
 local function test_update_notification_model_lookup_failure()
     local result = make_update_test_result()
-    result.first_field_error = 'Note type missing'
+    result.first_field_error = "Note type missing"
     local jobs = {}
     local context, subtitle = make_update_test_context { result = result, jobs = jobs }
     context.perform_update({ note_ids = { 11 }, overwrite = true, subtitle = subtitle })
     complete_update_test_media_jobs(jobs)
     h.assert_equals(result.appended_note_ids, { 11 })
     h.assert_equals(result.preview_reads, {})
-    h.assert_equals(result.notification, 'Updated note #11.')
+    h.assert_equals(result.notification, "Updated note #11.")
 end
 
 --- Construct real blank subtitles retaining secondary text and timings.
 local function make_blank_update_test_subtitle(case)
-    local values = { text = case.text, secondary = 'translation', ['start'] = 1, ['end'] = 3, is_secondary = true }
+    local values = { text = case.text, secondary = "translation", ["start"] = 1, ["end"] = 3, is_secondary = true }
     return subtitle_module.Subtitle:new(values)
 end
 
@@ -478,8 +502,8 @@ local function assert_blank_update_test_outcome(result, jobs, case)
         h.assert_equals(result.notification, case.preflight_error)
     else
         complete_update_test_media_jobs(jobs)
-        h.assert_equals(result.fields_by_note[13].SentKanji, 'stored 13')
-        h.assert_equals(result.fields_by_note[13].SentEng, 'translation')
+        h.assert_equals(result.fields_by_note[13].SentKanji, "stored 13")
+        h.assert_equals(result.fields_by_note[13].SentEng, "translation")
         h.assert_equals(result.clear_count, 1)
     end
 end
@@ -487,10 +511,10 @@ end
 --- Check caller data directly because subtitle defaults can conceal a removed text key.
 local function assert_blank_update_test_request(request, sub, original)
     h.assert_equals(rawequal(request.subtitle, sub), true)
-    h.assert_equals(rawget(sub, 'text'), rawget(original.subtitle, 'text'))
-    h.assert_equals(sub.secondary, 'translation')
-    h.assert_equals(sub['start'], 1)
-    h.assert_equals(sub['end'], 3)
+    h.assert_equals(rawget(sub, "text"), rawget(original.subtitle, "text"))
+    h.assert_equals(sub.secondary, "translation")
+    h.assert_equals(sub["start"], 1)
+    h.assert_equals(sub["end"], 3)
     h.assert_equals(sub.is_secondary, true)
     h.assert_equals(request, original)
 end
@@ -512,14 +536,14 @@ end
 --- Preserve caller data for empty and absent text with successful or failed preparation.
 local function test_blank_update_subtitle()
     for _, case in ipairs {
-        { text = '', overwrite = false },
-        { text = '', overwrite = true },
+        { text = "", overwrite = false },
+        { text = "", overwrite = true },
         { overwrite = true },
         { overwrite = false },
-        { text = '', overwrite = true, preflight_error = 'AnkiConnect unavailable' },
-        { text = '', overwrite = false, preflight_error = 'AnkiConnect unavailable' },
-        { overwrite = false, preflight_error = 'AnkiConnect unavailable' },
-        { overwrite = true, preflight_error = 'AnkiConnect unavailable' },
+        { text = "", overwrite = true, preflight_error = "AnkiConnect unavailable" },
+        { text = "", overwrite = false, preflight_error = "AnkiConnect unavailable" },
+        { overwrite = false, preflight_error = "AnkiConnect unavailable" },
+        { overwrite = true, preflight_error = "AnkiConnect unavailable" },
     } do
         assert_blank_update_test_case(case)
     end
@@ -527,21 +551,21 @@ end
 
 --- Create the mp API for metadata and duration tests.
 local function make_update_test_mp_api(filename)
-    filename = filename or 'episode.mkv'
+    filename = filename or "episode.mkv"
     return {
         --- Return the test media filename.
         get_property = function(name)
-            if name == 'filename' then
+            if name == "filename" then
                 return filename
-            elseif name == 'path' then
-                return '/videos/' .. filename
+            elseif name == "path" then
+                return "/videos/" .. filename
             end
         end,
         --- Return the test media duration.
         get_property_number = function(name)
-            if name == 'duration' then
+            if name == "duration" then
                 return 1
-            elseif name == 'time-pos' then
+            elseif name == "time-pos" then
                 return 65
             end
         end,
@@ -555,10 +579,14 @@ local function assert_update_test_media_metadata(mp_api)
     local result = make_update_test_result()
     local context = make_update_test_context { result = result, jobs = {}, config = config, mp = mp_api }
     local altered_context = make_update_test_context {
-        result = result, jobs = {}, config = config, user_altered = true, mp = mp_api,
+        result = result,
+        jobs = {},
+        config = config,
+        user_altered = true,
+        mp = mp_api,
     }
-    h.assert_equals(context.substitute_fmt('source_%n'), 'source_episode')
-    h.assert_equals(context.substitute_fmt('%f %t'), '/videos/episode.mkv 01m05s000ms')
+    h.assert_equals(context.substitute_fmt("source_%n"), "source_episode")
+    h.assert_equals(context.substitute_fmt("%f %t"), "/videos/episode.mkv 01m05s000ms")
     h.assert_equals(context.audio_padding(), 0.5)
     h.assert_equals(altered_context.audio_padding(), 0.0)
 end
@@ -571,32 +599,38 @@ end
 --- Preserve literal percent signs in filenames and paths, including repeated placeholders.
 local function test_literal_tag_substitutions()
     for _, case in ipairs {
-        { filename = '100% fun.mkv', name = '100%_fun' },
-        { filename = 'part%1.mkv', name = 'part%1' },
-        { filename = 'part%%.mkv', name = 'part%%' },
+        { filename = "100% fun.mkv", name = "100%_fun" },
+        { filename = "part%1.mkv", name = "part%1" },
+        { filename = "part%%.mkv", name = "part%%" },
     } do
         local context = make_update_test_context {
-            result = make_update_test_result(), jobs = {}, mp = make_update_test_mp_api(case.filename),
+            result = make_update_test_result(),
+            jobs = {},
+            mp = make_update_test_mp_api(case.filename),
         }
-        h.assert_equals(context.substitute_fmt('%n|%f|%n'),
-                case.name .. '|/videos/' .. case.filename .. '|' .. case.name)
+        h.assert_equals(
+            context.substitute_fmt("%n|%f|%n"),
+            case.name .. "|/videos/" .. case.filename .. "|" .. case.name
+        )
     end
 end
 
 --- Preserve the environment value literally during its placeholder substitution.
 local function test_environment_tag_substitution()
     local context = make_update_test_context {
-        result = make_update_test_result(), jobs = {}, mp = make_update_test_mp_api(),
+        result = make_update_test_result(),
+        jobs = {},
+        mp = make_update_test_mp_api(),
     }
-    local env_tags = os.getenv('SUBS2SRS_TAGS') or ''
+    local env_tags = os.getenv("SUBS2SRS_TAGS") or ""
     -- Full-path substitution still follows environment substitution, as in production.
-    local expected = h.str_replace(env_tags, '%f', '/videos/episode.mkv')
-    h.assert_equals(context.substitute_fmt('%e'), h.remove_leading_trailing_spaces(expected))
+    local expected = h.str_replace(env_tags, "%f", "/videos/episode.mkv")
+    h.assert_equals(context.substitute_fmt("%e"), h.remove_leading_trailing_spaces(expected))
 end
 
 --- Assert every target receives the invocation tag rather than later playback metadata.
 local function assert_update_invocation_tag_test_results(result, case)
-    local expected = case.name .. '|/videos/' .. case.filename .. '|01m05s000ms|' .. case.name
+    local expected = case.name .. "|/videos/" .. case.filename .. "|01m05s000ms|" .. case.name
     for _, note_id in ipairs(case.note_ids) do
         h.assert_equals(result.tags_by_note[note_id], expected)
     end
@@ -606,20 +640,23 @@ end
 --- Advance playback between media completions while retaining the original update tag.
 local function assert_update_invocation_tag_test_case(case)
     local result, jobs = make_update_test_result(), {}
-    local properties = { filename = case.filename, path = '/videos/' .. case.filename, ['time-pos'] = 65 }
+    local properties = { filename = case.filename, path = "/videos/" .. case.filename, ["time-pos"] = 65 }
     local config = make_update_test_config(true)
-    config.note_tag = '%n|%f|%t|%n'
+    config.note_tag = "%n|%f|%t|%n"
     local context, subtitle = make_update_test_context {
-        result = result, jobs = jobs, config = config, mp = fixtures.make_mp_property_reader(properties),
+        result = result,
+        jobs = jobs,
+        config = config,
+        mp = fixtures.make_mp_property_reader(properties),
     }
     local request = { note_ids = case.note_ids, overwrite = case.overwrite, subtitle = subtitle }
     local original_request = h.deep_copy(request)
     context.perform_update(request)
-    properties.filename, properties.path, properties['time-pos'] = 'later.mkv', '/later/later.mkv', 125
-    jobs[1].callback('snapshot.avif', nil)
+    properties.filename, properties.path, properties["time-pos"] = "later.mkv", "/later/later.mkv", 125
+    jobs[1].callback("snapshot.avif", nil)
     h.assert_equals(result.tags_by_note, nil)
-    properties.filename, properties.path, properties['time-pos'] = 'last.mkv', '/last/last.mkv', 185
-    jobs[2].callback('audio.ogg', nil)
+    properties.filename, properties.path, properties["time-pos"] = "last.mkv", "/last/last.mkv", 185
+    jobs[2].callback("audio.ogg", nil)
     assert_update_invocation_tag_test_results(result, case)
     h.assert_equals(request, original_request)
 end
@@ -627,9 +664,9 @@ end
 --- Capture literal filename/path values and playback time for single and multi-note updates.
 local function test_update_captures_invocation_tag()
     for _, case in ipairs {
-        { filename = 'episode.mkv', name = 'episode', note_ids = { 11 }, overwrite = false },
-        { filename = '100% fun.mkv', name = '100%_fun', note_ids = { 11, 12 }, overwrite = true },
-        { filename = 'part%1.mkv', name = 'part%1', note_ids = { 11, 12 }, overwrite = false },
+        { filename = "episode.mkv", name = "episode", note_ids = { 11 }, overwrite = false },
+        { filename = "100% fun.mkv", name = "100%_fun", note_ids = { 11, 12 }, overwrite = true },
+        { filename = "part%1.mkv", name = "part%1", note_ids = { 11, 12 }, overwrite = false },
     } do
         assert_update_invocation_tag_test_case(case)
     end
@@ -637,10 +674,10 @@ end
 
 --- Return separate original and later selections for lifecycle scenarios.
 local function make_reentrant_update_test_state()
-    local initial = subtitle_module.make_subtitle('Initial selection', 0, 1)
+    local initial = subtitle_module.make_subtitle("Initial selection", 0, 1)
     local state = make_update_test_result()
     state.selection, state.original_selection = initial, initial
-    state.later_selection = subtitle_module.make_subtitle('Later selection', 3, 4)
+    state.later_selection = subtitle_module.make_subtitle("Later selection", 3, 4)
     state.job_starts = {}
     return state
 end
@@ -653,7 +690,9 @@ local function make_reentrant_update_test_context(state, media)
         on_start = fixtures.make_update_start_test_recorder(state, quick_options),
     })
     local context = make_update_test_context {
-        result = state, jobs = jobs, subtitle = state.original_selection,
+        result = state,
+        jobs = jobs,
+        subtitle = state.original_selection,
         quick_options = quick_options,
         observer = fixtures.make_reentrant_update_test_observer(state),
         encoder = fixtures.make_update_encoder(jobs, encoder_options),
@@ -705,7 +744,7 @@ end
 --- Preserve both selection and quick options when preparation fails before job startup.
 local function test_update_preflight_preserves_interactive_state()
     local state = make_reentrant_update_test_state()
-    state.media_dir_error = 'AnkiConnect unavailable'
+    state.media_dir_error = "AnkiConnect unavailable"
     local context, jobs, quick_options = make_reentrant_update_test_context(state, {})
     context.perform_update { note_ids = { 11 }, overwrite = true, subtitle = state.original_selection }
     h.assert_equals(state.selection, state.original_selection)
@@ -715,7 +754,7 @@ local function test_update_preflight_preserves_interactive_state()
     h.assert_equals(jobs, {})
     h.assert_equals(state.job_starts, {})
     h.assert_equals(state.appended_note_ids, {})
-    h.assert_equals(state.notification, 'AnkiConnect unavailable')
+    h.assert_equals(state.notification, "AnkiConnect unavailable")
 end
 
 --- Run context tests without requiring mpv-backed components.

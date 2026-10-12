@@ -5,7 +5,7 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Fixtures shared by standalone and in-mpv tests.
 ]]
 
-local h = require('helpers')
+local h = require("helpers")
 
 local this = {}
 
@@ -59,8 +59,8 @@ end
 function this.make_update_encoder(jobs, options, cfg_mgr)
     options = options or {}
     local state = { cfg_mgr = cfg_mgr, on_start = options.on_start }
-    local snapshot_filename = 'snapshot.avif'
-    local audio_filename = 'audio.ogg'
+    local snapshot_filename = "snapshot.avif"
+    local audio_filename = "audio.ogg"
     if options.skip_snapshot then
         snapshot_filename = nil
     end
@@ -111,7 +111,7 @@ end
 
 --- Return a config manager that exposes the supplied test configuration.
 function this.make_config_manager(config, profiles)
-    profiles = profiles or { active = 'test', profiles = 'test' }
+    profiles = profiles or { active = "test", profiles = "test" }
     return {
         fail_if_not_ready = h.noop,
         --- Return the test configuration.
@@ -128,10 +128,10 @@ end
 --- Return a fresh common update-test configuration with local scenario overrides.
 function this.make_update_config(overrides)
     local config = {
-        sentence_field = 'SentKanji',
-        audio_field = 'SentAudio',
-        audio_template = '[sound:%s]',
-        image_field = 'Image',
+        sentence_field = "SentKanji",
+        audio_field = "SentAudio",
+        audio_template = "[sound:%s]",
+        image_field = "Image",
         image_template = '<img alt="snapshot" src="%s">',
         audio_padding = 0,
         miscinfo_enable = false,
@@ -159,7 +159,7 @@ function this.make_update_ankiconnect(state, fields_for_note, cfg_mgr)
             if state.media_dir_error then
                 return nil, state.media_dir_error
             end
-            return state.media_dir_path or '/tmp', nil
+            return state.media_dir_path or "/tmp", nil
         end,
         --- Record bulk field reads before returning test-specific fields or errors.
         get_notes_fields = function(note_ids)
@@ -184,7 +184,7 @@ function this.make_update_ankiconnect(state, fields_for_note, cfg_mgr)
             if state.first_field_error then
                 return nil, state.first_field_error
             end
-            return state.first_field or 'SentKanji', nil
+            return state.first_field or "SentKanji", nil
         end,
         --- Record a write and optionally defer its completion for asynchronous tests.
         append_media = function(note_id, fields, tag, on_finish)
@@ -360,7 +360,7 @@ function this.make_forvo_dependencies(state, responses)
         platform = {
             windows = false,
             --- Return a fake temporary directory without creating it.
-            tmp_dir = function() return '/forvo-test-tmp' end,
+            tmp_dir = function() return "/forvo-test-tmp" end,
             --- Record a request and return its supplied response.
             curl_request = function(options)
                 table.insert(state.requests, options.args)
@@ -423,7 +423,7 @@ local function make_note_add_test_client(state, make_client, cfg_mgr, components
     end
     --- Supply a fake destination for deferred encoder jobs.
     client.get_media_dir_path = function()
-        return '/anki-test-media', nil
+        return "/anki-test-media", nil
     end
     record_note_add_test_requests(client, state, components)
     --- Construct a recording transaction client rather than losing fake transport hooks.
@@ -454,7 +454,7 @@ end
 function this.make_backend_codec_test_context(make_backend, config, supported)
     local state = { config = config }
     local support = {
-        avif_encoders = { 'libsvtav1', 'libaom-av1' },
+        avif_encoders = { "libsvtav1", "libaom-av1" },
         ffmpeg_support = { snapshot = supported },
         mpv_support = { snapshot = supported },
     }
@@ -469,14 +469,14 @@ end
 --- Extract the snapshot codec from either backend's generated command.
 function this.backend_test_command_codec(args)
     for index, arg in ipairs(args) do
-        if arg == '-c:v' then
+        if arg == "-c:v" then
             return args[index + 1]
         end
-        if arg:match('^%-%-ovc=') then
+        if arg:match("^%-%-ovc=") then
             return arg:sub(7)
         end
     end
-    error('backend test command contains no snapshot codec')
+    error("backend test command contains no snapshot codec")
 end
 
 --- Return only the method names exposed by a backend instance.
@@ -492,7 +492,7 @@ end
 --- Record encoder commands without executing them or completing filesystem-dependent callbacks.
 function this.make_recording_encoder_components(state)
     return {
-        mp = this.make_mp_property_reader { path = 'encoder-test.mkv', ['time-pos'] = 0 },
+        mp = this.make_mp_property_reader { path = "encoder-test.mkv", ["time-pos"] = 0 },
         --- Record a media command for output-directory assertions.
         subprocess = function(options)
             table.insert(state.commands, options.args)
@@ -501,7 +501,7 @@ function this.make_recording_encoder_components(state)
         has_video_track = function() return true end,
         filename_factory = {
             --- Avoid the file-loaded filename cache during standalone tests.
-            make_filename = function() return 'encoder-test.jpg' end,
+            make_filename = function() return "encoder-test.jpg" end,
         },
     }
 end
@@ -509,7 +509,7 @@ end
 --- Extract the output path from a generated mpv or FFmpeg test command.
 function this.encoder_test_output_path(args)
     for _, arg in pairs(args) do
-        if arg:match('^%-o=') then
+        if arg:match("^%-o=") then
             return arg:sub(4)
         end
     end
@@ -532,15 +532,15 @@ end
 --- Return synchronous fake responses while deferring real-client write completions.
 local function update_transport_test_response(state, options)
     local request = state.anki_requests[#state.anki_requests].request
-    if request.action == 'getMediaDirPath' then
+    if request.action == "getMediaDirPath" then
         return { test_result = state.media_dirs[options.url] }
-    elseif request.action == 'notesInfo' then
+    elseif request.action == "notesInfo" then
         return { test_result = make_update_transport_test_fields(state, request.params.notes) }
-    elseif request.action == 'findModelsByName' then
-        return { test_result = { { flds = { { ord = 0, name = 'SentKanji' } } } } }
-    elseif request.action == 'findNotes' or request.action == 'guiSelectedNotes' then
+    elseif request.action == "findModelsByName" then
+        return { test_result = { { flds = { { ord = 0, name = "SentKanji" } } } } }
+    elseif request.action == "findNotes" or request.action == "guiSelectedNotes" then
         return { test_result = state.target_ids }
-    elseif request.action == 'updateNoteFields' then
+    elseif request.action == "updateNoteFields" then
         state.anki_write_callbacks = state.anki_write_callbacks or {}
         state.anki_write_callbacks[request.params.note.id] = options.completion_fn
     end
@@ -595,7 +595,11 @@ local function parse_loudnorm_test_json(state, json)
     h.assert_equals(json, loudnorm_test_json())
     state.parsed_json_count = (state.parsed_json_count or 0) + 1
     return {
-        input_i = '-20', input_lra = '3', input_tp = '-2', input_thresh = '-30', target_offset = '1',
+        input_i = "-20",
+        input_lra = "3",
+        input_tp = "-2",
+        input_thresh = "-30",
+        target_offset = "1",
     }
 end
 
@@ -603,9 +607,9 @@ end
 function this.make_loudnorm_test_context(make_backend, cfg_mgr)
     local state = { analysis = {}, encoding = {}, warnings = {} }
     local components = {
-        mp = this.make_mp_property_reader { aid = '2', volume = 100 },
+        mp = this.make_mp_property_reader { aid = "2", volume = 100 },
         --- Supply a known internal audio track without changing shared mp functions.
-        get_active_track = function() return { ['ff-index'] = 1, external = false } end,
+        get_active_track = function() return { ["ff-index"] = 1, external = false } end,
         --- Save analysis callbacks without launching an encoder process.
         subprocess = function(options) table.insert(state.analysis, options) end,
         --- Decode the controlled successful analysis result.
@@ -619,8 +623,11 @@ function this.make_loudnorm_test_context(make_backend, cfg_mgr)
     local backend = make_backend(cfg_mgr, nil, components)
     backend.init()
     backend.make_audio_args(
-            'source.mkv', 'output' .. cfg_mgr.config().audio_extension, 1, 2,
-            this.make_loudnorm_test_consumer(state)
+        "source.mkv",
+        "output" .. cfg_mgr.config().audio_extension,
+        1,
+        2,
+        this.make_loudnorm_test_consumer(state)
     )
     return backend, state
 end
@@ -632,12 +639,12 @@ end
 
 --- Complete analysis with controlled successful output or an explicit process failure.
 function this.complete_loudnorm_test_analysis(state, success)
-    local result = { status = 1, stdout = '', stderr = '' }
+    local result = { status = 1, stdout = "", stderr = "" }
     if success then
         result = {
             status = 0,
-            stdout = '[ffmpeg] ' .. loudnorm_test_json(),
-            stderr = '[Parsed_loudnorm_0 @ test] ' .. loudnorm_test_json(),
+            stdout = "[ffmpeg] " .. loudnorm_test_json(),
+            stderr = "[Parsed_loudnorm_0 @ test] " .. loudnorm_test_json(),
         }
     end
     state.analysis[1].completion_fn(success, result, nil)
@@ -648,7 +655,7 @@ function this.encoder_test_option_value(args, option)
     for index, arg in ipairs(args) do
         if arg == option then
             return args[index + 1]
-        elseif arg:sub(1, #option + 1) == option .. '=' then
+        elseif arg:sub(1, #option + 1) == option .. "=" then
             return arg:sub(#option + 2)
         end
     end
@@ -686,7 +693,7 @@ end
 function this.make_reentrant_update_test_notifier(state, quick_options)
     return function(message, level)
         state.notification, state.notification_level = message, level
-        if level ~= 'error' then
+        if level ~= "error" then
             state.selection_at_finish = state.selection
             state.selection = state.later_selection
             quick_options.set_options_for_test(7, 9)

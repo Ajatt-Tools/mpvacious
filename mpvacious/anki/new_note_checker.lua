@@ -7,9 +7,9 @@ When enabled, mpvacious will periodically check for new notes
 and automatically add media (audio and images) to them if they match your configured note type.
 ]]
 
-local mp = require('mp')
-local msg = require('mp.msg')
-local h = require('helpers')
+local mp = require("mp")
+local msg = require("mp.msg")
+local h = require("helpers")
 
 --- Create a new-note checker with optional mpv-compatible dependencies.
 local function make_anki_new_note_checker(components)
@@ -42,7 +42,7 @@ local function make_anki_new_note_checker(components)
     --- on_completed = fn(note_ids, error)
     local function find_notes_added_today(on_completed)
         return self.ankiconnect.find_notes {
-            query = string.format("added:1 \"note:%s\" \"deck:%s\"", self.config.model_name, self.config.deck_name),
+            query = string.format('added:1 "note:%s" "deck:%s"', self.config.model_name, self.config.deck_name),
             suppress_log = true,
             completion_fn = on_completed,
         }
@@ -74,9 +74,9 @@ local function make_anki_new_note_checker(components)
         -- The configured sentence field identifies the expected note type, even when its value is blank.
         -- Notes added by mpvacious already have media and must not be updated again.
         return not h.is_empty(note_fields)
-                and note_fields[self.config.sentence_field] ~= nil
-                and is_note_recent(note_id)
-                and has_no_media(note_fields)
+            and note_fields[self.config.sentence_field] ~= nil
+            and is_note_recent(note_id)
+            and has_no_media(note_fields)
     end
 
     --- Inspect one note once per checker session and add it to `to_update` when eligible.

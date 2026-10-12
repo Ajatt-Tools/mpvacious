@@ -5,14 +5,14 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Observer waits for subtitles to appear on the screen and adds them to a list.
 ]]
 
-local h = require('helpers')
-local timings = require('utils.timings')
-local sub_list = require('subtitles.sub_list')
-local subtitle = require('subtitles.subtitle')
-local mp = require('mp')
-local platform = require('platform.init')
-local new_autoclip_method_selector = require('subtitles.autoclip_methods')
-local custom_subtitle_filter = h.maybe_require('custom_subtitle_filter')
+local h = require("helpers")
+local timings = require("utils.timings")
+local sub_list = require("subtitles.sub_list")
+local subtitle = require("subtitles.subtitle")
+local mp = require("mp")
+local platform = require("platform.init")
+local new_autoclip_method_selector = require("subtitles.autoclip_methods")
+local custom_subtitle_filter = h.maybe_require("custom_subtitle_filter")
 
 ------------------------------------------------------------
 --- Private
@@ -38,9 +38,9 @@ local function external_command_args(cur_lines, autoclip_custom_args)
 
     for _, arg in config_str:gmatch(pattern) do
         if arg ~= "" then
-            if arg == '%MPV_PRIMARY%' then
+            if arg == "%MPV_PRIMARY%" then
                 arg = cur_lines.primary
-            elseif arg == '%MPV_SECONDARY%' then
+            elseif arg == "%MPV_SECONDARY%" then
                 arg = cur_lines.secondary
             end
 
@@ -72,13 +72,13 @@ local function make_current_subtitle_lines(dependencies)
         get_prepared = function()
             return {
                 primary = dependencies.clipboard_preparer(primary),
-                secondary = secondary
+                secondary = secondary,
             }
         end,
         raw = {
             primary = primary,
-            secondary = secondary
-        }
+            secondary = secondary,
+        },
     }
 end
 
@@ -118,22 +118,31 @@ local function make_subtitles_observer()
     ------------------------------------------------------------
     --- Register handlers
 
-    private.autoclip_method.register_handler('clipboard', function(current_subtitle_lines)
-        public.copy_to_clipboard("autocopy action", current_subtitle_lines.raw.primary)
-    end)
+    private.autoclip_method.register_handler(
+        "clipboard",
+        function(current_subtitle_lines)
+            public.copy_to_clipboard("autocopy action", current_subtitle_lines.raw.primary)
+        end
+    )
 
-    private.autoclip_method.register_handler('goldendict', function(current_subtitle_lines)
-        h.subprocess_detached {
-            args = { 'goldendict', current_subtitle_lines.get_prepared().primary },
-            completion_fn = on_external_finish
-        }
-    end)
+    private.autoclip_method.register_handler(
+        "goldendict",
+        function(current_subtitle_lines)
+            h.subprocess_detached {
+                args = { "goldendict", current_subtitle_lines.get_prepared().primary },
+                completion_fn = on_external_finish,
+            }
+        end
+    )
 
-    private.autoclip_method.register_handler('custom_command', function(current_subtitle_lines)
+    private.autoclip_method.register_handler("custom_command", function(current_subtitle_lines)
         if not h.is_empty(private.config.autoclip_custom_args) then
             h.subprocess {
-                args = external_command_args(current_subtitle_lines.get_prepared(), private.config.autoclip_custom_args),
-                completion_fn = on_external_finish
+                args = external_command_args(
+                    current_subtitle_lines.get_prepared(),
+                    private.config.autoclip_custom_args
+                ),
+                completion_fn = on_external_finish,
             }
         end
     end)
@@ -150,9 +159,9 @@ local function make_subtitles_observer()
     end
 
     local function append_secondary_sub()
-        local current_secondary = subtitle.make_current('secondary')
+        local current_secondary = subtitle.make_current("secondary")
         private.all_secondary_dialogs.insert(current_secondary)
-        if private.append_dialogue and private.secondary_dialogs.insert(subtitle.make_current('secondary')) then
+        if private.append_dialogue and private.secondary_dialogs.insert(subtitle.make_current("secondary")) then
             private.menu:update()
         end
     end
@@ -237,7 +246,7 @@ local function make_subtitles_observer()
 
     function public.user_altered()
         --- Return true if the user manually set at least start or end.
-        return private.user_timings.is_set('start') or private.user_timings.is_set('end')
+        return private.user_timings.is_set("start") or private.user_timings.is_set("end")
     end
 
     function public.get_timing(position)
@@ -251,7 +260,7 @@ local function make_subtitles_observer()
 
     function public.collect_from_all_dialogues(n_lines)
         local current_sub = subtitle.make_current()
-        local current_secondary_sub = subtitle.make_current('secondary')
+        local current_secondary_sub = subtitle.make_current("secondary")
         private.all_dialogs.insert(current_sub)
         private.all_secondary_dialogs.insert(current_secondary_sub)
         if current_sub == nil then
@@ -260,10 +269,10 @@ local function make_subtitles_observer()
         local combined = private.all_dialogs.collect_n_subs(current_sub, n_lines)
         local secondary_text = private.all_secondary_dialogs.get_overlapping_text(combined)
         return subtitle.Subtitle:new {
-            ['text'] = combined["text"],
-            ['secondary'] = secondary_text,
-            ['start'] = combined['start'],
-            ['end'] = combined['end'],
+            ["text"] = combined["text"],
+            ["secondary"] = secondary_text,
+            ["start"] = combined["start"],
+            ["end"] = combined["end"],
         }
     end
 
@@ -274,19 +283,20 @@ local function make_subtitles_observer()
             private.dialogs.insert(subtitle.make_current())
         end
         if private.secondary_dialogs.is_empty() then
-            private.secondary_dialogs.insert(subtitle.make_current('secondary'))
+            private.secondary_dialogs.insert(subtitle.make_current("secondary"))
         end
-        local combined = subtitle.make_subtitle(private.dialogs.get_text(), public.get_timing('start'), public.get_timing('end'))
+        local combined =
+            subtitle.make_subtitle(private.dialogs.get_text(), public.get_timing("start"), public.get_timing("end"))
         return subtitle.Subtitle:new {
-            ['text'] = combined['text'],
-            ['secondary'] = private.secondary_dialogs.get_overlapping_text(combined),
-            ['start'] = combined['start'],
-            ['end'] = combined['end'],
+            ["text"] = combined["text"],
+            ["secondary"] = private.secondary_dialogs.get_overlapping_text(combined),
+            ["start"] = combined["start"],
+            ["end"] = combined["end"],
         }
     end
 
     function public.set_manual_timing(position)
-        private.user_timings.set(position, mp.get_property_number('time-pos') - mp.get_property("audio-delay"))
+        private.user_timings.set(position, mp.get_property_number("time-pos") - mp.get_property("audio-delay"))
         h.notify(h.capitalize_first_letter(position) .. " time has been set.")
         start_appending()
     end
@@ -337,7 +347,7 @@ local function make_subtitles_observer()
 
     function public.all_subs_until_now()
         private.all_dialogs.insert(subtitle.make_current())
-        private.all_secondary_dialogs.insert(subtitle.make_current('secondary'))
+        private.all_secondary_dialogs.insert(subtitle.make_current("secondary"))
         return private.all_dialogs.get_subs_list(), private.all_secondary_dialogs.get_subs_list()
     end
 
@@ -354,19 +364,15 @@ local function make_subtitles_observer()
     end
 
     function public.autocopy_is_enabled_str()
-        return private.autoclip_enabled and 'enabled' or 'disabled'
+        return private.autoclip_enabled and "enabled" or "disabled"
     end
 
     function public.autocopy_current_method_str()
-        return public.autocopy_current_method():gsub('_', ' ')
+        return public.autocopy_current_method():gsub("_", " ")
     end
 
     function public.autocopy_status_str()
-        return string.format(
-                "%s (%s)",
-                public.autocopy_is_enabled_str(),
-                public.autocopy_current_method_str()
-        )
+        return string.format("%s (%s)", public.autocopy_is_enabled_str(), public.autocopy_current_method_str())
     end
 
     function public.autocopy_current_method()
@@ -409,7 +415,7 @@ local function make_subtitles_observer()
             custom_subtitle_filter.init({
                 get_mode = function()
                     return private.config.custom_subtitle_filter_mode
-                end
+                end,
             })
         end
 

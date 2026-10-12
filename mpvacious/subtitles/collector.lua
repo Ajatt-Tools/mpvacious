@@ -5,8 +5,8 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Collect subtitle lines into a joined speech.
 ]]
 
-local h = require('helpers')
-local CONCAT_CHR = '\n' -- character used to concatenate subtitle lines
+local h = require("helpers")
+local CONCAT_CHR = "\n" -- character used to concatenate subtitle lines
 
 --- Split text into individual lines, normalized to LF.
 --- Empty lines are preserved so intentional subtitle formatting survives joining.
@@ -15,7 +15,7 @@ local function normalized_lines(text)
     local lines = h.split_lines(normalized_text)
     -- Splitting works by appending a newline, so text that already ends with one
     -- would produce an extra empty line unless we remove it here.
-    if normalized_text:sub(-1) == '\n' then
+    if normalized_text:sub(-1) == "\n" then
         lines[#lines] = nil
     end
     return lines
@@ -36,7 +36,12 @@ local function count_overlapping_lines(recorded_lines, lines_to_append)
     for overlap_size = max_overlap, 1, -1 do
         -- Compare the last overlap_size lines of recorded_lines
         -- with the first overlap_size lines of lines_to_append.
-        if h.list_equal(h.itable_slice(recorded_lines, -overlap_size), h.itable_slice(lines_to_append, 1, overlap_size)) then
+        if
+            h.list_equal(
+                h.itable_slice(recorded_lines, -overlap_size),
+                h.itable_slice(lines_to_append, 1, overlap_size)
+            )
+        then
             return overlap_size
         end
     end
@@ -54,7 +59,7 @@ local function make_speech_collector()
     --- the trailing lines of speech. Skipping applies only when the two subs
     --- overlap or touch in time; a repeated line after a gap is kept as separate dialogue.
     function self.append_sub(sub)
-        local lines_to_append = normalized_lines(sub['text'])
+        local lines_to_append = normalized_lines(sub["text"])
         local n_lines_to_skip = 0
         if do_subs_overlap_in_time(previous_sub, sub) then
             n_lines_to_skip = count_overlapping_lines(recorded_lines, lines_to_append)

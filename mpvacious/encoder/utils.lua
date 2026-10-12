@@ -5,10 +5,10 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Encoder utilities.
 ]]
 
-local utils = require('mp.utils')
-local msg = require('mp.msg')
-local defaults = require('config.defaults')
-local h = require('helpers')
+local utils = require("mp.utils")
+local msg = require("mp.msg")
+local defaults = require("config.defaults")
+local h = require("helpers")
 
 local this = {}
 
@@ -45,40 +45,37 @@ local function make_scale_filter(algorithm, width, height)
     -- Animated images use Lanczos, which is faster.
     if width == defaults.preserve_aspect_ratio and height > 0 then
         return string.format(
-                "scale='trunc(min(%d,ih)*dar/2+0.5)*2':'min(%d,ih)':flags=%s+accurate_rnd,setsar=1",
-                height, height, algorithm
+            "scale='trunc(min(%d,ih)*dar/2+0.5)*2':'min(%d,ih)':flags=%s+accurate_rnd,setsar=1",
+            height,
+            height,
+            algorithm
         )
     end
     if height == defaults.preserve_aspect_ratio and width > 0 then
         return string.format(
-                "scale='trunc(min(%d,iw*sar)/2+0.5)*2':'trunc(min(%d,iw*sar)/dar/2+0.5)*2':flags=%s+accurate_rnd,setsar=1",
-                width, width, algorithm
+            "scale='trunc(min(%d,iw*sar)/2+0.5)*2':'trunc(min(%d,iw*sar)/dar/2+0.5)*2':flags=%s+accurate_rnd,setsar=1",
+            width,
+            width,
+            algorithm
         )
     end
-    return string.format(
-            "scale='min(%d,iw)':'min(%d,ih)':flags=%s+accurate_rnd",
-            width, height, algorithm
-    )
+    return string.format("scale='min(%d,iw)':'min(%d,ih)':flags=%s+accurate_rnd", width, height, algorithm)
 end
 
 function this.static_scale_filter(config)
-    return make_scale_filter('sinc', config.snapshot_width, config.snapshot_height)
+    return make_scale_filter("sinc", config.snapshot_width, config.snapshot_height)
 end
 
 function this.animated_scale_filter(config)
-    return make_scale_filter(
-            'lanczos',
-            config.animated_snapshot_width,
-            config.animated_snapshot_height
-    )
+    return make_scale_filter("lanczos", config.animated_snapshot_width, config.animated_snapshot_height)
 end
 
 function this.make_loudnorm_targets(config)
     return string.format(
-            'loudnorm=I=%s:LRA=%s:TP=%s:dual_mono=true',
-            config.loudnorm_target,
-            config.loudnorm_range,
-            config.loudnorm_peak
+        "loudnorm=I=%s:LRA=%s:TP=%s:dual_mono=true",
+        config.loudnorm_target,
+        config.loudnorm_range,
+        config.loudnorm_peak
     )
 end
 
@@ -90,10 +87,10 @@ function this.set_codecs(encoder, config)
     if h.is_empty(chosen_avif_codec) then
         return
     end
-    if config.snapshot_format == 'avif' then
+    if config.snapshot_format == "avif" then
         encoder.snapshot_codec = chosen_avif_codec
     end
-    if config.animated_snapshot_format == 'avif' then
+    if config.animated_snapshot_format == "avif" then
         encoder.animated_snapshot_codec = chosen_avif_codec
     end
 end
@@ -105,7 +102,7 @@ function this.parse_loudnorm(loudnorm_targets, json_extractor, loudnorm_consumer
     local logger = components.logger or msg
     --- Report analysis fallback through the caller's logger.
     local function warn()
-        logger.warn('Failed to measure loudnorm stats, falling back on dynamic loudnorm.')
+        logger.warn("Failed to measure loudnorm stats, falling back on dynamic loudnorm.")
     end
 
     return function(success, result)
@@ -124,21 +121,21 @@ function this.parse_loudnorm(loudnorm_targets, json_extractor, loudnorm_consumer
         local function add_arg(name, val)
             -- loudnorm sometimes fails to gather stats for extremely short inputs.
             -- Simply omit the stat to fall back on dynamic loudnorm.
-            if val ~= '-inf' and val ~= 'inf' then
-                table.insert(loudnorm_args, string.format('%s=%s', name, val))
+            if val ~= "-inf" and val ~= "inf" then
+                table.insert(loudnorm_args, string.format("%s=%s", name, val))
             else
                 warn()
             end
         end
 
         local stats = parse_json(json)
-        add_arg('measured_I', stats.input_i)
-        add_arg('measured_LRA', stats.input_lra)
-        add_arg('measured_TP', stats.input_tp)
-        add_arg('measured_thresh', stats.input_thresh)
-        add_arg('offset', stats.target_offset)
+        add_arg("measured_I", stats.input_i)
+        add_arg("measured_LRA", stats.input_lra)
+        add_arg("measured_TP", stats.input_tp)
+        add_arg("measured_thresh", stats.input_thresh)
+        add_arg("offset", stats.target_offset)
 
-        loudnorm_consumer(table.concat(loudnorm_args, ':'))
+        loudnorm_consumer(table.concat(loudnorm_args, ":"))
     end
 end
 

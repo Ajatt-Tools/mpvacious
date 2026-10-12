@@ -6,7 +6,7 @@ Object that remembers manually set timings.
 ]]
 
 local new_timings = function()
-    local self = { ['start'] = -1, ['end'] = -1, }
+    local self = { ["start"] = -1, ["end"] = -1 }
     local is_set = function(position)
         return self[position] >= 0
     end

@@ -5,9 +5,9 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Prepare and perform one Anki note update request.
 ]]
 
-local mp = require('mp')
-local h = require('helpers')
-local dec_counter = require('utils.dec_counter')
+local mp = require("mp")
+local h = require("helpers")
+local dec_counter = require("utils.dec_counter")
 local accept_notes_made_within_last_minutes = 10
 
 --- Normalize two fields before joining them.
@@ -67,31 +67,31 @@ local function make_substitute_fmt(cfg_mgr, mp_api)
 
     --- Replace the filename placeholder in a tag.
     local function substitute_filename(tag, filename)
-        return h.str_replace(tag, '%n', filename)
+        return h.str_replace(tag, "%n", filename)
     end
 
     --- Replace the episode-number placeholder in a tag.
     local function substitute_episode_number(tag, episode)
-        return h.str_replace(tag, '%d', episode)
+        return h.str_replace(tag, "%d", episode)
     end
 
     --- Replace the playback-time placeholder in a tag.
     local function substitute_time_pos(tag)
-        local time_pos = h.human_readable_time(mp_api.get_property_number('time-pos'))
-        return h.str_replace(tag, '%t', time_pos)
+        local time_pos = h.human_readable_time(mp_api.get_property_number("time-pos"))
+        return h.str_replace(tag, "%t", time_pos)
     end
 
     --- Replace the environment-tag placeholder in a tag.
     local function substitute_envvar(tag)
-        local env_tags = os.getenv('SUBS2SRS_TAGS') or ''
+        local env_tags = os.getenv("SUBS2SRS_TAGS") or ""
         -- Environment values may contain percent signs that are not capture references.
-        return h.str_replace(tag, '%e', env_tags)
+        return h.str_replace(tag, "%e", env_tags)
     end
 
     --- Replace the full-path placeholder in a tag.
     local function substitute_fullpath(tag)
-        local full_path = mp_api.get_property("path") or ''
-        return h.str_replace(tag, '%f', full_path)
+        local full_path = mp_api.get_property("path") or ""
+        return h.str_replace(tag, "%f", full_path)
     end
 
     --- Remove the configured episode-number portion from a filename.
@@ -134,7 +134,7 @@ local function make_substitute_fmt(cfg_mgr, mp_api)
         filename = h.remove_common_resolutions(filename)
         local start_index, end_index, episode_num = h.get_episode_number(filename)
         filename = remove_episode_number(filename, start_index, end_index)
-        return clean_tag_filename(filename), episode_num or ''
+        return clean_tag_filename(filename), episode_num or ""
     end
 
     --- Substitute all supported placeholders in a media tag.
@@ -191,7 +191,7 @@ local function make_completion_collector()
         private.countdown = private.countdown or dec_counter.new(private.count).on_finish(on_finish)
         return function(result, error)
             if error ~= nil then
-                table.insert(private.errors, string.format('%s: %s', label, tostring(error)))
+                table.insert(private.errors, string.format("%s: %s", label, tostring(error)))
             end
             private.countdown.decrease()
         end
@@ -211,7 +211,7 @@ local function make_note_update_context(components)
         forvo = components.forvo,
         cfg_mgr = components.cfg_mgr,
         notify = components.notify or h.notify,
-        substitute_fmt = make_substitute_fmt(components.cfg_mgr, mp_api)
+        substitute_fmt = make_substitute_fmt(components.cfg_mgr, mp_api),
     }
     local pub = {}
 
@@ -254,15 +254,12 @@ local function make_note_update_context(components)
             return new_data
         end
 
-        local _, opentag, target, closetag, _ = stored_data[config().sentence_field]:match('^(.-)(<[^>]+>)(.-)(</[^>]+>)(.-)$')
+        local _, opentag, target, closetag, _ =
+            stored_data[config().sentence_field]:match("^(.-)(<[^>]+>)(.-)(</[^>]+>)(.-)$")
         if target then
             -- Treat the target and replacement markup literally, preserving the first match only.
-            new_data[config().sentence_field] = h.str_replace(
-                    new_data[config().sentence_field],
-                    target,
-                    (opentag .. target .. closetag),
-                    1
-            )
+            new_data[config().sentence_field] =
+                h.str_replace(new_data[config().sentence_field], target, (opentag .. target .. closetag), 1)
         end
         return new_data
     end
@@ -317,12 +314,12 @@ local function make_note_update_context(components)
     local function make_update_write_completion(note_ids)
         --- Show all failed writes once their batch is complete.
         local function on_failure(errors)
-            self.notify(string.format('Failed to update notes: %s', table.concat(errors, '; ')), 'error', 5)
+            self.notify(string.format("Failed to update notes: %s", table.concat(errors, "; ")), "error", 5)
         end
         return make_completion_collector()
-                .count(#note_ids)
-                .on_success(h.as_callback(notify_user_on_finish, note_ids))
-                .on_failure(on_failure)
+            .count(#note_ids)
+            .on_success(h.as_callback(notify_user_on_finish, note_ids))
+            .on_failure(on_failure)
     end
 
     --- Fetch all targets before any write; never return a partial snapshot on failure.
@@ -343,14 +340,10 @@ local function make_note_update_context(components)
         local completion_for = make_update_write_completion(request.note_ids)
         for _, target in pairs(targets) do
             self.ankiconnect.append_media(
-                    target.note_id,
-                    pub.make_new_note_data(
-                            target.fields,
-                            h.deep_copy(new_data),
-                            { overwrite = request.overwrite }
-                    ),
-                    tag,
-                    completion_for.callback_for('note ' .. tostring(target.note_id))
+                target.note_id,
+                pub.make_new_note_data(target.fields, h.deep_copy(new_data), { overwrite = request.overwrite }),
+                tag,
+                completion_for.callback_for("note " .. tostring(target.note_id))
             )
         end
     end
@@ -361,7 +354,7 @@ local function make_note_update_context(components)
         -- Read every target first: a later read failure must not leave earlier notes partly updated.
         local targets, error = collect_target_fields(request.note_ids)
         if error then
-            return self.notify(error, 'error', 5)
+            return self.notify(error, "error", 5)
         end
         write_target_fields(request, future.new_data, targets, future.tag)
     end
@@ -378,8 +371,8 @@ local function make_note_update_context(components)
         local snapshot = self.encoder.snapshot.create_job(request.subtitle)
         local audio = self.encoder.audio.create_job(request.subtitle, pub.audio_padding())
         local new_data = pub.construct_note_fields {
-            primary_text = request.subtitle['text'],
-            secondary_text = request.subtitle['secondary'],
+            primary_text = request.subtitle["text"],
+            secondary_text = request.subtitle["secondary"],
             snapshot_filename = snapshot.filename,
             audio_filename = audio.filename,
         }
@@ -394,7 +387,7 @@ local function make_note_update_context(components)
 
     --- Report media failures only after every job in the batch completes.
     local function on_media_creation_failure(errors)
-        self.notify('Failed to create media: ' .. table.concat(errors, '; '), 'error', 5)
+        self.notify("Failed to create media: " .. table.concat(errors, "; "), "error", 5)
     end
 
     --- Add the captured note only after every requested media job completes successfully.
@@ -405,23 +398,23 @@ local function make_note_update_context(components)
             gui = gui,
         }
         local completion = make_completion_collector()
-                .count(2)
-                .on_success(h.as_callback(self.ankiconnect.add_note, job))
-                .on_failure(on_media_creation_failure)
+            .count(2)
+            .on_success(h.as_callback(self.ankiconnect.add_note, job))
+            .on_failure(on_media_creation_failure)
         -- The shared countdown is ready before any job, including a skipped job, can finish.
         self.subs_observer.clear()
-        media.snapshot.on_finish(completion.callback_for('snapshot')).run_async()
-        media.audio.on_finish(completion.callback_for('audio')).run_async()
+        media.snapshot.on_finish(completion.callback_for("snapshot")).run_async()
+        media.audio.on_finish(completion.callback_for("audio")).run_async()
     end
 
     --- Start media jobs and schedule the resulting note write.
     local function start_update_media(request, future)
         local completion_for = make_completion_collector()
-                .count(2)
-                .on_success(h.as_callback(change_fields, request, future))
-                .on_failure(on_media_creation_failure)
-        future.snapshot.on_finish(completion_for.callback_for('snapshot')).run_async()
-        future.audio.on_finish(completion_for.callback_for('audio')).run_async()
+            .count(2)
+            .on_success(h.as_callback(change_fields, request, future))
+            .on_failure(on_media_creation_failure)
+        future.snapshot.on_finish(completion_for.callback_for("snapshot")).run_async()
+        future.audio.on_finish(completion_for.callback_for("audio")).run_async()
     end
 
     --- Clear subtitle selection after an update starts.
@@ -433,8 +426,8 @@ local function make_note_update_context(components)
     --- Build note fields and ensure the first model field is populated.
     local function make_export_note_fields(subtitle, media)
         local note_fields = pub.construct_note_fields {
-            primary_text = subtitle['text'],
-            secondary_text = subtitle['secondary'],
+            primary_text = subtitle["text"],
+            secondary_text = subtitle["secondary"],
             snapshot_filename = media.snapshot.filename,
             audio_filename = media.audio.filename,
         }
@@ -464,7 +457,7 @@ local function make_note_update_context(components)
     local function nullify_subtitle_text(request)
         request = h.shallow_copy(request)
         request.subtitle = request.subtitle:clone()
-        request.subtitle['text'] = nil
+        request.subtitle["text"] = nil
         return request
     end
 
@@ -476,14 +469,19 @@ local function make_note_update_context(components)
         fail_if_not_ready()
         for _, field in pairs { config().audio_field, config().image_field, config().miscinfo_field } do
             if not h.is_empty(field) then
-                new_data[field] = join_field_content(h.table_get(new_data, field, ""), h.table_get(stored_data, field, ""))
+                new_data[field] =
+                    join_field_content(h.table_get(new_data, field, ""), h.table_get(stored_data, field, ""))
             end
         end
 
         for _, field in pairs { config().sentence_field, config().secondary_field } do
             if not h.is_empty(field) then
                 -- Strip html tags to compare text only.
-                new_data[field] = join_field_content(h.table_get(new_data, field, ""), h.table_get(stored_data, field, ""), { plaintext_compare = true })
+                new_data[field] = join_field_content(
+                    h.table_get(new_data, field, ""),
+                    h.table_get(stored_data, field, ""),
+                    { plaintext_compare = true }
+                )
             end
         end
 
@@ -539,7 +537,7 @@ local function make_note_update_context(components)
 
     --- Return audio padding for ordinary new-note export unless the user manually selected timings.
     function pub.audio_padding()
-        local video_duration = mp_api.get_property_number('duration')
+        local video_duration = mp_api.get_property_number("duration")
         if config().audio_padding == 0.0 or not video_duration then
             return 0.0
         end
@@ -568,7 +566,7 @@ local function make_note_update_context(components)
     --- Create media and update fields for `request`,
     --- which contains the captured "subtitle", target "note_ids", and "overwrite" mode.
     function pub.perform_update(request)
-        if h.is_empty(request.subtitle['text']) then
+        if h.is_empty(request.subtitle["text"]) then
             -- In this case, don't modify whatever existing text there is and just
             -- modify the other fields we can. The user might be trying to add
             -- audio to a card which they've manually transcribed (either the video
@@ -579,7 +577,7 @@ local function make_note_update_context(components)
         local future, error = create_update_media(request)
         if error then
             -- Keep the subtitle selection so the user can retry after Anki reconnects.
-            self.notify(error, 'error', 5)
+            self.notify(error, "error", 5)
             return pub
         end
         clear_update_state()
@@ -607,13 +605,17 @@ local function make_note_update_context(components)
         local selected_note_ids = self.ankiconnect.get_selected_note_ids()
 
         if h.is_empty(selected_note_ids) then
-            return self.notify("Couldn't find the target note(s). Did you select the notes you want in Anki?", "warn", 3)
+            return self.notify(
+                "Couldn't find the target note(s). Did you select the notes you want in Anki?",
+                "warn",
+                3
+            )
         end
 
         if #selected_note_ids > config().card_overwrite_safeguard then
             local msg = string.format(
-                    "More than %i notes selected\nnot recommended, but you can change the limit in your config",
-                    config().card_overwrite_safeguard
+                "More than %i notes selected\nnot recommended, but you can change the limit in your config",
+                config().card_overwrite_safeguard
             )
             return self.notify(msg, "warn", 4)
         end
@@ -629,7 +631,7 @@ local function make_note_update_context(components)
         local last_note_ids = self.ankiconnect.get_last_note_ids(n_cards)
         -- Recent note IDs are ordered earliest to latest.
         if h.is_empty(last_note_ids) or last_note_ids[1] < h.minutes_ago(accept_notes_made_within_last_minutes) then
-            return self.notify("Couldn't find the target note.", 'warn', 2)
+            return self.notify("Couldn't find the target note.", "warn", 2)
         end
         return pub.update_notes(last_note_ids, overwrite)
     end
@@ -640,13 +642,13 @@ local function make_note_update_context(components)
         if not sub:is_valid() then
             return self.notify("Nothing to export.", "warn", 1)
         end
-        if not gui and h.is_empty(sub['text']) then
-            sub['text'] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
+        if not gui and h.is_empty(sub["text"]) then
+            sub["text"] = string.format("mpvacious wasn't able to grab subtitles (%s)", os.time())
         end
         local media, error = create_export_media(sub)
         if error then
             -- Keep the observer's selection for a retry when Anki is unavailable.
-            self.notify(error, 'error', 5)
+            self.notify(error, "error", 5)
             return pub
         end
         start_export_media(media, make_export_note_fields(sub, media), gui)

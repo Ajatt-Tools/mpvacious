@@ -5,10 +5,10 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Check for updates.
 ]]
 
-local mp = require('mp')
-local h = require('helpers')
-local platform = require('platform.init')
-local utils = require('mp.utils')
+local mp = require("mp")
+local h = require("helpers")
+local platform = require("platform.init")
+local utils = require("mp.utils")
 
 local function make_release_checker()
     local private = {}
@@ -44,7 +44,8 @@ local function make_release_checker()
             return
         end
         -- Use numeric version comparison instead of string comparison
-        private.is_new_version_available = h.version_needs_update(private.latest_version, private.installed_version) == true
+        private.is_new_version_available = h.version_needs_update(private.latest_version, private.installed_version)
+            == true
         if private.is_new_version_available then
             mp.msg.warn("New version is available: " .. private.latest_version)
         else
@@ -109,5 +110,5 @@ local function make_release_checker()
 end
 
 return {
-    new = make_release_checker
+    new = make_release_checker,
 }

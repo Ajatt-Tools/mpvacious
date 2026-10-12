@@ -3,11 +3,11 @@ Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 ]]
 
-local switch = require('utils.switch')
-local h = require('helpers')
+local switch = require("utils.switch")
+local h = require("helpers")
 
 local function new_autoclip_method_selector()
-    local methods = { 'clipboard', 'goldendict', 'custom_command', }
+    local methods = { "clipboard", "goldendict", "custom_command" }
     local handlers = {}
     local current_method = switch.new(methods)
     local self = {

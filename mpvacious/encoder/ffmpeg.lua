@@ -5,11 +5,11 @@ License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 Encoder that uses ffmpeg to create media files.
 ]]
 
-local mp = require('mp')
-local codec_support = require('encoder.codec_support')
-local h = require('helpers')
-local eutils = require('encoder.utils')
-local exec = require('encoder.executables')
+local mp = require("mp")
+local codec_support = require("encoder.codec_support")
+local h = require("helpers")
+local eutils = require("encoder.utils")
+local exec = require("encoder.executables")
 
 --- Create an FFmpeg backend with optional codec support and isolated I/O dependencies.
 local function make_ffmpeg_encoder(cfg_mgr, support, components)
@@ -19,7 +19,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
     local get_active_track = components.get_active_track or h.get_active_track
     local mp_api = components.mp or mp
     local logger = components.logger or mp.msg
-    local self = { }
+    local self = {}
     local public = {}
 
     ------------------------------------------------------------
@@ -30,7 +30,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
     --- Select the first supported AVIF encoder for private codec initialization.
     function self.choose_avif_encoder()
         for _, codec_name in ipairs(support.avif_encoders) do
-            if support.ffmpeg_support['snapshot'][codec_name] then
+            if support.ffmpeg_support["snapshot"][codec_name] then
                 return codec_name
             end
         end
@@ -54,25 +54,32 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
     --- Build codec-specific AVIF options for a still or animated snapshot.
     local function make_avif_encoder_args(quality_value, is_still_picture)
         local avif_codec = get_avif_codec(is_still_picture)
-        if avif_codec == 'libsvtav1' then
+        if avif_codec == "libsvtav1" then
             return {
-                '-c:v', avif_codec,
-                '-preset', '8',
+                "-c:v",
+                avif_codec,
+                "-preset",
+                "8",
                 -- Avif quality can be controlled with crf.
-                '-crf', tostring(eutils.quality_to_crf_avif(quality_value)),
-                '-svtav1-params', 'avif=1',
+                "-crf",
+                tostring(eutils.quality_to_crf_avif(quality_value)),
+                "-svtav1-params",
+                "avif=1",
             }
         else
             local args = {
-                '-c:v', avif_codec,
+                "-c:v",
+                avif_codec,
                 -- cpu-used < 6 can take a lot of time to encode.
-                '-cpu-used', '6',
+                "-cpu-used",
+                "6",
                 -- Avif quality can be controlled with crf.
-                '-crf', tostring(eutils.quality_to_crf_avif(quality_value)),
+                "-crf",
+                tostring(eutils.quality_to_crf_avif(quality_value)),
             }
             if is_still_picture then
-                table.insert(args, '-still-picture')
-                table.insert(args, '1')
+                table.insert(args, "-still-picture")
+                table.insert(args, "1")
             end
             return args
         end
@@ -82,7 +89,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         if #filters == 0 then
             return filter
         else
-            return string.format('%s,%s', filters, filter)
+            return string.format("%s,%s", filters, filter)
         end
     end
 
@@ -95,7 +102,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         -- "You should not change the value of the control variable during the loop."
         local expect_filter = false
         for i = 1, #args do
-            if args[i] == '-af' or args[i] == '-filter:a' then
+            if args[i] == "-af" or args[i] == "-filter:a" then
                 expect_filter = true
             else
                 if expect_filter then
@@ -112,7 +119,13 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
     --- Prepend common FFmpeg process arguments.
     local function prepend(...)
         return {
-            exec.ffmpeg, "-hide_banner", "-nostdin", "-y", "-loglevel", "quiet", "-sn",
+            exec.ffmpeg,
+            "-hide_banner",
+            "-nostdin",
+            "-y",
+            "-loglevel",
+            "quiet",
+            "-sn",
             ...,
         }
     end
@@ -120,11 +133,11 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
     --- Merge configured audio filters and arguments into a private command.
     local function append_user_audio_args(args)
         local new_args = {}
-        local filters = ''
+        local filters = ""
 
         filters = separate_filters(filters, new_args, args)
         if config().tie_volumes then
-            filters = add_filter(filters, string.format("volume=%.1f", mp_api.get_property_native('volume') / 100.0))
+            filters = add_filter(filters, string.format("volume=%.1f", mp_api.get_property_native("volume") / 100.0))
         end
 
         local user_args = {}
@@ -134,7 +147,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         filters = separate_filters(filters, new_args, user_args)
 
         if #filters > 0 then
-            table.insert(new_args, '-af')
+            table.insert(new_args, "-af")
             table.insert(new_args, filters)
         end
         return new_args
@@ -151,29 +164,39 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
     --- Build the command for a still snapshot using initialized codecs.
     public.make_static_snapshot_args = function(source_path, output_path, timestamp)
         local encoder_args
-        if config().snapshot_format == 'avif' then
+        if config().snapshot_format == "avif" then
             encoder_args = make_avif_encoder_args(config().snapshot_quality, true)
-        elseif config().snapshot_format == 'webp' then
+        elseif config().snapshot_format == "webp" then
             encoder_args = {
-                '-c:v', self.snapshot_codec,
-                '-compression_level', '6',
-                '-quality', tostring(config().snapshot_quality),
+                "-c:v",
+                self.snapshot_codec,
+                "-compression_level",
+                "6",
+                "-quality",
+                tostring(config().snapshot_quality),
             }
         else
             encoder_args = {
-                '-c:v', self.snapshot_codec,
-                '-q:v', tostring(eutils.quality_to_jpeg_qscale(config().snapshot_quality)),
+                "-c:v",
+                self.snapshot_codec,
+                "-q:v",
+                tostring(eutils.quality_to_jpeg_qscale(config().snapshot_quality)),
             }
         end
 
         local args = prepend(
-                '-an',
-                '-ss', eutils.toms(timestamp),
-                '-i', source_path,
-                '-map_metadata', '-1',
-                '-vf', eutils.static_scale_filter(config()),
-                '-frames:v', '1',
-                h.unpack(encoder_args)
+            "-an",
+            "-ss",
+            eutils.toms(timestamp),
+            "-i",
+            source_path,
+            "-map_metadata",
+            "-1",
+            "-vf",
+            eutils.static_scale_filter(config()),
+            "-frames:v",
+            "1",
+            h.unpack(encoder_args)
         )
         table.insert(args, output_path)
         return args
@@ -182,90 +205,106 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
     --- Build the command for an animated snapshot using initialized codecs.
     public.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
         local encoder_args
-        if config().animated_snapshot_format == 'avif' then
+        if config().animated_snapshot_format == "avif" then
             encoder_args = make_avif_encoder_args(config().animated_snapshot_quality, false)
         else
             -- Documentation: https://www.ffmpeg.org/ffmpeg-all.html#libwebp
             encoder_args = {
-                '-c:v', self.animated_snapshot_codec,
-                '-compression_level', '6',
-                '-quality', tostring(config().animated_snapshot_quality),
+                "-c:v",
+                self.animated_snapshot_codec,
+                "-compression_level",
+                "6",
+                "-quality",
+                tostring(config().animated_snapshot_quality),
             }
         end
 
         local args = prepend(
-                '-an',
-                '-ss', eutils.toms(start_timestamp),
-                '-to', eutils.toms(end_timestamp),
-                '-i', source_path,
-                '-map_metadata', '-1',
-                '-loop', '0',
-                '-vf', string.format(
-                        'fps=%d,%s',
-                        config().animated_snapshot_fps,
-                        eutils.animated_scale_filter(config())
-                ),
-                h.unpack(encoder_args)
+            "-an",
+            "-ss",
+            eutils.toms(start_timestamp),
+            "-to",
+            eutils.toms(end_timestamp),
+            "-i",
+            source_path,
+            "-map_metadata",
+            "-1",
+            "-loop",
+            "0",
+            "-vf",
+            string.format("fps=%d,%s", config().animated_snapshot_fps, eutils.animated_scale_filter(config())),
+            h.unpack(encoder_args)
         )
         table.insert(args, output_path)
         return args
     end
 
     --- Build audio arguments and deliver them after optional loudness analysis.
-    public.make_audio_args = function(
-            source_path, output_path, start_timestamp, end_timestamp, args_consumer
-    )
-        local audio_track = get_active_track('audio')
-        local audio_track_id = audio_track and audio_track['ff-index'] or 'a'
+    public.make_audio_args = function(source_path, output_path, start_timestamp, end_timestamp, args_consumer)
+        local audio_track = get_active_track("audio")
+        local audio_track_id = audio_track and audio_track["ff-index"] or "a"
 
         if audio_track and audio_track.external == true then
-            source_path = audio_track['external-filename']
-            audio_track_id = 'a'
+            source_path = audio_track["external-filename"]
+            audio_track_id = "a"
         end
 
         --- Build audio arguments using the captured source, track, and timing window.
         local function make_ffargs(...)
             return append_user_audio_args(
-                    prepend(
-                            '-vn',
-                            '-ss', eutils.toms(start_timestamp),
-                            '-to', eutils.toms(end_timestamp),
-                            '-i', source_path,
-                            '-map_metadata', '-1',
-                            '-map_chapters', '-1',
-                            '-map', string.format("0:%s", tostring(audio_track_id)),
-                            '-ac', '1',
-                            ...
-                    )
+                prepend(
+                    "-vn",
+                    "-ss",
+                    eutils.toms(start_timestamp),
+                    "-to",
+                    eutils.toms(end_timestamp),
+                    "-i",
+                    source_path,
+                    "-map_metadata",
+                    "-1",
+                    "-map_chapters",
+                    "-1",
+                    "-map",
+                    string.format("0:%s", tostring(audio_track_id)),
+                    "-ac",
+                    "1",
+                    ...
+                )
             )
         end
 
         --- Deliver the final audio command with configured codec and normalization options.
         local function make_encoding_args(loudnorm_args)
             local encoder_args
-            if config().audio_format == 'opus' then
+            if config().audio_format == "opus" then
                 encoder_args = {
-                    '-c:a', config().audio_codec,
-                    '-application', 'voip',
-                    '-apply_phase_inv', '0', -- Improves mono audio.
+                    "-c:a",
+                    config().audio_codec,
+                    "-application",
+                    "voip",
+                    "-apply_phase_inv",
+                    "0", -- Improves mono audio.
                 }
-                if config().opus_container == 'm4a' then
-                    table.insert(encoder_args, '-f')
-                    table.insert(encoder_args, 'mp4')
+                if config().opus_container == "m4a" then
+                    table.insert(encoder_args, "-f")
+                    table.insert(encoder_args, "mp4")
                 end
             else
                 -- https://wiki.hydrogenaud.io/index.php?title=LAME#Recommended_encoder_settings:
                 -- "For very low bitrates, up to 100kbps, ABR is most often the best solution."
                 encoder_args = {
-                    '-c:a', config().audio_codec,
-                    '-compression_level', '0',
-                    '-abr', '1',
+                    "-c:a",
+                    config().audio_codec,
+                    "-compression_level",
+                    "0",
+                    "-abr",
+                    "1",
                 }
             end
 
-            encoder_args = { '-b:a', tostring(config().audio_bitrate), h.unpack(encoder_args) }
+            encoder_args = { "-b:a", tostring(config().audio_bitrate), h.unpack(encoder_args) }
             if loudnorm_args then
-                table.insert(encoder_args, '-af')
+                table.insert(encoder_args, "-af")
                 table.insert(encoder_args, loudnorm_args)
             end
             local args = make_ffargs(h.unpack(encoder_args))
@@ -279,26 +318,18 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         end
 
         local loudnorm_targets = eutils.make_loudnorm_targets(config())
-        local args = make_ffargs(
-                '-loglevel', 'info',
-                '-af', loudnorm_targets .. ':print_format=json'
-        )
-        table.insert(args, '-f')
-        table.insert(args, 'null')
-        table.insert(args, '-')
+        local args = make_ffargs("-loglevel", "info", "-af", loudnorm_targets .. ":print_format=json")
+        table.insert(args, "-f")
+        table.insert(args, "null")
+        table.insert(args, "-")
         subprocess {
             args = args,
-            completion_fn = eutils.parse_loudnorm(
-                    loudnorm_targets,
-                    function(_, stderr)
-                        -- function takes stdout, stderr
-                        local _, _, json = string.find(stderr, '%[Parsed_loudnorm_0.-({.-})') -- returns: start, stop, json
-                        logger.info("json: " .. tostring(json))
-                        return json
-                    end,
-                    make_encoding_args,
-                    components
-            )
+            completion_fn = eutils.parse_loudnorm(loudnorm_targets, function(_, stderr)
+                -- function takes stdout, stderr
+                local _, _, json = string.find(stderr, "%[Parsed_loudnorm_0.-({.-})") -- returns: start, stop, json
+                logger.info("json: " .. tostring(json))
+                return json
+            end, make_encoding_args, components),
         }
     end
 
