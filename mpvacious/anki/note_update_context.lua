@@ -322,6 +322,11 @@ local function make_note_update_context(components)
             .on_failure(on_failure)
     end
 
+    --- Extract note IDs from the captured target array.
+    local function targets_to_note_ids(targets)
+        return h.map(targets, function(target) return target.note_id end)
+    end
+
     --- Fetch all targets before media creation. Never return a partial snapshot on failure.
     local function collect_target_fields(note_ids)
         local fields_by_note_id, error = self.ankiconnect.get_notes_fields(note_ids)
@@ -333,11 +338,6 @@ local function make_note_update_context(components)
             function(note_id) return { note_id = note_id, fields = fields_by_note_id[note_id] } end
         )
         return targets, nil
-    end
-
-    --- Extract note IDs from the captured target array.
-    local function targets_to_note_ids(targets)
-        return h.map(targets, function(target) return target.note_id end)
     end
 
     --- Configure output paths and create update media jobs.
