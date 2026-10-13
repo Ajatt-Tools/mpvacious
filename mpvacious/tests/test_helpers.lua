@@ -8,6 +8,40 @@ Test helpers.
 local h = require("helpers")
 local utils = require("mp.utils")
 
+--- Preserve dense, sparse, and string keys while mapping values into a separate table.
+local function test_map_preserves_keys_and_input()
+    for _, case in ipairs {
+        { input = {}, expected = {} },
+        { input = { 1, 2, 3 }, expected = { 2, 4, 6 } },
+        { input = { [2] = 3, [5] = 7 }, expected = { [2] = 6, [5] = 14 } },
+        { input = { first = 2, second = 5 }, expected = { first = 4, second = 10 } },
+    } do
+        local original = h.deep_copy(case.input)
+        local mapped = h.map(case.input, function(value) return value * 2 end)
+        h.assert_equals(mapped, case.expected)
+        h.assert_equals(rawequal(mapped, case.input), false)
+        mapped.extra = true
+        h.assert_equals(case.input, original)
+    end
+end
+
+--- Retain false mapped values rather than treating them as absent entries.
+local function test_map_preserves_false_values()
+    local input = { first = true, second = false }
+    h.assert_equals(h.map(input, function(value) return not value end), { first = false, second = true })
+    h.assert_equals(input, { first = true, second = false })
+end
+
+--- Leave original indices intact when a mapping callback returns nil for an entry.
+local function test_map_omits_nil_results()
+    local input = { 1, 2, 3 }
+    local mapped = h.map(input, function(value)
+        if value ~= 2 then return value end
+    end)
+    h.assert_equals(mapped, { [1] = 1, [3] = 3 })
+    h.assert_equals(input, { 1, 2, 3 })
+end
+
 --- Build slice scenarios covering bounds, negative indices, and fractional indices.
 local function make_islice_cases()
     return {
@@ -487,6 +521,9 @@ end
 
 --- Run the shared helper regression suite.
 local function run_tests()
+    test_map_preserves_keys_and_input()
+    test_map_preserves_false_values()
+    test_map_omits_nil_results()
     test_is_substr()
     test_str_contains()
     test_collapse_whitespace()
