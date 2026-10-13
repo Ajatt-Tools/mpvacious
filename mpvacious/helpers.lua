@@ -103,7 +103,9 @@ function this.is_gnu()
     return not this.is_win() and not this.is_mac()
 end
 
-local function map(tab, func)
+--- Return transformed values at their original keys without changing the input table.
+--- Nil results omit their corresponding keys rather than compacting the table.
+function this.map(tab, func)
     local t = {}
     for k, v in pairs(tab) do
         t[k] = func(v)
@@ -115,7 +117,7 @@ local function args_as_str(args)
     local function single_quote(str)
         return string.format("'%s'", str)
     end
-    return table.concat(map(args, single_quote), " ")
+    return table.concat(this.map(args, single_quote), " ")
 end
 
 --- Parameters: args, completion_fn, override_settings, suppress_log
