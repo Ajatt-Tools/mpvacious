@@ -47,7 +47,9 @@ end
 local function make_subtitle_warning_test_cases()
     local partial_match = "Only 1 of 2 target notes have SentKanji matching the current subtitle."
     return {
+        { fields = {}, expected = nil },
         { fields = { "<b>" .. TEST_SENTENCE .. "</b>" }, expected = nil },
+        { fields = { TEST_SENTENCE, TEST_SENTENCE }, expected = nil },
         {
             fields = { TEST_UNRELATED_SENTENCE },
             expected = "The target note's SentKanji does not match the current subtitle.",
@@ -55,6 +57,10 @@ local function make_subtitle_warning_test_cases()
         { fields = { TEST_SENTENCE, TEST_UNRELATED_SENTENCE }, expected = partial_match },
         { fields = { "", TEST_SENTENCE }, expected = partial_match },
         { fields = { false, TEST_SENTENCE }, expected = partial_match },
+        {
+            fields = { TEST_UNRELATED_SENTENCE, TEST_UNRELATED_SENTENCE },
+            expected = "Only 0 of 2 target notes have SentKanji matching the current subtitle.",
+        },
     }
 end
 
