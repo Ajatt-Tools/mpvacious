@@ -359,6 +359,8 @@ local function make_note_update_context(components)
         local snapshot = self.encoder.snapshot.create_job(request.subtitle, request.snapshot_timestamp)
         local padding = request.audio_padding or pub.audio_padding()
         local audio = self.encoder.audio.create_job(request.subtitle, padding)
+        -- Reuse captured text/metadata and add filenames from the newly created jobs.
+        -- The builder copies prepared fields without preparing them again.
         local new_data = pub.construct_note_fields {
             prepared_fields = request.prepared_fields,
             primary_text = request.subtitle.text,
@@ -500,6 +502,7 @@ local function make_note_update_context(components)
                 target_notes = warning_result.target_notes,
                 overwrite = request.overwrite,
                 subtitle = request.subtitle,
+                -- Capture text and metadata before confirmation. Media filenames are not known yet.
                 prepared_fields = pub.construct_note_fields {
                     primary_text = request.subtitle.text,
                     secondary_text = request.subtitle.secondary,
