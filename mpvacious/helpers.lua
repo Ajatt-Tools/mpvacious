@@ -113,6 +113,17 @@ function this.map(tab, func)
     return t
 end
 
+--- Fold an array in index order by calling reducer(accumulator, value) for each entry.
+--- Default initial to zero when omitted or nil. Like ipairs, stop at the first missing index.
+function this.reduce(values, reducer, initial)
+    if initial == nil then initial = 0 end
+    local accumulator = initial
+    for _, value in ipairs(values) do
+        accumulator = reducer(accumulator, value)
+    end
+    return accumulator
+end
+
 local function args_as_str(args)
     local function single_quote(str)
         return string.format("'%s'", str)
