@@ -479,18 +479,17 @@ local function make_note_update_context(components)
         if error then
             return { error = error }
         end
-        local warning
         if request.options and request.options.check_recent_notes then
-            warning = self.note_update_guard.current_subtitle_warning(
-                target_fields(target_notes),
-                prepare_for_exporting(request.subtitle.text),
-                config().sentence_field
-            )
+            return {
+                warning = self.note_update_guard.current_subtitle_warning(
+                    target_fields(target_notes),
+                    prepare_for_exporting(request.subtitle.text),
+                    config().sentence_field
+                ),
+                target_notes = target_notes,
+            }
         end
-        return {
-            warning = warning,
-            target_notes = target_notes,
-        }
+        return { target_notes = target_notes }
     end
 
     --- Capture execution fields and metadata using the checked target ID/field pairs.
