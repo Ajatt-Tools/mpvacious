@@ -380,7 +380,27 @@ local function test_update_completion()
     h.assert_equals(result.clear_count, 1)
 end
 
---- Verify a failed media job never starts field reads or writes.
+--- Keep captured IDs, field pairs, and completion counts after caller changes during media creation.
+local function test_update_retains_captured_targets()
+    local result, jobs = make_update_test_result(), {}
+    result.write_callbacks = {}
+    local context, sub = make_update_test_context { result = result, jobs = jobs }
+    local ids = { 23, 11 }
+    context.perform_update { note_ids = ids, overwrite = true, subtitle = sub }
+    h.assert_equals(result.field_requests, { { 23, 11 } })
+    ids[1] = 99
+    table.insert(ids, 42)
+    result.read_fields = h.as_callback(error, "captured targets must not be read again")
+    complete_update_test_media_jobs(jobs)
+    h.assert_equals(result.appended_note_ids, { 23, 11 })
+    result.write_callbacks[11](nil, nil)
+    h.assert_equals(result.notification, nil)
+    result.write_callbacks[23](nil, nil)
+    h.assert_equals(result.browse_query, "nid:23 OR nid:11")
+    h.assert_equals(result.notification, "Updated 2 notes.")
+end
+
+--- Verify a failed media job never writes fields after target reading.
 local function test_update_media_failures()
     for _, case in ipairs {
         { snapshot_error = "image conversion failed", expected = "snapshot: image conversion failed" },
@@ -398,7 +418,7 @@ local function test_update_media_failures()
         jobs[1].callback(case.snapshot_error and nil or "snapshot.avif", case.snapshot_error)
         h.assert_equals(result.notification, nil)
         jobs[2].callback(case.audio_error and nil or "audio.ogg", case.audio_error)
-        h.assert_equals(result.field_requests, {})
+        h.assert_equals(result.field_requests, { { 11 } })
         h.assert_equals(result.appended_note_ids, {})
         h.assert_equals(result.browse_query, nil)
         h.assert_equals(result.notification, "Failed to create media: " .. case.expected)
@@ -414,7 +434,7 @@ local function test_update_without_media_directory()
     local context, subtitle = make_update_test_context { result = result, jobs = jobs }
     context.perform_update({ note_ids = { 11 }, overwrite = true, subtitle = subtitle })
     h.assert_equals(#jobs, 0)
-    h.assert_equals(result.field_requests, {})
+    h.assert_equals(result.field_requests, { { 11 } })
     h.assert_equals(result.appended_note_ids, {})
     h.assert_equals(result.clear_count, 0)
     h.assert_equals(result.notification_level, "error")
@@ -487,7 +507,9 @@ local function assert_update_test_field_failure(case)
         return nil, "read failed"
     end
     context.perform_update({ note_ids = { 11, 12 }, overwrite = case.overwrite, subtitle = subtitle })
-    complete_update_test_media_jobs(jobs)
+    h.assert_equals(jobs, {})
+    h.assert_equals(result.media_dir_requests, nil)
+    h.assert_equals(result.clear_count, 0)
     h.assert_equals(result.appended_note_ids, {})
     h.assert_equals(result.fields_by_note, {})
     h.assert_equals(result.field_requests, { { 11, 12 } })
@@ -522,6 +544,8 @@ local function test_update_preflight_field_reads()
             nil
     end
     context.perform_update({ note_ids = { 11, 12 }, overwrite = false, subtitle = subtitle })
+    h.assert_equals(result.field_requests, { { 11, 12 } })
+    result.read_fields = h.as_callback(error, "captured target fields must not be read again")
     complete_update_test_media_jobs(jobs)
     h.assert_equals(result.field_requests, { { 11, 12 } })
     h.assert_equals(result.fields_by_note[11].SentKanji, "stored 11<br>new sentence")
@@ -666,6 +690,36 @@ end
 --- Test tag substitution and audio padding for automatic and altered timings.
 local function test_media_metadata()
     assert_update_test_media_metadata(make_update_test_mp_api())
+end
+
+--- Verify the padding selected by the context is passed to the fake audio-job constructor.
+local function assert_audio_padding_job_test_case(case)
+    local result, jobs = make_update_test_result(), {}
+    local config = make_update_test_config(true)
+    config.audio_padding = case.padding
+    local context, sub = make_update_test_context {
+        result = result,
+        jobs = jobs,
+        config = config,
+        user_altered = case.user_altered,
+        mp = fixtures.make_mp_property_reader { duration = case.duration },
+    }
+    context.perform_update { note_ids = { 13 }, overwrite = true, subtitle = sub }
+    h.assert_equals(#jobs, 2)
+    h.assert_equals(jobs[1].argument, nil)
+    h.assert_equals(jobs[2].argument, case.expected)
+end
+
+--- Pass automatic padding or zero for manual timings, disabled padding, and absent duration.
+local function test_audio_job_receives_selected_padding()
+    for _, case in ipairs {
+        { padding = 0.5, duration = 200, expected = 0.5 },
+        { padding = 0.5, duration = 200, user_altered = true, expected = 0 },
+        { padding = 0, duration = 200, expected = 0 },
+        { padding = 0.5, expected = 0 },
+    } do
+        assert_audio_padding_job_test_case(case)
+    end
 end
 
 --- Preserve literal percent signs in filenames and paths, including repeated placeholders.
@@ -838,6 +892,7 @@ local function run_tests(context)
     test_find_selected_note_ids()
     test_selected_lookup_retains_snapshot_safeguard()
     test_update_completion()
+    test_update_retains_captured_targets()
     test_update_media_failures()
     test_update_without_media_directory()
     test_update_skipped_media_job()
@@ -849,6 +904,7 @@ local function run_tests(context)
     test_update_notification_model_lookup_failure()
     test_blank_update_subtitle()
     test_media_metadata()
+    test_audio_job_receives_selected_padding()
     test_literal_tag_substitutions()
     test_environment_tag_substitution()
     test_update_captures_invocation_tag()

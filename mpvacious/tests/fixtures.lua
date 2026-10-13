@@ -47,10 +47,11 @@ end
 --- Return a media-job factory for one output filename.
 local function make_media_job_factory(filename, jobs, state)
     --- Create a pending job when the encoder requests one.
-    return function()
+    return function(_, argument)
         local job = this.make_pending_media_job(filename, jobs, state.on_start)
         job.cfg_mgr = state.cfg_mgr
         job.output_dir = state.output_dir
+        job.argument = argument
         return job
     end
 end
@@ -157,6 +158,7 @@ function this.make_update_ankiconnect(state, fields_for_note, cfg_mgr)
     return {
         --- Return the test media directory.
         get_media_dir_path = function()
+            state.media_dir_requests = (state.media_dir_requests or 0) + 1
             if state.media_dir_error then
                 return nil, state.media_dir_error
             end
