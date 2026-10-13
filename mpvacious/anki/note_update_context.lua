@@ -322,16 +322,16 @@ local function make_note_update_context(components)
             .on_failure(on_failure)
     end
 
-    --- Fetch all targets before any write; never return a partial snapshot on failure.
+    --- Fetch all targets before media creation. Never return a partial snapshot on failure.
     local function collect_target_fields(note_ids)
         local fields_by_note_id, error = self.ankiconnect.get_notes_fields(note_ids)
         if error then
             return nil, error
         end
-        local targets = {}
-        for _, note_id in pairs(note_ids) do
-            table.insert(targets, { note_id = note_id, fields = fields_by_note_id[note_id] })
-        end
+        local targets = h.map(
+            note_ids,
+            function(note_id) return { note_id = note_id, fields = fields_by_note_id[note_id] } end
+        )
         return targets, nil
     end
 
