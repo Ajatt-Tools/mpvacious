@@ -42,6 +42,53 @@ local function test_map_omits_nil_results()
     h.assert_equals(input, { 1, 2, 3 })
 end
 
+--- Reduce numeric arrays with default-zero and explicitly supplied accumulators.
+local function test_reduce_numeric_accumulators()
+    for _, case in ipairs {
+        { input = {}, expected = 0 },
+        { input = { 1, 2, 3 }, expected = 6 },
+        { input = { 1, 2, 3 }, initial = 10, expected = 16 },
+        { input = { 1, 2, 3 }, initial = 0, expected = 6 },
+    } do
+        local original = h.deep_copy(case.input)
+        local result = h.reduce(case.input, function(total, value) return total + value end, case.initial)
+        h.assert_equals(result, case.expected)
+        h.assert_equals(case.input, original)
+    end
+end
+
+--- Visit array entries in index order and follow ipairs behavior at missing indices.
+local function test_reduce_array_iteration()
+    for _, case in ipairs {
+        { input = { "third", "first", "second" }, expected = "third|first|second|" },
+        { input = { [1] = "first", [3] = "third" }, expected = "first|" },
+        { input = { named = "ignored" }, expected = "" },
+    } do
+        local result = h.reduce(case.input, function(text, value) return text .. value .. "|" end, "")
+        h.assert_equals(result, case.expected)
+    end
+end
+
+--- Preserve false accumulators and false array entries rather than applying a truthy default.
+local function test_reduce_false_accumulator()
+    local result = h.reduce({ false }, function(accumulator, value)
+        h.assert_equals(accumulator, false)
+        h.assert_equals(value, false)
+        return true
+    end, false)
+    h.assert_equals(result, true)
+end
+
+--- Return empty-array accumulators unchanged without invoking the reducer.
+local function test_reduce_empty_array()
+    local reject_call = h.as_callback(error, "an empty array must not invoke its reducer")
+    local initial = { retained = true }
+    h.assert_equals(h.reduce({}, reject_call), 0)
+    h.assert_equals(h.reduce({}, reject_call, nil), 0)
+    h.assert_equals(h.reduce({}, reject_call, false), false)
+    h.assert_equals(rawequal(h.reduce({}, reject_call, initial), initial), true)
+end
+
 --- Build slice scenarios covering bounds, negative indices, and fractional indices.
 local function make_islice_cases()
     return {
@@ -524,6 +571,10 @@ local function run_tests()
     test_map_preserves_keys_and_input()
     test_map_preserves_false_values()
     test_map_omits_nil_results()
+    test_reduce_numeric_accumulators()
+    test_reduce_array_iteration()
+    test_reduce_false_accumulator()
+    test_reduce_empty_array()
     test_is_substr()
     test_str_contains()
     test_collapse_whitespace()
