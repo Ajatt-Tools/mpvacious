@@ -335,36 +335,21 @@ local function make_note_update_context(components)
         return targets, nil
     end
 
-    --- Start writes using completed target snapshots, without fetching their fields again.
-    local function write_target_fields(request, new_data, targets, tag)
-        local completion_for = make_update_write_completion(request.note_ids)
-        for _, target in pairs(targets) do
-            self.ankiconnect.append_media(
-                target.note_id,
-                pub.make_new_note_data(target.fields, h.deep_copy(new_data), { overwrite = request.overwrite }),
-                tag,
-                completion_for.callback_for("note " .. tostring(target.note_id))
-            )
-        end
-    end
-
-    --- Write generated fields after media creation completes.
-    local function change_fields(request, future)
-        -- Run this callback once audio and image files are created.
-        -- Read every target first: a later read failure must not leave earlier notes partly updated.
-        local targets, error = collect_target_fields(request.note_ids)
-        if error then
-            return self.notify(error, "error", 5)
-        end
-        write_target_fields(request, future.new_data, targets, future.tag)
+    --- Extract note IDs from the captured target array.
+    local function targets_to_note_ids(targets)
+        return h.map(targets, function(target) return target.note_id end)
     end
 
     --- Configure output paths and create update media jobs.
     local function create_update_media(request)
-        local anki_media_dir, error = self.ankiconnect.get_media_dir_path()
-        if error then
+        local target_notes, target_read_error = collect_target_fields(request.note_ids)
+        if target_read_error then
+            return nil, target_read_error
+        end
+        local anki_media_dir, media_dir_error = self.ankiconnect.get_media_dir_path()
+        if media_dir_error then
             -- Without a destination, encoder jobs cannot complete the update batch.
-            return nil, error
+            return nil, media_dir_error
         end
         self.encoder.set_output_dir(anki_media_dir)
         self.forvo.set_output_dir(anki_media_dir)
@@ -380,6 +365,7 @@ local function make_note_update_context(components)
             snapshot = snapshot,
             audio = audio,
             new_data = new_data,
+            target_notes = target_notes,
             -- Playback metadata is captured with the batch before any jobs start.
             tag = self.substitute_fmt(config().note_tag),
         }
@@ -407,11 +393,24 @@ local function make_note_update_context(components)
         media.audio.on_finish(completion.callback_for("audio")).run_async()
     end
 
+    --- Write captured targets using the media batch's generated fields and tag.
+    local function write_target_fields(request, future)
+        local completion_for = make_update_write_completion(targets_to_note_ids(future.target_notes))
+        for _, target in pairs(future.target_notes) do
+            self.ankiconnect.append_media(
+                target.note_id,
+                pub.make_new_note_data(target.fields, h.deep_copy(future.new_data), { overwrite = request.overwrite }),
+                future.tag,
+                completion_for.callback_for("note " .. tostring(target.note_id))
+            )
+        end
+    end
+
     --- Start media jobs and schedule the resulting note write.
     local function start_update_media(request, future)
         local completion_for = make_completion_collector()
             .count(2)
-            .on_success(h.as_callback(change_fields, request, future))
+            .on_success(h.as_callback(write_target_fields, request, future))
             .on_failure(on_media_creation_failure)
         future.snapshot.on_finish(completion_for.callback_for("snapshot")).run_async()
         future.audio.on_finish(completion_for.callback_for("audio")).run_async()
