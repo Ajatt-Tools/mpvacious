@@ -25,13 +25,12 @@ local function make_note_update_guard()
 
     --- Count note field tables related to the current sentence.
     function private.count_matching_notes(note_fields, current_sentence, field_name)
-        local matching_count = 0
-        for _, fields in ipairs(note_fields) do
+        return h.reduce(note_fields, function(matching_count, fields)
             if public.sentences_are_related(current_sentence, private.sentence_field(fields, field_name)) then
-                matching_count = matching_count + 1
+                return matching_count + 1
             end
-        end
-        return matching_count
+            return matching_count
+        end)
     end
 
     --- Return whether two nonempty sentence fields share normalized sentence content.
