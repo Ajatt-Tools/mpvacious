@@ -42,6 +42,7 @@ local function make_note_update_workflow(components)
     --- Collect one subtitle and either update immediately or ask for confirmation.
     function pub.update_notes(request)
         self.confirmation.cancel()
+        -- get the current subtitle (or multiple lines from quick creation opts)
         local subtitle = self.context.collect_subtitle()
         if not subtitle:is_valid() then
             self.notify("Nothing to export. Have you set the timings?", "warn", 4)
