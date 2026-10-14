@@ -55,7 +55,7 @@ local function make_note_update_workflow(components)
             subtitle = subtitle,
         }
         if preparation.error then
-            self.notify(preparation.error, "error", 3)
+            self.notify(preparation.error, "error", 4)
             return self.exporter
         end
         if h.is_empty(preparation.warning) then
