@@ -39,6 +39,16 @@ local function make_note_update_workflow(components)
         return self.exporter
     end
 
+    --- Prepare an execution request with copied IDs and the collected subtitle.
+    local function prepare_update_request(request, subtitle)
+        return self.context.prepare_update_request {
+            note_ids = h.itable_slice(request.note_ids),
+            overwrite = request.overwrite,
+            options = request.options or {},
+            subtitle = subtitle,
+        }
+    end
+
     --- Collect one subtitle and either update immediately or ask for confirmation.
     function pub.update_notes(request)
         self.confirmation.cancel()
@@ -48,12 +58,7 @@ local function make_note_update_workflow(components)
             self.notify("Nothing to export. Have you set the timings?", "warn", 4)
             return self.exporter
         end
-        local preparation = self.context.prepare_update_request {
-            note_ids = h.itable_slice(request.note_ids),
-            overwrite = request.overwrite,
-            options = request.options or {},
-            subtitle = subtitle,
-        }
+        local preparation = prepare_update_request(request, subtitle)
         if preparation.error then
             self.notify(preparation.error, "error", 4)
             return self.exporter
