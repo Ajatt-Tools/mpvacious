@@ -45,6 +45,20 @@ local function make_prepared_update_test_request(request, target_notes)
     }
 end
 
+--- Record preparation and return the workflow scenario's error, warning, or execution request.
+local function prepare_workflow_test_request(state, request, warning)
+    state.preparation_request = request
+    state.warning_subtitle_text = request.subtitle.text
+    if state.warning_error then
+        return { error = state.warning_error }
+    end
+    state.prepared_request = make_prepared_update_test_request(request, state.target_notes)
+    if request.options.check_recent_notes then
+        return { warning = warning, request = state.prepared_request }
+    end
+    return { request = state.prepared_request }
+end
+
 --- Record subtitle collection, request preparation, and writes in workflow tests.
 local function make_test_context(state, subtitle, warning)
     return {
@@ -52,16 +66,7 @@ local function make_test_context(state, subtitle, warning)
             return subtitle
         end,
         prepare_update_request = function(request)
-            state.preparation_request = request
-            state.warning_subtitle_text = request.subtitle.text
-            if state.warning_error then
-                return { error = state.warning_error }
-            end
-            state.prepared_request = make_prepared_update_test_request(request, state.target_notes)
-            if request.options.check_recent_notes then
-                return { warning = warning, request = state.prepared_request }
-            end
-            return { request = state.prepared_request }
+            return prepare_workflow_test_request(state, request, warning)
         end,
         perform_update = function(request)
             state.performed = state.performed + 1
@@ -131,6 +136,24 @@ local function test_update_passes_request_to_context()
     h.assert_equals(rawequal(state.performed_request, state.prepared_request), true)
 end
 
+--- Default missing checking options without changing the caller's IDs or overwrite mode.
+local function test_update_defaults_missing_options()
+    for _, overwrite in ipairs { false, true } do
+        local state, request, workflow = workflow_fixture(true, nil)
+        request.options, request.overwrite = nil, overwrite
+        local original = h.deep_copy(request)
+        h.assert_equals(rawequal(workflow.update_notes(request), state.exporter), true)
+        h.assert_equals(state.preparation_request.options, {})
+        h.assert_equals(state.preparation_request.overwrite, overwrite)
+        h.assert_equals(state.performed_request.overwrite, overwrite)
+        h.assert_equals(rawequal(state.preparation_request.note_ids, request.note_ids), false)
+        h.assert_equals(state.preparation_request.note_ids, request.note_ids)
+        h.assert_equals(state.performed, 1)
+        h.assert_equals(state.confirmation, nil)
+        h.assert_equals(request, original)
+    end
+end
+
 --- Verify tunable notifications supply a finite, positive display duration.
 local function assert_workflow_test_notification_duration(state)
     h.assert_equals(type(state.notification_duration), "number")
@@ -154,6 +177,16 @@ local function test_immediate_update_returns_exporter()
     h.assert_equals(workflow.update_notes(request), state.exporter)
     h.assert_equals(state.performed, 1)
     h.assert_equals(state.performed_request.target_notes, state.target_notes)
+end
+
+--- Ignore the scenario's mismatch warning when recent-note checking is disabled.
+local function test_non_recent_update_does_not_confirm()
+    local state, request, workflow = workflow_fixture(true, "Different sentence.")
+    request.options.check_recent_notes = false
+    h.assert_equals(rawequal(workflow.update_notes(request), state.exporter), true)
+    h.assert_equals(state.confirmation, nil)
+    h.assert_equals(state.performed, 1)
+    h.assert_equals(rawequal(state.performed_request, state.prepared_request), true)
 end
 
 --- Test warnings defer the update until explicit acceptance and preserve request data.
@@ -206,8 +239,10 @@ end
 local function run_tests()
     test_update_cancels_before_collecting()
     test_update_passes_request_to_context()
+    test_update_defaults_missing_options()
     test_invalid_subtitle_notifies_without_confirming()
     test_immediate_update_returns_exporter()
+    test_non_recent_update_does_not_confirm()
     test_update_confirms_before_performing()
     test_update_fails_closed_on_read_error()
     test_update_retains_captured_targets()

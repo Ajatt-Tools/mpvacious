@@ -744,11 +744,16 @@ local function test_audio_job_receives_selected_padding()
     end
 end
 
+--- Configure prepared-field scenarios to capture filename and playback-time metadata.
+local function make_prepared_fields_test_config()
+    local config = make_update_test_config(true)
+    config.miscinfo_enable, config.miscinfo_format = true, "%f|%t"
+    return config
+end
+
 --- Build a prepared-update scenario with mutable playback metadata and a separate observer.
 local function make_prepared_fields_test_context()
     local result, jobs = make_update_test_result(), {}
-    local config = make_update_test_config(true)
-    config.miscinfo_enable, config.miscinfo_format = true, "%f|%t"
     local properties = { filename = "episode.mkv", path = "/videos/episode.mkv", ["time-pos"] = 65 }
     local sub = subtitle_module.Subtitle:new {
         text = "new sentence",
@@ -760,7 +765,7 @@ local function make_prepared_fields_test_context()
     local context = make_update_test_context {
         result = result,
         jobs = jobs,
-        config = config,
+        config = make_prepared_fields_test_config(),
         subtitle = sub,
         observer = observer,
         mp = fixtures.make_mp_property_reader(properties),
@@ -779,6 +784,8 @@ local function test_update_reuses_prepared_fields()
     sub.text, sub.secondary = "later sentence", "later translation"
     observer.clipboard_prepare = h.as_callback(error, "captured text must not be prepared again")
     context.perform_update(request)
+    h.assert_equals(jobs[1].argument, 65)
+    h.assert_equals(jobs[2].argument, 0)
     complete_update_test_media_jobs(jobs)
     h.assert_equals(result.fields_by_note[13].SentKanji, "new sentence")
     h.assert_equals(result.fields_by_note[13].SentEng, "translation")

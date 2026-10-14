@@ -110,21 +110,26 @@ local function get_update_test_note_fields(result, options, note_id)
     return fields, nil
 end
 
+--- Read a scenario's target fields as one fail-closed batch.
+local function read_update_test_target_fields(result, options, note_ids)
+    local fields_by_id = {}
+    for _, note_id in ipairs(note_ids) do
+        local fields, error = get_update_test_note_fields(result, options, note_id)
+        if error then
+            return nil, error
+        end
+        fields_by_id[note_id] = fields
+    end
+    return fields_by_id, nil
+end
+
 --- Return the AnkiConnect fake used by update tests.
 local function make_update_test_ankiconnect(result, options)
     result.last_note_ids = options.last_note_ids
     result.selected_note_ids = options.selected_note_ids
     --- Supply scenario-specific fields after the shared fake records the request.
     result.read_fields = function(note_ids)
-        local fields_by_id = {}
-        for _, note_id in ipairs(note_ids) do
-            local fields, error = get_update_test_note_fields(result, options, note_id)
-            if error then
-                return nil, error
-            end
-            fields_by_id[note_id] = fields
-        end
-        return fields_by_id, nil
+        return read_update_test_target_fields(result, options, note_ids)
     end
     --- Preview reads do not count as update-target field requests.
     result.read_preview = function(note_id)
@@ -172,10 +177,15 @@ local function make_guarded_update_test_exporter(result, jobs, options)
     })
 end
 
---- Return a confirmation fake that retains one pending request.
+--- Return a confirmation fake that retains and cancels one pending request.
 local function make_update_test_confirmation(result)
     return {
-        cancel = h.noop,
+        cancel = function()
+            if result.confirmation then
+                result.confirmation.on_cancel()
+                result.confirmation = nil
+            end
+        end,
         confirm = function(options)
             result.confirmation = options
         end,
@@ -343,12 +353,6 @@ local function test_cancel_pending_update_cancels_confirmation()
     local result = { append_count = 0 }
     local jobs = {}
     local confirmation = make_update_test_confirmation(result)
-    confirmation.cancel = function()
-        if result.confirmation then
-            result.confirmation.on_cancel()
-            result.confirmation = nil
-        end
-    end
     local exporter = make_guarded_update_test_exporter(result, jobs, {
         confirmation = confirmation,
         current_sentence = "new sentence",
@@ -356,6 +360,8 @@ local function test_cancel_pending_update_cancels_confirmation()
         last_note_ids = { h.minutes_ago(1) },
     })
     exporter.update_last_note(true)
+    h.assert_equals(type(result.confirmation), "table")
+    exporter.cancel_pending_update()
     exporter.cancel_pending_update()
     h.assert_equals({ #jobs, result.clear_count, result.confirmation }, { 0, nil, nil })
 end
@@ -366,32 +372,31 @@ local function test_file_change_cancels_and_clears()
     local result = { append_count = 0 }
     local jobs = {}
     local confirmation = make_update_test_confirmation(result)
-    confirmation.cancel = function()
-        if result.confirmation then
-            result.confirmation.on_cancel()
-            result.confirmation = nil
-        end
-    end
     local exporter = make_guarded_update_test_exporter(result, jobs, {
         confirmation = confirmation,
         stored_sentence = "old sentence",
         last_note_ids = { h.minutes_ago(1) },
     })
     exporter.update_last_note(true)
+    h.assert_equals(type(result.confirmation), "table")
     exporter.cancel_pending_update_for_file_change()
     h.assert_equals(result.confirmation, nil)
     h.assert_equals(result.clear_count, 2)
     h.assert_equals(#jobs, 0)
 end
 
---- Test that blocked note-update entry points cancel a pending confirmation.
-local function test_blocked_updates_cancel_confirmation()
-    local scenarios = {
+--- Return blocked lookup scenarios with the required 4-second warning duration.
+local function make_blocked_update_test_cases()
+    return {
         { method = "update_last_note", last_note_ids = { h.minutes_ago(11) }, duration = 4 },
         { method = "update_selected_note", selected_note_ids = {}, duration = 4 },
         { method = "update_selected_note", selected_note_ids = { 1, 2, 3, 4 }, duration = 4 },
     }
-    for _, scenario in ipairs(scenarios) do
+end
+
+--- Test that blocked note-update entry points cancel a pending confirmation.
+local function test_blocked_updates_cancel_confirmation()
+    for _, scenario in ipairs(make_blocked_update_test_cases()) do
         local result = { append_count = 0, cancel_count = 0 }
         local confirmation = make_update_test_confirmation(result)
         confirmation.cancel = function()

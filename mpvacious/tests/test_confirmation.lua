@@ -199,23 +199,33 @@ local function test_stale_delayed_open_is_inert()
     h.assert_equals(first.options.prompt, "Fourth")
 end
 
---- Keep a new request queued from an active request's cancellation callback.
-local function test_reentrant_active_cancellation()
-    local state = { terminated = 0, timer_kills = 0, timers = {}, cancelled = 0, accepted = 0 }
-    local confirmation = make_confirmation(make_fake_mp_api(state))
+--- Queue a test request whose cancellation submits a counted replacement.
+local function queue_reentrant_confirmation_test_request(confirmation, counts, scenario)
     confirmation.confirm({
-        prompt = "First",
+        prompt = scenario.prompt,
         on_accept = h.noop,
         on_cancel = function()
-            state.cancelled = state.cancelled + 1
+            counts[scenario.cancel_key] = counts[scenario.cancel_key] + 1
             confirmation.confirm({
-                prompt = "New",
+                prompt = scenario.replacement_prompt,
                 on_accept = function()
-                    state.accepted = state.accepted + 1
+                    counts[scenario.accept_key] = counts[scenario.accept_key] + 1
                 end,
                 on_cancel = h.noop,
             })
         end,
+    })
+end
+
+--- Keep a new request queued from an active request's cancellation callback.
+local function test_reentrant_active_cancellation()
+    local state = { terminated = 0, timer_kills = 0, timers = {}, cancelled = 0, accepted = 0 }
+    local confirmation = make_confirmation(make_fake_mp_api(state))
+    queue_reentrant_confirmation_test_request(confirmation, state, {
+        prompt = "First",
+        cancel_key = "cancelled",
+        replacement_prompt = "New",
+        accept_key = "accepted",
     })
     local stale_options = state.options
     confirmation.cancel()
@@ -232,26 +242,16 @@ end
 local function test_reentrant_pending_replacement()
     local state, confirmation = confirmation_fixture("First")
     local counts = { second = 0, third = 0, fourth = 0 }
-    confirmation.confirm({
+    queue_reentrant_confirmation_test_request(confirmation, counts, {
         prompt = "Second",
-        on_accept = h.noop,
-        on_cancel = function()
-            counts.second = counts.second + 1
-            confirmation.confirm({
-                prompt = "Fourth",
-                on_cancel = h.noop,
-                on_accept = function()
-                    counts.fourth = counts.fourth + 1
-                end,
-            })
-        end,
+        cancel_key = "second",
+        replacement_prompt = "Fourth",
+        accept_key = "fourth",
     })
     confirmation.confirm({
         prompt = "Third",
         on_accept = h.noop,
-        on_cancel = function()
-            counts.third = counts.third + 1
-        end,
+        on_cancel = function() counts.third = counts.third + 1 end,
     })
     close_confirmation_test_input(state)
     run_confirmation_test_scheduled_open(state)
@@ -264,19 +264,11 @@ end
 local function test_reentrant_pending_cancellation()
     local state, confirmation = confirmation_fixture("First")
     local counts = { old = 0, new = 0 }
-    confirmation.confirm({
+    queue_reentrant_confirmation_test_request(confirmation, counts, {
         prompt = "Old",
-        on_accept = h.noop,
-        on_cancel = function()
-            counts.old = counts.old + 1
-            confirmation.confirm({
-                prompt = "New",
-                on_cancel = h.noop,
-                on_accept = function()
-                    counts.new = counts.new + 1
-                end,
-            })
-        end,
+        cancel_key = "old",
+        replacement_prompt = "New",
+        accept_key = "new",
     })
     confirmation.cancel()
     close_confirmation_test_input(state)
