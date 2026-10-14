@@ -375,7 +375,8 @@ local function assert_export_destination_test_request(result)
     h.assert_equals(note.options.allowDuplicate, false)
     h.assert_equals(note.fields.SentKanji, "new sentence")
     h.assert_equals(result.transport_calls[1].url, "http://original-server:8765")
-    h.assert_equals(result.note_requests[1].key, "original-key")
+    h.assert_equals(result.note_requests[1].key, nil)
+    h.assert_equals(result.transport_calls[1].request_json:match('"key"%s*:%s*"([^"]*)"'), "original-key")
 end
 
 --- Pending exports retain their original destination when the live profile changes.

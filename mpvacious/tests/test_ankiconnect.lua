@@ -287,7 +287,7 @@ local function test_execute_transaction_transport()
         local request = { action = "version", version = 6 }
         client.execute { request = request }
         h.assert_equals(state.transport_calls[1].url, "http://original-server:8765")
-        h.assert_equals(request.key, case.expected_key)
+        h.assert_equals(request, { action = "version", version = 6 })
         h.assert_equals(state.transport_calls[1].request_json:match('"key"%s*:%s*"([^"]*)"'), case.expected_key)
         original.execute { request = { action = "version", version = 6 } }
         h.assert_equals(state.transport_calls[2].url, "http://different-server:8765")
@@ -305,7 +305,48 @@ local function test_execute_current_transport()
     local request = { action = "version", version = 6 }
     client.execute { request = request }
     h.assert_equals(state.transport_calls[1].url, "http://different-server:8765")
-    h.assert_equals(request.key, "different-key")
+    h.assert_equals(request, { action = "version", version = 6 })
+    h.assert_equals(state.transport_calls[1].request_json:match('"key"%s*:%s*"([^"]*)"'), "different-key")
+end
+
+--- Authenticate a fresh copy without modifying the caller's key or nested payload.
+local function test_execute_copies_request()
+    for _, case in ipairs { { key = "configured-key", expected = "configured-key" }, { key = "" }, {} } do
+        local state = {}
+        local config = { ankiconnect_url = "http://server:8765", ankiconnect_api_key = case.key }
+        local client = ankiconnect.new { platform = fixtures.make_recording_anki_platform(state) }
+        client.init(fixtures.make_config_manager(config))
+        local request = { action = "version", version = 6, key = "payload-key", params = { test = "unchanged" } }
+        local original = h.deep_copy(request)
+        local options = { request = request }
+        client.execute(options)
+        h.assert_equals(options.request == request, false)
+        h.assert_equals(options.request.params == request.params, true)
+        h.assert_equals(request, original)
+        h.assert_equals(options.request.key, case.expected)
+        h.assert_equals(state.transport_calls[1].request_json:match('"key"%s*:%s*"([^"]*)"'), case.expected)
+    end
+end
+
+--- Reusing options creates another copy and clears authentication when the provider's key is blank.
+local function test_execute_reuses_options_safely()
+    local state = {}
+    local config = { ankiconnect_url = "http://first:8765", ankiconnect_api_key = "old-key" }
+    local client = ankiconnect.new { platform = fixtures.make_recording_anki_platform(state) }
+    client.init(fixtures.make_config_manager(config))
+    local request = { action = "version", version = 6 }
+    local options = { request = request }
+    client.execute(options)
+    local first_copy = options.request
+    config.ankiconnect_api_key = ""
+    config.ankiconnect_url = "http://second:8765"
+    client.execute(options)
+    h.assert_equals(options.request == first_copy, false)
+    h.assert_equals(first_copy.key, "old-key")
+    h.assert_equals(request, { action = "version", version = 6 })
+    h.assert_equals(options.request.key, nil)
+    h.assert_equals(state.transport_calls[2].request_json:match('"key"%s*:%s*"([^"]*)"'), nil)
+    h.assert_equals(state.transport_calls[2].url, "http://second:8765")
 end
 
 --- Return the original settings for delayed add-response scenarios.
@@ -328,7 +369,7 @@ local function assert_browse_destination_test_calls(state, case)
         local request = state.note_requests[2]
         h.assert_equals(request.action, "guiBrowse")
         h.assert_equals(request.params.query, "nid:123")
-        h.assert_equals(request.key, "original-key")
+        h.assert_equals(request.key, nil)
         h.assert_equals(state.transport_calls[2].url, "http://original-server:8765")
         h.assert_equals(state.transport_calls[2].request_json:match('"key"%s*:%s*"([^"]*)"'), "original-key")
     end
@@ -373,7 +414,8 @@ local function test_gui_browse_current_config()
     })
     client.gui_browse("nid:456")
     h.assert_equals(state.transport_calls[1].url, config.ankiconnect_url)
-    h.assert_equals(state.note_requests[1].key, config.ankiconnect_api_key)
+    h.assert_equals(state.note_requests[1].key, nil)
+    h.assert_equals(state.transport_calls[1].request_json:match('"key"%s*:%s*"([^"]*)"'), config.ankiconnect_api_key)
     h.assert_equals(state.note_requests[1].params.query, "nid:456")
     config.disable_gui_browse = true
     client.gui_browse("nid:789")
@@ -392,6 +434,8 @@ local function run_tests()
     test_add_note_current_config()
     test_execute_transaction_transport()
     test_execute_current_transport()
+    test_execute_copies_request()
+    test_execute_reuses_options_safely()
     test_add_note_browses_captured_destination()
     test_gui_browse_current_config()
 end
