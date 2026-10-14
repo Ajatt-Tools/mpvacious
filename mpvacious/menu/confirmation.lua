@@ -13,7 +13,7 @@ local CONFIRMATION_TIMEOUT_SECONDS = 10
 local DEFAULT_MP_API = { input = input, msg = msg, mp = mp }
 
 --- Return a stateful Yes/No confirmation controller with optional mp-compatible APIs.
---- Requests resolve once; replacements open only after the previous input handler closes.
+--- Requests resolve once. Replacements open only after the previous input handler closes.
 local function make_confirmation(mp_api)
     mp_api = mp_api or DEFAULT_MP_API
     local private = {
@@ -135,7 +135,7 @@ local function make_confirmation(mp_api)
             resolve(previous, false)
         end
         if private.pending ~= incoming then
-            -- A cancellation callback queued a newer request; latest wins.
+            -- A cancellation callback queued a newer request. Latest wins.
             return
         end
         if private.active then

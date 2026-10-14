@@ -13,7 +13,7 @@ local make_note_update_guard = guard_module.new
 ------------------------------------------------------------
 -- Tests: executed by both standalone and mpv-backed runners.
 
---- Return note field tables for test sentence values; false represents unavailable fields.
+--- Return note field tables for test sentence values. False represents unavailable fields.
 local function make_guard_test_note_fields(sentences)
     local fields = {}
     for _, sentence in ipairs(sentences) do
