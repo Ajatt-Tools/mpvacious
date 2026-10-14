@@ -81,16 +81,20 @@ local function make_ankiconnect(components)
         return self.cfg_mgr.config()
     end
 
+    local function get_request_key()
+        if h.is_non_empty_str(config().ankiconnect_api_key) then
+            return config().ankiconnect_api_key
+        else
+            return nil
+        end
+    end
+
     --- Parameters: request, completion_fn, suppress_log
     --- completion_fn = fn(success, result, error)
     --- https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst#mp-functions
     self.execute = function(o)
         o.request = h.shallow_copy(o.request) -- defensive: copy request to avoid mutations
-        if h.is_non_empty_str(config().ankiconnect_api_key) then
-            o.request.key = config().ankiconnect_api_key
-        else
-            o.request.key = nil
-        end
+        o.request.key = get_request_key()
 
         -- utils.format_json returns a string
         -- On error, request_json will contain "null", not nil.
