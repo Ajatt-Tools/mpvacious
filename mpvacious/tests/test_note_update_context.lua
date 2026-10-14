@@ -10,7 +10,6 @@ local fixtures = require("tests.fixtures")
 local note_update_context = require("anki.note_update_context")
 local snapshot = require("config.snapshot")
 local subtitle_module = require("subtitles.subtitle")
-local snapshot = require("config.snapshot")
 
 --- Create an update configuration with the selected merge order.
 local function make_update_test_config(append_media)

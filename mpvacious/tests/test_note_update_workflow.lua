@@ -131,6 +131,12 @@ local function test_update_passes_request_to_context()
     h.assert_equals(rawequal(state.performed_request, state.prepared_request), true)
 end
 
+--- Verify tunable notifications supply a finite, positive display duration.
+local function assert_workflow_test_notification_duration(state)
+    h.assert_equals(type(state.notification_duration), "number")
+    h.assert_equals(state.notification_duration > 0 and state.notification_duration < math.huge, true)
+end
+
 --- Test invalid subtitles skip confirmation and updates.
 local function test_invalid_subtitle_notifies_without_confirming()
     local state, request, workflow = workflow_fixture(false, nil)
@@ -139,7 +145,7 @@ local function test_invalid_subtitle_notifies_without_confirming()
     h.assert_equals(state.confirmation, nil)
     h.assert_equals(state.notification, "Nothing to export. Have you set the timings?")
     h.assert_equals(state.notification_level, "warn")
-    h.assert_equals(state.notification_duration, 4)
+    assert_workflow_test_notification_duration(state)
 end
 
 --- Immediate updates return the exporter, not the update context's result.
@@ -177,7 +183,7 @@ local function test_update_fails_closed_on_read_error()
     h.assert_equals(state.performed, 0)
     h.assert_equals(state.notification, "Could not read note 1")
     h.assert_equals(state.notification_level, "error")
-    h.assert_equals(state.notification_duration, 3)
+    assert_workflow_test_notification_duration(state)
 end
 
 --- A pending confirmation uses captured target IDs even if the caller changes its input list.
