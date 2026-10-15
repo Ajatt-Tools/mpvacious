@@ -17,7 +17,11 @@ local make_note_update_guard = guard_module.new
 local function make_guard_test_note_fields(sentences)
     local fields = {}
     for _, sentence in ipairs(sentences) do
-        table.insert(fields, sentence == false and {} or { SentKanji = sentence })
+        if sentence == false then
+            table.insert(fields, {})
+        else
+            table.insert(fields, { SentKanji = sentence })
+        end
     end
     return fields
 end
