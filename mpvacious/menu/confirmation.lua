@@ -9,7 +9,7 @@ local mp = require("mp")
 local input = require("mp.input")
 local msg = require("mp.msg")
 
-local CONFIRMATION_TIMEOUT_SECONDS = 10
+local CONFIRMATION_TIMEOUT_SECONDS = 20
 local DEFAULT_MP_API = { input = input, msg = msg, mp = mp }
 
 --- Return a stateful Yes/No confirmation controller with optional mp-compatible APIs.
@@ -143,6 +143,13 @@ local function make_confirmation(mp_api)
         else
             private.open_pending()
         end
+    end
+
+    ------------------------------------------------------------
+    --- Public
+
+    function public.get_confirmation_timeout()
+        return CONFIRMATION_TIMEOUT_SECONDS
     end
 
     --- Cancel active and queued confirmations, if any.
