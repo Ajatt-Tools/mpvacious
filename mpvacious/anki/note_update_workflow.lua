@@ -26,7 +26,7 @@ local function make_note_update_workflow(components)
     }
     local pub = {}
 
-    --- Queue a confirmation after sentence validation reports a mismatch.
+    --- Request confirmation for a mismatch, leaving an existing prompt unchanged.
     local function confirm_update(request, warning)
         self.confirmation.confirm {
             prompt = string.format(

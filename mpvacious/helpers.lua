@@ -428,6 +428,7 @@ function this.get_episode_number(filename)
     end
 end
 
+--- Log and display a nonempty string, ignoring missing or non-string messages.
 function this.notify(message, level, duration)
     if not this.is_non_empty_str(message) then
         return
