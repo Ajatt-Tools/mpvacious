@@ -12,13 +12,15 @@ local function make_note_update_guard()
     local private = {}
     local public = {}
 
-    --- Preserve HTML spacing before applying existing subtitle comparison rules.
+    --- Preserve HTML spacing and literal entity content while normalizing sentence text.
     function private.normalize_sentence(text)
-        text = h.unescape_special_characters((text or ""):lower())
+        text = (text or ""):lower()
         -- Removing line-break tags directly would join otherwise separate words.
         text = h.str_replace(text, "&nbsp;", " ")
         text = text:gsub("<br%s*/?>", " ")
-        return h.normalize_subtitle_text(text)
+        -- Strip actual markup before decoding entities so escaped tags remain literal text.
+        text = h.normalize_subtitle_text(text)
+        return h.unescape_special_characters(text)
     end
 
     --- Return the configured sentence from one supplied note field table.
