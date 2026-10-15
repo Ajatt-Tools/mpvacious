@@ -29,7 +29,12 @@ local function make_note_update_workflow(components)
     --- Queue a confirmation after sentence validation reports a mismatch.
     local function confirm_update(request, warning)
         self.confirmation.confirm {
-            prompt = warning .. "\n" .. update_question(#request.target_notes),
+            prompt = string.format(
+                "%s\n%s (auto cancel in %d seconds)",
+                warning,
+                update_question(#request.target_notes),
+                self.confirmation.get_confirmation_timeout()
+            ),
             on_accept = function()
                 self.context.perform_update(request)
             end,
