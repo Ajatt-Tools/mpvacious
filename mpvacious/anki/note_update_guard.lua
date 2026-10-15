@@ -28,7 +28,7 @@ local function make_note_update_guard()
         return note_fields[field_name] or ""
     end
 
-    --- Count note field tables related to the current sentence.
+    --- Count note field tables related to the original current sentence.
     function private.count_matching_notes(note_fields, current_sentence, field_name)
         return h.reduce(note_fields, function(matching_count, fields)
             if public.sentences_are_related(current_sentence, private.sentence_field(fields, field_name)) then
@@ -49,8 +49,8 @@ local function make_note_update_guard()
 
     --- Return a warning unless every supplied note matches the current sentence.
     function public.current_subtitle_warning(note_fields, current_sentence, field_name)
-        current_sentence = private.normalize_sentence(current_sentence)
-        if h.is_empty(current_sentence) then
+        -- Keep the original input for comparisons so decoded literal tags are never stripped again.
+        if h.is_empty(private.normalize_sentence(current_sentence)) then
             return string.format("Couldn't verify the current subtitle against target notes' %s field.", field_name)
         end
         local matching_count = private.count_matching_notes(note_fields, current_sentence, field_name)
