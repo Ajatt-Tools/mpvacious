@@ -429,6 +429,9 @@ function this.get_episode_number(filename)
 end
 
 function this.notify(message, level, duration)
+    if not this.is_non_empty_str(message) then
+        return
+    end
     level = level or "info"
     duration = duration or 1
     msg[level](message)
