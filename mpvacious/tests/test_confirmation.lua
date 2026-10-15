@@ -9,7 +9,6 @@ local mp = require("mp")
 local input = require("mp.input")
 local h = require("helpers")
 
-local CONFIRMATION_TIMEOUT_SECONDS = 10
 local confirmation_module = require("menu.confirmation")
 
 local make_confirmation = confirmation_module.new
@@ -55,12 +54,24 @@ local function make_confirmation_test_mp(state)
     }
 end
 
+--- Record nonempty notifications using the same empty-message contract as h.notify.
+local function make_confirmation_test_notifier(state)
+    state.notifications = {}
+    return function(message, level, duration)
+        if not h.is_non_empty_str(message) then
+            return
+        end
+        table.insert(state.notifications, { message = message, level = level, duration = duration })
+    end
+end
+
 --- Return a fake mp API that records confirmation effects in `state`.
 local function make_fake_mp_api(state)
     return {
         input = make_confirmation_test_input(state),
         msg = make_confirmation_test_msg(state),
         mp = make_confirmation_test_mp(state),
+        notify = make_confirmation_test_notifier(state),
     }
 end
 
@@ -102,21 +113,34 @@ end
 
 --- Test prompt configuration and logging.
 local function test_confirmation_prompt()
-    local state = confirmation_fixture("Different sentence.\nUpdate anyway?")
+    local state, confirmation = confirmation_fixture("Different sentence.\nUpdate anyway?")
     h.assert_equals(state.options.items, { "Yes", "No" })
     h.assert_equals(state.options.default_item, 2)
     h.assert_equals(state.options.prompt, "Different sentence.\nUpdate anyway?")
     h.assert_equals(state.warning, state.options.prompt)
-    h.assert_equals(state.timers[1].seconds, CONFIRMATION_TIMEOUT_SECONDS)
+    h.assert_equals(state.timers[1].seconds, confirmation.get_confirmation_timeout())
+    h.assert_equals(state.timers[1].seconds > 0 and state.timers[1].seconds < math.huge, true)
 end
 
 --- Test that acceptance resolves once despite a later closed callback.
 local function test_confirmation_accepts_once()
-    local state = confirmation_fixture()
+    local state, confirmation = confirmation_fixture()
     state.options.submit(1)
     close_confirmation_test_input(state)
+    confirmation.cancel("Must not report cancellation after acceptance.")
     h.assert_equals({ state.accepted, state.cancelled }, { 1, 0 })
     h.assert_equals({ state.terminated, state.timer_kills }, { 1, 1 })
+    h.assert_equals(state.notifications, {})
+end
+
+--- Check cancellation messages without hard-coding their tunable display durations.
+local function assert_confirmation_test_notifications(state, messages)
+    h.assert_equals(h.map(state.notifications, function(notification) return notification.message end), messages)
+    for _, notification in ipairs(state.notifications) do
+        h.assert_equals(notification.level, "info")
+        h.assert_equals(type(notification.duration), "number")
+        h.assert_equals(notification.duration > 0 and notification.duration < math.huge, true)
+    end
 end
 
 --- Test explicit No and timeout cancellation paths.
@@ -131,17 +155,40 @@ local function run_confirmation_test_cancellation_scenario(scenario)
     local state, confirmation = confirmation_fixture()
     scenario.resolve(state, confirmation)
     assert_confirmation_canceled(state, scenario.terminate)
-    confirmation.cancel()
+    close_confirmation_test_input(state)
+    get_confirmation_test_timeout(state)()
+    state.options.submit(2)
+    confirmation.cancel("Must not report cancellation twice.")
+    local messages = {}
+    if scenario.message then messages = { scenario.message } end
+    assert_confirmation_test_notifications(state, messages)
 end
 
 --- Return cancellation scenarios for No, timeout, input closure, and explicit cancellation.
 local function make_confirmation_cancellation_test_cases()
     return {
-        { terminate = 1, resolve = function(state) state.options.submit(2) end },
+        { terminate = 1, resolve = function(state) state.options.submit(2) end, message = "Cancelled by the user." },
         { terminate = 1, resolve = function(state) get_confirmation_test_timeout(state)() end },
         { terminate = 0, resolve = close_confirmation_test_input },
         { terminate = 1, resolve = function(_, confirmation) confirmation.cancel() end },
+        {
+            terminate = 1,
+            resolve = function(_, confirmation) confirmation.cancel("Video changed.") end,
+            message = "Video changed.",
+        },
     }
+end
+
+--- Idle cancellation and empty reasons must not produce messages.
+local function test_confirmation_silent_cancellation()
+    local state = { timers = {} }
+    local confirmation = make_confirmation(make_fake_mp_api(state))
+    confirmation.cancel("Nothing is pending.")
+    h.assert_equals(state.notifications, {})
+    local active_state, active_confirmation = confirmation_fixture()
+    active_confirmation.cancel("")
+    h.assert_equals(active_state.cancelled, 1)
+    h.assert_equals(active_state.notifications, {})
 end
 
 --- Test explicit No and timeout cancellation paths.
@@ -167,6 +214,19 @@ local function replacement_fixture()
         end,
     })
     return first, confirmation, first_options, first_timeout, second_state
+end
+
+--- Report a queued cancellation once while an already-resolved active prompt closes.
+local function test_pending_cancellation_notification()
+    local state, confirmation, stale_options, stale_timeout, pending = replacement_fixture()
+    confirmation.cancel("Video changed.")
+    h.assert_equals(pending.cancelled, 1)
+    close_confirmation_test_input(state)
+    run_confirmation_test_scheduled_open(state)
+    stale_options.submit(2)
+    stale_timeout()
+    confirmation.cancel("Must not report cancellation twice.")
+    assert_confirmation_test_notifications(state, { "Video changed." })
 end
 
 --- Test that replacing a request cancels it and opens the replacement after closed.
@@ -290,6 +350,8 @@ local function run_tests()
     test_confirmation_prompt()
     test_confirmation_accepts_once()
     test_confirmation_cancellation_paths()
+    test_confirmation_silent_cancellation()
+    test_pending_cancellation_notification()
     test_confirmation_supersedes_and_cancels()
     test_stale_delayed_open_is_inert()
     test_reentrant_active_cancellation()

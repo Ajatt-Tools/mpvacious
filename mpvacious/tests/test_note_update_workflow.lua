@@ -27,6 +27,7 @@ end
 --- Record confirmation requests and cancellations in workflow tests.
 local function make_test_confirmation(state)
     return {
+        get_confirmation_timeout = fixtures.get_confirmation_timeout_for_test,
         cancel = function()
             state.cancelled = state.cancelled + 1
         end,
@@ -189,12 +190,20 @@ local function test_non_recent_update_does_not_confirm()
     h.assert_equals(rawequal(state.performed_request, state.prepared_request), true)
 end
 
+--- Add the controller fake's timeout to the expected workflow prompt.
+local function with_workflow_test_countdown(prompt)
+    return prompt .. string.format(" (auto cancel in %d seconds)", fixtures.get_confirmation_timeout_for_test())
+end
+
 --- Test warnings defer the update until explicit acceptance and preserve request data.
 local function test_update_confirms_before_performing()
     local state, request, workflow = workflow_fixture(true, "Different sentence.")
     h.assert_equals(workflow.update_notes(request), state.exporter)
     h.assert_equals(state.performed, 0)
-    h.assert_equals(state.confirmation.prompt, "Different sentence.\nUpdate this note anyway?")
+    h.assert_equals(
+        state.confirmation.prompt,
+        with_workflow_test_countdown("Different sentence.\nUpdate this note anyway?")
+    )
     state.confirmation.on_cancel()
     h.assert_equals(state.performed, 0)
     state.confirmation.on_accept()
@@ -225,7 +234,10 @@ local function test_update_retains_captured_targets()
     request.note_ids = { 1, 2 }
     state.target_notes = { { note_id = 1, fields = {} }, { note_id = 2, fields = {} } }
     h.assert_equals(workflow.update_notes(request), state.exporter)
-    h.assert_equals(state.confirmation.prompt, "Different sentence.\nUpdate all 2 notes anyway?")
+    h.assert_equals(
+        state.confirmation.prompt,
+        with_workflow_test_countdown("Different sentence.\nUpdate all 2 notes anyway?")
+    )
     request.note_ids[1] = 99
     table.insert(request.note_ids, 3)
     state.confirmation.on_accept()

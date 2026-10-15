@@ -312,9 +312,15 @@ function this.make_notifier(state)
     end
 end
 
+--- Supply a deterministic timeout for confirmation fakes without copying the production default.
+function this.get_confirmation_timeout_for_test()
+    return 7
+end
+
 --- Return a confirmation fake that immediately accepts each prompt without opening UI.
 function this.make_accepting_confirmation()
     return {
+        get_confirmation_timeout = this.get_confirmation_timeout_for_test,
         cancel = h.noop,
         --- Complete accepted prompts synchronously for dispatch and transport scenarios.
         confirm = function(options) options.on_accept() end,

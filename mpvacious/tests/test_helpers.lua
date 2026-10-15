@@ -566,6 +566,14 @@ local function test_str_replace()
     h.assert_equals(h.str_replace("メイド喫茶", "メイド", "冥土"), "冥土喫茶")
 end
 
+--- Ignore missing, empty, and non-string notifications before logging or displaying them.
+local function test_notify_ignores_empty_messages()
+    h.assert_equals(h.notify(nil), nil)
+    for _, message in ipairs { "", false, 123, {} } do
+        h.assert_equals(h.notify(message), nil)
+    end
+end
+
 --- Run the shared helper regression suite.
 local function run_tests()
     test_map_preserves_keys_and_input()
@@ -603,6 +611,7 @@ local function run_tests()
     test_join_two_sorted_lists()
     test_remove_html_tags()
     test_str_replace()
+    test_notify_ignores_empty_messages()
 end
 
 return {

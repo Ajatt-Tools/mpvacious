@@ -180,8 +180,10 @@ end
 --- Return a confirmation fake that retains and cancels one pending request.
 local function make_update_test_confirmation(result)
     return {
-        cancel = function()
+        get_confirmation_timeout = fixtures.get_confirmation_timeout_for_test,
+        cancel = function(reason)
             if result.confirmation then
+                result.cancellation_reason = reason
                 result.confirmation.on_cancel()
                 result.confirmation = nil
             end
@@ -190,6 +192,11 @@ local function make_update_test_confirmation(result)
             result.confirmation = options
         end,
     }
+end
+
+--- Add the timeout supplied by the fake controller to an expected prompt.
+local function with_update_test_countdown(prompt)
+    return prompt .. string.format(" (auto cancel in %d seconds)", fixtures.get_confirmation_timeout_for_test())
 end
 
 --- Create a started mismatched-update test fixture.
@@ -212,7 +219,9 @@ local function test_mismatched_update_requires_confirmation()
     h.assert_equals(#jobs, 0)
     h.assert_equals(
         result.confirmation.prompt,
-        "The target note's SentKanji does not match the current subtitle.\nUpdate this note anyway?"
+        with_update_test_countdown(
+            "The target note's SentKanji does not match the current subtitle.\nUpdate this note anyway?"
+        )
     )
     result.confirmation.on_accept()
     h.assert_equals(#jobs, 2)
@@ -243,7 +252,9 @@ local function test_empty_current_subtitle_requires_confirmation()
     h.assert_equals(#jobs, 0)
     h.assert_equals(
         result.confirmation.prompt,
-        "Couldn't verify the current subtitle against target notes' SentKanji field.\nUpdate this note anyway?"
+        with_update_test_countdown(
+            "Couldn't verify the current subtitle against target notes' SentKanji field.\nUpdate this note anyway?"
+        )
     )
     result.confirmation.on_cancel()
     h.assert_equals({ result.clear_count, result.menu_updates }, { nil, nil })
@@ -305,7 +316,9 @@ local function test_update_last_note_with_mismatched_sentences()
     h.assert_equals(#jobs, 0)
     h.assert_equals(
         result.confirmation.prompt,
-        "Only 1 of 2 target notes have SentKanji matching the current subtitle.\n" .. "Update all 2 notes anyway?"
+        with_update_test_countdown(
+            "Only 1 of 2 target notes have SentKanji matching the current subtitle.\nUpdate all 2 notes anyway?"
+        )
     )
     h.assert_equals(result.note_field_fetches[note_ids[1]], 1)
     h.assert_equals(result.note_field_fetches[note_ids[2]], 1)
@@ -324,7 +337,9 @@ local function test_update_last_note_with_unverifiable_field()
     h.assert_equals(#jobs, 0)
     h.assert_equals(
         result.confirmation.prompt,
-        "Only 0 of 2 target notes have SentKanji matching the current subtitle.\nUpdate all 2 notes anyway?"
+        with_update_test_countdown(
+            "Only 0 of 2 target notes have SentKanji matching the current subtitle.\nUpdate all 2 notes anyway?"
+        )
     )
     h.assert_equals(result.note_field_fetches[note_ids[2]], 1)
 end
@@ -380,9 +395,23 @@ local function test_file_change_cancels_and_clears()
     exporter.update_last_note(true)
     h.assert_equals(type(result.confirmation), "table")
     exporter.cancel_pending_update_for_file_change()
+    h.assert_equals(result.cancellation_reason, "Cancelled automatically because the video changed.")
     h.assert_equals(result.confirmation, nil)
     h.assert_equals(result.clear_count, 2)
     h.assert_equals(#jobs, 0)
+end
+
+--- File changes without a pending prompt still reset state without a cancellation notification.
+local function test_file_change_without_pending_confirmation_is_silent()
+    local result, jobs = {}, {}
+    local exporter = make_guarded_update_test_exporter(result, jobs, {
+        confirmation = make_update_test_confirmation(result),
+    })
+    exporter.cancel_pending_update_for_file_change()
+    h.assert_equals(result.cancellation_reason, nil)
+    h.assert_equals(result.notification, nil)
+    h.assert_equals(result.clear_count, 2)
+    h.assert_equals(jobs, {})
 end
 
 --- Return blocked lookup scenarios with the required 4-second warning duration.
@@ -1068,6 +1097,7 @@ local function run_tests()
     test_update_last_note_aborts_on_field_error()
     test_cancel_pending_update_cancels_confirmation()
     test_file_change_cancels_and_clears()
+    test_file_change_without_pending_confirmation_is_silent()
     test_blocked_updates_cancel_confirmation()
     test_mismatched_selected_note_update()
 end
