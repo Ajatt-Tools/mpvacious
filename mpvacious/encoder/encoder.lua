@@ -123,9 +123,9 @@ local function make_encoder(components)
     end
 
     --- Encode an animated snapshot and forward command completion.
-    local function create_animated_snapshot(start_timestamp, end_timestamp, source_path, output_path, on_finish_fn)
+    local function create_animated_snapshot(sub, source_path, output_path, on_finish_fn)
         -- Creates the animated snapshot and then calls on_finish_fn
-        local args = self.encoder.make_animated_snapshot_args(source_path, output_path, start_timestamp, end_timestamp)
+        local args = self.encoder.make_animated_snapshot_args(source_path, output_path, sub["start"], sub["end"])
         subprocess { args = args, completion_fn = on_finish_fn }
     end
 
@@ -142,7 +142,7 @@ local function make_encoder(components)
     end
 
     --- Create and validate the requested static or animated snapshot.
-    local function create_snapshot(start_timestamp, end_timestamp, current_timestamp, filename, on_finish_fn)
+    local function create_snapshot(sub, current_timestamp, filename, on_finish_fn, is_animated)
         if h.is_empty(self.output_dir_path) then
             return msg.error("Output directory wasn't provided. Image file will not be created.")
         end
@@ -151,10 +151,9 @@ local function make_encoder(components)
         if not h.is_empty(config().image_field) then
             local source_path = mp_api.get_property("path")
             local output_path = utils.join_path(self.output_dir_path, filename)
-
             local on_finish_wrap = report_creation_result(output_path).on_finish(on_finish_fn)
-            if config().animated_snapshot_enabled then
-                create_animated_snapshot(start_timestamp, end_timestamp, source_path, output_path, on_finish_wrap.run)
+            if is_animated then
+                create_animated_snapshot(sub, source_path, output_path, on_finish_wrap.run)
             else
                 create_static_snapshot(current_timestamp, source_path, output_path, on_finish_wrap.run)
             end
@@ -191,19 +190,19 @@ local function make_encoder(components)
     end
 
     --- Name the snapshot using its configured format and timing mode.
-    local function make_snapshot_filename(start_time, end_time, timestamp)
+    local function make_snapshot_filename(sub, timestamp, is_animated)
         -- Generate a filename for the snapshot, taking care of its extension and whether it's animated or static
-        if config().animated_snapshot_enabled then
-            return filenames.make_filename(start_time, end_time, config().animated_snapshot_extension)
+        if is_animated then
+            return filenames.make_filename(sub["start"], sub["end"], config().animated_snapshot_extension)
         else
             return filenames.make_filename(timestamp, config().snapshot_extension)
         end
     end
 
     --- Name the audio clip using its timing window and configured extension.
-    local function make_audio_filename(start_time, end_time)
+    local function make_audio_filename(sub)
         -- Generates a filename for the audio
-        return filenames.make_filename(start_time, end_time, config().audio_extension)
+        return filenames.make_filename(sub["start"], sub["end"], config().audio_extension)
     end
 
     --- Prepare a deferred media job or a skipped job when no matching track/field exists.
@@ -212,13 +211,15 @@ local function make_encoder(components)
         local job = {}
         if job_type == "snapshot" and has_video_track() and not h.is_empty(config().image_field) then
             current_timestamp = snapshot_timestamp or mp_api.get_property_number("time-pos", 0)
-            job.filename = make_snapshot_filename(sub["start"], sub["end"], current_timestamp)
+            local track = get_active_track("video")
+            local is_animated = (config().animated_snapshot_enabled and not (track and track.albumart == true))
+            job.filename = make_snapshot_filename(sub, current_timestamp, is_animated)
             --- Start snapshot creation using this job's captured timings.
             job.run_async = function()
-                create_snapshot(sub["start"], sub["end"], current_timestamp, job.filename, on_finish_fn)
+                create_snapshot(sub, current_timestamp, job.filename, on_finish_fn, is_animated)
             end
         elseif job_type == "audioclip" and h.has_audio_track() and not h.is_empty(config().audio_field) then
-            job.filename = make_audio_filename(sub["start"], sub["end"])
+            job.filename = make_audio_filename(sub)
             --- Start audio creation using this job's captured timings and padding.
             job.run_async = function()
                 create_audio(sub["start"], sub["end"], job.filename, audio_padding, on_finish_fn)
