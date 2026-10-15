@@ -12,9 +12,12 @@ local function make_note_update_guard()
     local private = {}
     local public = {}
 
-    --- Normalize a sentence field with existing subtitle comparison rules.
+    --- Preserve HTML spacing before applying existing subtitle comparison rules.
     function private.normalize_sentence(text)
         text = h.unescape_special_characters((text or ""):lower())
+        -- Removing line-break tags directly would join otherwise separate words.
+        text = h.str_replace(text, "&nbsp;", " ")
+        text = text:gsub("<br%s*/?>", " ")
         return h.normalize_subtitle_text(text)
     end
 
