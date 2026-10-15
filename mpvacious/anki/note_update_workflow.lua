@@ -38,8 +38,6 @@ local function make_note_update_workflow(components)
             on_accept = function()
                 self.context.perform_update(request)
             end,
-            -- A declined prompt is not an update, so timings remain available for a retry.
-            on_cancel = h.noop,
         }
         return self.exporter
     end
@@ -56,7 +54,6 @@ local function make_note_update_workflow(components)
 
     --- Collect one subtitle and either update immediately or ask for confirmation.
     function pub.update_notes(request)
-        self.confirmation.cancel()
         -- get the current subtitle (or multiple lines from quick creation opts)
         local subtitle = self.context.collect_subtitle()
         if not subtitle:is_valid() then
