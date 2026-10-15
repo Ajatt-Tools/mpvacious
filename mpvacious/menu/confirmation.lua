@@ -14,10 +14,12 @@ local CONFIRMATION_TIMEOUT_SECONDS = 20
 local DEFAULT_MP_API = { input = input, msg = msg, mp = mp }
 
 --- Create an unopened prompt owning its state, timer, and input-handler lifecycle.
-local function make_request(options, mp_api, on_closed)
+local function make_request(components)
+    local mp_api = components.mp_api or DEFAULT_MP_API
     local self = {
-        prompt = options.prompt,
-        on_accept = options.on_accept,
+        prompt = components.prompt,
+        on_accept = components.on_accept,
+        on_closed = components.on_closed,
         resolved = false,
         closed = false,
         notify = mp_api.notify or h.notify,
@@ -67,7 +69,7 @@ local function make_request(options, mp_api, on_closed)
                 end
                 self.closed = true
                 public.cancel()
-                on_closed(public)
+                self.on_closed(public)
             end,
         }
     end
@@ -123,7 +125,12 @@ local function make_confirmation(mp_api)
     --- Present a Yes/No prompt unless another handler is active or still closing.
     function public.confirm(options)
         if not self.active_request then
-            self.active_request = make_request(options, mp_api, release_request)
+            self.active_request = make_request {
+                mp_api = mp_api,
+                prompt = options.prompt,
+                on_accept = options.on_accept,
+                on_closed = release_request,
+            }
             self.active_request.open()
         end
     end
