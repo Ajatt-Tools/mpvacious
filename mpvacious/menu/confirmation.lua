@@ -8,6 +8,7 @@ Present reusable Yes/No confirmations through mpv's console input.
 local mp = require("mp")
 local input = require("mp.input")
 local msg = require("mp.msg")
+local h = require("helpers")
 
 local CONFIRMATION_TIMEOUT_SECONDS = 20
 local DEFAULT_MP_API = { input = input, msg = msg, mp = mp }
@@ -16,6 +17,7 @@ local DEFAULT_MP_API = { input = input, msg = msg, mp = mp }
 --- Requests resolve once. Replacements open only after the previous input handler closes.
 local function make_confirmation(mp_api)
     mp_api = mp_api or DEFAULT_MP_API
+    local notify = mp_api.notify or h.notify
     local private = {
         -- The registered request remains active until its closed callback runs.
         active = nil,
@@ -49,6 +51,16 @@ local function make_confirmation(mp_api)
         mp_api.input.terminate()
     end
 
+    --- Cancel once, close any active prompt, and report an optional reason.
+    local function cancel_request(request, reason)
+        if request.resolved then
+            return
+        end
+        resolve(request, false)
+        close_request(request)
+        notify(reason, "info", 4)
+    end
+
     --- Resolve and close a request, leaving any replacement queued.
     local function finish_request(request, was_accepted)
         if private.active ~= request then
@@ -65,13 +77,22 @@ local function make_confirmation(mp_api)
         end
     end
 
+    --- Accept Yes or cancel No with a user-facing reason.
+    local function submit_request(request, index)
+        if index == 1 then
+            finish_request(request, true)
+        else
+            cancel_request(request, "Cancelled by the user.")
+        end
+    end
+
     --- Return input callbacks tied to a request rather than mutable controller state.
     local function input_options(request)
         return {
             prompt = request.prompt,
             items = { "Yes", "No" },
             default_item = 2,
-            submit = function(index) finish_request(request, index == 1) end,
+            submit = function(index) submit_request(request, index) end,
             closed = function()
                 resolve(request, false)
                 if private.active ~= request then
@@ -106,20 +127,6 @@ local function make_confirmation(mp_api)
         open_request(request)
     end
 
-    --- Cancel requests present at entry, preserving any newly queued reentrant request.
-    local function cancel_confirmation()
-        local pending = private.pending
-        local active = private.active
-        private.pending = nil
-        if pending then
-            resolve(pending, false)
-        end
-        if active and private.active == active then
-            finish_request(active, false)
-        end
-        private.open_pending()
-    end
-
     --- Queue a prompt, allowing cancellation callbacks to supersede it with a newer one.
     local function queue_confirmation(options)
         local previous = private.pending
@@ -148,13 +155,23 @@ local function make_confirmation(mp_api)
     ------------------------------------------------------------
     --- Public
 
+    --- Return the configured prompt timeout in seconds.
     function public.get_confirmation_timeout()
         return CONFIRMATION_TIMEOUT_SECONDS
     end
 
-    --- Cancel active and queued confirmations, if any.
-    function public.cancel()
-        cancel_confirmation()
+    --- Cancel entry-time requests with an optional reason, preserving reentrant replacements.
+    function public.cancel(reason)
+        local pending = private.pending
+        local active = private.active
+        private.pending = nil
+        if pending then
+            cancel_request(pending, reason)
+        end
+        if active and private.active == active then
+            cancel_request(active, reason)
+        end
+        private.open_pending()
     end
 
     --- Present a Yes/No prompt and resolve it exactly once.

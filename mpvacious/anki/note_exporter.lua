@@ -69,7 +69,9 @@ local function make_exporter()
 
     --- Cancel confirmation and discard timings when the source file changes.
     function pub.cancel_pending_update_for_file_change()
-        pub.cancel_pending_update()
+        if self.confirmation ~= nil then
+            self.confirmation.cancel("Cancelled automatically because the video changed.")
+        end
         return pub.reset_for_file_change()
     end
 
