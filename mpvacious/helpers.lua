@@ -350,7 +350,9 @@ this.unescape_special_characters = (function()
         ["&amp;"] = "&",
     }
     return function(text)
-        return this.replace_key_value_pairs(text, entities)
+        -- Assign before returning to discard gsub's replacement count and return only the string.
+        text = text:gsub("&[#%w]+;", entities)
+        return text
     end
 end)()
 
