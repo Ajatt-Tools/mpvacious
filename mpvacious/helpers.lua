@@ -334,7 +334,9 @@ this.escape_special_characters = (function()
         -- Unescape first to ensure idempotency. Calling escape on already-escaped text should be a no-op.
         text = this.unescape_special_characters(text)
         -- Use gsub here to avoid double-replacing, resulting in: Expected 'that&apos;s', got 'that&amp;apos;s'
-        return text:gsub("[&\"'<>]", entities)
+        -- Assign before returning to discard gsub's replacement count and return only the string.
+        text = text:gsub("[&\"'<>]", entities)
+        return text
     end
 end)()
 
