@@ -17,10 +17,10 @@ local DEFAULT_MP_API = { input = input, msg = msg, mp = mp }
 --- Ignore new prompts until the active input handler has closed.
 local function make_confirmation(mp_api)
     mp_api = mp_api or DEFAULT_MP_API
-    local notify = mp_api.notify or h.notify
-    local private = {
+    local self = {
         -- The registered request remains active until its closed callback runs.
         active = nil,
+        notify = mp_api.notify or h.notify,
     }
     local public = {}
 
@@ -40,7 +40,7 @@ local function make_confirmation(mp_api)
 
     --- Close the active request after its callback has resolved.
     local function close_request(request)
-        if private.active ~= request or request.closed then
+        if self.active ~= request or request.closed then
             return
         end
         request.closed = true
@@ -54,7 +54,7 @@ local function make_confirmation(mp_api)
         end
         resolve(request, false)
         close_request(request)
-        notify(reason, "info", 4)
+        self.notify(reason, "info", 4)
     end
 
     --- Return input callbacks tied to a request rather than mutable controller state.
@@ -64,7 +64,7 @@ local function make_confirmation(mp_api)
             items = { "Yes", "No" },
             default_item = 2,
             submit = function(index)
-                if private.active ~= request then
+                if self.active ~= request then
                     return
                 end
                 if index == 1 then
@@ -76,10 +76,10 @@ local function make_confirmation(mp_api)
             end,
             closed = function()
                 resolve(request, false)
-                if private.active ~= request then
+                if self.active ~= request then
                     return
                 end
-                private.active = nil
+                self.active = nil
             end,
         }
     end
@@ -94,14 +94,14 @@ local function make_confirmation(mp_api)
 
     --- Cancel the active request with an optional reason.
     function public.cancel(reason)
-        if private.active then
-            cancel_request(private.active, reason)
+        if self.active then
+            cancel_request(self.active, reason)
         end
     end
 
     --- Present a Yes/No prompt unless another handler is active or still closing.
     function public.confirm(options)
-        if private.active then
+        if self.active then
             return
         end
         local request = {
@@ -110,9 +110,9 @@ local function make_confirmation(mp_api)
             resolved = false,
             closed = false,
         }
-        private.active = request
+        self.active = request
         request.timer = mp_api.mp.add_timeout(CONFIRMATION_TIMEOUT_SECONDS, function()
-            if private.active == request then
+            if self.active == request then
                 cancel_request(request)
             end
         end)
