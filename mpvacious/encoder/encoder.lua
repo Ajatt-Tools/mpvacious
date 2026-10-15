@@ -100,6 +100,7 @@ local function make_encoder(components)
     components = components or {}
     local subprocess = components.subprocess or h.subprocess
     local has_video_track = components.has_video_track or h.has_video_track
+    local get_active_track = components.get_active_track or h.get_active_track
     local filenames = components.filename_factory or filename_factory
     local mp_api = components.mp or mp
     -- Contains the state of the encoder
@@ -244,9 +245,9 @@ local function make_encoder(components)
     --- Select the configured FFmpeg or mpv encoding backend.
     local function choose_backend()
         if config().use_ffmpeg then
-            return ffmpeg_encoder.new(self.cfg_mgr)
+            return ffmpeg_encoder.new(self.cfg_mgr, nil, { get_active_track = get_active_track })
         else
-            return mpv_encoder.new(self.cfg_mgr)
+            return mpv_encoder.new(self.cfg_mgr, nil, { get_active_track = get_active_track })
         end
     end
 

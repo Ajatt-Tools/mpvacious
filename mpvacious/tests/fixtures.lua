@@ -516,6 +516,8 @@ end
 function this.make_recording_encoder_components(state)
     return {
         mp = this.make_mp_property_reader { path = "encoder-test.mkv", ["time-pos"] = 0 },
+        --- Keep generic command tests independent of the host mpv's selected tracks.
+        get_active_track = function() return nil end,
         --- Record a media command for output-directory assertions.
         subprocess = function(options)
             table.insert(state.commands, options.args)
