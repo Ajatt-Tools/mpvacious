@@ -25,6 +25,9 @@ local function make_confirmation_test_input(state)
         terminate = function()
             state.terminated = state.terminated + 1
             state.closing_options = state.options
+            if state.close_synchronously then
+                state.closing_options.closed()
+            end
         end,
     }
 end
@@ -92,6 +95,8 @@ local function confirmation_fixture(prompt)
     confirmation.confirm({
         prompt = prompt or "Warning\nProceed?",
         on_accept = function()
+            h.assert_equals({ state.terminated, state.timer_kills }, { 1, 1 })
+            h.assert_equals(state.timers[1].killed, true)
             state.accepted = state.accepted + 1
         end,
     })
@@ -113,11 +118,30 @@ end
 local function test_confirmation_accepts_once()
     local state, confirmation = confirmation_fixture()
     state.options.submit(1)
+    state.options.submit(1)
+    state.options.submit(2)
+    get_confirmation_test_timeout(state)()
+    close_confirmation_test_input(state)
     close_confirmation_test_input(state)
     confirmation.cancel("Must not report cancellation after acceptance.")
     h.assert_equals(state.accepted, 1)
     h.assert_equals({ state.terminated, state.timer_kills }, { 1, 1 })
     h.assert_equals(state.notifications, {})
+end
+
+--- Callback failures must not prevent timer cleanup or prompt closure.
+local function test_acceptance_failure_closes_prompt()
+    local state = { terminated = 0, timer_kills = 0, timers = {} }
+    local confirmation = make_confirmation(make_fake_mp_api(state))
+    confirmation.confirm { prompt = "Failure", on_accept = h.as_callback(error, "acceptance failed") }
+    local success, failure = pcall(state.options.submit, 1)
+    h.assert_equals(success, false)
+    h.assert_equals(h.is_substr(failure, "acceptance failed"), true)
+    h.assert_equals({ state.terminated, state.timer_kills }, { 1, 1 })
+    state.options.submit(1)
+    close_confirmation_test_input(state)
+    confirmation.confirm { prompt = "Next", on_accept = h.noop }
+    h.assert_equals(state.options.prompt, "Next")
 end
 
 --- Check cancellation messages without hard-coding their tunable display durations.
@@ -141,10 +165,12 @@ local function run_confirmation_test_cancellation_scenario(scenario)
     local state, confirmation = confirmation_fixture()
     scenario.resolve(state, confirmation)
     assert_confirmation_canceled(state, scenario.terminate)
+    state.options.submit(1)
     close_confirmation_test_input(state)
     get_confirmation_test_timeout(state)()
     state.options.submit(2)
     confirmation.cancel("Must not report cancellation twice.")
+    assert_confirmation_canceled(state, scenario.terminate)
     local messages = {}
     if scenario.message then messages = { scenario.message } end
     assert_confirmation_test_notifications(state, messages)
@@ -214,6 +240,25 @@ local function assert_stale_confirmation_test_callbacks(state, old_options, old_
     h.assert_equals(state.notifications, notifications)
 end
 
+--- Synchronous input closure releases the controller without affecting a later request.
+local function test_synchronous_closure_releases_request()
+    local state = { accepted = 0, terminated = 0, timer_kills = 0, timers = {}, close_synchronously = true }
+    local confirmation = make_confirmation(make_fake_mp_api(state))
+    confirmation.confirm {
+        prompt = "First",
+        on_accept = function() state.accepted = state.accepted + 1 end,
+    }
+    local old_options, old_timeout = state.options, get_confirmation_test_timeout(state)
+    state.options.submit(1)
+    h.assert_equals({ state.accepted, state.terminated, state.timer_kills }, { 1, 1, 1 })
+    confirmation.confirm { prompt = "Next", on_accept = h.noop }
+    assert_stale_confirmation_test_callbacks(state, old_options, old_timeout)
+    confirmation.confirm { prompt = "Ignored", on_accept = h.noop }
+    h.assert_equals(state.options.prompt, "Next")
+    confirmation.cancel()
+    h.assert_equals({ state.terminated, state.timer_kills }, { 2, 2 })
+end
+
 --- Reject requests while closing and accept a fresh invocation only after closed.
 local function run_confirmation_test_closing_scenario(resolve_request)
     local state, confirmation = confirmation_fixture("First")
@@ -258,10 +303,12 @@ end
 local function run_tests()
     test_confirmation_prompt()
     test_confirmation_accepts_once()
+    test_acceptance_failure_closes_prompt()
     test_confirmation_cancellation_paths()
     test_confirmation_silent_cancellation()
     test_confirmation_ignores_requests_while_active()
     test_confirmation_ignores_requests_while_closing()
+    test_synchronous_closure_releases_request()
     test_real_mp_api()
 end
 
