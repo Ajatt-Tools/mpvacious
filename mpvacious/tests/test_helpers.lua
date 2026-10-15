@@ -348,12 +348,30 @@ local function test_collapse_whitespace()
     h.assert_equals(h.collapse_whitespace("a \t \n b"), "a b")
 end
 
---- Verify HTML entities decode to their literal characters.
+--- Verify HTML entities decode once while unknown entities remain unchanged.
 local function test_unescape_special_characters()
-    -- Test unescape_special_characters
-    h.assert_equals(h.unescape_special_characters("that&apos;s"), "that's")
-    h.assert_equals(h.unescape_special_characters("that&#39;s &amp; &quot;ok&quot;"), 'that\'s & "ok"')
-    h.assert_equals(h.unescape_special_characters("&lt;tag&gt;"), "<tag>")
+    for _, case in ipairs {
+        { input = "that&apos;s", expected = "that's" },
+        { input = "that&#39;s &amp; &quot;ok&quot;", expected = 'that\'s & "ok"' },
+        { input = "&lt;tag&gt;", expected = "<tag>" },
+        { input = "&amp;lt;tag&amp;gt;", expected = "&lt;tag&gt;" },
+        { input = "&amp;amp;", expected = "&amp;" },
+        { input = "&unknown; &#123; &nbsp;", expected = "&unknown; &#123; &nbsp;" },
+        { input = "plain text", expected = "plain text" },
+        { input = "", expected = "" },
+    } do
+        h.assert_equals(h.unescape_special_characters(case.input), case.expected)
+    end
+end
+
+--- Keep gsub replacement counts out of both helpers' public return values.
+local function test_entity_helpers_return_only_strings()
+    for _, helper in ipairs { h.escape_special_characters, h.unescape_special_characters } do
+        for _, text in ipairs { "", "plain text", "<tag> &amp; &quot;" } do
+            h.assert_equals(select("#", helper(text)), 1)
+            h.assert_equals(type(helper(text)), "string")
+        end
+    end
 end
 
 --- Verify HTML escaping is idempotent and reversible for plain text.
@@ -589,6 +607,7 @@ local function run_tests()
     test_trim()
     test_normalize_subtitle_text()
     test_unescape_special_characters()
+    test_entity_helpers_return_only_strings()
     test_escape_special_characters()
     test_get_episode_number()
     h.assert_equals(h.join_lists({ 1, 2 }, { 3 }, {}, { 4, 5 }), { 1, 2, 3, 4, 5 })

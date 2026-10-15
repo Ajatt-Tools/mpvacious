@@ -234,6 +234,26 @@ local function test_mismatched_update_requires_confirmation()
     h.assert_equals(result.clear_count, 2)
 end
 
+--- Require confirmation when escaped angle-bracket content distinguishes two sentences.
+local function test_escaped_sentence_mismatch_requires_confirmation()
+    local result, jobs = { append_count = 0 }, {}
+    make_guarded_update_test_exporter(result, jobs, {
+        confirmation = make_update_test_confirmation(result),
+        current_sentence = "It says <hello> here.",
+        stored_sentence = "It says &lt;goodbye&gt; here.",
+        last_note_ids = { h.minutes_ago(1) },
+    }).update_last_note(true)
+    h.assert_equals(
+        result.confirmation.prompt,
+        with_update_test_countdown(
+            "The target note's SentKanji does not match the current subtitle.\nUpdate this note anyway?"
+        )
+    )
+    h.assert_equals(jobs, {})
+    h.assert_equals(result.append_count, 0)
+    h.assert_equals(result.clear_count, nil)
+end
+
 --- Test that cancelling a mismatched update preserves its selection.
 local function test_cancelled_update_preserves_selection()
     local result, jobs, _, confirmation = make_mismatched_update_test_fixture()
@@ -1091,6 +1111,7 @@ local function run_tests()
     test_confirmation_captures_profile_and_metadata()
     test_reset_for_file_change()
     test_mismatched_update_requires_confirmation()
+    test_escaped_sentence_mismatch_requires_confirmation()
     test_cancelled_update_preserves_selection()
     test_empty_current_subtitle_requires_confirmation()
     test_accepted_update_reuses_target_snapshot()
