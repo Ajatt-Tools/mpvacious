@@ -24,15 +24,14 @@ local function test_subtitle(is_valid)
     }
 end
 
---- Record confirmation requests and cancellations in workflow tests.
+--- Record the first confirmation and ignore further requests until it is dismissed.
 local function make_test_confirmation(state)
     return {
         get_confirmation_timeout = fixtures.get_confirmation_timeout_for_test,
-        cancel = function()
-            state.cancelled = state.cancelled + 1
-        end,
         confirm = function(options)
-            state.confirmation = options
+            if not state.confirmation then
+                state.confirmation = options
+            end
         end,
     }
 end
@@ -90,7 +89,6 @@ end
 --- Build a fresh request, state, and workflow for one test scenario.
 local function workflow_fixture(is_valid, warning)
     local state = {
-        cancelled = 0,
         performed = 0,
         exporter = {},
         target_notes = { { note_id = 1, fields = {} } },
@@ -100,23 +98,34 @@ local function workflow_fixture(is_valid, warning)
     return state, request, workflow
 end
 
---- Test that a replacement cancels the prior prompt before collecting a subtitle.
-local function test_update_cancels_before_collecting()
-    local events = {}
-    local state = { cancelled = 0, performed = 0, exporter = {} }
-    local components = test_components(state, test_subtitle(true), nil)
-    components.confirmation.cancel = function()
-        table.insert(events, "cancel")
-    end
-    components.context.collect_subtitle = function()
-        h.assert_equals(events, { "cancel" })
-        return test_subtitle(true)
-    end
-    local workflow = make_note_update_workflow(components)
-    local request = { note_ids = { 1 }, overwrite = true, options = {} }
+--- A second mismatched update cannot cancel or replace the first confirmation.
+local function test_update_preserves_existing_confirmation()
+    local state, request, workflow = workflow_fixture(true, "Different sentence.")
     h.assert_equals(workflow.update_notes(request), state.exporter)
+    local original_prompt, original_request = state.confirmation, state.prepared_request
+    h.assert_equals(workflow.update_notes(request), state.exporter)
+    h.assert_equals(rawequal(state.confirmation, original_prompt), true)
+    h.assert_equals(state.performed, 0)
+    original_prompt.on_accept()
+    h.assert_equals(state.performed, 1)
+    h.assert_equals(rawequal(state.performed_request, original_request), true)
     h.assert_equals(request.subtitle, nil)
     h.assert_equals(request.target_notes, nil)
+end
+
+--- Immediate updates still execute without dismissing a waiting confirmation.
+local function test_immediate_update_preserves_existing_confirmation()
+    local state, request, workflow = workflow_fixture(true, "Different sentence.")
+    workflow.update_notes(request)
+    local original_prompt, original_request = state.confirmation, state.prepared_request
+    request.options.check_recent_notes = false
+    h.assert_equals(workflow.update_notes(request), state.exporter)
+    h.assert_equals(state.performed, 1)
+    h.assert_equals(rawequal(state.confirmation, original_prompt), true)
+    h.assert_equals(rawequal(state.performed_request, original_request), false)
+    original_prompt.on_accept()
+    h.assert_equals(state.performed, 2)
+    h.assert_equals(rawequal(state.performed_request, original_request), true)
 end
 
 --- Pass collected input to context preparation and reuse its execution request on acceptance.
@@ -204,8 +213,6 @@ local function test_update_confirms_before_performing()
         state.confirmation.prompt,
         with_workflow_test_countdown("Different sentence.\nUpdate this note anyway?")
     )
-    state.confirmation.on_cancel()
-    h.assert_equals(state.performed, 0)
     state.confirmation.on_accept()
     h.assert_equals(state.performed, 1)
     h.assert_equals(state.performed_request.note_ids, nil)
@@ -249,7 +256,8 @@ end
 
 --- Run workflow tests in both standalone and mpv-backed runners.
 local function run_tests()
-    test_update_cancels_before_collecting()
+    test_update_preserves_existing_confirmation()
+    test_immediate_update_preserves_existing_confirmation()
     test_update_passes_request_to_context()
     test_update_defaults_missing_options()
     test_invalid_subtitle_notifies_without_confirming()

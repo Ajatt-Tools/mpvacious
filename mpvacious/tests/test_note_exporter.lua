@@ -184,12 +184,13 @@ local function make_update_test_confirmation(result)
         cancel = function(reason)
             if result.confirmation then
                 result.cancellation_reason = reason
-                result.confirmation.on_cancel()
                 result.confirmation = nil
             end
         end,
         confirm = function(options)
-            result.confirmation = options
+            if not result.confirmation then
+                result.confirmation = options
+            end
         end,
     }
 end
@@ -204,13 +205,14 @@ local function make_mismatched_update_test_fixture()
     local result = { append_count = 0 }
     local jobs = {}
     local note_id = h.minutes_ago(1)
+    local confirmation = make_update_test_confirmation(result)
     make_guarded_update_test_exporter(result, jobs, {
-        confirmation = make_update_test_confirmation(result),
+        confirmation = confirmation,
         current_sentence = "それは うまくすれば 鉛から黄金を生み出すことも 可能になる",
         stored_sentence = "まあ 無理やり手伝った というのが正しいけれど それで稼いだお金よ",
         last_note_ids = { note_id },
     }).update_last_note(true)
-    return result, jobs, note_id
+    return result, jobs, note_id, confirmation
 end
 
 --- Test that a mismatched note remains unchanged until acceptance.
@@ -234,8 +236,8 @@ end
 
 --- Test that cancelling a mismatched update preserves its selection.
 local function test_cancelled_update_preserves_selection()
-    local result, jobs = make_mismatched_update_test_fixture()
-    result.confirmation.on_cancel()
+    local result, jobs, _, confirmation = make_mismatched_update_test_fixture()
+    confirmation.cancel()
     h.assert_equals(#jobs, 0)
     h.assert_equals({ result.clear_count, result.menu_updates }, { nil, nil })
 end
@@ -244,8 +246,9 @@ end
 local function test_empty_current_subtitle_requires_confirmation()
     local result = { append_count = 0 }
     local jobs = {}
+    local confirmation = make_update_test_confirmation(result)
     make_guarded_update_test_exporter(result, jobs, {
-        confirmation = make_update_test_confirmation(result),
+        confirmation = confirmation,
         current_sentence = "",
         last_note_ids = { h.minutes_ago(1) },
     }).update_last_note(true)
@@ -256,7 +259,7 @@ local function test_empty_current_subtitle_requires_confirmation()
             "Couldn't verify the current subtitle against target notes' SentKanji field.\nUpdate this note anyway?"
         )
     )
-    result.confirmation.on_cancel()
+    confirmation.cancel()
     h.assert_equals({ result.clear_count, result.menu_updates }, { nil, nil })
 end
 

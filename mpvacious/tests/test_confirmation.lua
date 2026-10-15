@@ -2,7 +2,7 @@
 Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
-Confirmation lifecycle and reentrant cancellation tests.
+Confirmation lifecycle, busy rejection, and stale callback tests.
 ]]
 
 local mp = require("mp")
@@ -80,16 +80,6 @@ local function close_confirmation_test_input(state)
     (state.closing_options or state.options).closed()
 end
 
---- Run one scheduled confirmation-test task after the old handler closes.
-local function run_confirmation_test_scheduled_open(state)
-    state.timers[#state.timers].callback()
-end
-
---- Run one confirmation-test timer by creation order.
-local function run_confirmation_test_timer(state, index)
-    state.timers[index].callback()
-end
-
 --- Return the confirmation-test timeout callback recorded in `state`.
 local function get_confirmation_test_timeout(state)
     return state.timers[1].callback
@@ -97,15 +87,12 @@ end
 
 --- Start one confirmation and return its recorded state plus controller.
 local function confirmation_fixture(prompt)
-    local state = { accepted = 0, cancelled = 0, terminated = 0, timer_kills = 0, timers = {} }
+    local state = { accepted = 0, terminated = 0, timer_kills = 0, timers = {} }
     local confirmation = make_confirmation(make_fake_mp_api(state))
     confirmation.confirm({
         prompt = prompt or "Warning\nProceed?",
         on_accept = function()
             state.accepted = state.accepted + 1
-        end,
-        on_cancel = function()
-            state.cancelled = state.cancelled + 1
         end,
     })
     return state, confirmation
@@ -128,7 +115,7 @@ local function test_confirmation_accepts_once()
     state.options.submit(1)
     close_confirmation_test_input(state)
     confirmation.cancel("Must not report cancellation after acceptance.")
-    h.assert_equals({ state.accepted, state.cancelled }, { 1, 0 })
+    h.assert_equals(state.accepted, 1)
     h.assert_equals({ state.terminated, state.timer_kills }, { 1, 1 })
     h.assert_equals(state.notifications, {})
 end
@@ -145,9 +132,8 @@ end
 
 --- Test explicit No and timeout cancellation paths.
 local function assert_confirmation_canceled(state, expected_terminations)
-    h.assert_equals({ state.accepted, state.cancelled }, { 0, 1 })
+    h.assert_equals(state.accepted, 0)
     h.assert_equals({ state.terminated, state.timer_kills }, { expected_terminations, 1 })
-    h.assert_equals(state.cancelled, 1)
 end
 
 --- Run one confirmation-test cancellation scenario.
@@ -187,7 +173,8 @@ local function test_confirmation_silent_cancellation()
     h.assert_equals(state.notifications, {})
     local active_state, active_confirmation = confirmation_fixture()
     active_confirmation.cancel("")
-    h.assert_equals(active_state.cancelled, 1)
+    h.assert_equals(active_state.accepted, 0)
+    h.assert_equals({ active_state.terminated, active_state.timer_kills }, { 1, 1 })
     h.assert_equals(active_state.notifications, {})
 end
 
@@ -198,150 +185,72 @@ local function test_confirmation_cancellation_paths()
     end
 end
 
---- Confirm a replacement request and return its state alongside stale first callbacks.
-local function replacement_fixture()
-    local first, confirmation = confirmation_fixture("First")
-    local first_options = first.options
-    local first_timeout = get_confirmation_test_timeout(first)
-    local second_state = { accepted = 0, cancelled = 0 }
-    confirmation.confirm({
-        prompt = "Second",
-        on_accept = function()
-            second_state.accepted = second_state.accepted + 1
-        end,
-        on_cancel = function()
-            second_state.cancelled = second_state.cancelled + 1
-        end,
-    })
-    return first, confirmation, first_options, first_timeout, second_state
-end
-
---- Report a queued cancellation once while an already-resolved active prompt closes.
-local function test_pending_cancellation_notification()
-    local state, confirmation, stale_options, stale_timeout, pending = replacement_fixture()
-    confirmation.cancel("Video changed.")
-    h.assert_equals(pending.cancelled, 1)
-    close_confirmation_test_input(state)
-    run_confirmation_test_scheduled_open(state)
-    stale_options.submit(2)
-    stale_timeout()
-    confirmation.cancel("Must not report cancellation twice.")
-    assert_confirmation_test_notifications(state, { "Video changed." })
-end
-
---- Test that replacing a request cancels it and opens the replacement after closed.
-local function test_confirmation_supersedes_and_cancels()
-    local first, confirmation, first_options, first_timeout, second_state = replacement_fixture()
-    h.assert_equals(first.cancelled, 1)
-    close_confirmation_test_input(first)
-    run_confirmation_test_scheduled_open(first)
-    h.assert_equals(first.options.prompt, "Second")
-    first_options.submit(1)
-    first_options.submit(2)
-    first_options.closed()
-    first_timeout()
-    h.assert_equals({ first.accepted, second_state.accepted, second_state.cancelled }, { 0, 0, 0 })
-    confirmation.cancel()
-    h.assert_equals(second_state.cancelled, 1)
-end
-
---- Test that a stale delayed opener cannot replace an active mpv 0.41 input handler.
-local function test_stale_delayed_open_is_inert()
-    local first, confirmation = confirmation_fixture("First")
-    confirmation.confirm({ prompt = "Second", on_accept = h.noop, on_cancel = h.noop })
-    close_confirmation_test_input(first)
-    confirmation.confirm({ prompt = "Third", on_accept = h.noop, on_cancel = h.noop })
-    confirmation.confirm({ prompt = "Fourth", on_accept = h.noop, on_cancel = h.noop })
-    run_confirmation_test_timer(first, 2)
-    h.assert_equals(first.options.prompt, "Third")
-    close_confirmation_test_input(first)
-    run_confirmation_test_scheduled_open(first)
-    h.assert_equals(first.options.prompt, "Fourth")
-end
-
---- Queue a test request whose cancellation submits a counted replacement.
-local function queue_reentrant_confirmation_test_request(confirmation, counts, scenario)
-    confirmation.confirm({
-        prompt = scenario.prompt,
-        on_accept = h.noop,
-        on_cancel = function()
-            counts[scenario.cancel_key] = counts[scenario.cancel_key] + 1
-            confirmation.confirm({
-                prompt = scenario.replacement_prompt,
-                on_accept = function()
-                    counts[scenario.accept_key] = counts[scenario.accept_key] + 1
-                end,
-                on_cancel = h.noop,
-            })
-        end,
-    })
-end
-
---- Keep a new request queued from an active request's cancellation callback.
-local function test_reentrant_active_cancellation()
-    local state = { terminated = 0, timer_kills = 0, timers = {}, cancelled = 0, accepted = 0 }
-    local confirmation = make_confirmation(make_fake_mp_api(state))
-    queue_reentrant_confirmation_test_request(confirmation, state, {
-        prompt = "First",
-        cancel_key = "cancelled",
-        replacement_prompt = "New",
-        accept_key = "accepted",
-    })
-    local stale_options = state.options
-    confirmation.cancel()
-    h.assert_equals(state.cancelled, 1)
-    close_confirmation_test_input(state)
-    run_confirmation_test_scheduled_open(state)
-    h.assert_equals(state.options.prompt, "New")
-    stale_options.submit(1)
-    state.options.submit(1)
-    h.assert_equals({ state.cancelled, state.accepted }, { 1, 1 })
-end
-
---- Replacing a pending request must not discard a newer reentrant request.
-local function test_reentrant_pending_replacement()
+--- Ignore repeated prompt requests without closing, resolving, or queueing the first.
+local function test_confirmation_ignores_requests_while_active()
     local state, confirmation = confirmation_fixture("First")
-    local counts = { second = 0, third = 0, fourth = 0 }
-    queue_reentrant_confirmation_test_request(confirmation, counts, {
-        prompt = "Second",
-        cancel_key = "second",
-        replacement_prompt = "Fourth",
-        accept_key = "fourth",
-    })
-    confirmation.confirm({
-        prompt = "Third",
-        on_accept = h.noop,
-        on_cancel = function() counts.third = counts.third + 1 end,
-    })
-    close_confirmation_test_input(state)
-    run_confirmation_test_scheduled_open(state)
-    h.assert_equals(state.options.prompt, "Fourth")
+    local first_options = state.options
+    for _ = 1, 3 do
+        confirmation.confirm { prompt = "Ignored", on_accept = h.as_callback(error, "ignored prompt was accepted") }
+    end
+    h.assert_equals(rawequal(state.options, first_options), true)
+    h.assert_equals({ #state.timers, state.terminated, state.timer_kills }, { 1, 0, 0 })
     state.options.submit(1)
-    h.assert_equals({ counts.second, counts.third, counts.fourth }, { 1, 1, 1 })
+    close_confirmation_test_input(state)
+    h.assert_equals(state.accepted, 1)
+    h.assert_equals(#state.timers, 1)
+    h.assert_equals(state.options.prompt, "First")
+    h.assert_equals(state.notifications, {})
 end
 
---- Public cancellation preserves a request queued by the pending callback.
-local function test_reentrant_pending_cancellation()
+--- Old input and timeout callbacks must not resolve or close a newly opened prompt.
+local function assert_stale_confirmation_test_callbacks(state, old_options, old_timeout)
+    local counts = { state.accepted, state.terminated, state.timer_kills }
+    local notifications = h.deep_copy(state.notifications)
+    old_options.submit(1)
+    old_options.submit(2)
+    old_options.closed()
+    old_timeout()
+    h.assert_equals({ state.accepted, state.terminated, state.timer_kills }, counts)
+    h.assert_equals(state.notifications, notifications)
+end
+
+--- Reject requests while closing and accept a fresh invocation only after closed.
+local function run_confirmation_test_closing_scenario(resolve_request)
     local state, confirmation = confirmation_fixture("First")
-    local counts = { old = 0, new = 0 }
-    queue_reentrant_confirmation_test_request(confirmation, counts, {
-        prompt = "Old",
-        cancel_key = "old",
-        replacement_prompt = "New",
-        accept_key = "new",
-    })
-    confirmation.cancel()
+    local old_options, old_timeout = state.options, get_confirmation_test_timeout(state)
+    resolve_request(state, confirmation)
+    local accepted = state.accepted
+    confirmation.confirm { prompt = "Ignored", on_accept = h.as_callback(error, "closing prompt was replaced") }
+    h.assert_equals(rawequal(state.options, old_options), true)
+    h.assert_equals(#state.timers, 1)
     close_confirmation_test_input(state)
-    run_confirmation_test_scheduled_open(state)
-    h.assert_equals(state.options.prompt, "New")
+    confirmation.confirm {
+        prompt = "Next",
+        on_accept = function() state.accepted = state.accepted + 1 end,
+    }
+    h.assert_equals(state.options.prompt, "Next")
+    h.assert_equals(#state.timers, 2)
+    assert_stale_confirmation_test_callbacks(state, old_options, old_timeout)
     state.options.submit(1)
-    h.assert_equals({ counts.old, counts.new }, { 1, 1 })
+    h.assert_equals(state.accepted, accepted + 1)
+end
+
+--- Cover closing after Yes, No, timeout, and explicit cancellation.
+local function test_confirmation_ignores_requests_while_closing()
+    for _, resolve_request in ipairs {
+        function(state) state.options.submit(1) end,
+        function(state) state.options.submit(2) end,
+        function(state) get_confirmation_test_timeout(state)() end,
+        function(_, confirmation) confirmation.cancel("Video changed.") end,
+    } do
+        run_confirmation_test_closing_scenario(resolve_request)
+    end
 end
 
 --- Smoke-test real mp and mp.input APIs without producing a test-run warning.
 local function test_real_mp_api()
     local confirmation = make_confirmation({ input = input, msg = { warn = h.noop }, mp = mp })
-    confirmation.confirm({ prompt = "Test confirmation", on_accept = h.noop, on_cancel = h.noop })
+    confirmation.confirm({ prompt = "Test confirmation", on_accept = h.noop })
     confirmation.cancel()
 end
 
@@ -351,12 +260,8 @@ local function run_tests()
     test_confirmation_accepts_once()
     test_confirmation_cancellation_paths()
     test_confirmation_silent_cancellation()
-    test_pending_cancellation_notification()
-    test_confirmation_supersedes_and_cancels()
-    test_stale_delayed_open_is_inert()
-    test_reentrant_active_cancellation()
-    test_reentrant_pending_replacement()
-    test_reentrant_pending_cancellation()
+    test_confirmation_ignores_requests_while_active()
+    test_confirmation_ignores_requests_while_closing()
     test_real_mp_api()
 end
 
