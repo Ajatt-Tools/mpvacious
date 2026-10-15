@@ -24,37 +24,36 @@ local function make_confirmation(mp_api)
     }
     local public = {}
 
-    --- Resolve a request once and stop its timeout timer before invoking callbacks.
-    local function resolve(request, was_accepted)
+    --- Resolve once, stop the timer, and close the active prompt.
+    --- Return whether this call initiated prompt closure.
+    local function resolve_and_close_request(request)
         if request.resolved then
-            return
+            return false
         end
         request.resolved = true
         if request.timer then
             request.timer:kill()
         end
-        if was_accepted then
+        if self.active ~= request or request.closed then
+            return false
+        end
+        request.closed = true
+        mp_api.input.terminate()
+        return true
+    end
+
+    --- Accept once after resolving and requesting prompt closure.
+    local function accept_request(request)
+        if resolve_and_close_request(request) then
             request.on_accept()
         end
     end
 
-    --- Close the active request after its callback has resolved.
-    local function close_request(request)
-        if self.active ~= request or request.closed then
-            return
-        end
-        request.closed = true
-        mp_api.input.terminate()
-    end
-
     --- Cancel once, close any active prompt, and report an optional reason.
     local function cancel_request(request, reason)
-        if request.resolved then
-            return
+        if resolve_and_close_request(request) then
+            self.notify(reason, "info", 4)
         end
-        resolve(request, false)
-        close_request(request)
-        self.notify(reason, "info", 4)
     end
 
     --- Return input callbacks tied to a request rather than mutable controller state.
@@ -68,14 +67,14 @@ local function make_confirmation(mp_api)
                     return
                 end
                 if index == 1 then
-                    resolve(request, true)
-                    close_request(request)
+                    accept_request(request)
                 else
                     cancel_request(request, "Cancelled by the user.")
                 end
             end,
             closed = function()
-                resolve(request, false)
+                request.closed = true
+                cancel_request(request)
                 if self.active ~= request then
                     return
                 end
