@@ -43,6 +43,34 @@ local function test_sentence_relationship(test_guard)
     end
 end
 
+--- Compare HTML spacing in either input while retaining mismatch and empty-text safeguards.
+local function assert_guard_html_spacing_test_case(test_guard, separator)
+    local formatted = "hello" .. separator .. "world"
+    local unrelated = "goodbye" .. separator .. "moon"
+    local fields = { { SentKanji = formatted } }
+    h.assert_equals(test_guard.sentences_are_related("hello world", formatted), true)
+    h.assert_equals(test_guard.sentences_are_related(formatted, "hello world"), true)
+    h.assert_equals(test_guard.current_subtitle_warning(fields, "hello world", "SentKanji"), nil)
+    h.assert_equals(test_guard.current_subtitle_warning({ { SentKanji = "hello world" } }, formatted, "SentKanji"), nil)
+    h.assert_equals(test_guard.sentences_are_related("hello world", unrelated), false)
+    h.assert_equals(
+        test_guard.current_subtitle_warning(fields, unrelated, "SentKanji"),
+        "The target note's SentKanji does not match the current subtitle."
+    )
+    h.assert_equals(test_guard.sentences_are_related(separator, separator), false)
+    h.assert_equals(
+        test_guard.current_subtitle_warning(fields, separator, "SentKanji"),
+        "Couldn't verify the current subtitle against target notes' SentKanji field."
+    )
+end
+
+--- Treat nonbreaking-space entities and common HTML line breaks as ordinary spacing.
+local function test_html_sentence_spacing(test_guard)
+    for _, separator in ipairs { "&nbsp;", "<br>", "<br/>", "<br />", "<BR>", "<BR />" } do
+        assert_guard_html_spacing_test_case(test_guard, separator)
+    end
+end
+
 --- Return fresh warning scenarios for matching, mismatched, blank, and unavailable fields.
 local function make_subtitle_warning_test_cases()
     local partial_match = "Only 1 of 2 target notes have SentKanji matching the current subtitle."
@@ -82,6 +110,7 @@ end
 local function run_tests(test_guard)
     test_guard = test_guard or make_note_update_guard()
     test_sentence_relationship(test_guard)
+    test_html_sentence_spacing(test_guard)
     test_current_subtitle_warning(test_guard)
 end
 
