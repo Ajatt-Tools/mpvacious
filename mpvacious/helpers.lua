@@ -443,9 +443,10 @@ function this.notify(message, level, duration)
     mp.osd_message(message, duration)
 end
 
+--- Return the selected audio, subtitle, or video track, if track metadata is available.
 function this.get_active_track(track_type)
-    -- track_type == audio|sub
-    for _, track in pairs(mp.get_property_native("track-list")) do
+    -- track_type == audio|sub|video
+    for _, track in pairs(mp.get_property_native("track-list") or {}) do
         if track.type == track_type and track.selected == true then
             return track
         end
