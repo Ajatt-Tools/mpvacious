@@ -127,31 +127,6 @@ local function make_confirmation(mp_api)
         open_request(request)
     end
 
-    --- Queue a prompt, allowing cancellation callbacks to supersede it with a newer one.
-    local function queue_confirmation(options)
-        local previous = private.pending
-        local incoming = {
-            prompt = options.prompt,
-            on_accept = options.on_accept,
-            on_cancel = options.on_cancel,
-            resolved = false,
-            closed = false,
-        }
-        private.pending = incoming
-        if previous then
-            resolve(previous, false)
-        end
-        if private.pending ~= incoming then
-            -- A cancellation callback queued a newer request. Latest wins.
-            return
-        end
-        if private.active then
-            finish_active(false)
-        else
-            private.open_pending()
-        end
-    end
-
     ------------------------------------------------------------
     --- Public
 
@@ -176,7 +151,27 @@ local function make_confirmation(mp_api)
 
     --- Present a Yes/No prompt and resolve it exactly once.
     function public.confirm(options)
-        queue_confirmation(options)
+        local previous = private.pending
+        local incoming = {
+            prompt = options.prompt,
+            on_accept = options.on_accept,
+            on_cancel = options.on_cancel,
+            resolved = false,
+            closed = false,
+        }
+        private.pending = incoming
+        if previous then
+            resolve(previous, false)
+        end
+        if private.pending ~= incoming then
+            -- A cancellation callback queued a newer request. Latest wins.
+            return
+        end
+        if private.active then
+            finish_active(false)
+        else
+            private.open_pending()
+        end
     end
 
     return public
