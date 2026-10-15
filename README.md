@@ -378,9 +378,10 @@ new-note export stops before creating media and retains your subtitle selection 
 When updating recent notes,
 mpvacious compares the configured sentence field with the current subtitle.
 If a target sentence does not appear related, select **Yes** to update anyway or **No** to cancel.
-The prompt defaults to "No" and expires after ten seconds.
+The prompt defaults to "No" and displays its timeout.
 Changing the loaded video cancels an unanswered update confirmation and clears
 saved subtitle timings and quick-creation options.
+Selecting **No** preserves your selection and quick-creation options.
 If media creation fails during an update, the existing note fields are left unchanged.
 
 **Clipboard:**
