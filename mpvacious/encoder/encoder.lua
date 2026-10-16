@@ -17,6 +17,7 @@ local ffmpeg_encoder = require("encoder.ffmpeg")
 ------------------------------------------------------------
 --- utility functions
 
+--- Extend an audio window and clamp it to zero and the duration supplied by the job.
 local function pad_timings(padding, start_time, end_time, video_duration)
     start_time = start_time - padding
     end_time = end_time + padding
