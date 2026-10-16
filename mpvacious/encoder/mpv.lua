@@ -56,15 +56,24 @@ local function make_mpv_encoder(cfg_mgr, support, components)
         }
     end
 
+    --- Build shared AVIF options and enable still-picture mode only for static snapshots.
+    local function make_avif_encoder_args(codec, quality, still_picture)
+        local args = {
+            "--ovc=" .. codec,
+            -- cpu-used < 6 can take a lot of time to encode.
+            "--ovcopts-add=cpu-used=6",
+            string.format("--ovcopts-add=crf=%d", eutils.quality_to_crf_avif(quality)),
+        }
+        if still_picture then
+            table.insert(args, "--ovcopts-add=still-picture=1")
+        end
+        return args
+    end
+
+    --- Build codec and quality arguments for the configured static image format.
     local function make_encoder_args()
         if config().snapshot_format == "avif" then
-            return {
-                "--ovc=" .. self.snapshot_codec,
-                -- cpu-used < 6 can take a lot of time to encode.
-                "--ovcopts-add=cpu-used=6",
-                string.format("--ovcopts-add=crf=%d", eutils.quality_to_crf_avif(config().snapshot_quality)),
-                "--ovcopts-add=still-picture=1",
-            }
+            return make_avif_encoder_args(self.snapshot_codec, config().snapshot_quality, true)
         elseif config().snapshot_format == "webp" then
             return {
                 "--ovc=" .. self.snapshot_codec,
@@ -83,14 +92,10 @@ local function make_mpv_encoder(cfg_mgr, support, components)
         end
     end
 
+    --- Build codec and quality arguments for the configured animated image format.
     local function make_animated_encoder_args()
         if config().animated_snapshot_format == "avif" then
-            return {
-                "--ovc=" .. self.animated_snapshot_codec,
-                -- cpu-used < 6 can take a lot of time to encode.
-                "--ovcopts-add=cpu-used=6",
-                string.format("--ovcopts-add=crf=%d", eutils.quality_to_crf_avif(config().animated_snapshot_quality)),
-            }
+            return make_avif_encoder_args(self.animated_snapshot_codec, config().animated_snapshot_quality, false)
         else
             return {
                 "--ovc=" .. self.animated_snapshot_codec,
