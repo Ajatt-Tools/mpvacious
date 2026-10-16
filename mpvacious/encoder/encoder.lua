@@ -17,8 +17,7 @@ local ffmpeg_encoder = require("encoder.ffmpeg")
 ------------------------------------------------------------
 --- utility functions
 
-local function pad_timings(padding, start_time, end_time)
-    local video_duration = mp.get_property_number("duration")
+local function pad_timings(padding, start_time, end_time, video_duration)
     start_time = start_time - padding
     end_time = end_time + padding
 
@@ -196,6 +195,96 @@ local function make_snapshot_job(opts)
         self.on_finish_fn = fn
         return job
     end
+
+    return job
+end
+
+--- Create a deferred audio job owning its timing fields and output destination.
+local function make_audioclip_job(opts)
+    -- Dependencies (API)
+    local mp_api = opts.mp_api or mp
+    local filenames = opts.filename_factory or filename_factory
+    local subprocess = opts.subprocess or h.subprocess
+    local logger = opts.logger or msg
+
+    -- Private fields
+    local self = {
+        -- Args passed to constructor.
+        -- Padding changes only this job's numeric timing fields, never the caller or sibling jobs.
+        sub = h.shallow_copy(opts.sub),
+        cfg_mgr = opts.cfg_mgr,
+        output_dir_path = opts.output_dir_path,
+        backend = opts.backend, -- ffmpeg or mpv
+        audio_padding = opts.audio_padding,
+        -- Initialized here.
+        on_finish_fn = nil,
+    }
+
+    -- Public interface
+    local job = {}
+
+    ------------------------------------------------------------
+    --- Private
+
+    --- Return the active configuration for this encoder instance.
+    local function config()
+        return self.cfg_mgr.config()
+    end
+
+    --- Name the audio clip using its timing window and configured extension.
+    local function make_audio_filename()
+        -- Generates a filename for the audio
+        return filenames.make_filename(self.sub["start"], self.sub["end"], config().audio_extension)
+    end
+
+    ------------------------------------------------------------
+    --- Public
+
+    job.filename = make_audio_filename()
+
+    --- Start audio creation using this job's captured timings and padding.
+    job.run_async = function()
+        if h.is_empty(self.output_dir_path) then
+            local reason = "Output directory wasn't provided. Audio file will not be created."
+            logger.error(reason)
+            -- Report failure so a media batch cannot wait forever or treat this as a successful skip.
+            if type(self.on_finish_fn) == "function" then
+                self.on_finish_fn(nil, reason)
+            end
+            return
+        end
+
+        if not h.is_empty(config().audio_field) then
+            local source_path = mp_api.get_property("path")
+            local output_path = utils.join_path(self.output_dir_path, job.filename)
+
+            if self.audio_padding > 0 then
+                -- Use this job's mp API for duration rather than reaching into the shared global API.
+                self.sub["start"], self.sub["end"] = pad_timings(
+                    self.audio_padding, self.sub["start"], self.sub["end"], mp_api.get_property_number("duration")
+                )
+            end
+
+            --- Start encoding and forward its completion to the media reporter.
+            local function start_encoding(args)
+                local completion = report_creation_result(output_path)
+                    .on_finish(self.on_finish_fn)
+                    .preview_audio(config().preview_audio)
+                subprocess { args = args, completion_fn = completion.run }
+            end
+
+            self.backend.make_audio_args(source_path, output_path, self.sub["start"], self.sub["end"], start_encoding)
+        else
+            print("Audio will not be created.")
+        end
+    end
+
+    --- Register the callback receiving the completed media path and error.
+    job.on_finish = function(fn)
+        self.on_finish_fn = fn
+        return job
+    end
+
     return job
 end
 
@@ -207,6 +296,7 @@ local function make_encoder(components)
     components = components or {}
     local subprocess = components.subprocess or h.subprocess
     local has_video_track = components.has_video_track or h.has_video_track
+    local has_audio_track = components.has_audio_track or h.has_audio_track
     local get_active_track = components.get_active_track or h.get_active_track
     local filenames = components.filename_factory or filename_factory
     local mp_api = components.mp or mp
@@ -229,45 +319,12 @@ local function make_encoder(components)
         return self.cfg_mgr.config()
     end
 
-    --- Encode padded audio and report its creation result with optional playback.
-    local function create_audio(start_timestamp, end_timestamp, filename, padding, on_finish_fn)
-        if h.is_empty(self.output_dir_path) then
-            return msg.error("Output directory wasn't provided. Audio file will not be created.")
-        end
-
-        if not h.is_empty(config().audio_field) then
-            local source_path = mp_api.get_property("path")
-            local output_path = utils.join_path(self.output_dir_path, filename)
-
-            if padding > 0 then
-                start_timestamp, end_timestamp = pad_timings(padding, start_timestamp, end_timestamp)
-            end
-
-            --- Start encoding and forward its completion to the media reporter.
-            local function start_encoding(args)
-                local completion =
-                    report_creation_result(output_path).on_finish(on_finish_fn).preview_audio(config().preview_audio)
-                subprocess { args = args, completion_fn = completion.run }
-            end
-
-            self.encoder.make_audio_args(source_path, output_path, start_timestamp, end_timestamp, start_encoding)
-        else
-            print("Audio will not be created.")
-        end
-    end
-
-    --- Name the audio clip using its timing window and configured extension.
-    local function make_audio_filename(sub)
-        -- Generates a filename for the audio
-        return filenames.make_filename(sub["start"], sub["end"], config().audio_extension)
-    end
-
     local function is_snapshot_job(job_type)
         return job_type == "snapshot" and has_video_track() and not h.is_empty(config().image_field)
     end
 
     local function is_audioclip_job(job_type)
-        return job_type == "audioclip" and h.has_audio_track() and not h.is_empty(config().audio_field)
+        return job_type == "audioclip" and has_audio_track() and not h.is_empty(config().audio_field)
     end
 
     --- Prepare a deferred media job or a skipped job when no matching track/field exists.
@@ -288,11 +345,17 @@ local function make_encoder(components)
                 logger = components.logger,
             }
         elseif is_audioclip_job(job_type) then
-            job.filename = make_audio_filename(sub)
-            --- Start audio creation using this job's captured timings and padding.
-            job.run_async = function()
-                create_audio(sub["start"], sub["end"], job.filename, audio_padding, on_finish_fn)
-            end
+            return make_audioclip_job {
+                sub = sub,
+                mp_api = mp_api,
+                cfg_mgr = self.cfg_mgr,
+                filename_factory = filenames,
+                output_dir_path = self.output_dir_path,
+                backend = self.encoder,
+                subprocess = subprocess,
+                logger = components.logger,
+                audio_padding = audio_padding,
+            }
         else
             job.filename = nil
             --- Complete an intentionally skipped media job without an error.
@@ -315,9 +378,9 @@ local function make_encoder(components)
     --- Select the configured FFmpeg or mpv encoding backend.
     local function choose_backend()
         if config().use_ffmpeg then
-            return ffmpeg_encoder.new(self.cfg_mgr, nil, { get_active_track = get_active_track })
+            return ffmpeg_encoder.new(self.cfg_mgr, nil, { get_active_track = get_active_track, mp = mp_api })
         else
-            return mpv_encoder.new(self.cfg_mgr, nil, { get_active_track = get_active_track })
+            return mpv_encoder.new(self.cfg_mgr, nil, { get_active_track = get_active_track, mp = mp_api })
         end
     end
 
