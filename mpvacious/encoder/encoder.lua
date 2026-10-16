@@ -285,6 +285,18 @@ local function make_audioclip_job(opts)
         end
     end
 
+    --- Prepare audio completion and optional preview through isolated I/O boundaries.
+    local function make_completion(output_path)
+        return report_creation_result {
+                file_exists = opts.file_exists,
+                play_audio = opts.play_audio,
+                logger = logger,
+                file_path = output_path,
+            }
+            .on_finish(self.on_finish_fn)
+            .preview_audio(config().preview_audio)
+    end
+
     local function start_audio()
         local source_path = mp_api.get_property("path")
         local output_path = utils.join_path(self.output_dir_path, job.filename)
@@ -293,9 +305,7 @@ local function make_audioclip_job(opts)
 
         --- Start encoding and forward its completion to the media reporter.
         local function start_encoding(args)
-            local completion =
-                report_creation_result(output_path).on_finish(self.on_finish_fn).preview_audio(config().preview_audio)
-            subprocess { args = args, completion_fn = completion.run }
+            subprocess { args = args, completion_fn = make_completion(output_path).run }
         end
 
         self.backend.make_audio_args(source_path, output_path, self.sub["start"], self.sub["end"], start_encoding)
