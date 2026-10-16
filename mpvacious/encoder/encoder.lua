@@ -99,6 +99,15 @@ local function refuse_to_run_again()
     error("job has already been started", 2)
 end
 
+local function handle_missing_output_directory(logger, on_finish_fn, media_type)
+    local reason = string.format("Output directory wasn't provided. %s file will not be created.", media_type)
+    logger.error(reason)
+    -- Report failure so a media batch cannot wait forever or treat this as a successful skip.
+    if type(on_finish_fn) == "function" then
+        on_finish_fn(nil, reason)
+    end
+end
+
 --- Create a deferred snapshot job with its own dependencies and captured destination.
 local function make_snapshot_job(opts)
     -- Dependencies (API)
@@ -178,12 +187,7 @@ local function make_snapshot_job(opts)
         job.run_async = refuse_to_run_again
 
         if h.is_empty(self.output_dir_path) then
-            local reason = "Output directory wasn't provided. Image file will not be created."
-            logger.error(reason)
-            if type(self.on_finish_fn) == "function" then
-                self.on_finish_fn(nil, reason)
-            end
-            return
+            return handle_missing_output_directory(logger, self.on_finish_fn, "Image")
         end
 
         -- Calls the proper function depending on whether or not the snapshot should be animated
@@ -258,13 +262,7 @@ local function make_audioclip_job(opts)
         job.run_async = refuse_to_run_again
 
         if h.is_empty(self.output_dir_path) then
-            local reason = "Output directory wasn't provided. Audio file will not be created."
-            logger.error(reason)
-            -- Report failure so a media batch cannot wait forever or treat this as a successful skip.
-            if type(self.on_finish_fn) == "function" then
-                self.on_finish_fn(nil, reason)
-            end
-            return
+            return handle_missing_output_directory(logger, self.on_finish_fn, "Audio")
         end
 
         if not h.is_empty(config().audio_field) then
