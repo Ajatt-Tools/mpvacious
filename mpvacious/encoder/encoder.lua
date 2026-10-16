@@ -262,11 +262,15 @@ local function make_encoder(components)
         return filenames.make_filename(sub["start"], sub["end"], config().audio_extension)
     end
 
+    local function is_snapshot_job(job_type)
+        return job_type == "snapshot" and has_video_track() and not h.is_empty(config().image_field)
+    end
+
     --- Prepare a deferred media job or a skipped job when no matching track/field exists.
     local function create_job(job_type, sub, audio_padding, snapshot_timestamp)
         local on_finish_fn
         local job = {}
-        if job_type == "snapshot" and has_video_track() and not h.is_empty(config().image_field) then
+        if is_snapshot_job(job_type) then
             return make_snapshot_job {
                 sub = sub,
                 snapshot_timestamp = snapshot_timestamp,
