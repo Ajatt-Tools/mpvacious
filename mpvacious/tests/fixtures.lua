@@ -737,4 +737,42 @@ function this.make_reentrant_update_test_notifier(state, quick_options)
     end
 end
 
+--- Initialize a backend with deterministic codecs and selected-video metadata.
+function this.make_cover_backend_test_context(make_backend, config, video_track)
+    local support = {
+        avif_encoders = {},
+        ffmpeg_support = { snapshot = {} },
+        mpv_support = { snapshot = {} },
+    }
+    local backend = make_backend(this.make_config_manager(config), support, {
+        --- Supply only the scenario's selected video track.
+        get_active_track = function(kind)
+            if kind == "video" then return video_track end
+            return nil
+        end,
+    })
+    backend.init()
+    return backend
+end
+
+--- Record cover-job commands, native screenshots, and requested filename arguments.
+function this.make_cover_encoder_test_components(state, video_track)
+    local components = this.make_recording_encoder_components(state)
+    components.mp = this.make_mp_property_reader { path = "source.m4b", ["time-pos"] = 65 }
+    --- Record native screenshots without requiring a rendered video output.
+    components.mp.command_native_async = function(args) table.insert(state.screenshots, args) end
+    --- Preserve the selected-track boundary when constructing transaction encoders.
+    components.get_active_track = function(kind)
+        if kind == "video" then return video_track end
+        return nil
+    end
+    --- Expose the selected static or animated filename extension and timing arguments.
+    components.filename_factory.make_filename = function(...)
+        local args = { ... }
+        table.insert(state.filename_args, args)
+        return "snapshot" .. args[#args]
+    end
+    return components
+end
+
 return this

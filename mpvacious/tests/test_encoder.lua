@@ -15,6 +15,7 @@ local mpv_backend = require("encoder.mpv")
 local snapshot = require("config.snapshot")
 local subtitle = require("subtitles.subtitle")
 local executables = require("encoder.executables")
+local eutils = require("encoder.utils")
 
 --- Record reporter messages without printing expected test failures.
 local function make_encoder_test_logger(state)
@@ -395,7 +396,173 @@ local function test_loudnorm_profile_isolation()
     end
 end
 
---- Run encoder completion, constructor, codec, and deferred normalization tests.
+--- Give static and animated profiles intentionally different formats, quality, and dimensions.
+local function make_cover_snapshot_test_config(format, use_ffmpeg, animated)
+    local config = make_backend_test_config(format, "avif", use_ffmpeg)
+    config.snapshot_quality, config.snapshot_height = 40, 240
+    config.animated_snapshot_quality, config.animated_snapshot_height = 8, 120
+    config.animated_snapshot_enabled = animated
+    config_utils.validate_config(config)
+    return config
+end
+
+--- Assert static dimensions and format-specific quality are retained in cover commands.
+local function assert_cover_static_profile_test_args(args, config, use_ffmpeg)
+    local command = table.concat(args, " ")
+    h.assert_equals(h.is_substr(command, eutils.static_scale_filter(config)), true)
+    local option, expected
+    if config.snapshot_format == "avif" then
+        option, expected = "--ovcopts-add=crf", tostring(eutils.quality_to_crf_avif(40))
+        if use_ffmpeg then option = "-crf" end
+    elseif config.snapshot_format == "webp" then
+        option, expected = "--ovcopts-add=quality", "40"
+        if use_ffmpeg then option = "-quality" end
+    else
+        option, expected =
+            "--ovcopts", string.format("global_quality=%d*QP2LAMBDA,flags=+qscale", eutils.quality_to_jpeg_qscale(40))
+        if use_ffmpeg then
+            option, expected = "-q:v", tostring(eutils.quality_to_jpeg_qscale(40))
+        end
+    end
+    h.assert_equals(fixtures.encoder_test_option_value(args, option), expected)
+end
+
+--- Verify timed video still seeks and selected covers are extracted without seeking.
+local function assert_cover_backend_test_case(case, format, track)
+    local config = make_cover_snapshot_test_config(format, case.use_ffmpeg, true)
+    local original = h.deep_copy(config)
+    local backend = fixtures.make_cover_backend_test_context(case.make_backend, config, track)
+    local args = backend.make_static_snapshot_args("source.m4b", "snapshot" .. config.snapshot_extension, 65)
+    local seek, selection = eutils.toms(65), nil
+    if track.albumart then
+        seek = nil
+        selection = tostring(track.id or "auto")
+        if case.use_ffmpeg then
+            selection = "0:v:0"
+            if track["ff-index"] ~= nil then selection = "0:" .. tostring(track["ff-index"]) end
+        end
+    end
+    h.assert_equals(fixtures.encoder_test_option_value(args, case.seek), seek)
+    h.assert_equals(fixtures.encoder_test_option_value(args, case.selection), selection)
+    h.assert_equals(fixtures.backend_test_command_codec(args), config.snapshot_codec)
+    assert_cover_static_profile_test_args(args, config, case.use_ffmpeg)
+    h.assert_equals(config, original)
+end
+
+--- Test both static backends with ordinary video, explicit covers, and missing stream identifiers.
+local function test_cover_backend_static_args()
+    local cases = {
+        { make_backend = ffmpeg_backend.new, use_ffmpeg = true, seek = "-ss", selection = "-map" },
+        { make_backend = mpv_backend.new, use_ffmpeg = false, seek = "--start", selection = "--vid" },
+    }
+    for _, case in ipairs(cases) do
+        for _, format in ipairs { "jpg", "webp", "avif" } do
+            for _, track in ipairs {
+                { type = "video", selected = true, id = 7, ["ff-index"] = 2, albumart = false },
+                { type = "video", selected = true, id = 7, ["ff-index"] = 2, albumart = true },
+                { type = "video", selected = true, albumart = true },
+            } do
+                assert_cover_backend_test_case(case, format, track)
+            end
+        end
+    end
+end
+
+--- Retain range timing and animation filters for ordinary video.
+local function assert_normal_animated_job_test_args(args, config, use_ffmpeg)
+    local seek, finish, frames = "--start", "--end", "--frames"
+    if use_ffmpeg then
+        seek, finish, frames = "-ss", "-to", "-frames:v"
+    end
+    h.assert_equals(fixtures.encoder_test_option_value(args, seek), eutils.toms(60))
+    h.assert_equals(fixtures.encoder_test_option_value(args, finish), eutils.toms(70))
+    h.assert_equals(fixtures.encoder_test_option_value(args, frames), nil)
+    local command = table.concat(args, " ")
+    h.assert_equals(h.is_substr(command, eutils.animated_scale_filter(config)), true)
+    h.assert_equals(h.is_substr(command, "fps=" .. tostring(config.animated_snapshot_fps)), true)
+end
+
+--- Assert encoded covers use static commands while ordinary video retains animation.
+local function assert_cover_encoded_job_test_args(args, config, case)
+    if case.animated and not case.albumart then
+        assert_normal_animated_job_test_args(args, config, case.use_ffmpeg)
+        return
+    end
+    assert_cover_static_profile_test_args(args, config, case.use_ffmpeg)
+    if case.albumart then
+        h.assert_equals(fixtures.encoder_test_option_value(args, "-ss"), nil)
+        h.assert_equals(fixtures.encoder_test_option_value(args, "--start"), nil)
+        local selection, expected = "--vid", "7"
+        if case.use_ffmpeg then
+            selection, expected = "-map", "0:2"
+        end
+        h.assert_equals(fixtures.encoder_test_option_value(args, selection), expected)
+    end
+end
+
+--- Assert only ordinary animated video uses range timing and the animated extension.
+local function assert_cover_snapshot_job_test_result(state, job, config, case)
+    local animated = case.animated and not case.albumart
+    local extension = config.snapshot_extension
+    if animated then extension = config.animated_snapshot_extension end
+    h.assert_equals(job.filename, "snapshot" .. extension)
+    local filename_args = { 65, extension }
+    if animated then filename_args = { 60, 70, extension } end
+    h.assert_equals(state.filename_args, { filename_args })
+    if case.screenshot and not animated then
+        h.assert_equals(state.commands, {})
+        h.assert_equals(state.screenshots, { { "screenshot-to-file", "/test-media/" .. job.filename, "video" } })
+        return
+    end
+    h.assert_equals(state.screenshots, {})
+    h.assert_equals(#state.commands, 1)
+    local args = state.commands[1]
+    h.assert_equals(fixtures.encoder_test_output_path(args), "/test-media/" .. job.filename)
+    assert_cover_encoded_job_test_args(args, config, case)
+end
+
+--- Verify animation requests on cover-only sources use static filenames and settings.
+local function assert_cover_snapshot_job_test_case(case, format)
+    local config = make_cover_snapshot_test_config(format, case.use_ffmpeg, case.animated)
+    config.screenshot = case.screenshot
+    local original = h.deep_copy(config)
+    local state = { commands = {}, screenshots = {}, filename_args = {} }
+    local track = { type = "video", selected = true, albumart = case.albumart, id = 7, ["ff-index"] = 2 }
+    local instance = encoder
+        .new(fixtures.make_cover_encoder_test_components(state, track))
+        .init(fixtures.make_config_manager(config))
+    instance.set_output_dir("/test-media")
+    local job = instance.snapshot.create_job(subtitle.make_subtitle("Line", 60, 70))
+    job.run_async()
+    assert_cover_snapshot_job_test_result(state, job, config, case)
+    h.assert_equals(config, original)
+end
+
+--- Exercise static covers regardless of animation preference and preserve native screenshot behavior.
+local function test_cover_snapshot_jobs_use_static_settings()
+    for _, use_ffmpeg in ipairs { false, true } do
+        for _, animated in ipairs { false, true } do
+            for _, format in ipairs { "jpg", "webp", "avif" } do
+                assert_cover_snapshot_job_test_case({
+                    use_ffmpeg = use_ffmpeg,
+                    albumart = true,
+                    animated = animated,
+                    screenshot = false,
+                }, format)
+            end
+            for _, albumart in ipairs { false, true } do
+                assert_cover_snapshot_job_test_case({
+                    use_ffmpeg = use_ffmpeg,
+                    albumart = albumart,
+                    animated = animated,
+                    screenshot = true,
+                }, "jpg")
+            end
+        end
+    end
+end
+
+--- Run encoder completion, constructor, codec, normalization, and cover-art tests.
 local function run_tests()
     test_report_creation_result()
     test_encoder_instances_are_isolated()
@@ -406,6 +573,8 @@ local function run_tests()
     test_snapshot_job_captures_explicit_timestamp()
     test_encoder_constructor_requires_ready_manager()
     test_loudnorm_profile_isolation()
+    test_cover_backend_static_args()
+    test_cover_snapshot_jobs_use_static_settings()
 end
 
 return {
