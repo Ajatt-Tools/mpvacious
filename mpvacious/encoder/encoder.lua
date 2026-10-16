@@ -313,6 +313,7 @@ local function make_encoder(components)
         end
     end
 
+    ------------------------------------------------------------
     --- Public
 
     --- Return the initialized encoding backend.
