@@ -262,6 +262,10 @@ function this.make_subtitle_observer(state, subtitle, options)
         clear = function()
             state.clear_count = (state.clear_count or 0) + 1
         end,
+        --- Record a menu refresh after the subtitle selection is cleared.
+        refresh_menu = function()
+            state.menu_updates = (state.menu_updates or 0) + 1
+        end,
         --- Report whether subtitle timings were manually altered.
         user_altered = function()
             return options.user_altered or false
@@ -306,6 +310,21 @@ function this.make_notifier(state)
         state.notification_level = level
         state.notification_duration = duration
     end
+end
+
+--- Supply a deterministic timeout for confirmation fakes without copying the production default.
+function this.get_confirmation_timeout_for_test()
+    return 7
+end
+
+--- Return a confirmation fake that immediately accepts each prompt without opening UI.
+function this.make_accepting_confirmation()
+    return {
+        get_confirmation_timeout = this.get_confirmation_timeout_for_test,
+        cancel = h.noop,
+        --- Complete accepted prompts synchronously for dispatch and transport scenarios.
+        confirm = function(options) options.on_accept() end,
+    }
 end
 
 --- Return a fake AnkiConnect API for automatic new-note checker tests.
@@ -421,7 +440,7 @@ end
 --- Construct a recording client and preserve its fake dependencies across new instances.
 local function make_note_add_test_client(state, make_client, cfg_mgr, components)
     local client = make_client(components).init(cfg_mgr)
-    --- Supply preflight model metadata for exporter integration tests.
+    --- Supply model metadata for exporter integration tests' first-field checks.
     client.get_first_field = function()
         return cfg_mgr.config().sentence_field, nil
     end
@@ -679,6 +698,7 @@ end
 --- Model a selected subtitle that can be replaced by a synchronous completion callback.
 function this.make_reentrant_update_test_observer(state)
     return {
+        refresh_menu = h.noop,
         --- Return the scenario's current selected subtitle.
         collect_from_current = function() return state.selection end,
         --- Leave text preparation unchanged for the lifecycle test.

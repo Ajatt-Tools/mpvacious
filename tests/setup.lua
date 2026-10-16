@@ -154,6 +154,16 @@ local function split_path(path)
     return "", path
 end
 
+--- Return an inert cancellable timer for standalone confirmation construction.
+local function make_inert_timer()
+    return { kill = noop }
+end
+
+--- Return a standalone timeout timer without invoking `callback` after `seconds`.
+local function add_timeout(seconds, callback)
+    return make_inert_timer()
+end
+
 local mp_stub = {
     get_property = return_nil,
     get_property_number = return_default,
@@ -173,6 +183,7 @@ local mp_stub = {
     command_native = command_native,
     command_native_async = noop,
     commandv = noop,
+    add_timeout = add_timeout,
 }
 
 local mp_msg_stub = {
@@ -199,8 +210,14 @@ local mp_options_stub = {
     read_options = noop,
 }
 
+local mp_input_stub = {
+    select = noop,
+    terminate = noop,
+}
+
 -- Register stubs before any mpvacious module is required.
 package.loaded["mp"] = mp_stub
 package.loaded["mp.msg"] = mp_msg_stub
 package.loaded["mp.utils"] = mp_utils_stub
 package.loaded["mp.options"] = mp_options_stub
+package.loaded["mp.input"] = mp_input_stub

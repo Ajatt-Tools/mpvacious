@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Requirements:
-* mpv >= 0.32.0
+* mpv >= 0.41.0
 * AnkiConnect
 * curl
 * xclip (when running X11)
@@ -776,5 +776,5 @@ local main = (function()
 end)()
 
 mp.register_event("file-loaded", main)
--- A selection belongs to its source file, even if no export command has been invoked.
-mp.register_event("start-file", note_exporter.reset_for_file_change)
+-- Cancel confirmation and reset selection even if no export command has been invoked.
+mp.register_event("start-file", note_exporter.cancel_pending_update_for_file_change)

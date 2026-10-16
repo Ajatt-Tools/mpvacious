@@ -378,6 +378,7 @@ local function test_update_completion()
     h.assert_equals(result.browse_query, "nid:11 OR nid:12")
     h.assert_equals(result.notification, "Updated 2 notes.")
     h.assert_equals(result.clear_count, 1)
+    h.assert_equals(result.menu_updates, 1)
 end
 
 --- Keep captured IDs, field pairs, and completion counts after caller changes during media creation.
@@ -393,6 +394,25 @@ local function test_update_retains_captured_targets()
     result.read_fields = h.as_callback(error, "captured targets must not be read again")
     complete_update_test_media_jobs(jobs)
     h.assert_equals(result.appended_note_ids, { 23, 11 })
+    result.write_callbacks[11](nil, nil)
+    h.assert_equals(result.notification, nil)
+    result.write_callbacks[23](nil, nil)
+    h.assert_equals(result.browse_query, "nid:23 OR nid:11")
+    h.assert_equals(result.notification, "Updated 2 notes.")
+end
+
+--- Count dense captured targets and preserve their Browser-query order after deferred writes.
+local function test_captured_target_array_controls_completion()
+    local result, jobs = make_update_test_result(), {}
+    result.write_callbacks = {}
+    local context, sub = make_update_test_context { result = result, jobs = jobs }
+    local targets = {
+        { note_id = 23, fields = make_context_test_stored_fields(23) },
+        { note_id = 11, fields = make_context_test_stored_fields(11) },
+    }
+    context.perform_update { target_notes = targets, overwrite = true, subtitle = sub }
+    complete_update_test_media_jobs(jobs)
+    h.assert_equals(result.notification, nil)
     result.write_callbacks[11](nil, nil)
     h.assert_equals(result.notification, nil)
     result.write_callbacks[23](nil, nil)
@@ -437,6 +457,7 @@ local function test_update_without_media_directory()
     h.assert_equals(result.field_requests, { { 11 } })
     h.assert_equals(result.appended_note_ids, {})
     h.assert_equals(result.clear_count, 0)
+    h.assert_equals(result.menu_updates, nil)
     h.assert_equals(result.notification_level, "error")
     h.assert_equals(result.notification, "AnkiConnect unavailable")
 end
@@ -510,6 +531,7 @@ local function assert_update_test_field_failure(case)
     h.assert_equals(jobs, {})
     h.assert_equals(result.media_dir_requests, nil)
     h.assert_equals(result.clear_count, 0)
+    h.assert_equals(result.menu_updates, nil)
     h.assert_equals(result.appended_note_ids, {})
     h.assert_equals(result.fields_by_note, {})
     h.assert_equals(result.field_requests, { { 11, 12 } })
@@ -529,7 +551,7 @@ local function test_update_field_read_failures()
 end
 
 --- Test all fields are fetched once before writing, and stay paired with their own note IDs.
-local function test_update_preflight_field_reads()
+local function test_update_reads_target_fields_once()
     local result = make_update_test_result()
     local jobs = {}
     local context, subtitle = make_update_test_context { result = result, jobs = jobs }
@@ -591,11 +613,11 @@ end
 
 --- Verify blank updates preserve stored text or fail before touching interactive state.
 local function assert_blank_update_test_outcome(result, jobs, case)
-    if case.preflight_error then
+    if case.media_dir_error then
         h.assert_equals(jobs, {})
         h.assert_equals(result.appended_note_ids, {})
         h.assert_equals(result.clear_count, 0)
-        h.assert_equals(result.notification, case.preflight_error)
+        h.assert_equals(result.notification, case.media_dir_error)
     else
         complete_update_test_media_jobs(jobs)
         h.assert_equals(result.fields_by_note[13].SentKanji, "stored 13")
@@ -618,7 +640,7 @@ end
 --- Exercise preparation and completion without modifying the caller's blank subtitle.
 local function assert_blank_update_test_case(case)
     local result, jobs = make_update_test_result(), {}
-    result.media_dir_error = case.preflight_error
+    result.media_dir_error = case.media_dir_error
     local sub = make_blank_update_test_subtitle(case)
     local context = make_update_test_context { result = result, jobs = jobs, subtitle = sub }
     local request = { note_ids = { 13 }, overwrite = case.overwrite, subtitle = sub }
@@ -636,10 +658,10 @@ local function test_blank_update_subtitle()
         { text = "", overwrite = true },
         { overwrite = true },
         { overwrite = false },
-        { text = "", overwrite = true, preflight_error = "AnkiConnect unavailable" },
-        { text = "", overwrite = false, preflight_error = "AnkiConnect unavailable" },
-        { overwrite = false, preflight_error = "AnkiConnect unavailable" },
-        { overwrite = true, preflight_error = "AnkiConnect unavailable" },
+        { text = "", overwrite = true, media_dir_error = "AnkiConnect unavailable" },
+        { text = "", overwrite = false, media_dir_error = "AnkiConnect unavailable" },
+        { overwrite = false, media_dir_error = "AnkiConnect unavailable" },
+        { overwrite = true, media_dir_error = "AnkiConnect unavailable" },
     } do
         assert_blank_update_test_case(case)
     end
@@ -720,6 +742,177 @@ local function test_audio_job_receives_selected_padding()
     } do
         assert_audio_padding_job_test_case(case)
     end
+end
+
+--- Configure prepared-field scenarios to capture filename and playback-time metadata.
+local function make_prepared_fields_test_config()
+    local config = make_update_test_config(true)
+    config.miscinfo_enable, config.miscinfo_format = true, "%f|%t"
+    return config
+end
+
+--- Build a prepared-update scenario with mutable playback metadata and a separate observer.
+local function make_prepared_fields_test_context()
+    local result, jobs = make_update_test_result(), {}
+    local properties = { filename = "episode.mkv", path = "/videos/episode.mkv", ["time-pos"] = 65 }
+    local sub = subtitle_module.Subtitle:new {
+        text = "new sentence",
+        secondary = "translation",
+        ["start"] = 0,
+        ["end"] = 1,
+    }
+    local observer = fixtures.make_subtitle_observer(result, sub)
+    local context = make_update_test_context {
+        result = result,
+        jobs = jobs,
+        config = make_prepared_fields_test_config(),
+        subtitle = sub,
+        observer = observer,
+        mp = fixtures.make_mp_property_reader(properties),
+    }
+    return context, result, jobs, properties, observer, sub
+end
+
+--- Add media without re-preparing captured text or modifying the original prepared fields.
+local function test_update_reuses_prepared_fields()
+    local context, result, jobs, properties, observer, sub = make_prepared_fields_test_context()
+    local preparation = context.prepare_update_request { note_ids = { 13 }, overwrite = true, subtitle = sub }
+    h.assert_equals(preparation.error, nil)
+    local request = preparation.request
+    local prepared_fields = h.deep_copy(request.prepared_fields)
+    properties.path, properties["time-pos"] = "/later/later.mkv", 125
+    sub.text, sub.secondary = "later sentence", "later translation"
+    observer.clipboard_prepare = h.as_callback(error, "captured text must not be prepared again")
+    context.perform_update(request)
+    h.assert_equals(jobs[1].argument, 65)
+    h.assert_equals(jobs[2].argument, 0)
+    complete_update_test_media_jobs(jobs)
+    h.assert_equals(result.fields_by_note[13].SentKanji, "new sentence")
+    h.assert_equals(result.fields_by_note[13].SentEng, "translation")
+    h.assert_equals(result.fields_by_note[13].Notes, "/videos/episode.mkv|01m05s000ms")
+    h.assert_equals(result.fields_by_note[13].SentAudio, "[sound:audio.ogg]")
+    h.assert_equals(result.fields_by_note[13].Image, '<img alt="snapshot" src="snapshot.avif">')
+    h.assert_equals(request.prepared_fields, prepared_fields)
+end
+
+--- Return media-filename cases for an already prepared field table.
+local function make_prepared_media_field_test_cases()
+    local image = '<img alt="snapshot" src="still.avif">'
+    local audio = "[sound:clip.ogg]"
+    return {
+        {},
+        { snapshot_filename = "still.avif", expected_image = image },
+        { audio_filename = "clip.ogg", expected_audio = audio },
+        {
+            snapshot_filename = "still.avif",
+            audio_filename = "clip.ogg",
+            expected_image = image,
+            expected_audio = audio,
+        },
+    }
+end
+
+--- Format media while retaining copied text/metadata rather than raw replacement inputs.
+local function assert_prepared_media_fields_test_case(context, prepared_fields, case)
+    local fields = context.construct_note_fields {
+        prepared_fields = prepared_fields,
+        primary_text = "must not replace captured text",
+        secondary_text = "must not replace captured translation",
+        snapshot_filename = case.snapshot_filename,
+        audio_filename = case.audio_filename,
+    }
+    h.assert_equals(rawequal(fields, prepared_fields), false)
+    h.assert_equals(fields.SentKanji, "new sentence")
+    h.assert_equals(fields.SentEng, "translation")
+    h.assert_equals(fields.Notes, "/videos/episode.mkv|01m05s000ms")
+    h.assert_equals(fields.Image, case.expected_image)
+    h.assert_equals(fields.SentAudio, case.expected_audio)
+end
+
+--- Reuse captured fields for direct builder calls with absent, single, or paired media.
+local function test_construct_note_fields_uses_prepared_fields()
+    local context, result, jobs, properties, observer, sub = make_prepared_fields_test_context()
+    local preparation = context.prepare_update_request { note_ids = { 13 }, overwrite = true, subtitle = sub }
+    local prepared_fields = preparation.request.prepared_fields
+    local original = h.deep_copy(prepared_fields)
+    properties.path, properties["time-pos"] = "/later/later.mkv", 125
+    observer.clipboard_prepare = h.as_callback(error, "captured text must not be prepared again")
+    for _, case in ipairs(make_prepared_media_field_test_cases()) do
+        assert_prepared_media_fields_test_case(context, prepared_fields, case)
+    end
+    h.assert_equals(prepared_fields, original)
+    h.assert_equals(result.field_requests, { { 13 } })
+    h.assert_equals(jobs, {})
+end
+
+--- Treat an empty prepared table as captured data rather than missing text or metadata.
+local function test_construct_note_fields_keeps_empty_prepared_fields()
+    local context, result, jobs, properties, observer, sub = make_prepared_fields_test_context()
+    properties.path = "/must-not-regenerate-metadata.mkv"
+    observer.clipboard_prepare = h.as_callback(error, "empty captured fields must not be prepared again")
+    local prepared_fields = {}
+    local fields = context.construct_note_fields {
+        prepared_fields = prepared_fields,
+        primary_text = sub.text,
+        secondary_text = sub.secondary,
+        snapshot_filename = "s.avif",
+        audio_filename = "a.ogg",
+    }
+    h.assert_equals(fields, { Image = '<img alt="snapshot" src="s.avif">', SentAudio = "[sound:a.ogg]" })
+    h.assert_equals(prepared_fields, {})
+    h.assert_equals(result.field_requests, {})
+    h.assert_equals(jobs, {})
+end
+
+--- Retain captured targets without carrying input IDs, checking options, or unused fields.
+local function test_prepare_update_request_owns_execution_data()
+    local result, jobs = make_update_test_result(), {}
+    local context, sub = make_update_test_context { result = result, jobs = jobs }
+    local input = { note_ids = { 13 }, overwrite = true, options = {}, subtitle = sub, unused = "unused" }
+    local original = h.deep_copy(input)
+    local preparation = context.prepare_update_request(input)
+    h.assert_equals(preparation.error, nil)
+    h.assert_equals(preparation.warning, nil)
+    h.assert_equals(rawequal(preparation.request, input), false)
+    h.assert_equals(preparation.request.note_ids, nil)
+    h.assert_equals(preparation.request.options, nil)
+    h.assert_equals(preparation.request.unused, nil)
+    h.assert_equals(preparation.request.target_notes, { { note_id = 13, fields = { SentKanji = "stored 13" } } })
+    h.assert_equals(input, original)
+    input.note_ids[1] = 99
+    h.assert_equals(preparation.request.target_notes[1].note_id, 13)
+    h.assert_equals(result.field_requests, { { 13 } })
+    h.assert_equals(jobs, {})
+end
+
+--- Execute only captured target pairs after the caller changes its original ID list.
+local function test_prepared_update_writes_captured_targets()
+    local result, jobs = make_update_test_result(), {}
+    local context, sub = make_update_test_context { result = result, jobs = jobs }
+    local input = { note_ids = { 13 }, overwrite = true, subtitle = sub }
+    local preparation = context.prepare_update_request(input)
+    input.note_ids[1] = 99
+    result.read_fields = h.as_callback(error, "captured targets must not be read again")
+    context.perform_update(preparation.request)
+    complete_update_test_media_jobs(jobs)
+    h.assert_equals(preparation.request.note_ids, nil)
+    h.assert_equals(result.appended_note_ids, { 13 })
+    h.assert_equals(result.field_requests, { { 13 } })
+end
+
+--- Fail target reading before preparing fields, creating media, or changing interactive state.
+local function test_prepare_update_request_reports_read_failure()
+    local result, jobs = make_update_test_result(), {}
+    --- Supply a failed target read without modifying the shared Anki fake.
+    result.read_fields = function() return nil, "target read failed" end
+    local context, sub = make_update_test_context { result = result, jobs = jobs }
+    local input = { note_ids = { 13 }, overwrite = true, subtitle = sub }
+    local original = h.deep_copy(input)
+    h.assert_equals(context.prepare_update_request(input), { error = "target read failed" })
+    h.assert_equals(input, original)
+    h.assert_equals(result.notification, nil)
+    h.assert_equals(result.clear_count, 0)
+    h.assert_equals(jobs, {})
 end
 
 --- Preserve literal percent signs in filenames and paths, including repeated placeholders.
@@ -868,7 +1061,7 @@ local function test_update_clears_state_before_job_start()
 end
 
 --- Preserve both selection and quick options when preparation fails before job startup.
-local function test_update_preflight_preserves_interactive_state()
+local function test_media_directory_failure_preserves_interactive_state()
     local state = make_reentrant_update_test_state()
     state.media_dir_error = "AnkiConnect unavailable"
     local context, jobs, quick_options = make_reentrant_update_test_context(state, {})
@@ -893,23 +1086,30 @@ local function run_tests(context)
     test_selected_lookup_retains_snapshot_safeguard()
     test_update_completion()
     test_update_retains_captured_targets()
+    test_captured_target_array_controls_completion()
     test_update_media_failures()
     test_update_without_media_directory()
     test_update_skipped_media_job()
     test_update_write_outcomes()
     test_single_note_update_completion()
     test_update_field_read_failures()
-    test_update_preflight_field_reads()
+    test_update_reads_target_fields_once()
     test_update_notification_field_read_failure()
     test_update_notification_model_lookup_failure()
     test_blank_update_subtitle()
     test_media_metadata()
     test_audio_job_receives_selected_padding()
+    test_update_reuses_prepared_fields()
+    test_construct_note_fields_uses_prepared_fields()
+    test_construct_note_fields_keeps_empty_prepared_fields()
+    test_prepare_update_request_owns_execution_data()
+    test_prepared_update_writes_captured_targets()
+    test_prepare_update_request_reports_read_failure()
     test_literal_tag_substitutions()
     test_environment_tag_substitution()
     test_update_captures_invocation_tag()
     test_update_clears_state_before_job_start()
-    test_update_preflight_preserves_interactive_state()
+    test_media_directory_failure_preserves_interactive_state()
     test_update_media_merge()
     test_join_fields(context)
     test_join_fields_duplicates(context)

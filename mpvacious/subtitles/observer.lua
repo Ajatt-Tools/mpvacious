@@ -363,6 +363,11 @@ local function make_subtitles_observer()
         return private.secondary_dialogs.get_subs_list()
     end
 
+    --- Refresh the observer's menu after asynchronous state changes.
+    function public.refresh_menu()
+        return private.menu:update()
+    end
+
     function public.autocopy_is_enabled_str()
         return private.autoclip_enabled and "enabled" or "disabled"
     end

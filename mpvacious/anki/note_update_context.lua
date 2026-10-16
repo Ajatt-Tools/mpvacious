@@ -210,6 +210,7 @@ local function make_note_update_context(components)
         encoder = components.encoder,
         forvo = components.forvo,
         cfg_mgr = components.cfg_mgr,
+        note_update_guard = components.note_update_guard,
         notify = components.notify or h.notify,
         substitute_fmt = make_substitute_fmt(components.cfg_mgr, mp_api),
     }
@@ -328,21 +329,23 @@ local function make_note_update_context(components)
     end
 
     --- Fetch all targets before media creation. Never return a partial snapshot on failure.
-    local function collect_target_fields(note_ids)
-        local fields_by_note_id, error = self.ankiconnect.get_notes_fields(note_ids)
-        if error then
-            return nil, error
+    local function collect_target_fields(target_notes, note_ids)
+        if not target_notes then
+            local fields_by_note_id, error = self.ankiconnect.get_notes_fields(note_ids)
+            if error then
+                return nil, error
+            end
+            target_notes = h.map(
+                note_ids,
+                function(note_id) return { note_id = note_id, fields = fields_by_note_id[note_id] } end
+            )
         end
-        local targets = h.map(
-            note_ids,
-            function(note_id) return { note_id = note_id, fields = fields_by_note_id[note_id] } end
-        )
-        return targets, nil
+        return target_notes, nil
     end
 
     --- Configure output paths and create update media jobs.
     local function create_update_media(request)
-        local target_notes, target_read_error = collect_target_fields(request.note_ids)
+        local target_notes, target_read_error = collect_target_fields(request.target_notes, request.note_ids)
         if target_read_error then
             return nil, target_read_error
         end
@@ -353,11 +356,15 @@ local function make_note_update_context(components)
         end
         self.encoder.set_output_dir(anki_media_dir)
         self.forvo.set_output_dir(anki_media_dir)
-        local snapshot = self.encoder.snapshot.create_job(request.subtitle)
-        local audio = self.encoder.audio.create_job(request.subtitle, pub.audio_padding())
+        local snapshot = self.encoder.snapshot.create_job(request.subtitle, request.snapshot_timestamp)
+        local padding = request.audio_padding or pub.audio_padding()
+        local audio = self.encoder.audio.create_job(request.subtitle, padding)
+        -- Reuse captured text/metadata and add filenames from the newly created jobs.
+        -- The builder copies prepared fields without preparing them again.
         local new_data = pub.construct_note_fields {
-            primary_text = request.subtitle["text"],
-            secondary_text = request.subtitle["secondary"],
+            prepared_fields = request.prepared_fields,
+            primary_text = request.subtitle.text,
+            secondary_text = request.subtitle.secondary,
             snapshot_filename = snapshot.filename,
             audio_filename = audio.filename,
         }
@@ -367,7 +374,7 @@ local function make_note_update_context(components)
             new_data = new_data,
             target_notes = target_notes,
             -- Playback metadata is captured with the batch before any jobs start.
-            tag = self.substitute_fmt(config().note_tag),
+            tag = request.tag or self.substitute_fmt(config().note_tag),
         }
     end
 
@@ -395,6 +402,8 @@ local function make_note_update_context(components)
 
     --- Write captured targets using the media batch's generated fields and tag.
     local function write_target_fields(request, future)
+        -- Note: Future has fields: snapshot, audio, new_data, target_notes, tag
+        -- This uses new_data, target_notes, tag.
         local completion_for = make_update_write_completion(targets_to_note_ids(future.target_notes))
         for _, target in pairs(future.target_notes) do
             self.ankiconnect.append_media(
@@ -420,6 +429,7 @@ local function make_note_update_context(components)
     local function clear_update_state()
         self.subs_observer.clear()
         self.quick_creation_opts:clear_options()
+        self.subs_observer.refresh_menu()
     end
 
     --- Build note fields and ensure the first model field is populated.
@@ -436,7 +446,7 @@ local function make_note_update_context(components)
         return note_fields
     end
 
-    --- Preflight and create export media jobs without starting them.
+    --- Validate the model and media directory, then create export jobs without starting them.
     local function create_export_media(subtitle)
         local first_field, field_error = self.ankiconnect.get_first_field(config().model_name)
         if field_error then
@@ -458,6 +468,50 @@ local function make_note_update_context(components)
         request.subtitle = request.subtitle:clone()
         request.subtitle["text"] = nil
         return request
+    end
+
+    --- Extract field tables from the captured target array.
+    local function target_fields(targets)
+        return h.map(targets, function(target) return target.fields end)
+    end
+
+    --- Read target fields once and return a read error or optional sentence-mismatch warning.
+    local function read_and_check_update_targets(request)
+        local target_notes, error = collect_target_fields(request.target_notes, request.note_ids)
+        if error then
+            return { error = error }
+        end
+        if request.options and request.options.check_recent_notes then
+            return {
+                warning = self.note_update_guard.current_subtitle_warning(
+                    target_fields(target_notes),
+                    prepare_for_exporting(request.subtitle.text),
+                    config().sentence_field
+                ),
+                target_notes = target_notes,
+            }
+        end
+        return { target_notes = target_notes }
+    end
+
+    --- Capture execution fields and metadata using the checked target ID/field pairs.
+    local function create_update_request(warning_result, request)
+        return {
+            warning = warning_result.warning,
+            request = {
+                target_notes = warning_result.target_notes,
+                overwrite = request.overwrite,
+                subtitle = request.subtitle,
+                -- Capture text and metadata before confirmation. Media filenames are not known yet.
+                prepared_fields = pub.construct_note_fields {
+                    primary_text = request.subtitle.text,
+                    secondary_text = request.subtitle.secondary,
+                },
+                tag = self.substitute_fmt(config().note_tag),
+                audio_padding = pub.audio_padding(),
+                snapshot_timestamp = mp_api.get_property_number("time-pos", 0),
+            },
+        }
     end
 
     ------------------------------------------------------------
@@ -513,23 +567,24 @@ local function make_note_update_context(components)
         return new_data
     end
 
-    --- Construct fields for ordinary new-note export.
     --- Construct generated note fields from subtitle text and media filenames.
+    --- Copy optional prepared_fields without repeating text or metadata preparation.
     function pub.construct_note_fields(kwargs)
-        local ret = {
-            [config().sentence_field] = prepare_for_exporting(kwargs.primary_text),
-        }
-        if not h.is_empty(config().secondary_field) then
-            ret[config().secondary_field] = prepare_for_exporting(kwargs.secondary_text)
+        local ret = h.shallow_copy(kwargs.prepared_fields or {})
+        if not kwargs.prepared_fields then
+            ret[config().sentence_field] = prepare_for_exporting(kwargs.primary_text)
+            if not h.is_empty(config().secondary_field) then
+                ret[config().secondary_field] = prepare_for_exporting(kwargs.secondary_text)
+            end
+            if config().miscinfo_enable then
+                ret[config().miscinfo_field] = self.substitute_fmt(config().miscinfo_format)
+            end
         end
         if not h.is_empty(config().image_field) and not h.is_empty(kwargs.snapshot_filename) then
             ret[config().image_field] = string.format(config().image_template, kwargs.snapshot_filename)
         end
         if not h.is_empty(config().audio_field) and not h.is_empty(kwargs.audio_filename) then
             ret[config().audio_field] = string.format(config().audio_template, kwargs.audio_filename)
-        end
-        if config().miscinfo_enable then
-            ret[config().miscinfo_field] = self.substitute_fmt(config().miscinfo_format)
         end
         return ret
     end
@@ -561,9 +616,30 @@ local function make_note_update_context(components)
         end
     end
 
+    --- Snapshot note IDs and fields before opening a prompt or creating media.
+    --- Capture text, tags, padding, and snapshot time before a confirmation can wait.
+    --- Return an error or optional warning with a new execution request and prepared fields.
+    --- Retain captured target ID/field pairs and collected subtitle timings until completion.
+    --- Do not mutate these inputs while the prompt waits or re-prepare text on acceptance.
+    function pub.prepare_update_request(request)
+        local warning_result = read_and_check_update_targets {
+            note_ids = request.note_ids,
+            options = request.options or {},
+            subtitle = request.subtitle,
+        }
+        if warning_result.error then
+            return { error = warning_result.error }
+        end
+        return create_update_request(warning_result, request)
+    end
+
     --- Start media creation and write note fields after both jobs finish.
     --- Create media and update fields for `request`,
-    --- which contains the captured "subtitle", target "note_ids", and "overwrite" mode.
+    --- which contains the captured "subtitle", target ID/field pairs, and "overwrite" mode.
+    --- Workflow requests include targets and invocation metadata from prepare_update_request.
+    --- Reuse those captures without another field read. Standalone requests without targets
+    --- supply input note_ids and read their fields once here before media starts. Media assembly copies prepared
+    --- fields, leaving the captured table and caller's request unchanged.
     function pub.perform_update(request)
         if h.is_empty(request.subtitle["text"]) then
             -- In this case, don't modify whatever existing text there is and just
@@ -582,20 +658,6 @@ local function make_note_update_context(components)
         clear_update_state()
         -- Skipped jobs can complete synchronously and callbacks may select new subtitles.
         start_update_media(request, future)
-        return pub
-    end
-
-    --- Collect and update supplied note IDs through this context.
-    function pub.update_notes(note_ids, overwrite)
-        local request = {
-            note_ids = note_ids,
-            overwrite = overwrite,
-            subtitle = pub.collect_subtitle(),
-        }
-        if not request.subtitle:is_valid() then
-            return self.notify("Nothing to export. Have you set the timings?", "warn", 2)
-        end
-        pub.perform_update(request)
         return pub
     end
 
@@ -653,6 +715,7 @@ local function make_note_update_context(components)
     function pub.new(cfg_mgr)
         return make_note_update_context {
             cfg_mgr = cfg_mgr,
+            note_update_guard = self.note_update_guard,
             ankiconnect = self.ankiconnect.new(cfg_mgr),
             encoder = self.encoder.new(cfg_mgr),
             forvo = self.forvo.new(cfg_mgr),
