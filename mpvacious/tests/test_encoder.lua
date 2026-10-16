@@ -16,6 +16,7 @@ local snapshot = require("config.snapshot")
 local subtitle = require("subtitles.subtitle")
 local executables = require("encoder.executables")
 local eutils = require("encoder.utils")
+local note_update_context = require("anki.note_update_context")
 
 --- Record reporter messages without printing expected test failures.
 local function make_encoder_test_logger(state)
@@ -432,7 +433,7 @@ local function assert_cover_backend_test_case(case, format, track)
     local config = make_cover_snapshot_test_config(format, case.use_ffmpeg, true)
     local original = h.deep_copy(config)
     local backend = fixtures.make_cover_backend_test_context(case.make_backend, config, track)
-    local args = backend.make_static_snapshot_args("source.m4b", "snapshot" .. config.snapshot_extension, 65)
+    local args = backend.make_static_snapshot_args("source.m4b", "snapshot" .. config.snapshot_extension, 65, track)
     local seek, selection = eutils.toms(65), nil
     if track.albumart then
         seek = nil
@@ -689,6 +690,66 @@ local function test_audioclip_padding_owns_subtitle()
     end
 end
 
+--- Assert skipped jobs perform no I/O and complete successfully only when a callback is registered.
+local function assert_noop_encoder_test_result(state, media_type, with_callback)
+    local label = "snapshot"
+    if media_type == "audio" then label = "audioclip" end
+    h.assert_equals(state.messages, { label .. " will not be created." })
+    h.assert_equals(state.commands, {})
+    h.assert_equals(state.filename_args, nil)
+    h.assert_equals(state.failed_errors, nil)
+    if with_callback then
+        h.assert_equals(state.completion_count, 1)
+        h.assert_equals(state.completed_path, nil)
+        h.assert_equals(state.completed_error, nil)
+        h.assert_equals(state.success_count, 1)
+    else
+        h.assert_equals(state.completion_count, nil)
+        h.assert_equals(state.success_count, nil)
+    end
+end
+
+--- Create a real skipped encoder job and optionally connect it to the real completion collector.
+local function assert_noop_encoder_test_case(case, media_type, use_ffmpeg, with_callback)
+    local state = { commands = {}, messages = {} }
+    local config = make_backend_test_config("jpg", "webp", use_ffmpeg)
+    local field = "image_field"
+    if media_type == "audio" then field = "audio_field" end
+    if case.skip_field then config[field] = case.field_value end
+    local instance = encoder
+        .new(fixtures.make_noop_encoder_test_components(state, case.has_track))
+        .init(fixtures.make_config_manager(config))
+    local job = instance[media_type].create_job(subtitle.make_subtitle("Line", 0, 1), 0)
+    h.assert_equals(job.filename, nil)
+    if with_callback then
+        local callback = fixtures.make_recording_completion_test_callback(
+            state,
+            note_update_context.make_completion_collector,
+            media_type
+        )
+        h.assert_equals(job.on_finish(callback), job)
+    end
+    h.assert_equals(pcall(job.run_async), true)
+    assert_noop_encoder_test_result(state, media_type, with_callback)
+end
+
+--- Preserve successful skipped-job completion for absent tracks and blank or missing fields.
+local function test_encoder_noop_jobs()
+    for _, use_ffmpeg in ipairs { false, true } do
+        for _, media_type in ipairs { "snapshot", "audio" } do
+            for _, with_callback in ipairs { false, true } do
+                for _, case in ipairs {
+                    { has_track = false },
+                    { has_track = true, skip_field = true, field_value = "" },
+                    { has_track = true, skip_field = true },
+                } do
+                    assert_noop_encoder_test_case(case, media_type, use_ffmpeg, with_callback)
+                end
+            end
+        end
+    end
+end
+
 --- Run encoder completion, constructor, codec, normalization, and cover-art tests.
 local function run_tests()
     test_report_creation_result()
@@ -705,6 +766,7 @@ local function run_tests()
     test_media_jobs_capture_output_directory()
     test_media_jobs_missing_output_directory()
     test_audioclip_padding_owns_subtitle()
+    test_encoder_noop_jobs()
 end
 
 return {

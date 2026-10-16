@@ -776,10 +776,11 @@ function this.make_cover_encoder_test_components(state, video_track)
 end
 
 --- Record media completion paths and errors, including intentional nil results.
-function this.make_media_result_test_recorder(state)
+function this.make_media_result_test_recorder(state, on_finish)
     return function(path, error)
         state.completion_count = (state.completion_count or 0) + 1
         state.completed_path, state.completed_error = path, error
+        if on_finish then on_finish(path, error) end
     end
 end
 
@@ -803,6 +804,32 @@ function this.make_recording_audio_encoder_components(state)
         return "encoder-test" .. args[#args]
     end
     return components
+end
+
+--- Supply deterministic eligibility and informational logging for skipped encoder jobs.
+function this.make_noop_encoder_test_components(state, has_track)
+    local components = this.make_recording_audio_encoder_components(state)
+    --- Make either media type absent without modifying the shared mp API.
+    components.has_video_track = function() return has_track end
+    components.has_audio_track = components.has_video_track
+    components.logger = {
+        --- Expose the standard informational logger method, not a non-existent warning method.
+        info = function(message) table.insert(state.messages, message) end,
+    }
+    return components
+end
+
+--- Record one completion and whether the real batch collector accepts it as successful.
+function this.make_recording_completion_test_callback(state, make_collector, label)
+    local collector = make_collector()
+        .count(1)
+        .on_success(function()
+            state.success_count = (state.success_count or 0) + 1
+        end)
+        .on_failure(function(errors)
+            state.failed_errors = errors
+        end)
+    return this.make_media_result_test_recorder(state, collector.callback_for(label))
 end
 
 return this
