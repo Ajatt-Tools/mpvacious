@@ -292,6 +292,39 @@ local function make_audioclip_job(opts)
     return job
 end
 
+--- Create an intentionally skipped job using the same completion API as real media jobs.
+local function make_noop_job(opts)
+    local logger = opts.logger or msg
+    -- Private fields
+    local self = {
+        on_finish_fn = nil,
+        job_type = opts.job_type,
+    }
+
+    -- Public interface
+    local job = {}
+
+    job.filename = nil
+
+    --- Complete an intentionally skipped media job without an error.
+    job.run_async = function()
+        -- Missing tracks or disabled fields are expected skips, not media-creation errors.
+        logger.info(self.job_type .. " will not be created.")
+        if type(self.on_finish_fn) == "function" then
+            -- No media track or configured field: this is a skipped job, not a failure.
+            self.on_finish_fn(nil, nil)
+        end
+    end
+
+    --- Register the callback receiving the completed media path and error.
+    job.on_finish = function(fn)
+        self.on_finish_fn = fn
+        return job
+    end
+
+    return job
+end
+
 ------------------------------------------------------------
 --- public interface
 
@@ -333,8 +366,6 @@ local function make_encoder(components)
 
     --- Prepare a deferred media job or a skipped job when no matching track/field exists.
     local function create_job(job_type, sub, audio_padding, snapshot_timestamp)
-        local on_finish_fn
-        local job = {}
         if is_snapshot_job(job_type) then
             return make_snapshot_job {
                 sub = sub,
@@ -361,22 +392,11 @@ local function make_encoder(components)
                 audio_padding = audio_padding,
             }
         else
-            job.filename = nil
-            --- Complete an intentionally skipped media job without an error.
-            job.run_async = function()
-                print(job_type .. " will not be created.")
-                if type(on_finish_fn) == "function" then
-                    -- No media track or configured field: this is a skipped job, not a failure.
-                    on_finish_fn(nil, nil)
-                end
-            end
+            return make_noop_job {
+                job_type = job_type,
+                logger = components.logger,
+            }
         end
-        --- Register the callback receiving the completed media path and error.
-        job.on_finish = function(fn)
-            on_finish_fn = fn
-            return job
-        end
-        return job
     end
 
     --- Select the configured FFmpeg or mpv encoding backend.
