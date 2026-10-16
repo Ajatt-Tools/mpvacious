@@ -161,7 +161,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         eutils.set_codecs(self, config())
     end
 
-    --- Build the command for a still snapshot using initialized codecs.
+    --- Build a static snapshot, selecting attached cover art without a timestamp seek.
     public.make_static_snapshot_args = function(source_path, output_path, timestamp)
         local encoder_args
         if config().snapshot_format == "avif" then
@@ -184,22 +184,26 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
             }
         end
 
-        local args = prepend(
-            "-an",
-            "-ss",
-            eutils.toms(timestamp),
-            "-i",
-            source_path,
+        local track = get_active_track("video")
+        local input_args
+        if track and track.albumart == true then
+            local stream = "0:v:0"
+            if track["ff-index"] ~= nil then
+                stream = string.format("0:%s", tostring(track["ff-index"]))
+            end
+            input_args = prepend("-an", "-i", source_path, "-map", stream)
+        else
+            input_args = prepend("-an", "-ss", eutils.toms(timestamp), "-i", source_path)
+        end
+        local additional_args = {
             "-map_metadata",
             "-1",
             "-vf",
             eutils.static_scale_filter(config()),
             "-frames:v",
             "1",
-            h.unpack(encoder_args)
-        )
-        table.insert(args, output_path)
-        return args
+        }
+        return h.join_lists(input_args, additional_args, encoder_args, { output_path })
     end
 
     --- Build the command for an animated snapshot using initialized codecs.

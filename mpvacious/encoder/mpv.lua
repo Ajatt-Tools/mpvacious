@@ -64,7 +64,7 @@ local function make_mpv_encoder(cfg_mgr, support, components)
         eutils.set_codecs(self, config())
     end
 
-    --- Build the command for a still snapshot using initialized codecs.
+    --- Build a static snapshot, selecting attached cover art without a timestamp seek.
     public.make_static_snapshot_args = function(source_path, output_path, timestamp)
         local encoder_args
         if config().snapshot_format == "avif" then
@@ -92,15 +92,17 @@ local function make_mpv_encoder(cfg_mgr, support, components)
             }
         end
 
-        return prepend_common_args(
-            source_path,
-            "--audio=no",
-            "--frames=1",
-            "--start=" .. eutils.toms(timestamp),
+        local args = prepend_common_args(source_path, "--audio=no", "--frames=1")
+        local track = get_active_track("video")
+        if track and track.albumart == true then
+            table.insert(args, "--vid=" .. tostring(track.id or "auto"))
+        else
+            table.insert(args, "--start=" .. eutils.toms(timestamp))
+        end
+        return h.join_lists(args, {
             string.format("--vf-add=lavfi=[%s]", eutils.static_scale_filter(config())),
             "-o=" .. output_path,
-            h.unpack(encoder_args)
-        )
+        }, encoder_args)
     end
 
     --- Build the command for an animated snapshot using initialized codecs.
