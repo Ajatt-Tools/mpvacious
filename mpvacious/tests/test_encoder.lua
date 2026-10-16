@@ -18,6 +18,8 @@ local executables = require("encoder.executables")
 local eutils = require("encoder.utils")
 local note_update_context = require("anki.note_update_context")
 
+local MEDIA_FIELDS_FOR_TEST = { snapshot = "image_field", audio = "audio_field" }
+
 --- Record reporter messages without printing expected test failures.
 local function make_encoder_test_logger(state)
     return {
@@ -41,30 +43,26 @@ end
 
 --- Check one reporter outcome without launching an audio preview subprocess.
 local function assert_creation_result_test_case(case)
-    local completed_path, completed_error, previewed_path
+    local state = {}
     local log = { count = 0 }
     local components = {
+        file_path = "output.ogg",
         --- Return the scenario's file-existence result for the expected path.
         file_exists = function(path)
             h.assert_equals(path, "output.ogg")
             return case.exists
         end,
         --- Record an audio preview without launching playback.
-        play_audio = function(path)
-            previewed_path = path
-        end,
+        play_audio = function(path) state.previewed_path = path end,
         logger = make_encoder_test_logger(log),
     }
-    --- Capture the reported result without writing media files.
-    local function on_finish(path, error)
-        completed_path, completed_error = path, error
-    end
-    local completion =
-        encoder.report_creation_result("output.ogg", components).on_finish(on_finish).preview_audio(case.preview)
+    local completion = encoder.report_creation_result(components)
+    -- Capture the reported result without writing media files.
+    completion.on_finish(fixtures.make_media_result_test_recorder(state)).preview_audio(case.preview)
     h.assert_equals(completion.run(case.success, case.result, case.error), nil)
-    h.assert_equals(completed_path, case.expected_path)
-    h.assert_equals(completed_error, case.expected_error)
-    h.assert_equals(previewed_path, case.expected_preview)
+    h.assert_equals(state.completed_path, case.expected_path)
+    h.assert_equals(state.completed_error, case.expected_error)
+    h.assert_equals(state.previewed_path, case.expected_preview)
     assert_encoder_test_log(log, case)
 end
 
@@ -551,6 +549,14 @@ local function test_cover_snapshot_jobs_use_static_settings()
                     screenshot = false,
                 }, format)
             end
+        end
+    end
+end
+
+--- Preserve native screenshots for static jobs and animation for ordinary timed video.
+local function test_cover_snapshot_native_routing()
+    for _, use_ffmpeg in ipairs { false, true } do
+        for _, animated in ipairs { false, true } do
             for _, albumart in ipairs { false, true } do
                 assert_cover_snapshot_job_test_case({
                     use_ffmpeg = use_ffmpeg,
@@ -713,24 +719,190 @@ end
 local function assert_noop_encoder_test_case(case, media_type, use_ffmpeg, with_callback)
     local state = { commands = {}, messages = {} }
     local config = make_backend_test_config("jpg", "webp", use_ffmpeg)
-    local field = "image_field"
-    if media_type == "audio" then field = "audio_field" end
-    if case.skip_field then config[field] = case.field_value end
+    if case.skip_field then config[MEDIA_FIELDS_FOR_TEST[media_type]] = case.field_value end
     local instance = encoder
         .new(fixtures.make_noop_encoder_test_components(state, case.has_track))
         .init(fixtures.make_config_manager(config))
     local job = instance[media_type].create_job(subtitle.make_subtitle("Line", 0, 1), 0)
     h.assert_equals(job.filename, nil)
     if with_callback then
-        local callback = fixtures.make_recording_completion_test_callback(
-            state,
-            note_update_context.make_completion_collector,
-            media_type
-        )
+        local make_collector = note_update_context.make_completion_collector
+        local callback = fixtures.make_recording_completion_test_callback(state, make_collector, media_type)
         h.assert_equals(job.on_finish(callback), job)
     end
     h.assert_equals(pcall(job.run_async), true)
     assert_noop_encoder_test_result(state, media_type, with_callback)
+end
+
+--- Build one real media job with controlled execution, file checks, and preview behavior.
+local function make_job_lifecycle_test_context(case, use_ffmpeg)
+    local state = fixtures.make_job_lifecycle_test_state {
+        file_exists = case.outcome ~= "missing_file",
+        finish_immediately = case.synchronous,
+    }
+    local config = make_backend_test_config("jpg", "webp", use_ffmpeg)
+    config.loudnorm, config.preview_audio = false, case.preview
+    config.screenshot, config.animated_snapshot_enabled = case.native, case.animated
+    if case.skip then config[MEDIA_FIELDS_FOR_TEST[case.media]] = "" end
+    local instance =
+        encoder.new(fixtures.make_job_lifecycle_test_components(state)).init(fixtures.make_config_manager(config))
+    if not case.missing_directory then instance.set_output_dir("/request-media") end
+    local job = instance[case.media].create_job(subtitle.make_subtitle("Line", 3, 7), 0)
+    if not case.no_callback then
+        job.on_finish(fixtures.make_job_lifecycle_test_callback(state, job, case.reentrant))
+    end
+    return job, state
+end
+
+--- Reject another start without allowing any additional I/O, logging, or completion.
+local function assert_job_restart_test_rejected(job, state)
+    local before = { #state.operations, #state.messages, #state.previews, #state.checked_paths, state.completion_count }
+    local success, error = pcall(job.run_async)
+    h.assert_equals(success, false)
+    h.assert_equals(h.is_substr(error, "job has already been started"), true)
+    h.assert_equals(
+        { #state.operations, #state.messages, #state.previews, #state.checked_paths, state.completion_count },
+        before
+    )
+end
+
+--- Return the failure expected from an early destination error or delivered encoder result.
+local function job_lifecycle_test_expected_error(case, path)
+    if case.missing_directory then
+        local label = "Image"
+        if case.media == "audio" then label = "Audio" end
+        return "Output directory wasn't provided. " .. label .. " file will not be created."
+    elseif case.outcome == "failure" then
+        return "simulated encoder failure"
+    elseif case.outcome == "missing_file" then
+        return "Couldn't create file: " .. path
+    end
+    return nil
+end
+
+--- Verify actual job callbacks deliver the correct media result and enforce reentrant refusal.
+local function assert_job_lifecycle_test_completion(job, state, case)
+    if case.no_callback then
+        h.assert_equals(state.completion_count, nil)
+        return
+    end
+    local path
+    if job.filename then path = "/request-media/" .. job.filename end
+    local expected_error = job_lifecycle_test_expected_error(case, path)
+    h.assert_equals(state.completion_count, 1)
+    h.assert_equals(state.completed_error, expected_error)
+    if expected_error or case.skip then path = nil end
+    h.assert_equals(state.completed_path, path)
+    if case.reentrant then
+        h.assert_equals(state.reentrant_success, false)
+        h.assert_equals(h.is_substr(state.reentrant_error, "job has already been started"), true)
+    end
+end
+
+--- Verify preview happens only after a successful audio completion and never starts a real player.
+local function assert_job_lifecycle_test_preview(job, state, case)
+    local expected = {}
+    if case.media == "audio" and case.preview and not case.skip and not job_lifecycle_test_expected_error(case, "") then
+        expected = { { path = "/request-media/" .. job.filename, completion_count = state.completion_count } }
+    end
+    h.assert_equals(state.previews, expected)
+end
+
+--- Exercise one-shot behavior before completion, after completion, and during synchronous callbacks.
+local function assert_job_lifecycle_test_case(case, use_ffmpeg)
+    local job, state = make_job_lifecycle_test_context(case, use_ffmpeg)
+    h.assert_equals(state.operations, {})
+    h.assert_equals(state.messages, {})
+    job.run_async()
+    assert_job_restart_test_rejected(job, state)
+    if #state.operations > 0 and not case.synchronous then
+        h.assert_equals(state.completion_count, nil)
+        local error
+        if case.outcome == "failure" then error = "simulated encoder failure" end
+        fixtures.complete_job_lifecycle_test_operation(state, 1, case.outcome ~= "failure", error)
+    end
+    local count = 1
+    if case.skip or case.missing_directory then count = 0 end
+    h.assert_equals(#state.operations, count)
+    if count > 0 then h.assert_equals(state.operations[1].native, case.native == true) end
+    assert_job_lifecycle_test_completion(job, state, case)
+    assert_job_lifecycle_test_preview(job, state, case)
+    assert_job_restart_test_rejected(job, state)
+end
+
+--- Cover native and subprocess completion, including failed creation and audio preview policy.
+local function make_job_execution_test_cases()
+    return {
+        { media = "snapshot" },
+        { media = "snapshot", animated = true },
+        { media = "snapshot", native = true },
+        { media = "audio", preview = true },
+        { media = "audio", preview = true, outcome = "failure" },
+        { media = "snapshot", outcome = "failure" },
+        { media = "snapshot", native = true, outcome = "failure" },
+        { media = "snapshot", outcome = "missing_file" },
+        { media = "audio", preview = true, outcome = "missing_file" },
+        { media = "snapshot", no_callback = true },
+        { media = "audio", no_callback = true },
+    }
+end
+
+--- Reentrant completion must see the guarded public method before any callback is delivered.
+local function make_job_reentrancy_test_cases()
+    return {
+        { media = "snapshot", native = true, synchronous = true, reentrant = true },
+        { media = "snapshot", animated = true, synchronous = true, reentrant = true },
+        { media = "audio", preview = true, synchronous = true, reentrant = true },
+        { media = "snapshot", skip = true, reentrant = true },
+        { media = "audio", skip = true, reentrant = true },
+        { media = "snapshot", missing_directory = true, reentrant = true },
+        { media = "audio", missing_directory = true, reentrant = true },
+        { media = "snapshot", skip = true, no_callback = true },
+        { media = "audio", skip = true, no_callback = true },
+        { media = "snapshot", missing_directory = true, no_callback = true },
+        { media = "audio", missing_directory = true, no_callback = true },
+    }
+end
+
+--- Validate real job execution and callbacks on both encoding backends without external I/O.
+local function test_media_jobs_are_single_use()
+    for _, use_ffmpeg in ipairs { false, true } do
+        local cases = h.join_lists(make_job_execution_test_cases(), make_job_reentrancy_test_cases())
+        for _, case in ipairs(cases) do
+            assert_job_lifecycle_test_case(case, use_ffmpeg)
+        end
+    end
+end
+
+--- Retain caller timing and captured stream selection even when inputs change before execution.
+local function assert_snapshot_capture_test_case(use_ffmpeg, albumart)
+    local state = { commands = {}, screenshots = {}, filename_args = {} }
+    local config = make_cover_snapshot_test_config("jpg", use_ffmpeg, true)
+    local track = { type = "video", selected = true, albumart = albumart, id = 7, ["ff-index"] = 2 }
+    local instance = encoder
+        .new(fixtures.make_cover_encoder_test_components(state, track))
+        .init(fixtures.make_config_manager(config))
+    instance.set_output_dir("/test-media")
+    local sub = subtitle.make_subtitle("Line", 60, 70)
+    local job = instance.snapshot.create_job(sub)
+    sub["start"], sub["end"] = 120, 130
+    state.video_track = { type = "video", selected = true, albumart = not albumart, id = 8, ["ff-index"] = 3 }
+    job.run_async()
+    assert_cover_snapshot_job_test_result(state, job, config, {
+        use_ffmpeg = use_ffmpeg,
+        albumart = albumart,
+        animated = true,
+        screenshot = false,
+    })
+end
+
+--- Snapshot jobs own their copied timings and retain their selected-track lookup result.
+local function test_snapshot_jobs_capture_inputs()
+    for _, use_ffmpeg in ipairs { false, true } do
+        for _, albumart in ipairs { false, true } do
+            assert_snapshot_capture_test_case(use_ffmpeg, albumart)
+        end
+    end
 end
 
 --- Preserve successful skipped-job completion for absent tracks and blank or missing fields.
@@ -763,10 +935,13 @@ local function run_tests()
     test_loudnorm_profile_isolation()
     test_cover_backend_static_args()
     test_cover_snapshot_jobs_use_static_settings()
+    test_cover_snapshot_native_routing()
     test_media_jobs_capture_output_directory()
     test_media_jobs_missing_output_directory()
     test_audioclip_padding_owns_subtitle()
     test_encoder_noop_jobs()
+    test_media_jobs_are_single_use()
+    test_snapshot_jobs_capture_inputs()
 end
 
 return {

@@ -660,8 +660,7 @@ function this.make_loudnorm_test_context(make_backend, cfg_mgr)
     backend.make_audio_args(
         "source.mkv",
         "output" .. cfg_mgr.config().audio_extension,
-        1,
-        2,
+        { ["start"] = 1, ["end"] = 2 },
         this.make_loudnorm_test_consumer(state)
     )
     return backend, state
@@ -758,12 +757,13 @@ end
 --- Record cover-job commands, native screenshots, and requested filename arguments.
 function this.make_cover_encoder_test_components(state, video_track)
     local components = this.make_recording_encoder_components(state)
+    state.video_track = video_track
     components.mp = this.make_mp_property_reader { path = "source.m4b", ["time-pos"] = 65 }
     --- Record native screenshots without requiring a rendered video output.
     components.mp.command_native_async = function(args) table.insert(state.screenshots, args) end
     --- Preserve the selected-track boundary when constructing transaction encoders.
     components.get_active_track = function(kind)
-        if kind == "video" then return video_track end
+        if kind == "video" then return state.video_track end
         return nil
     end
     --- Expose the selected static or animated filename extension and timing arguments.
@@ -830,6 +830,76 @@ function this.make_recording_completion_test_callback(state, make_collector, lab
             state.failed_errors = errors
         end)
     return this.make_media_result_test_recorder(state, collector.callback_for(label))
+end
+
+--- Deliver one recorded native or subprocess media result without touching the filesystem.
+function this.complete_job_lifecycle_test_operation(state, index, success, error)
+    local operation = state.operations[index]
+    local result
+    if not operation.native then
+        local status = 0
+        if not success then status = 1 end
+        result = { status = status }
+    end
+    operation.callback(success, result, error)
+end
+
+--- Record a media operation and optionally finish it synchronously to exercise reentrancy.
+local function record_job_lifecycle_test_operation(state, args, callback, native)
+    table.insert(state.operations, { args = args, callback = callback, native = native })
+    if state.finish_immediately then
+        this.complete_job_lifecycle_test_operation(state, #state.operations, true, nil)
+    end
+end
+
+--- Return independent recording state for one real-job lifecycle scenario.
+function this.make_job_lifecycle_test_state(options)
+    return {
+        operations = {},
+        checked_paths = {},
+        messages = {},
+        previews = {},
+        file_exists = options.file_exists,
+        finish_immediately = options.finish_immediately,
+    }
+end
+
+--- Supply isolated execution, file checks, logging, and audio previews for real job lifecycle tests.
+function this.make_job_lifecycle_test_components(state)
+    local components = this.make_recording_audio_encoder_components(state)
+    --- Record subprocess execution without starting a real encoder.
+    components.subprocess = function(options)
+        record_job_lifecycle_test_operation(state, options.args, options.completion_fn, false)
+    end
+    --- Record native screenshot callbacks independently of a rendered video output.
+    components.mp.command_native_async = function(args, callback)
+        record_job_lifecycle_test_operation(state, args, callback, true)
+    end
+    --- Return controlled file validation results without filesystem access.
+    components.file_exists = function(path)
+        table.insert(state.checked_paths, path)
+        return state.file_exists
+    end
+    --- Record playback and whether completion already reached the caller.
+    components.play_audio = function(path)
+        table.insert(state.previews, { path = path, completion_count = state.completion_count })
+    end
+    components.logger = {
+        --- Record successful creation messages without printing during tests.
+        info = function(message) table.insert(state.messages, { level = "info", message = message }) end,
+        --- Record expected failures without alarming the real-mpv test runner.
+        error = function(message) table.insert(state.messages, { level = "error", message = message }) end,
+    }
+    return components
+end
+
+--- Record completion and attempt a guarded reentrant start when requested by the scenario.
+function this.make_job_lifecycle_test_callback(state, job, reentrant)
+    return this.make_media_result_test_recorder(state, function()
+        if reentrant then
+            state.reentrant_success, state.reentrant_error = pcall(job.run_async)
+        end
+    end)
 end
 
 return this
