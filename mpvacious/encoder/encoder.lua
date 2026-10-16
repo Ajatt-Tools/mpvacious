@@ -80,6 +80,15 @@ local function report_creation_result(kwargs)
         end
     end
 
+    --- Log creation failure and forward its reason to an optional completion callback.
+    local function report_failure(error)
+        local reason = error or string.format("Couldn't create file: %s", kwargs.file_path)
+        kwargs.logger.error(reason)
+        if type(private.on_finish_fn) == "function" then
+            private.on_finish_fn(nil, reason)
+        end
+    end
+
     --- Handle completion of an mpv or subprocess media command.
     --- https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst#mp-functions
     function public.run(success, result, error)
@@ -87,11 +96,7 @@ local function report_creation_result(kwargs)
         if success and (result == nil or result.status == 0) and kwargs.file_exists(kwargs.file_path) then
             report_success()
         else
-            local reason = error or string.format("Couldn't create file: %s", kwargs.file_path)
-            kwargs.logger.error(reason)
-            if type(private.on_finish_fn) == "function" then
-                private.on_finish_fn(nil, reason)
-            end
+            report_failure(error)
         end
     end
 
