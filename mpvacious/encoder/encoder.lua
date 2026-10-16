@@ -92,6 +92,113 @@ local function report_creation_result(file_path, components)
     return public
 end
 
+--- Create a deferred snapshot job with its own dependencies and captured destination.
+local function make_snapshot_job(opts)
+    -- Dependencies (API)
+    local mp_api = opts.mp_api or mp
+    local get_active_track = opts.get_active_track or h.get_active_track
+    local filenames = opts.filename_factory or filename_factory
+    local subprocess = opts.subprocess or h.subprocess
+    local logger = opts.logger or msg
+
+    -- Private fields
+    local self = {
+        -- Args passed to constructor.
+        snapshot_timestamp = opts.snapshot_timestamp,
+        sub = opts.sub,
+        cfg_mgr = opts.cfg_mgr,
+        output_dir_path = opts.output_dir_path,
+        backend = opts.backend, -- ffmpeg or mpv
+        -- Initialized here.
+        on_finish_fn = nil,
+        current_timestamp = (opts.snapshot_timestamp or mp_api.get_property_number("time-pos", 0)),
+        track = get_active_track("video"),
+    }
+    -- Public interface
+    local job = {}
+
+    ------------------------------------------------------------
+    --- Private
+
+    --- Return the active configuration for this encoder instance.
+    local function config()
+        return self.cfg_mgr.config()
+    end
+
+    --- Determine whether this job's selected track supports the configured animation mode.
+    local function is_animated()
+        return (config().animated_snapshot_enabled and not (self.track and self.track.albumart == true))
+    end
+
+    --- Name the snapshot using its configured format and timing mode.
+    local function make_filename()
+        -- Generate a filename for the snapshot, taking care of its extension and whether it's animated or static
+        if is_animated() then
+            return filenames.make_filename(self.sub["start"], self.sub["end"], config().animated_snapshot_extension)
+        else
+            return filenames.make_filename(self.current_timestamp, config().snapshot_extension)
+        end
+    end
+
+    --- Encode an animated snapshot and forward command completion.
+    local function create_animated_snapshot(source_path, output_path, on_finish_fn)
+        -- Creates the animated snapshot and then calls on_finish_fn
+        local args =
+            self.backend.make_animated_snapshot_args(source_path, output_path, self.sub["start"], self.sub["end"])
+        return subprocess { args = args, completion_fn = on_finish_fn }
+    end
+
+    --- Create a still image using encoding or mpv's screenshot command.
+    local function create_static_snapshot(source_path, output_path, on_finish_fn)
+        -- Creates a static snapshot, in other words an image, and then calls on_finish_fn
+        if not config().screenshot then
+            local args = self.backend.make_static_snapshot_args(source_path, output_path, self.current_timestamp)
+            subprocess { args = args, completion_fn = on_finish_fn }
+        else
+            local args = { "screenshot-to-file", output_path, "video" }
+            mp_api.command_native_async(args, on_finish_fn)
+        end
+    end
+
+    ------------------------------------------------------------
+    --- Public
+
+    job.filename = make_filename()
+
+    --- Start snapshot creation using this job's captured timings.
+    job.run_async = function()
+        if h.is_empty(self.output_dir_path) then
+            local reason = "Output directory wasn't provided. Image file will not be created."
+            logger.error(reason)
+            if type(self.on_finish_fn) == "function" then
+                self.on_finish_fn(nil, reason)
+            end
+            return
+        end
+
+        -- Calls the proper function depending on whether or not the snapshot should be animated
+        if not h.is_empty(config().image_field) then
+            local source_path = mp_api.get_property("path")
+            local output_path = utils.join_path(self.output_dir_path, job.filename)
+            local on_finish_wrap = report_creation_result(output_path).on_finish(self.on_finish_fn)
+            if is_animated() then
+                return create_animated_snapshot(source_path, output_path, on_finish_wrap.run)
+            else
+                create_static_snapshot(source_path, output_path, on_finish_wrap.run)
+            end
+        else
+            print("Snapshot will not be created.")
+        end
+    end
+
+    --- Register the callback receiving the completed media path and error.
+    job.on_finish = function(fn)
+        self.on_finish_fn = fn
+        return job
+    end
+    return job
+end
+
 ------------------------------------------------------------
 --- public interface
 
@@ -122,46 +229,6 @@ local function make_encoder(components)
         return self.cfg_mgr.config()
     end
 
-    --- Encode an animated snapshot and forward command completion.
-    local function create_animated_snapshot(sub, source_path, output_path, on_finish_fn)
-        -- Creates the animated snapshot and then calls on_finish_fn
-        local args = self.encoder.make_animated_snapshot_args(source_path, output_path, sub["start"], sub["end"])
-        subprocess { args = args, completion_fn = on_finish_fn }
-    end
-
-    --- Create a still image using encoding or mpv's screenshot command.
-    local function create_static_snapshot(timestamp, source_path, output_path, on_finish_fn)
-        -- Creates a static snapshot, in other words an image, and then calls on_finish_fn
-        if not config().screenshot then
-            local args = self.encoder.make_static_snapshot_args(source_path, output_path, timestamp)
-            subprocess { args = args, completion_fn = on_finish_fn }
-        else
-            local args = { "screenshot-to-file", output_path, "video" }
-            mp_api.command_native_async(args, on_finish_fn)
-        end
-    end
-
-    --- Create and validate the requested static or animated snapshot.
-    local function create_snapshot(sub, current_timestamp, filename, on_finish_fn, is_animated)
-        if h.is_empty(self.output_dir_path) then
-            return msg.error("Output directory wasn't provided. Image file will not be created.")
-        end
-
-        -- Calls the proper function depending on whether or not the snapshot should be animated
-        if not h.is_empty(config().image_field) then
-            local source_path = mp_api.get_property("path")
-            local output_path = utils.join_path(self.output_dir_path, filename)
-            local on_finish_wrap = report_creation_result(output_path).on_finish(on_finish_fn)
-            if is_animated then
-                create_animated_snapshot(sub, source_path, output_path, on_finish_wrap.run)
-            else
-                create_static_snapshot(current_timestamp, source_path, output_path, on_finish_wrap.run)
-            end
-        else
-            print("Snapshot will not be created.")
-        end
-    end
-
     --- Encode padded audio and report its creation result with optional playback.
     local function create_audio(start_timestamp, end_timestamp, filename, padding, on_finish_fn)
         if h.is_empty(self.output_dir_path) then
@@ -189,54 +256,10 @@ local function make_encoder(components)
         end
     end
 
-    --- Name the snapshot using its configured format and timing mode.
-    local function make_snapshot_filename(sub, timestamp, is_animated)
-        -- Generate a filename for the snapshot, taking care of its extension and whether it's animated or static
-        if is_animated then
-            return filenames.make_filename(sub["start"], sub["end"], config().animated_snapshot_extension)
-        else
-            return filenames.make_filename(timestamp, config().snapshot_extension)
-        end
-    end
-
     --- Name the audio clip using its timing window and configured extension.
     local function make_audio_filename(sub)
         -- Generates a filename for the audio
         return filenames.make_filename(sub["start"], sub["end"], config().audio_extension)
-    end
-
-    local function make_snapshot_job(opts)
-        local self = {
-            -- Args passed to constructor.
-            snapshot_timestamp = opts.snapshot_timestamp,
-            sub = opts.sub,
-            -- Initialized here.
-            on_finish_fn = nil,
-            current_timestamp = (opts.snapshot_timestamp or mp_api.get_property_number("time-pos", 0)),
-            track = get_active_track("video"),
-        }
-        local job = {}
-
-        local function is_animated()
-            return (config().animated_snapshot_enabled and not (self.track and self.track.albumart == true))
-        end
-
-        ------------------------------------------------------------
-        --- Public
-
-        job.filename = make_snapshot_filename(self.sub, self.current_timestamp, is_animated)
-
-        --- Start snapshot creation using this job's captured timings.
-        job.run_async = function()
-            create_snapshot(self.sub, self.current_timestamp, job.filename, self.on_finish_fn, is_animated)
-        end
-
-        --- Register the callback receiving the completed media path and error.
-        job.on_finish = function(fn)
-            self.on_finish_fn = fn
-            return job
-        end
-        return job
     end
 
     --- Prepare a deferred media job or a skipped job when no matching track/field exists.
@@ -247,6 +270,14 @@ local function make_encoder(components)
             return make_snapshot_job {
                 sub = sub,
                 snapshot_timestamp = snapshot_timestamp,
+                get_active_track = get_active_track,
+                mp_api = mp_api,
+                cfg_mgr = self.cfg_mgr,
+                filename_factory = filenames,
+                output_dir_path = self.output_dir_path,
+                backend = self.encoder,
+                subprocess = subprocess,
+                logger = components.logger,
             }
         elseif job_type == "audioclip" and h.has_audio_track() and not h.is_empty(config().audio_field) then
             job.filename = make_audio_filename(sub)
