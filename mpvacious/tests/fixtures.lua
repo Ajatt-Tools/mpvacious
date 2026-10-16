@@ -775,4 +775,12 @@ function this.make_cover_encoder_test_components(state, video_track)
     return components
 end
 
+--- Record media completion paths and errors, including intentional nil results.
+function this.make_media_result_test_recorder(state)
+    return function(path, error)
+        state.completion_count = (state.completion_count or 0) + 1
+        state.completed_path, state.completed_error = path, error
+    end
+end
+
 return this

@@ -562,6 +562,67 @@ local function test_cover_snapshot_jobs_use_static_settings()
     end
 end
 
+--- Keep each deferred snapshot's destination independent of later parent directory changes.
+local function test_snapshot_jobs_capture_output_directory()
+    for _, use_ffmpeg in ipairs { false, true } do
+        local state = { commands = {} }
+        local instance = encoder
+            .new(fixtures.make_recording_encoder_components(state))
+            .init(fixtures.make_config_manager(make_backend_test_config("jpg", "webp", use_ffmpeg)))
+        local sub = subtitle.make_subtitle("Line", 0, 1)
+        instance.set_output_dir("/first-media")
+        local first = instance.snapshot.create_job(sub)
+        instance.set_output_dir("/second-media")
+        local second = instance.snapshot.create_job(sub)
+        first.run_async()
+        second.run_async()
+        h.assert_equals(fixtures.encoder_test_output_path(state.commands[1]), "/first-media/encoder-test.jpg")
+        h.assert_equals(fixtures.encoder_test_output_path(state.commands[2]), "/second-media/encoder-test.jpg")
+    end
+end
+
+--- Assert a missing directory is reported as failure without executing a media command.
+local function assert_snapshot_missing_directory_test_result(state, log, with_callback)
+    local reason = "Output directory wasn't provided. Image file will not be created."
+    h.assert_equals(log, { count = 1, level = "error", message = reason })
+    h.assert_equals(state.commands, {})
+    if with_callback then
+        h.assert_equals(state.completion_count, 1)
+        h.assert_equals(state.completed_path, nil)
+        h.assert_equals(state.completed_error, reason)
+    else
+        h.assert_equals(state.completion_count, nil)
+    end
+end
+
+--- Missing destinations must report failure rather than successful skips, with optional callbacks.
+local function assert_snapshot_missing_directory_test_case(case, use_ffmpeg)
+    local state, log = { commands = {} }, { count = 0 }
+    local components = fixtures.make_recording_encoder_components(state)
+    components.logger = make_encoder_test_logger(log)
+    local instance =
+        encoder.new(components).init(fixtures.make_config_manager(make_backend_test_config("jpg", "webp", use_ffmpeg)))
+    instance.set_output_dir(case.directory)
+    local job = instance.snapshot.create_job(subtitle.make_subtitle("Line", 0, 1))
+    if case.callback then job.on_finish(fixtures.make_media_result_test_recorder(state)) end
+    h.assert_equals(pcall(job.run_async), true)
+    assert_snapshot_missing_directory_test_result(state, log, case.callback)
+end
+
+--- Cover missing and blank destinations with and without a completion callback on both backends.
+local function test_snapshot_missing_output_directory()
+    for _, use_ffmpeg in ipairs { false, true } do
+        for _, case in ipairs {
+            {},
+            { callback = true },
+            { directory = "" },
+            { directory = "", callback = true },
+        } do
+            assert_snapshot_missing_directory_test_case(case, use_ffmpeg)
+        end
+    end
+end
+
 --- Run encoder completion, constructor, codec, normalization, and cover-art tests.
 local function run_tests()
     test_report_creation_result()
@@ -575,6 +636,8 @@ local function run_tests()
     test_loudnorm_profile_isolation()
     test_cover_backend_static_args()
     test_cover_snapshot_jobs_use_static_settings()
+    test_snapshot_jobs_capture_output_directory()
+    test_snapshot_missing_output_directory()
 end
 
 return {
