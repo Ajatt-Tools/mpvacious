@@ -204,6 +204,17 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         end
     end
 
+    local function make_additional_args()
+        return {
+            "-map_metadata",
+            "-1",
+            "-vf",
+            eutils.static_scale_filter(config()),
+            "-frames:v",
+            "1",
+        }
+    end
+
     ------------------------------------------------------------
     --- Public
 
@@ -214,17 +225,9 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
 
     --- Build a static snapshot, selecting attached cover art without a timestamp seek.
     public.make_static_snapshot_args = function(source_path, output_path, timestamp, track)
-        local additional_args = {
-            "-map_metadata",
-            "-1",
-            "-vf",
-            eutils.static_scale_filter(config()),
-            "-frames:v",
-            "1",
-        }
         return h.join_lists(
             make_input_args(track, source_path, timestamp),
-            additional_args,
+            make_additional_args(),
             make_encoder_args(),
             { output_path }
         )
