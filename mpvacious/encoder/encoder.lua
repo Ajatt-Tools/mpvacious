@@ -92,6 +92,13 @@ local function report_creation_result(file_path, components)
     return public
 end
 
+--- Reject another attempt to start a single-use media job.
+local function refuse_to_run_again()
+    -- Adding `2` points to the caller: the line that called job.run_async().
+    -- Using 2 makes this API-misuse error easier to trace.
+    error("job has already been started", 2)
+end
+
 --- Create a deferred snapshot job with its own dependencies and captured destination.
 local function make_snapshot_job(opts)
     -- Dependencies (API)
@@ -168,6 +175,8 @@ local function make_snapshot_job(opts)
 
     --- Start snapshot creation using this job's captured timings.
     job.run_async = function()
+        job.run_async = refuse_to_run_again
+
         if h.is_empty(self.output_dir_path) then
             local reason = "Output directory wasn't provided. Image file will not be created."
             logger.error(reason)
@@ -183,7 +192,7 @@ local function make_snapshot_job(opts)
             local output_path = utils.join_path(self.output_dir_path, job.filename)
             local on_finish_wrap = report_creation_result(output_path).on_finish(self.on_finish_fn)
             if is_animated() then
-                return create_animated_snapshot(source_path, output_path, on_finish_wrap.run)
+                create_animated_snapshot(source_path, output_path, on_finish_wrap.run)
             else
                 create_static_snapshot(source_path, output_path, on_finish_wrap.run)
             end
@@ -246,6 +255,8 @@ local function make_audioclip_job(opts)
 
     --- Start audio creation using this job's captured timings and padding.
     job.run_async = function()
+        job.run_async = refuse_to_run_again
+
         if h.is_empty(self.output_dir_path) then
             local reason = "Output directory wasn't provided. Audio file will not be created."
             logger.error(reason)
@@ -309,6 +320,7 @@ local function make_noop_job(opts)
 
     --- Complete an intentionally skipped media job without an error.
     job.run_async = function()
+        job.run_async = refuse_to_run_again
         -- Missing tracks or disabled fields are expected skips, not media-creation errors.
         logger.info(self.job_type .. " will not be created.")
         if type(self.on_finish_fn) == "function" then
