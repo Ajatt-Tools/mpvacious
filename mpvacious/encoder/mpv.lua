@@ -151,7 +151,7 @@ local function make_mpv_encoder(cfg_mgr, support, components)
     end
 
     --- Build audio arguments and deliver them after optional loudness analysis.
-    public.make_audio_args = function(source_path, output_path, start_timestamp, end_timestamp, args_consumer)
+    public.make_audio_args = function(source_path, output_path, sub, args_consumer)
         local audio_track = get_active_track("audio")
         local audio_track_id = mp_api.get_property("aid")
 
@@ -167,8 +167,8 @@ local function make_mpv_encoder(cfg_mgr, support, components)
                 "--video=no",
                 "--aid=" .. audio_track_id,
                 "--audio-channels=mono",
-                "--start=" .. eutils.toms(start_timestamp),
-                "--end=" .. eutils.toms(end_timestamp),
+                "--start=" .. eutils.toms(sub["start"]),
+                "--end=" .. eutils.toms(sub["end"]),
                 string.format("--volume=%d", config().tie_volumes and mp_api.get_property("volume") or 100),
                 ...
             )

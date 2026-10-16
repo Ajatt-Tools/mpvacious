@@ -261,7 +261,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
     end
 
     --- Build audio arguments and deliver them after optional loudness analysis.
-    public.make_audio_args = function(source_path, output_path, start_timestamp, end_timestamp, args_consumer)
+    public.make_audio_args = function(source_path, output_path, sub, args_consumer)
         local audio_track = get_active_track("audio")
         local audio_track_id = audio_track and audio_track["ff-index"] or "a"
 
@@ -276,9 +276,9 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
                 prepend_common_args(
                     "-vn",
                     "-ss",
-                    eutils.toms(start_timestamp),
+                    eutils.toms(sub["start"]),
                     "-to",
-                    eutils.toms(end_timestamp),
+                    eutils.toms(sub["end"]),
                     "-i",
                     source_path,
                     "-map_metadata",

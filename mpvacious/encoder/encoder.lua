@@ -285,9 +285,9 @@ local function make_audioclip_job(opts)
         end
     end
 
-    --- Prepare audio completion and optional preview through isolated I/O boundaries.
-    local function make_completion(output_path)
-        return report_creation_result {
+    --- Return a function that starts encoding and forwards its completion to the media reporter.
+    local function make_subprocess_caller(output_path)
+        local completion = report_creation_result {
                 file_exists = opts.file_exists,
                 play_audio = opts.play_audio,
                 logger = logger,
@@ -295,20 +295,22 @@ local function make_audioclip_job(opts)
             }
             .on_finish(self.on_finish_fn)
             .preview_audio(config().preview_audio)
+        return function(args)
+            -- The reporter is already constructed for this output path. Forward its callback directly.
+            subprocess { args = args, completion_fn = completion.run }
+        end
     end
 
+    --- Apply job-owned padding and build the audio command using the prepared reporter.
     local function start_audio()
-        local source_path = mp_api.get_property("path")
         local output_path = utils.join_path(self.output_dir_path, job.filename)
-
         apply_padding()
-
-        --- Start encoding and forward its completion to the media reporter.
-        local function start_encoding(args)
-            subprocess { args = args, completion_fn = make_completion(output_path).run }
-        end
-
-        self.backend.make_audio_args(source_path, output_path, self.sub["start"], self.sub["end"], start_encoding)
+        self.backend.make_audio_args(
+            mp_api.get_property("path"),
+            output_path,
+            self.sub,
+            make_subprocess_caller(output_path)
+        )
     end
 
     ------------------------------------------------------------
