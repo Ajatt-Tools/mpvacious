@@ -166,6 +166,28 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         end
     end
 
+    local function make_encoder_args()
+        if config().snapshot_format == "avif" then
+            return make_avif_encoder_args(config().snapshot_quality, true)
+        elseif config().snapshot_format == "webp" then
+            return {
+                "-c:v",
+                self.snapshot_codec,
+                "-compression_level",
+                "6",
+                "-quality",
+                tostring(config().snapshot_quality),
+            }
+        else
+            return {
+                "-c:v",
+                self.snapshot_codec,
+                "-q:v",
+                tostring(eutils.quality_to_jpeg_qscale(config().snapshot_quality)),
+            }
+        end
+    end
+
     ------------------------------------------------------------
     --- Public
 
@@ -176,28 +198,6 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
 
     --- Build a static snapshot, selecting attached cover art without a timestamp seek.
     public.make_static_snapshot_args = function(source_path, output_path, timestamp, track)
-        local encoder_args
-        if config().snapshot_format == "avif" then
-            encoder_args = make_avif_encoder_args(config().snapshot_quality, true)
-        elseif config().snapshot_format == "webp" then
-            encoder_args = {
-                "-c:v",
-                self.snapshot_codec,
-                "-compression_level",
-                "6",
-                "-quality",
-                tostring(config().snapshot_quality),
-            }
-        else
-            encoder_args = {
-                "-c:v",
-                self.snapshot_codec,
-                "-q:v",
-                tostring(eutils.quality_to_jpeg_qscale(config().snapshot_quality)),
-            }
-        end
-
-        local input_args = make_input_args(track, source_path, timestamp)
         local additional_args = {
             "-map_metadata",
             "-1",
@@ -206,7 +206,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
             "-frames:v",
             "1",
         }
-        return h.join_lists(input_args, additional_args, encoder_args, { output_path })
+        return h.join_lists(make_input_args(track, source_path, timestamp), additional_args, make_encoder_args(), { output_path })
     end
 
     --- Build the command for an animated snapshot using initialized codecs.
