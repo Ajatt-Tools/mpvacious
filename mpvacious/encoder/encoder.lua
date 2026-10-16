@@ -205,19 +205,49 @@ local function make_encoder(components)
         return filenames.make_filename(sub["start"], sub["end"], config().audio_extension)
     end
 
+    local function make_snapshot_job(opts)
+        local self = {
+            -- Args passed to constructor.
+            snapshot_timestamp = opts.snapshot_timestamp,
+            sub = opts.sub,
+            -- Initialized here.
+            on_finish_fn = nil,
+            current_timestamp = (opts.snapshot_timestamp or mp_api.get_property_number("time-pos", 0)),
+            track = get_active_track("video"),
+        }
+        local job = {}
+
+        local function is_animated()
+            return (config().animated_snapshot_enabled and not (self.track and self.track.albumart == true))
+        end
+
+        ------------------------------------------------------------
+        --- Public
+
+        job.filename = make_snapshot_filename(self.sub, self.current_timestamp, is_animated)
+
+        --- Start snapshot creation using this job's captured timings.
+        job.run_async = function()
+            create_snapshot(self.sub, self.current_timestamp, job.filename, self.on_finish_fn, is_animated)
+        end
+
+        --- Register the callback receiving the completed media path and error.
+        job.on_finish = function(fn)
+            self.on_finish_fn = fn
+            return job
+        end
+        return job
+    end
+
     --- Prepare a deferred media job or a skipped job when no matching track/field exists.
     local function create_job(job_type, sub, audio_padding, snapshot_timestamp)
-        local current_timestamp, on_finish_fn
+        local on_finish_fn
         local job = {}
         if job_type == "snapshot" and has_video_track() and not h.is_empty(config().image_field) then
-            current_timestamp = snapshot_timestamp or mp_api.get_property_number("time-pos", 0)
-            local track = get_active_track("video")
-            local is_animated = (config().animated_snapshot_enabled and not (track and track.albumart == true))
-            job.filename = make_snapshot_filename(sub, current_timestamp, is_animated)
-            --- Start snapshot creation using this job's captured timings.
-            job.run_async = function()
-                create_snapshot(sub, current_timestamp, job.filename, on_finish_fn, is_animated)
-            end
+            return make_snapshot_job {
+                sub = sub,
+                snapshot_timestamp = snapshot_timestamp,
+            }
         elseif job_type == "audioclip" and h.has_audio_track() and not h.is_empty(config().audio_field) then
             job.filename = make_audio_filename(sub)
             --- Start audio creation using this job's captured timings and padding.
