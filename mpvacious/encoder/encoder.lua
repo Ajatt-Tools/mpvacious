@@ -64,23 +64,28 @@ local function report_creation_result(kwargs)
         return public
     end
 
+    --- Notify completion before optionally playing successfully created audio.
+    local function report_success()
+        kwargs.logger.info(string.format("Created file: %s", kwargs.file_path))
+        if type(private.on_finish_fn) == "function" then
+            private.on_finish_fn(kwargs.file_path, nil)
+        end
+        if private.preview_audio then
+            kwargs.play_audio(
+                kwargs.file_path,
+                function()
+                    print("Played file: " .. kwargs.file_path)
+                end
+            )
+        end
+    end
+
     --- Handle completion of an mpv or subprocess media command.
     --- https://github.com/mpv-player/mpv/blob/master/DOCS/man/lua.rst#mp-functions
     function public.run(success, result, error)
         -- result is nil on success for screenshot-to-file.
         if success and (result == nil or result.status == 0) and kwargs.file_exists(kwargs.file_path) then
-            kwargs.logger.info(string.format("Created file: %s", kwargs.file_path))
-            if type(private.on_finish_fn) == "function" then
-                private.on_finish_fn(kwargs.file_path, nil)
-            end
-            if private.preview_audio then
-                kwargs.play_audio(
-                    kwargs.file_path,
-                    function()
-                        print("Played file: " .. kwargs.file_path)
-                    end
-                )
-            end
+            report_success()
         else
             local reason = error or string.format("Couldn't create file: %s", kwargs.file_path)
             kwargs.logger.error(reason)
