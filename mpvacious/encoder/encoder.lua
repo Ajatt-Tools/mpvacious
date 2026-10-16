@@ -176,12 +176,29 @@ local function make_snapshot_job(opts)
         end
     end
 
+    --- Start the appropriate snapshot operation through the job's completion reporter.
+    local function start_snapshot()
+        local source_path = mp_api.get_property("path")
+        local output_path = utils.join_path(self.output_dir_path, job.filename)
+        local on_finish_wrap = report_creation_result {
+            file_exists = opts.file_exists,
+            logger = logger,
+            file_path = output_path,
+        }.on_finish(self.on_finish_fn)
+        -- Calls the proper function depending on whether or not the snapshot should be animated
+        if is_animated() then
+            create_animated_snapshot(source_path, output_path, on_finish_wrap.run)
+        else
+            create_static_snapshot(source_path, output_path, on_finish_wrap.run)
+        end
+    end
+
     ------------------------------------------------------------
     --- Public
 
     job.filename = make_filename()
 
-    --- Start snapshot creation using this job's captured timings.
+    --- Start this single-use snapshot job using its captured timings.
     job.run_async = function()
         job.run_async = refuse_to_run_again
 
@@ -189,16 +206,8 @@ local function make_snapshot_job(opts)
             return handle_missing_output_directory(logger, self.on_finish_fn, "Image")
         end
 
-        -- Calls the proper function depending on whether or not the snapshot should be animated
         if not h.is_empty(config().image_field) then
-            local source_path = mp_api.get_property("path")
-            local output_path = utils.join_path(self.output_dir_path, job.filename)
-            local on_finish_wrap = report_creation_result(output_path).on_finish(self.on_finish_fn)
-            if is_animated() then
-                create_animated_snapshot(source_path, output_path, on_finish_wrap.run)
-            else
-                create_static_snapshot(source_path, output_path, on_finish_wrap.run)
-            end
+            start_snapshot()
         else
             print("Snapshot will not be created.")
         end
