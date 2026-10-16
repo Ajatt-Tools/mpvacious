@@ -83,6 +83,23 @@ local function make_mpv_encoder(cfg_mgr, support, components)
         end
     end
 
+    local function make_animated_encoder_args()
+        if config().animated_snapshot_format == "avif" then
+            return {
+                "--ovc=" .. self.animated_snapshot_codec,
+                -- cpu-used < 6 can take a lot of time to encode.
+                "--ovcopts-add=cpu-used=6",
+                string.format("--ovcopts-add=crf=%d", eutils.quality_to_crf_avif(config().animated_snapshot_quality)),
+            }
+        else
+            return {
+                "--ovc=" .. self.animated_snapshot_codec,
+                "--ovcopts-add=compression_level=6",
+                string.format("--ovcopts-add=quality=%d", config().animated_snapshot_quality),
+            }
+        end
+    end
+
     ------------------------------------------------------------
     --- Public
 
@@ -107,22 +124,6 @@ local function make_mpv_encoder(cfg_mgr, support, components)
 
     --- Build the command for an animated snapshot using initialized codecs.
     public.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
-        local encoder_args
-        if config().animated_snapshot_format == "avif" then
-            encoder_args = {
-                "--ovc=" .. self.animated_snapshot_codec,
-                -- cpu-used < 6 can take a lot of time to encode.
-                "--ovcopts-add=cpu-used=6",
-                string.format("--ovcopts-add=crf=%d", eutils.quality_to_crf_avif(config().animated_snapshot_quality)),
-            }
-        else
-            encoder_args = {
-                "--ovc=" .. self.animated_snapshot_codec,
-                "--ovcopts-add=compression_level=6",
-                string.format("--ovcopts-add=quality=%d", config().animated_snapshot_quality),
-            }
-        end
-
         return prepend_common_args(
             source_path,
             "--audio=no",
@@ -132,7 +133,7 @@ local function make_mpv_encoder(cfg_mgr, support, components)
             string.format("--vf-add=fps=%d", config().animated_snapshot_fps),
             string.format("--vf-add=lavfi=[%s]", eutils.animated_scale_filter(config())),
             "-o=" .. output_path,
-            h.unpack(encoder_args)
+            h.unpack(make_animated_encoder_args())
         )
     end
 
