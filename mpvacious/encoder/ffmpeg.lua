@@ -117,7 +117,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
     end
 
     --- Prepend common FFmpeg process arguments.
-    local function prepend(...)
+    local function prepend_common_args(...)
         return {
             exec.ffmpeg,
             "-hide_banner",
@@ -160,9 +160,9 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
             if track["ff-index"] ~= nil then
                 stream = string.format("0:%s", tostring(track["ff-index"]))
             end
-            return prepend("-an", "-i", source_path, "-map", stream)
+            return prepend_common_args("-an", "-i", source_path, "-map", stream)
         else
-            return prepend("-an", "-ss", eutils.toms(timestamp), "-i", source_path)
+            return prepend_common_args("-an", "-ss", eutils.toms(timestamp), "-i", source_path)
         end
     end
 
@@ -226,7 +226,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
             }
         end
 
-        local args = prepend(
+        local args = prepend_common_args(
             "-an",
             "-ss",
             eutils.toms(start_timestamp),
@@ -259,7 +259,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         --- Build audio arguments using the captured source, track, and timing window.
         local function make_ffargs(...)
             return append_user_audio_args(
-                prepend(
+                prepend_common_args(
                     "-vn",
                     "-ss",
                     eutils.toms(start_timestamp),
