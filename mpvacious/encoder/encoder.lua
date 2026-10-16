@@ -262,7 +262,10 @@ local function make_audioclip_job(opts)
             if self.audio_padding > 0 then
                 -- Use this job's mp API for duration rather than reaching into the shared global API.
                 self.sub["start"], self.sub["end"] = pad_timings(
-                    self.audio_padding, self.sub["start"], self.sub["end"], mp_api.get_property_number("duration")
+                    self.audio_padding,
+                    self.sub["start"],
+                    self.sub["end"],
+                    mp_api.get_property_number("duration")
                 )
             end
 
