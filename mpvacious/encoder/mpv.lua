@@ -100,6 +100,19 @@ local function make_mpv_encoder(cfg_mgr, support, components)
         end
     end
 
+    --- Build static snapshot selection, scaling, and destination arguments.
+    local function make_additional_args(track, output_path, timestamp)
+        local additional_args = {}
+        if track and track.albumart == true then
+            table.insert(additional_args, "--vid=" .. tostring(track.id or "auto"))
+        else
+            table.insert(additional_args, "--start=" .. eutils.toms(timestamp))
+        end
+        table.insert(additional_args, string.format("--vf-add=lavfi=[%s]", eutils.static_scale_filter(config())))
+        table.insert(additional_args, "-o=" .. output_path)
+        return additional_args
+    end
+
     ------------------------------------------------------------
     --- Public
 
@@ -110,16 +123,11 @@ local function make_mpv_encoder(cfg_mgr, support, components)
 
     --- Build a static snapshot, selecting attached cover art without a timestamp seek.
     public.make_static_snapshot_args = function(source_path, output_path, timestamp, track)
-        local args = prepend_common_args(source_path, "--audio=no", "--frames=1")
-        if track and track.albumart == true then
-            table.insert(args, "--vid=" .. tostring(track.id or "auto"))
-        else
-            table.insert(args, "--start=" .. eutils.toms(timestamp))
-        end
-        return h.join_lists(args, {
-            string.format("--vf-add=lavfi=[%s]", eutils.static_scale_filter(config())),
-            "-o=" .. output_path,
-        }, make_encoder_args())
+        return h.join_lists(
+            prepend_common_args(source_path, "--audio=no", "--frames=1"),
+            make_additional_args(track, output_path, timestamp),
+            make_encoder_args()
+        )
     end
 
     --- Build the command for an animated snapshot using initialized codecs.
