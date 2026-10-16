@@ -384,33 +384,31 @@ local function make_encoder(components)
         return job_type == "audioclip" and has_audio_track() and not h.is_empty(config().audio_field)
     end
 
-    --- Prepare a deferred media job or a skipped job when no matching track/field exists.
+    --- Capture common job dependencies without exposing or mutating the caller's request.
+    local function make_job_options(sub, audio_padding, snapshot_timestamp)
+        return {
+            sub = sub,
+            snapshot_timestamp = snapshot_timestamp,
+            audio_padding = audio_padding,
+            get_active_track = get_active_track,
+            mp_api = mp_api,
+            cfg_mgr = self.cfg_mgr,
+            filename_factory = filenames,
+            output_dir_path = self.output_dir_path,
+            backend = self.encoder,
+            subprocess = subprocess,
+            logger = components.logger,
+            file_exists = components.file_exists,
+            play_audio = components.play_audio,
+        }
+    end
+
+    --- Prepare a single-use media job or an intentional skip when no track/field exists.
     local function create_job(job_type, sub, audio_padding, snapshot_timestamp)
         if is_snapshot_job(job_type) then
-            return make_snapshot_job {
-                sub = sub,
-                snapshot_timestamp = snapshot_timestamp,
-                get_active_track = get_active_track,
-                mp_api = mp_api,
-                cfg_mgr = self.cfg_mgr,
-                filename_factory = filenames,
-                output_dir_path = self.output_dir_path,
-                backend = self.encoder,
-                subprocess = subprocess,
-                logger = components.logger,
-            }
+            return make_snapshot_job(make_job_options(sub, nil, snapshot_timestamp))
         elseif is_audioclip_job(job_type) then
-            return make_audioclip_job {
-                sub = sub,
-                mp_api = mp_api,
-                cfg_mgr = self.cfg_mgr,
-                filename_factory = filenames,
-                output_dir_path = self.output_dir_path,
-                backend = self.encoder,
-                subprocess = subprocess,
-                logger = components.logger,
-                audio_padding = audio_padding,
-            }
+            return make_audioclip_job(make_job_options(sub, audio_padding))
         else
             return make_noop_job {
                 job_type = job_type,
