@@ -188,6 +188,22 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         end
     end
 
+    local function make_animated_encoder_args()
+        if config().animated_snapshot_format == "avif" then
+            return make_avif_encoder_args(config().animated_snapshot_quality, false)
+        else
+            -- Documentation: https://www.ffmpeg.org/ffmpeg-all.html#libwebp
+            return {
+                "-c:v",
+                self.animated_snapshot_codec,
+                "-compression_level",
+                "6",
+                "-quality",
+                tostring(config().animated_snapshot_quality),
+            }
+        end
+    end
+
     ------------------------------------------------------------
     --- Public
 
@@ -206,44 +222,35 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
             "-frames:v",
             "1",
         }
-        return h.join_lists(make_input_args(track, source_path, timestamp), additional_args, make_encoder_args(), { output_path })
+        return h.join_lists(
+            make_input_args(track, source_path, timestamp),
+            additional_args,
+            make_encoder_args(),
+            { output_path }
+        )
     end
 
     --- Build the command for an animated snapshot using initialized codecs.
     public.make_animated_snapshot_args = function(source_path, output_path, start_timestamp, end_timestamp)
-        local encoder_args
-        if config().animated_snapshot_format == "avif" then
-            encoder_args = make_avif_encoder_args(config().animated_snapshot_quality, false)
-        else
-            -- Documentation: https://www.ffmpeg.org/ffmpeg-all.html#libwebp
-            encoder_args = {
-                "-c:v",
-                self.animated_snapshot_codec,
-                "-compression_level",
-                "6",
-                "-quality",
-                tostring(config().animated_snapshot_quality),
-            }
-        end
-
-        local args = prepend_common_args(
-            "-an",
-            "-ss",
-            eutils.toms(start_timestamp),
-            "-to",
-            eutils.toms(end_timestamp),
-            "-i",
-            source_path,
-            "-map_metadata",
-            "-1",
-            "-loop",
-            "0",
-            "-vf",
-            string.format("fps=%d,%s", config().animated_snapshot_fps, eutils.animated_scale_filter(config())),
-            h.unpack(encoder_args)
+        return h.join_lists(
+            prepend_common_args(
+                "-an",
+                "-ss",
+                eutils.toms(start_timestamp),
+                "-to",
+                eutils.toms(end_timestamp),
+                "-i",
+                source_path,
+                "-map_metadata",
+                "-1",
+                "-loop",
+                "0",
+                "-vf",
+                string.format("fps=%d,%s", config().animated_snapshot_fps, eutils.animated_scale_filter(config()))
+            ),
+            make_animated_encoder_args(),
+            { output_path }
         )
-        table.insert(args, output_path)
-        return args
     end
 
     --- Build audio arguments and deliver them after optional loudness analysis.
