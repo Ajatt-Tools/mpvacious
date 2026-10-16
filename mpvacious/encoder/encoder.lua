@@ -105,7 +105,7 @@ local function make_snapshot_job(opts)
     local self = {
         -- Args passed to constructor.
         snapshot_timestamp = opts.snapshot_timestamp,
-        sub = opts.sub,
+        sub = h.shallow_copy(opts.sub),
         cfg_mgr = opts.cfg_mgr,
         output_dir_path = opts.output_dir_path,
         backend = opts.backend, -- ffmpeg or mpv
