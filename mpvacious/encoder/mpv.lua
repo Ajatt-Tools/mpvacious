@@ -56,6 +56,33 @@ local function make_mpv_encoder(cfg_mgr, support, components)
         }
     end
 
+    local function make_encoder_args()
+        if config().snapshot_format == "avif" then
+            return {
+                "--ovc=" .. self.snapshot_codec,
+                -- cpu-used < 6 can take a lot of time to encode.
+                "--ovcopts-add=cpu-used=6",
+                string.format("--ovcopts-add=crf=%d", eutils.quality_to_crf_avif(config().snapshot_quality)),
+                "--ovcopts-add=still-picture=1",
+            }
+        elseif config().snapshot_format == "webp" then
+            return {
+                "--ovc=" .. self.snapshot_codec,
+                "--ovcopts-add=compression_level=6",
+                string.format("--ovcopts-add=quality=%d", config().snapshot_quality),
+            }
+        else
+            return {
+                "--ovc=" .. self.snapshot_codec,
+                "--vf-add=scale=out_range=jpeg",
+                string.format(
+                    "--ovcopts=global_quality=%d*QP2LAMBDA,flags=+qscale",
+                    eutils.quality_to_jpeg_qscale(config().snapshot_quality)
+                ),
+            }
+        end
+    end
+
     ------------------------------------------------------------
     --- Public
 
@@ -66,32 +93,6 @@ local function make_mpv_encoder(cfg_mgr, support, components)
 
     --- Build a static snapshot, selecting attached cover art without a timestamp seek.
     public.make_static_snapshot_args = function(source_path, output_path, timestamp, track)
-        local encoder_args
-        if config().snapshot_format == "avif" then
-            encoder_args = {
-                "--ovc=" .. self.snapshot_codec,
-                -- cpu-used < 6 can take a lot of time to encode.
-                "--ovcopts-add=cpu-used=6",
-                string.format("--ovcopts-add=crf=%d", eutils.quality_to_crf_avif(config().snapshot_quality)),
-                "--ovcopts-add=still-picture=1",
-            }
-        elseif config().snapshot_format == "webp" then
-            encoder_args = {
-                "--ovc=" .. self.snapshot_codec,
-                "--ovcopts-add=compression_level=6",
-                string.format("--ovcopts-add=quality=%d", config().snapshot_quality),
-            }
-        else
-            encoder_args = {
-                "--ovc=" .. self.snapshot_codec,
-                "--vf-add=scale=out_range=jpeg",
-                string.format(
-                    "--ovcopts=global_quality=%d*QP2LAMBDA,flags=+qscale",
-                    eutils.quality_to_jpeg_qscale(config().snapshot_quality)
-                ),
-            }
-        end
-
         local args = prepend_common_args(source_path, "--audio=no", "--frames=1")
         if track and track.albumart == true then
             table.insert(args, "--vid=" .. tostring(track.id or "auto"))
@@ -101,7 +102,7 @@ local function make_mpv_encoder(cfg_mgr, support, components)
         return h.join_lists(args, {
             string.format("--vf-add=lavfi=[%s]", eutils.static_scale_filter(config())),
             "-o=" .. output_path,
-        }, encoder_args)
+        }, make_encoder_args())
     end
 
     --- Build the command for an animated snapshot using initialized codecs.
