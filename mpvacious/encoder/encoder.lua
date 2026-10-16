@@ -100,6 +100,7 @@ local function refuse_to_run_again()
     error("job has already been started", 2)
 end
 
+--- Report an unavailable media destination and fail an optional completion callback.
 local function handle_missing_output_directory(logger, on_finish_fn, media_type)
     local reason = string.format("Output directory wasn't provided. %s file will not be created.", media_type)
     logger.error(reason)
@@ -266,7 +267,7 @@ local function make_audioclip_job(opts)
 
     job.filename = make_audio_filename()
 
-    --- Start audio creation using this job's captured timings and padding.
+    --- Start this single-use audio job using its captured timings and padding.
     job.run_async = function()
         job.run_async = refuse_to_run_again
 
@@ -325,7 +326,7 @@ local function make_noop_job(opts)
 
     job.filename = nil
 
-    --- Complete an intentionally skipped media job without an error.
+    --- Complete this single-use skipped job without an error.
     job.run_async = function()
         job.run_async = refuse_to_run_again
         -- Missing tracks or disabled fields are expected skips, not media-creation errors.
@@ -376,10 +377,12 @@ local function make_encoder(components)
         return self.cfg_mgr.config()
     end
 
+    --- Check whether the requested snapshot has a video track and configured image field.
     local function is_snapshot_job(job_type)
         return job_type == "snapshot" and has_video_track() and not h.is_empty(config().image_field)
     end
 
+    --- Check whether the requested clip has an audio track and configured audio field.
     local function is_audioclip_job(job_type)
         return job_type == "audioclip" and has_audio_track() and not h.is_empty(config().audio_field)
     end
@@ -444,7 +447,7 @@ local function make_encoder(components)
         return public
     end
 
-    --- Set the collection media directory for newly started jobs.
+    --- Set the collection media directory captured by subsequently constructed jobs.
     function public.set_output_dir(dir_path)
         -- Set directory where media files should be saved.
         -- This function is called every time a card is created or updated.

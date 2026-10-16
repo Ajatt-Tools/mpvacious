@@ -153,6 +153,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         return new_args
     end
 
+    --- Select the captured cover stream without seeking, or seek ordinary timed video.
     local function make_input_args(track, source_path, timestamp)
         -- track is a table returned by h.get_active_track()
         if track and track.albumart == true then
@@ -166,6 +167,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         end
     end
 
+    --- Build codec and quality arguments for the configured static image format.
     local function make_encoder_args()
         if config().snapshot_format == "avif" then
             return make_avif_encoder_args(config().snapshot_quality, true)
@@ -188,6 +190,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         end
     end
 
+    --- Build codec and quality arguments for the configured animated image format.
     local function make_animated_encoder_args()
         if config().animated_snapshot_format == "avif" then
             return make_avif_encoder_args(config().animated_snapshot_quality, false)
@@ -204,6 +207,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         end
     end
 
+    --- Suppress metadata and apply static image dimensions with a one-frame limit.
     local function make_additional_args()
         return {
             "-map_metadata",
