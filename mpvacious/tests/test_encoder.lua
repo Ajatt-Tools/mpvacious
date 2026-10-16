@@ -562,28 +562,38 @@ local function test_cover_snapshot_jobs_use_static_settings()
     end
 end
 
---- Keep each deferred snapshot's destination independent of later parent directory changes.
-local function test_snapshot_jobs_capture_output_directory()
+--- Keep each deferred media job's destination independent of later parent directory changes.
+local function assert_media_job_directory_test_case(media_type, use_ffmpeg)
+    local state = { commands = {} }
+    local config = make_backend_test_config("jpg", "webp", use_ffmpeg)
+    config.loudnorm = false
+    local instance =
+        encoder.new(fixtures.make_recording_audio_encoder_components(state)).init(fixtures.make_config_manager(config))
+    local sub = subtitle.make_subtitle("Line", 0, 1)
+    instance.set_output_dir("/first-media")
+    local first = instance[media_type].create_job(sub, 0)
+    instance.set_output_dir("/second-media")
+    local second = instance[media_type].create_job(sub, 0)
+    first.run_async()
+    second.run_async()
+    h.assert_equals(fixtures.encoder_test_output_path(state.commands[1]), "/first-media/" .. first.filename)
+    h.assert_equals(fixtures.encoder_test_output_path(state.commands[2]), "/second-media/" .. second.filename)
+end
+
+--- Verify snapshot and audio closures capture their own output directory on both backends.
+local function test_media_jobs_capture_output_directory()
     for _, use_ffmpeg in ipairs { false, true } do
-        local state = { commands = {} }
-        local instance = encoder
-            .new(fixtures.make_recording_encoder_components(state))
-            .init(fixtures.make_config_manager(make_backend_test_config("jpg", "webp", use_ffmpeg)))
-        local sub = subtitle.make_subtitle("Line", 0, 1)
-        instance.set_output_dir("/first-media")
-        local first = instance.snapshot.create_job(sub)
-        instance.set_output_dir("/second-media")
-        local second = instance.snapshot.create_job(sub)
-        first.run_async()
-        second.run_async()
-        h.assert_equals(fixtures.encoder_test_output_path(state.commands[1]), "/first-media/encoder-test.jpg")
-        h.assert_equals(fixtures.encoder_test_output_path(state.commands[2]), "/second-media/encoder-test.jpg")
+        for _, media_type in ipairs { "snapshot", "audio" } do
+            assert_media_job_directory_test_case(media_type, use_ffmpeg)
+        end
     end
 end
 
 --- Assert a missing directory is reported as failure without executing a media command.
-local function assert_snapshot_missing_directory_test_result(state, log, with_callback)
-    local reason = "Output directory wasn't provided. Image file will not be created."
+local function assert_media_missing_directory_test_result(state, log, with_callback, media_type)
+    local label = "Image"
+    if media_type == "audio" then label = "Audio" end
+    local reason = "Output directory wasn't provided. " .. label .. " file will not be created."
     h.assert_equals(log, { count = 1, level = "error", message = reason })
     h.assert_equals(state.commands, {})
     if with_callback then
@@ -596,21 +606,21 @@ local function assert_snapshot_missing_directory_test_result(state, log, with_ca
 end
 
 --- Missing destinations must report failure rather than successful skips, with optional callbacks.
-local function assert_snapshot_missing_directory_test_case(case, use_ffmpeg)
+local function assert_media_missing_directory_test_case(case, use_ffmpeg, media_type)
     local state, log = { commands = {} }, { count = 0 }
-    local components = fixtures.make_recording_encoder_components(state)
+    local components = fixtures.make_recording_audio_encoder_components(state)
     components.logger = make_encoder_test_logger(log)
     local instance =
         encoder.new(components).init(fixtures.make_config_manager(make_backend_test_config("jpg", "webp", use_ffmpeg)))
     instance.set_output_dir(case.directory)
-    local job = instance.snapshot.create_job(subtitle.make_subtitle("Line", 0, 1))
+    local job = instance[media_type].create_job(subtitle.make_subtitle("Line", 0, 1), 0)
     if case.callback then job.on_finish(fixtures.make_media_result_test_recorder(state)) end
     h.assert_equals(pcall(job.run_async), true)
-    assert_snapshot_missing_directory_test_result(state, log, case.callback)
+    assert_media_missing_directory_test_result(state, log, case.callback, media_type)
 end
 
 --- Cover missing and blank destinations with and without a completion callback on both backends.
-local function test_snapshot_missing_output_directory()
+local function test_media_jobs_missing_output_directory()
     for _, use_ffmpeg in ipairs { false, true } do
         for _, case in ipairs {
             {},
@@ -618,7 +628,63 @@ local function test_snapshot_missing_output_directory()
             { directory = "" },
             { directory = "", callback = true },
         } do
-            assert_snapshot_missing_directory_test_case(case, use_ffmpeg)
+            for _, media_type in ipairs { "snapshot", "audio" } do
+                assert_media_missing_directory_test_case(case, use_ffmpeg, media_type)
+            end
+        end
+    end
+end
+
+--- Assert backend timing options without executing an audio encoder or animated snapshot.
+local function assert_media_padding_test_timings(args, start_time, end_time, use_ffmpeg)
+    local start_option, end_option = "--start", "--end"
+    if use_ffmpeg then
+        start_option, end_option = "-ss", "-to"
+    end
+    h.assert_equals(fixtures.encoder_test_option_value(args, start_option), eutils.toms(start_time))
+    h.assert_equals(fixtures.encoder_test_option_value(args, end_option), eutils.toms(end_time))
+end
+
+--- Check padding affects only the audio command, not the caller, sibling snapshot, or filenames.
+local function assert_audio_padding_test_result(state, sub, original, config, case, use_ffmpeg)
+    h.assert_equals(sub, original)
+    h.assert_equals(rawget(sub, "start"), case.start_time)
+    h.assert_equals(rawget(sub, "end"), case.end_time)
+    h.assert_equals(#state.commands, 2)
+    assert_media_padding_test_timings(state.commands[1], case.padded_start, case.padded_end, use_ffmpeg)
+    assert_media_padding_test_timings(state.commands[2], case.start_time, case.end_time, use_ffmpeg)
+    h.assert_equals(state.filename_args, {
+        { case.start_time, case.end_time, config.animated_snapshot_extension },
+        { case.start_time, case.end_time, config.audio_extension },
+    })
+end
+
+--- Execute padded audio before a sibling snapshot to expose accidental shared-subtitle mutation.
+local function assert_audio_padding_ownership_test_case(case, use_ffmpeg)
+    local state = { commands = {} }
+    local config = make_backend_test_config("jpg", "webp", use_ffmpeg)
+    config.loudnorm, config.animated_snapshot_enabled = false, true
+    local instance =
+        encoder.new(fixtures.make_recording_audio_encoder_components(state)).init(fixtures.make_config_manager(config))
+    instance.set_output_dir("/request-media")
+    local sub = subtitle.make_subtitle("Line", case.start_time, case.end_time)
+    local original = h.deep_copy(sub)
+    local snapshot_job = instance.snapshot.create_job(sub)
+    local audio_job = instance.audio.create_job(sub, case.padding)
+    audio_job.run_async()
+    snapshot_job.run_async()
+    assert_audio_padding_test_result(state, sub, original, config, case, use_ffmpeg)
+end
+
+--- Preserve caller-owned timing fields for zero padding, ordinary padding, and clamped boundaries.
+local function test_audioclip_padding_owns_subtitle()
+    for _, use_ffmpeg in ipairs { false, true } do
+        for _, case in ipairs {
+            { start_time = 3, end_time = 7, padding = 0, padded_start = 3, padded_end = 7 },
+            { start_time = 3, end_time = 7, padding = 0.5, padded_start = 2.5, padded_end = 7.5 },
+            { start_time = 0.1, end_time = 99.9, padding = 1, padded_start = 0, padded_end = 100 },
+        } do
+            assert_audio_padding_ownership_test_case(case, use_ffmpeg)
         end
     end
 end
@@ -636,8 +702,9 @@ local function run_tests()
     test_loudnorm_profile_isolation()
     test_cover_backend_static_args()
     test_cover_snapshot_jobs_use_static_settings()
-    test_snapshot_jobs_capture_output_directory()
-    test_snapshot_missing_output_directory()
+    test_media_jobs_capture_output_directory()
+    test_media_jobs_missing_output_directory()
+    test_audioclip_padding_owns_subtitle()
 end
 
 return {

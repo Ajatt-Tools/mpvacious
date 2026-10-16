@@ -783,4 +783,26 @@ function this.make_media_result_test_recorder(state)
     end
 end
 
+--- Record audio and snapshot jobs against isolated track, duration, and filename dependencies.
+function this.make_recording_audio_encoder_components(state)
+    local components = this.make_recording_encoder_components(state)
+    components.mp = this.make_mp_property_reader {
+        path = "encoder-test.mkv",
+        ["time-pos"] = 65,
+        duration = 100,
+        aid = "1",
+        volume = 100,
+    }
+    --- Make audio-job eligibility independent of the media used by the real-mpv test runner.
+    components.has_audio_track = function() return true end
+    --- Record the original unpadded timing window used to name each media file.
+    components.filename_factory.make_filename = function(...)
+        local args = { ... }
+        state.filename_args = state.filename_args or {}
+        table.insert(state.filename_args, args)
+        return "encoder-test" .. args[#args]
+    end
+    return components
+end
+
 return this
