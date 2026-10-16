@@ -120,7 +120,6 @@ local function make_snapshot_job(opts)
     -- Private fields
     local self = {
         -- Args passed to constructor.
-        snapshot_timestamp = opts.snapshot_timestamp,
         sub = h.shallow_copy(opts.sub),
         cfg_mgr = opts.cfg_mgr,
         output_dir_path = opts.output_dir_path,
