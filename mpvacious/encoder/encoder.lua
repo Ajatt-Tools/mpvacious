@@ -266,6 +266,10 @@ local function make_encoder(components)
         return job_type == "snapshot" and has_video_track() and not h.is_empty(config().image_field)
     end
 
+    local function is_audioclip_job(job_type)
+        return job_type == "audioclip" and h.has_audio_track() and not h.is_empty(config().audio_field)
+    end
+
     --- Prepare a deferred media job or a skipped job when no matching track/field exists.
     local function create_job(job_type, sub, audio_padding, snapshot_timestamp)
         local on_finish_fn
@@ -283,7 +287,7 @@ local function make_encoder(components)
                 subprocess = subprocess,
                 logger = components.logger,
             }
-        elseif job_type == "audioclip" and h.has_audio_track() and not h.is_empty(config().audio_field) then
+        elseif is_audioclip_job(job_type) then
             job.filename = make_audio_filename(sub)
             --- Start audio creation using this job's captured timings and padding.
             job.run_async = function()
