@@ -272,6 +272,30 @@ local function make_audioclip_job(opts)
         return filenames.make_filename(self.sub["start"], self.sub["end"], config().audio_extension)
     end
 
+    local function start_audio()
+        local source_path = mp_api.get_property("path")
+        local output_path = utils.join_path(self.output_dir_path, job.filename)
+
+        if self.audio_padding > 0 then
+            -- Use this job's mp API for duration rather than reaching into the shared global API.
+            self.sub["start"], self.sub["end"] = pad_timings(
+                self.audio_padding,
+                self.sub["start"],
+                self.sub["end"],
+                mp_api.get_property_number("duration")
+            )
+        end
+
+        --- Start encoding and forward its completion to the media reporter.
+        local function start_encoding(args)
+            local completion =
+                report_creation_result(output_path).on_finish(self.on_finish_fn).preview_audio(config().preview_audio)
+            subprocess { args = args, completion_fn = completion.run }
+        end
+
+        self.backend.make_audio_args(source_path, output_path, self.sub["start"], self.sub["end"], start_encoding)
+    end
+
     ------------------------------------------------------------
     --- Public
 
@@ -286,28 +310,7 @@ local function make_audioclip_job(opts)
         end
 
         if not h.is_empty(config().audio_field) then
-            local source_path = mp_api.get_property("path")
-            local output_path = utils.join_path(self.output_dir_path, job.filename)
-
-            if self.audio_padding > 0 then
-                -- Use this job's mp API for duration rather than reaching into the shared global API.
-                self.sub["start"], self.sub["end"] = pad_timings(
-                    self.audio_padding,
-                    self.sub["start"],
-                    self.sub["end"],
-                    mp_api.get_property_number("duration")
-                )
-            end
-
-            --- Start encoding and forward its completion to the media reporter.
-            local function start_encoding(args)
-                local completion = report_creation_result(output_path)
-                    .on_finish(self.on_finish_fn)
-                    .preview_audio(config().preview_audio)
-                subprocess { args = args, completion_fn = completion.run }
-            end
-
-            self.backend.make_audio_args(source_path, output_path, self.sub["start"], self.sub["end"], start_encoding)
+            start_audio()
         else
             print("Audio will not be created.")
         end
