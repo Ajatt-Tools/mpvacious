@@ -153,6 +153,19 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         return new_args
     end
 
+    local function make_input_args(track, source_path, timestamp)
+        -- track is a table returned by h.get_active_track()
+        if track and track.albumart == true then
+            local stream = "0:v:0"
+            if track["ff-index"] ~= nil then
+                stream = string.format("0:%s", tostring(track["ff-index"]))
+            end
+            return prepend("-an", "-i", source_path, "-map", stream)
+        else
+            return prepend("-an", "-ss", eutils.toms(timestamp), "-i", source_path)
+        end
+    end
+
     ------------------------------------------------------------
     --- Public
 
@@ -162,7 +175,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
     end
 
     --- Build a static snapshot, selecting attached cover art without a timestamp seek.
-    public.make_static_snapshot_args = function(source_path, output_path, timestamp)
+    public.make_static_snapshot_args = function(source_path, output_path, timestamp, track)
         local encoder_args
         if config().snapshot_format == "avif" then
             encoder_args = make_avif_encoder_args(config().snapshot_quality, true)
@@ -184,17 +197,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
             }
         end
 
-        local track = get_active_track("video")
-        local input_args
-        if track and track.albumart == true then
-            local stream = "0:v:0"
-            if track["ff-index"] ~= nil then
-                stream = string.format("0:%s", tostring(track["ff-index"]))
-            end
-            input_args = prepend("-an", "-i", source_path, "-map", stream)
-        else
-            input_args = prepend("-an", "-ss", eutils.toms(timestamp), "-i", source_path)
-        end
+        local input_args = make_input_args(track, source_path, timestamp)
         local additional_args = {
             "-map_metadata",
             "-1",

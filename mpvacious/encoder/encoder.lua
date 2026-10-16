@@ -152,7 +152,7 @@ local function make_snapshot_job(opts)
     local function create_static_snapshot(source_path, output_path, on_finish_fn)
         -- Creates a static snapshot, in other words an image, and then calls on_finish_fn
         if not config().screenshot then
-            local args = self.backend.make_static_snapshot_args(source_path, output_path, self.current_timestamp)
+            local args = self.backend.make_static_snapshot_args(source_path, output_path, self.current_timestamp, self.track)
             subprocess { args = args, completion_fn = on_finish_fn }
         else
             local args = { "screenshot-to-file", output_path, "video" }

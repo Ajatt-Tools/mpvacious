@@ -65,7 +65,7 @@ local function make_mpv_encoder(cfg_mgr, support, components)
     end
 
     --- Build a static snapshot, selecting attached cover art without a timestamp seek.
-    public.make_static_snapshot_args = function(source_path, output_path, timestamp)
+    public.make_static_snapshot_args = function(source_path, output_path, timestamp, track)
         local encoder_args
         if config().snapshot_format == "avif" then
             encoder_args = {
@@ -93,7 +93,6 @@ local function make_mpv_encoder(cfg_mgr, support, components)
         end
 
         local args = prepend_common_args(source_path, "--audio=no", "--frames=1")
-        local track = get_active_track("video")
         if track and track.albumart == true then
             table.insert(args, "--vid=" .. tostring(track.id or "auto"))
         else
