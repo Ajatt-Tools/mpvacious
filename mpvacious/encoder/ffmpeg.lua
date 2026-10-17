@@ -219,6 +219,30 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         }
     end
 
+    --- Build audio arguments using the captured source, track, and timing window.
+    local function make_audio_ffargs(sub, source_path, audio_track_id, ...)
+        return append_user_audio_args(
+            prepend_common_args(
+                "-vn",
+                "-ss",
+                eutils.toms(sub["start"]),
+                "-to",
+                eutils.toms(sub["end"]),
+                "-i",
+                source_path,
+                "-map_metadata",
+                "-1",
+                "-map_chapters",
+                "-1",
+                "-map",
+                string.format("0:%s", tostring(audio_track_id)),
+                "-ac",
+                "1",
+                ...
+            )
+        )
+    end
+
     ------------------------------------------------------------
     --- Public
 
@@ -270,30 +294,6 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
             audio_track_id = "a"
         end
 
-        --- Build audio arguments using the captured source, track, and timing window.
-        local function make_ffargs(...)
-            return append_user_audio_args(
-                prepend_common_args(
-                    "-vn",
-                    "-ss",
-                    eutils.toms(sub["start"]),
-                    "-to",
-                    eutils.toms(sub["end"]),
-                    "-i",
-                    source_path,
-                    "-map_metadata",
-                    "-1",
-                    "-map_chapters",
-                    "-1",
-                    "-map",
-                    string.format("0:%s", tostring(audio_track_id)),
-                    "-ac",
-                    "1",
-                    ...
-                )
-            )
-        end
-
         --- Deliver the final audio command with configured codec and normalization options.
         local function make_encoding_args(loudnorm_args)
             local encoder_args
@@ -328,7 +328,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
                 table.insert(encoder_args, "-af")
                 table.insert(encoder_args, loudnorm_args)
             end
-            local args = make_ffargs(h.unpack(encoder_args))
+            local args = make_audio_ffargs(sub, source_path, audio_track_id, h.unpack(encoder_args))
             table.insert(args, output_path)
             args_consumer(args)
         end
@@ -339,7 +339,15 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         end
 
         local loudnorm_targets = eutils.make_loudnorm_targets(config())
-        local args = make_ffargs("-loglevel", "info", "-af", loudnorm_targets .. ":print_format=json")
+        local args = make_audio_ffargs(
+            sub,
+            source_path,
+            audio_track_id,
+            "-loglevel",
+            "info",
+            "-af",
+            loudnorm_targets .. ":print_format=json"
+        )
         table.insert(args, "-f")
         table.insert(args, "null")
         table.insert(args, "-")
