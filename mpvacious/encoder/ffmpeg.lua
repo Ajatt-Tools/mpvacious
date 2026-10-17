@@ -168,7 +168,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
     end
 
     --- Build codec and quality arguments for the configured static image format.
-    local function make_encoder_args()
+    local function make_snapshot_encoder_args()
         if config().snapshot_format == "avif" then
             return make_avif_encoder_args(config().snapshot_quality, true)
         elseif config().snapshot_format == "webp" then
@@ -256,7 +256,7 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         return h.join_lists(
             make_input_args(track, source_path, timestamp),
             make_additional_args(),
-            make_encoder_args(),
+            make_snapshot_encoder_args(),
             { output_path }
         )
     end
