@@ -287,7 +287,7 @@ local function make_note_update_context(components)
             -- The update succeeded. An unavailable notification preview must not hide that success.
             return self.notify(string.format("Updated note #%s.", tostring(note_id)))
         end
-        local field_data = note_fields[first_field]
+        local field_data = h.normalize_html_text(note_fields[first_field])
         if not h.is_empty(field_data) then
             local max_len = 20
             if string.len(field_data) > max_len then

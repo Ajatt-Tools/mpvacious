@@ -281,6 +281,17 @@ function this.normalize_subtitle_text(text)
     return this.remove_leading_trailing_spaces(this.collapse_whitespace(text))
 end
 
+--- Lowercase HTML text and normalize spacing while preserving escaped literal content.
+function this.normalize_html_text(text)
+    text = (text or ""):lower()
+    text = this.str_replace(text, "&nbsp;", " ")
+    -- Removing line-break tags directly would join otherwise separate words.
+    text = text:gsub("<br%s*/?>", " ")
+    -- Strip actual markup before decoding entities so escaped tags remain literal text.
+    text = this.normalize_subtitle_text(text)
+    return this.unescape_special_characters(text)
+end
+
 function this.str_replace(s, old, new, max_repl)
     if this.is_empty(old) then
         return s
