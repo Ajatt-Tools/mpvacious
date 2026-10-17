@@ -689,6 +689,8 @@ local function test_audioclip_padding_owns_subtitle()
         for _, case in ipairs {
             { start_time = 3, end_time = 7, padding = 0, padded_start = 3, padded_end = 7 },
             { start_time = 3, end_time = 7, padding = 0.5, padded_start = 2.5, padded_end = 7.5 },
+            { start_time = 0.1, end_time = 7, padding = 0.5, padded_start = 0, padded_end = 7.5 },
+            { start_time = 3, end_time = 99.9, padding = 0.5, padded_start = 2.5, padded_end = 100 },
             { start_time = 0.1, end_time = 99.9, padding = 1, padded_start = 0, padded_end = 100 },
         } do
             assert_audio_padding_ownership_test_case(case, use_ffmpeg)

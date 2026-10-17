@@ -83,6 +83,21 @@ local function test_expand_end_time()
     h.assert_equals(expanded["end"], 3)
 end
 
+--- Replace clone timings without changing the source and retain chainable subtitle methods.
+local function test_set_timings()
+    for _, case in ipairs { { start_time = 0, end_time = 0 }, { start_time = 2.5, end_time = 7.5 } } do
+        local original = subtitle.make_subtitle("Line", 3, 7)
+        local copy = original:clone()
+        h.assert_equals(rawequal(copy:set_timings(case.start_time, case.end_time), copy), true)
+        h.assert_equals(copy["start"], case.start_time)
+        h.assert_equals(copy["end"], case.end_time)
+        h.assert_equals(copy:duration(), case.end_time - case.start_time)
+        h.assert_equals(copy.text, "Line")
+        h.assert_equals(original["start"], 3)
+        h.assert_equals(original["end"], 7)
+    end
+end
+
 --- Supply independent subtitle and audio delays for timing tests.
 local function make_mp_stub_for_tests()
     local delays = { ["sub-delay"] = 10, ["secondary-sub-delay"] = 3, ["audio-delay"] = 1 }
@@ -184,6 +199,7 @@ local function run_tests()
     test_duration_and_overlap_duration()
     test_can_expand_with()
     test_expand_end_time()
+    test_set_timings()
     test_subtitle_delay()
     test_make_current()
     test_clone()
