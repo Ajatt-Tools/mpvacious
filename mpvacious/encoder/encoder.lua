@@ -272,19 +272,6 @@ local function make_audioclip_job(opts)
         return filenames.make_filename(self.sub["start"], self.sub["end"], config().audio_extension)
     end
 
-    --- Apply padding only to this job's private timing copy.
-    local function apply_padding()
-        if self.audio_padding > 0 then
-            -- Use this job's mp API for duration rather than reaching into the shared global API.
-            self.sub["start"], self.sub["end"] = pad_timings(
-                self.audio_padding,
-                self.sub["start"],
-                self.sub["end"],
-                mp_api.get_property_number("duration")
-            )
-        end
-    end
-
     --- Return a function that starts encoding and forwards its completion to the media reporter.
     local function make_subprocess_caller(output_path)
         local completion = report_creation_result {
@@ -304,7 +291,15 @@ local function make_audioclip_job(opts)
     --- Apply job-owned padding and build the audio command using the prepared reporter.
     local function start_audio()
         local output_path = utils.join_path(self.output_dir_path, job.filename)
-        apply_padding()
+        -- Apply padding only to this job's private timing copy.
+        if self.audio_padding > 0 then
+            -- Use this job's mp API for duration rather than reaching into the shared global API.
+            self.sub = pad_timings(
+                self.audio_padding,
+                self.sub,
+                mp_api.get_property_number("duration")
+            )
+        end
         self.backend.make_audio_args(
             mp_api.get_property("path"),
             output_path,
