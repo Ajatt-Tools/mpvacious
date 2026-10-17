@@ -395,6 +395,68 @@ local function test_loudnorm_profile_isolation()
     end
 end
 
+--- Repeated analysis delivery must not retain or append filters from a prior command.
+local function assert_ffmpeg_consumer_delivery_test_case(audio_format, success)
+    local config = make_loudnorm_profile_test_config(audio_format)
+    local original = h.deep_copy(config)
+    local _, state = fixtures.make_loudnorm_test_context(ffmpeg_backend.new, fixtures.make_config_manager(config))
+    fixtures.complete_loudnorm_test_analysis(state, success)
+    local first = h.deep_copy(state.encoding[1])
+    fixtures.complete_loudnorm_test_analysis(state, success)
+    h.assert_equals(#state.encoding, 2)
+    h.assert_equals(state.encoding[1], first)
+    h.assert_equals(state.encoding[2], first)
+    h.assert_equals(config, original)
+end
+
+--- Build independent FFmpeg argument arrays for successful and fallback normalization callbacks.
+local function test_ffmpeg_consumer_builds_fresh_arguments()
+    for _, audio_format in ipairs { "opus", "mp3" } do
+        for _, success in ipairs { true, false } do
+            assert_ffmpeg_consumer_delivery_test_case(audio_format, success)
+        end
+    end
+end
+
+--- Resolve an external source before constructing either stage of the FFmpeg command.
+local function assert_ffmpeg_external_source_test_args(args, path)
+    h.assert_equals(fixtures.encoder_test_option_value(args, "-i"), path)
+    h.assert_equals(fixtures.encoder_test_option_value(args, "-map"), "0:a")
+    h.assert_equals(fixtures.encoder_test_option_value(args, "-ss"), eutils.toms(1))
+    h.assert_equals(fixtures.encoder_test_option_value(args, "-to"), eutils.toms(2))
+end
+
+--- Preserve external-track resolution with immediate and deferred codec-argument delivery.
+local function assert_ffmpeg_external_source_test_case(audio_format, normalized)
+    local config = make_loudnorm_profile_test_config(audio_format)
+    config.loudnorm = normalized
+    local track = { external = true, ["ff-index"] = 9, ["external-filename"] = "/external/audio track.m4a" }
+    local original = h.deep_copy(track)
+    local _, state =
+        fixtures.make_loudnorm_test_context(ffmpeg_backend.new, fixtures.make_config_manager(config), track)
+    if normalized then
+        h.assert_equals(#state.analysis, 1)
+        assert_ffmpeg_external_source_test_args(state.analysis[1].args, track["external-filename"])
+        fixtures.complete_loudnorm_test_analysis(state, true)
+    else
+        h.assert_equals(state.analysis, {})
+    end
+    h.assert_equals(#state.encoding, 1)
+    assert_ffmpeg_external_source_test_args(state.encoding[1], track["external-filename"])
+    h.assert_equals(fixtures.encoder_test_option_value(state.encoding[1], "-c:a"), config.audio_codec)
+    h.assert_equals(fixtures.encoder_test_option_value(state.encoding[1], "-b:a"), "32k")
+    h.assert_equals(track, original)
+end
+
+--- Cover external audio files in both supported codec branches and normalization modes.
+local function test_ffmpeg_external_audio_source()
+    for _, audio_format in ipairs { "opus", "mp3" } do
+        for _, normalized in ipairs { false, true } do
+            assert_ffmpeg_external_source_test_case(audio_format, normalized)
+        end
+    end
+end
+
 --- Give static and animated profiles intentionally different formats, quality, and dimensions.
 local function make_cover_snapshot_test_config(format, use_ffmpeg, animated)
     local config = make_backend_test_config(format, "avif", use_ffmpeg)
@@ -935,6 +997,8 @@ local function run_tests()
     test_snapshot_job_captures_explicit_timestamp()
     test_encoder_constructor_requires_ready_manager()
     test_loudnorm_profile_isolation()
+    test_ffmpeg_consumer_builds_fresh_arguments()
+    test_ffmpeg_external_audio_source()
     test_cover_backend_static_args()
     test_cover_snapshot_jobs_use_static_settings()
     test_cover_snapshot_native_routing()

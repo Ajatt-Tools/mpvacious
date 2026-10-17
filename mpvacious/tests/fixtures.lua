@@ -639,12 +639,13 @@ local function parse_loudnorm_test_json(state, json)
 end
 
 --- Create a backend with deferred analysis and isolated track, property, logging, and JSON boundaries.
-function this.make_loudnorm_test_context(make_backend, cfg_mgr)
+function this.make_loudnorm_test_context(make_backend, cfg_mgr, audio_track)
+    audio_track = audio_track or { ["ff-index"] = 1, external = false }
     local state = { analysis = {}, encoding = {}, warnings = {} }
     local components = {
         mp = this.make_mp_property_reader { aid = "2", volume = 100 },
-        --- Supply a known internal audio track without changing shared mp functions.
-        get_active_track = function() return { ["ff-index"] = 1, external = false } end,
+        --- Supply controlled internal or external audio without changing shared mp functions.
+        get_active_track = function() return audio_track end,
         --- Save analysis callbacks without launching an encoder process.
         subprocess = function(options) table.insert(state.analysis, options) end,
         --- Decode the controlled successful analysis result.
