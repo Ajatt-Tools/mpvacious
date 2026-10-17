@@ -348,6 +348,22 @@ local function test_collapse_whitespace()
     h.assert_equals(h.collapse_whitespace("a \t \n b"), "a b")
 end
 
+--- Lowercase HTML and normalize spacing and entities without erasing escaped literal tags.
+local function test_normalize_html_text()
+    for _, case in ipairs {
+        { expected = "" },
+        { input = "", expected = "" },
+        { input = "<b>Hello</b><BR/>World&nbsp;!", expected = "hello world !" },
+        { input = " one<br>two<br />three\n four ", expected = "one two three four" },
+        { input = "<b>&lt;Hello&gt;</b>", expected = "<hello>" },
+        { input = "&amp;lt;Hello&amp;gt;", expected = "&lt;hello&gt;" },
+        { input = "<i></i><br>&nbsp;", expected = "" },
+    } do
+        h.assert_equals(h.normalize_html_text(case.input), case.expected)
+        h.assert_equals(select("#", h.normalize_html_text(case.input)), 1)
+    end
+end
+
 --- Verify HTML entities decode once while unknown entities remain unchanged.
 local function test_unescape_special_characters()
     for _, case in ipairs {
@@ -607,6 +623,7 @@ local function run_tests()
     test_trim()
     test_normalize_subtitle_text()
     test_unescape_special_characters()
+    test_normalize_html_text()
     test_entity_helpers_return_only_strings()
     test_escape_special_characters()
     test_get_episode_number()

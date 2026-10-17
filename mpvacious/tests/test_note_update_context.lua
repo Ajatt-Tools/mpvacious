@@ -516,6 +516,41 @@ local function test_single_note_update_completion()
     h.assert_equals(result.notification, "Updated note: stored 11.")
 end
 
+--- Supply notification previews with markup, literal entities, whitespace, and empty content.
+local function make_notification_preview_test_cases()
+    return {
+        { text = "<b>Hello</b><BR/>World", expected = "Updated note: hello world." },
+        {
+            text = "興<b>きょうざめ</b><br>興ざめね",
+            expected = "Updated note: 興きょうざめ 興ざめね.",
+        },
+        { text = "<i>one</i><BR/>two<br />three", expected = "Updated note: one two three." },
+        { text = " \n one&nbsp; two\t ", expected = "Updated note: one two." },
+        { text = "&lt;hello&gt; &amp; &quot;ok&quot;", expected = 'Updated note: <hello> & "ok".' },
+        { text = "&amp;lt;hello&amp;gt;", expected = "Updated note: &lt;hello&gt;." },
+        { text = "<b>abcdefghijklmnopqrstuv</b>", expected = "Updated note: abcdefghijklmnopqrst…." },
+        { text = "<b></b><br>&nbsp;", expected = "Updated note #11." },
+        { text = "", expected = "Updated note #11." },
+        { expected = "Updated note #11." },
+    }
+end
+
+--- Clean only the notification preview, preserving its source fields and successful writes.
+local function test_update_notification_plain_text()
+    for _, case in ipairs(make_notification_preview_test_cases()) do
+        local result, jobs = make_update_test_result(), {}
+        local fields = { SentKanji = case.text }
+        result.read_preview = function() return fields, nil end
+        local context, subtitle = make_update_test_context { result = result, jobs = jobs }
+        context.perform_update({ note_ids = { 11 }, overwrite = true, subtitle = subtitle })
+        complete_update_test_media_jobs(jobs)
+        h.assert_equals(result.notification, case.expected)
+        h.assert_equals(fields, { SentKanji = case.text })
+        h.assert_equals(result.appended_note_ids, { 11 })
+        h.assert_equals(result.fields_by_note[11].SentKanji, "new sentence")
+    end
+end
+
 --- Assert one failed bulk field request prevents every write in the batch.
 local function assert_update_test_field_failure(case)
     local result = make_update_test_result()
@@ -1092,6 +1127,7 @@ local function run_tests(context)
     test_update_skipped_media_job()
     test_update_write_outcomes()
     test_single_note_update_completion()
+    test_update_notification_plain_text()
     test_update_field_read_failures()
     test_update_reads_target_fields_once()
     test_update_notification_field_read_failure()
