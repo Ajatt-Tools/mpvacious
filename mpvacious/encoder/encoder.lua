@@ -132,7 +132,7 @@ local function make_snapshot_job(opts)
     -- Private fields
     local self = {
         -- Args passed to constructor.
-        sub = h.shallow_copy(opts.sub),
+        sub = opts.sub:clone(),
         cfg_mgr = opts.cfg_mgr,
         output_dir_path = opts.output_dir_path,
         backend = opts.backend, -- ffmpeg or mpv
@@ -246,7 +246,7 @@ local function make_audioclip_job(opts)
     local self = {
         -- Args passed to constructor.
         -- Padding changes only this job's numeric timing fields, never the caller or sibling jobs.
-        sub = h.shallow_copy(opts.sub),
+        sub = opts.sub:clone(),
         cfg_mgr = opts.cfg_mgr,
         output_dir_path = opts.output_dir_path,
         backend = opts.backend, -- ffmpeg or mpv
