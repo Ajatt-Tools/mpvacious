@@ -123,6 +123,12 @@ function Subtitle:expand_end_time(other)
     return self
 end
 
+function Subtitle:set_timings(start_time, end_time)
+    self["start"] = start_time
+    self["end"] = end_time
+    return self
+end
+
 Subtitle.__eq = function(lhs, rhs)
     return lhs:is_same_event(rhs)
 end

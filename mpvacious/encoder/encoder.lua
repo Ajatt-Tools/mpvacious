@@ -17,10 +17,10 @@ local ffmpeg_encoder = require("encoder.ffmpeg")
 ------------------------------------------------------------
 --- utility functions
 
---- Extend an audio window and clamp it to zero and the duration supplied by the job.
-local function pad_timings(padding, start_time, end_time, video_duration)
-    start_time = start_time - padding
-    end_time = end_time + padding
+--- Return padded subtitle timings clamped to the job's duration without changing the subtitle.
+local function pad_timings(padding, sub, video_duration)
+    local start_time = sub["start"] - padding
+    local end_time = sub["end"] + padding
 
     if start_time < 0 then
         start_time = 0
@@ -30,7 +30,7 @@ local function pad_timings(padding, start_time, end_time, video_duration)
         end_time = video_duration
     end
 
-    return start_time, end_time
+    return sub:clone():set_timings(start_time, end_time)
 end
 
 --- Play a generated audio clip in a separate mpv process.
