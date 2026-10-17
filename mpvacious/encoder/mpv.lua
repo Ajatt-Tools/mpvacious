@@ -118,6 +118,24 @@ local function make_mpv_encoder(cfg_mgr, support, components)
         return additional_args
     end
 
+    --- Build audio arguments using the captured source, track, and timing window.
+    local function make_audio_mpvargs(source_path, audio_track_id, sub, ...)
+        local args = prepend_common_args(
+            source_path,
+            "--video=no",
+            "--aid=" .. audio_track_id,
+            "--audio-channels=mono",
+            "--start=" .. eutils.toms(sub["start"]),
+            "--end=" .. eutils.toms(sub["end"]),
+            string.format("--volume=%d", config().tie_volumes and mp_api.get_property("volume") or 100),
+            ...
+        )
+        for arg in string.gmatch(config().mpv_audio_args, "%S+") do
+            table.insert(args, arg)
+        end
+        return args
+    end
+
     ------------------------------------------------------------
     --- Public
 
@@ -160,24 +178,6 @@ local function make_mpv_encoder(cfg_mgr, support, components)
             audio_track_id = "auto"
         end
 
-        --- Build audio arguments using the captured source, track, and timing window.
-        local function make_mpvargs(...)
-            local args = prepend_common_args(
-                source_path,
-                "--video=no",
-                "--aid=" .. audio_track_id,
-                "--audio-channels=mono",
-                "--start=" .. eutils.toms(sub["start"]),
-                "--end=" .. eutils.toms(sub["end"]),
-                string.format("--volume=%d", config().tie_volumes and mp_api.get_property("volume") or 100),
-                ...
-            )
-            for arg in string.gmatch(config().mpv_audio_args, "%S+") do
-                table.insert(args, arg)
-            end
-            return args
-        end
-
         --- Deliver the final audio command with configured codec and normalization options.
         local function make_encoding_args(loudnorm_args)
             local encoder_args
@@ -200,8 +200,14 @@ local function make_mpv_encoder(cfg_mgr, support, components)
                 }
             end
 
-            local args =
-                make_mpvargs("--oacopts-add=b=" .. config().audio_bitrate, "-o=" .. output_path, h.unpack(encoder_args))
+            local args = make_audio_mpvargs(
+                source_path,
+                audio_track_id,
+                sub,
+                "--oacopts-add=b=" .. config().audio_bitrate,
+                "-o=" .. output_path,
+                h.unpack(encoder_args)
+            )
             if loudnorm_args then
                 table.insert(args, "--af-append=" .. loudnorm_args)
             end
@@ -215,7 +221,10 @@ local function make_mpv_encoder(cfg_mgr, support, components)
 
         local loudnorm_targets = eutils.make_loudnorm_targets(config())
         subprocess {
-            args = make_mpvargs(
+            args = make_audio_mpvargs(
+                source_path,
+                audio_track_id,
+                sub,
                 "-v",
                 "--af-append=" .. loudnorm_targets .. ":print_format=json",
                 "--ao=null",
