@@ -123,6 +123,7 @@ function Subtitle:expand_end_time(other)
     return self
 end
 
+--- Replace both timing boundaries and return this subtitle for chaining.
 function Subtitle:set_timings(start_time, end_time)
     self["start"] = start_time
     self["end"] = end_time

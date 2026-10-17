@@ -17,7 +17,7 @@ local ffmpeg_encoder = require("encoder.ffmpeg")
 ------------------------------------------------------------
 --- utility functions
 
---- Return padded subtitle timings clamped to the job's duration without changing the subtitle.
+--- Return a subtitle clone with padded timings clamped to the job's duration.
 local function pad_timings(padding, sub, video_duration)
     local start_time = sub["start"] - padding
     local end_time = sub["end"] + padding
@@ -294,11 +294,7 @@ local function make_audioclip_job(opts)
         -- Apply padding only to this job's private timing copy.
         if self.audio_padding > 0 then
             -- Use this job's mp API for duration rather than reaching into the shared global API.
-            self.sub = pad_timings(
-                self.audio_padding,
-                self.sub,
-                mp_api.get_property_number("duration")
-            )
+            self.sub = pad_timings(self.audio_padding, self.sub, mp_api.get_property_number("duration"))
         end
         self.backend.make_audio_args(
             mp_api.get_property("path"),
