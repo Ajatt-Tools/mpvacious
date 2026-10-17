@@ -243,6 +243,53 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         )
     end
 
+    --- Build format-specific audio codec options, including the Opus M4A muxer override.
+    local function make_audio_codec_args()
+        if config().audio_format == "opus" then
+            local encoder_args = {
+                "-c:a",
+                config().audio_codec,
+                "-application",
+                "voip",
+                "-apply_phase_inv",
+                "0", -- Improves mono audio.
+            }
+            if config().opus_container == "m4a" then
+                table.insert(encoder_args, "-f")
+                table.insert(encoder_args, "mp4")
+            end
+            return encoder_args
+        else
+            -- https://wiki.hydrogenaud.io/index.php?title=LAME#Recommended_encoder_settings:
+            -- "For very low bitrates, up to 100kbps, ABR is most often the best solution."
+            return { "-c:a", config().audio_codec, "-compression_level", "0", "-abr", "1" }
+        end
+    end
+
+    --- Return a callback building fresh codec and normalization arguments for each delivery.
+    local function make_encoding_args_consumer(kwargs)
+        return function(loudnorm_args)
+            -- Keep arguments local so repeated delivery cannot accumulate normalization filters.
+            local encoder_args = h.join_lists({ "-b:a", tostring(config().audio_bitrate) }, make_audio_codec_args())
+            if loudnorm_args then
+                table.insert(encoder_args, "-af")
+                table.insert(encoder_args, loudnorm_args)
+            end
+            local args =
+                make_audio_ffargs(kwargs.sub, kwargs.source_path, kwargs.audio_track_id, h.unpack(encoder_args))
+            table.insert(args, kwargs.output_path)
+            kwargs.args_consumer(args)
+        end
+    end
+
+    --- Extract measured loudness statistics from FFmpeg's analysis output.
+    local function audio_json_extractor(_, stderr)
+        -- function takes stdout, stderr
+        local _, _, json = string.find(stderr, "%[Parsed_loudnorm_0.-({.-})") -- returns: start, stop, json
+        logger.info("json: " .. tostring(json))
+        return json
+    end
+
     ------------------------------------------------------------
     --- Public
 
@@ -294,47 +341,16 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
             audio_track_id = "a"
         end
 
-        --- Deliver the final audio command with configured codec and normalization options.
-        local function make_encoding_args(loudnorm_args)
-            local encoder_args
-            if config().audio_format == "opus" then
-                encoder_args = {
-                    "-c:a",
-                    config().audio_codec,
-                    "-application",
-                    "voip",
-                    "-apply_phase_inv",
-                    "0", -- Improves mono audio.
-                }
-                if config().opus_container == "m4a" then
-                    table.insert(encoder_args, "-f")
-                    table.insert(encoder_args, "mp4")
-                end
-            else
-                -- https://wiki.hydrogenaud.io/index.php?title=LAME#Recommended_encoder_settings:
-                -- "For very low bitrates, up to 100kbps, ABR is most often the best solution."
-                encoder_args = {
-                    "-c:a",
-                    config().audio_codec,
-                    "-compression_level",
-                    "0",
-                    "-abr",
-                    "1",
-                }
-            end
-
-            encoder_args = { "-b:a", tostring(config().audio_bitrate), h.unpack(encoder_args) }
-            if loudnorm_args then
-                table.insert(encoder_args, "-af")
-                table.insert(encoder_args, loudnorm_args)
-            end
-            local args = make_audio_ffargs(sub, source_path, audio_track_id, h.unpack(encoder_args))
-            table.insert(args, output_path)
-            args_consumer(args)
-        end
+        local consume_encoding_args = make_encoding_args_consumer {
+            sub = sub,
+            source_path = source_path,
+            audio_track_id = audio_track_id,
+            output_path = output_path,
+            args_consumer = args_consumer,
+        }
 
         if not config().loudnorm then
-            make_encoding_args(nil)
+            consume_encoding_args()
             return
         end
 
@@ -353,12 +369,12 @@ local function make_ffmpeg_encoder(cfg_mgr, support, components)
         table.insert(args, "-")
         subprocess {
             args = args,
-            completion_fn = eutils.parse_loudnorm(loudnorm_targets, function(_, stderr)
-                -- function takes stdout, stderr
-                local _, _, json = string.find(stderr, "%[Parsed_loudnorm_0.-({.-})") -- returns: start, stop, json
-                logger.info("json: " .. tostring(json))
-                return json
-            end, make_encoding_args, components),
+            completion_fn = eutils.parse_loudnorm(
+                loudnorm_targets,
+                audio_json_extractor,
+                consume_encoding_args,
+                components
+            ),
         }
     end
 
