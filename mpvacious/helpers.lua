@@ -455,9 +455,11 @@ function this.notify(message, level, duration)
 end
 
 --- Return the selected audio, subtitle, or video track, if track metadata is available.
-function this.get_active_track(track_type)
+function this.get_active_track(track_type, mp_api)
     -- track_type == audio|sub|video
-    for _, track in pairs(mp.get_property_native("track-list") or {}) do
+    -- Allow isolated metadata reads without modifying the shared mp API.
+    mp_api = mp_api or mp
+    for _, track in pairs(mp_api.get_property_native("track-list") or {}) do
         if track.type == track_type and track.selected == true then
             return track
         end

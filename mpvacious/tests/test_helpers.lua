@@ -7,6 +7,7 @@ Test helpers.
 
 local h = require("helpers")
 local utils = require("mp.utils")
+local fixtures = require("tests.fixtures")
 
 --- Preserve dense, sparse, and string keys while mapping values into a separate table.
 local function test_map_preserves_keys_and_input()
@@ -608,6 +609,33 @@ local function test_notify_ignores_empty_messages()
     end
 end
 
+--- Read isolated track metadata without modifying the supplied records.
+local function assert_active_track_test_case(case, track_type)
+    local original = h.deep_copy(case.tracks)
+    local mp_api = fixtures.make_mp_property_reader { ["track-list"] = case.tracks }
+    h.assert_equals(rawequal(h.get_active_track(track_type, mp_api), case.expected), true)
+    h.assert_equals(case.tracks, original)
+end
+
+--- Handle unavailable metadata and select only matching, explicitly selected tracks.
+local function test_get_active_track()
+    for _, track_type in ipairs { "audio", "sub", "video" } do
+        local selected = { type = track_type, selected = true, id = 7, albumart = track_type == "video" }
+        local unselected = { type = track_type, selected = false, id = 8 }
+        local wrong_type = { type = "other", selected = true, id = 9 }
+        for _, case in ipairs {
+            {},
+            { tracks = {} },
+            { tracks = { unselected } },
+            { tracks = { wrong_type } },
+            { tracks = { { type = track_type, id = 10 } } },
+            { tracks = { unselected, wrong_type, selected }, expected = selected },
+        } do
+            assert_active_track_test_case(case, track_type)
+        end
+    end
+end
+
 --- Run the shared helper regression suite.
 local function run_tests()
     test_map_preserves_keys_and_input()
@@ -648,6 +676,7 @@ local function run_tests()
     test_remove_html_tags()
     test_str_replace()
     test_notify_ignores_empty_messages()
+    test_get_active_track()
 end
 
 return {
