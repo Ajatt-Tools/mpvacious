@@ -347,6 +347,7 @@ For example, <kbd>Ctrl+M</kbd> actually means <kbd>Ctrl+Shift+m</kbd>.
 * <kbd>Ctrl+g</kbd> - If animation is enabled, animated snapshots will be generated instead of static images.
   Animated snapshot are like GIFs (just in a different format)
   and will capture the video from the start to the end times selected.
+  Attached cover art, such as an audiobook cover, always uses static image settings even when animation is enabled.
 
 **Make a card:**
 
