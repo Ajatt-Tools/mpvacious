@@ -34,11 +34,20 @@ function Subtitle:from_text(text, start_time, end_time)
     return self:new { ["text"] = text, ["start"] = start_time, ["end"] = end_time }
 end
 
+--- Resolve a named track or legacy Boolean selector to its mpv property prefix.
+local function make_prefix(is_secondary)
+    if is_secondary and is_secondary ~= "primary" then
+        return "secondary-"
+    else
+        return ""
+    end
+end
+
 --- Return the selected subtitle track's delay relative to the audio track.
 --- mp_api defaults to mp; tests may provide an mp-compatible stub.
 local function subtitle_delay(is_secondary, mp_api)
     mp_api = mp_api or mp
-    local delay_property = is_secondary and "secondary-sub-delay" or "sub-delay"
+    local delay_property = make_prefix(is_secondary) .. "sub-delay"
     return mp_api.get_property_native(delay_property) - mp_api.get_property_native("audio-delay")
 end
 
@@ -56,12 +65,12 @@ end
 --- Return the currently displayed primary or secondary subtitle with mpv delays applied.
 function Subtitle:now(is_secondary, mp_api)
     mp_api = mp_api or mp
-    local prefix = is_secondary and "secondary-" or ""
+    local prefix = make_prefix(is_secondary)
     local this = self:new {
         ["text"] = mp_api.get_property(prefix .. "sub-text"),
         ["start"] = mp_api.get_property_number(prefix .. "sub-start"),
         ["end"] = mp_api.get_property_number(prefix .. "sub-end"),
-        ["is_secondary"] = (is_secondary and true or false),
+        ["is_secondary"] = prefix == "secondary-",
     }
     if this:is_valid() then
         return this:delay(subtitle_delay(is_secondary, mp_api))
