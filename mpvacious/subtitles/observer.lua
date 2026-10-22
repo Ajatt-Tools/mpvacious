@@ -52,10 +52,11 @@ local function external_command_args(cur_lines, autoclip_custom_args)
 end
 
 local function make_current_subtitle_lines(dependencies)
+    local mp_api = dependencies.mp or mp
     local primary = dependencies.dialogs.get_text()
 
     if h.is_empty(primary) then
-        primary = mp.get_property("sub-text")
+        primary = mp_api.get_property("sub-text")
     end
 
     if h.is_empty(primary) then
@@ -65,7 +66,7 @@ local function make_current_subtitle_lines(dependencies)
     local secondary = dependencies.secondary_dialogs.get_text()
 
     if h.is_empty(secondary) then
-        secondary = mp.get_property("secondary-sub-text") or ""
+        secondary = mp_api.get_property("secondary-sub-text") or ""
     end
 
     return {
@@ -102,7 +103,10 @@ end
 ------------------------------------------------------------
 --- Public
 
-local function make_subtitles_observer()
+--- Create an independent subtitle observer with an optional isolated mpv API.
+local function make_subtitles_observer(components)
+    components = components or {}
+    local mp_api = components.mp or mp
     local public = {}
     local private = {}
 
@@ -151,7 +155,7 @@ local function make_subtitles_observer()
     --- Private methods
 
     local function append_primary_sub()
-        local current_sub = subtitle.make_current()
+        local current_sub = subtitle.make_current("primary", mp_api)
         private.all_dialogs.insert(current_sub)
         if private.append_dialogue and private.dialogs.insert(current_sub) then
             private.menu:update()
@@ -159,9 +163,9 @@ local function make_subtitles_observer()
     end
 
     local function append_secondary_sub()
-        local current_secondary = subtitle.make_current("secondary")
+        local current_secondary = subtitle.make_current("secondary", mp_api)
         private.all_secondary_dialogs.insert(current_secondary)
-        if private.append_dialogue and private.secondary_dialogs.insert(subtitle.make_current("secondary")) then
+        if private.append_dialogue and private.secondary_dialogs.insert(subtitle.make_current("secondary", mp_api)) then
             private.menu:update()
         end
     end
@@ -182,6 +186,7 @@ local function make_subtitles_observer()
                 dialogs = private.dialogs,
                 secondary_dialogs = private.secondary_dialogs,
                 clipboard_preparer = public.clipboard_prepare,
+                mp = mp_api,
             })
         end
     end
@@ -200,7 +205,7 @@ local function make_subtitles_observer()
 
     local function copy_subtitle(subtitle_id)
         -- subtitle_id = "secondary-sub-text" or "sub-text"
-        public.copy_to_clipboard("copy-on-demand", mp.get_property(subtitle_id))
+        public.copy_to_clipboard("copy-on-demand", mp_api.get_property(subtitle_id))
     end
 
     ------------------------------------------------------------
@@ -259,8 +264,8 @@ local function make_subtitles_observer()
     end
 
     function public.collect_from_all_dialogues(n_lines)
-        local current_sub = subtitle.make_current()
-        local current_secondary_sub = subtitle.make_current("secondary")
+        local current_sub = subtitle.make_current("primary", mp_api)
+        local current_secondary_sub = subtitle.make_current("secondary", mp_api)
         private.all_dialogs.insert(current_sub)
         private.all_secondary_dialogs.insert(current_secondary_sub)
         if current_sub == nil then
@@ -280,10 +285,10 @@ local function make_subtitles_observer()
         --- Return all recorded subtitle lines as one subtitle object.
         --- The caller has to call subs_observer.clear() afterwards.
         if private.dialogs.is_empty() then
-            private.dialogs.insert(subtitle.make_current())
+            private.dialogs.insert(subtitle.make_current("primary", mp_api))
         end
         if private.secondary_dialogs.is_empty() then
-            private.secondary_dialogs.insert(subtitle.make_current("secondary"))
+            private.secondary_dialogs.insert(subtitle.make_current("secondary", mp_api))
         end
         local combined =
             subtitle.make_subtitle(private.dialogs.get_text(), public.get_timing("start"), public.get_timing("end"))
@@ -296,15 +301,15 @@ local function make_subtitles_observer()
     end
 
     function public.set_manual_timing(position)
-        private.user_timings.set(position, mp.get_property_number("time-pos") - mp.get_property("audio-delay"))
+        private.user_timings.set(position, mp_api.get_property_number("time-pos") - mp_api.get_property("audio-delay"))
         h.notify(h.capitalize_first_letter(position) .. " time has been set.")
         start_appending()
     end
 
     function public.set_manual_timing_to_sub(position)
-        local sub = subtitle.make_current()
+        local sub = subtitle.make_current("primary", mp_api)
         if sub then
-            private.user_timings.set(position, sub[position] - mp.get_property("audio-delay"))
+            private.user_timings.set(position, sub[position] - mp_api.get_property("audio-delay"))
             h.notify(h.capitalize_first_letter(position) .. " time has been set.")
             start_appending()
         else
@@ -314,7 +319,7 @@ local function make_subtitles_observer()
 
     function public.set_to_current_sub()
         public.clear()
-        if subtitle.make_current() then
+        if subtitle.make_current("primary", mp_api) then
             start_appending()
             h.notify("Timings have been set to the current sub.", "info", 2)
         else
@@ -346,8 +351,8 @@ local function make_subtitles_observer()
     end
 
     function public.all_subs_until_now()
-        private.all_dialogs.insert(subtitle.make_current())
-        private.all_secondary_dialogs.insert(subtitle.make_current("secondary"))
+        private.all_dialogs.insert(subtitle.make_current("primary", mp_api))
+        private.all_secondary_dialogs.insert(subtitle.make_current("secondary", mp_api))
         return private.all_dialogs.get_subs_list(), private.all_secondary_dialogs.get_subs_list()
     end
 
@@ -429,8 +434,8 @@ local function make_subtitles_observer()
         private.autoclip_enabled = private.config.autoclip
         private.autoclip_method.set(private.config.autoclip_method)
 
-        mp.observe_property("sub-text", "string", handle_primary_sub)
-        mp.observe_property("secondary-sub-text", "string", handle_secondary_sub)
+        mp_api.observe_property("sub-text", "string", handle_primary_sub)
+        mp_api.observe_property("secondary-sub-text", "string", handle_secondary_sub)
     end
 
     return public
