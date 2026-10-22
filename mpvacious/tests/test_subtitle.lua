@@ -114,6 +114,9 @@ local function test_subtitle_delay()
     local cases = {
         { is_secondary = false, expected_start = 10, expected_end = 11 },
         { is_secondary = true, expected_start = 3, expected_end = 4 },
+        { is_secondary = "primary", expected_start = 10, expected_end = 11 },
+        { is_secondary = "secondary", expected_start = 3, expected_end = 4 },
+        { expected_start = 10, expected_end = 11 },
     }
     for _, case in ipairs(cases) do
         local shifted = subtitle.make_subtitle("Line", 1, 2):delay(subtitle.subtitle_delay(case.is_secondary, mp_stub))
@@ -150,15 +153,20 @@ local function test_make_current()
     for _, case in ipairs {
         { secondary = false, visible = true, text = "Primary", start_time = 10, end_time = 11 },
         { secondary = true, visible = true, text = "Secondary", start_time = 6, end_time = 8 },
+        { secondary = "primary", visible = true, text = "Primary", start_time = 10, end_time = 11 },
+        { secondary = "secondary", visible = true, text = "Secondary", start_time = 6, end_time = 8 },
+        { visible = true, text = "Primary", start_time = 10, end_time = 11 },
         { secondary = false, visible = false },
         { secondary = true, visible = false },
+        { secondary = "primary", visible = false },
+        { secondary = "secondary", visible = false },
     } do
         local current = subtitle.make_current(case.secondary, make_current_subtitle_test_api(case.visible))
         if case.visible then
             h.assert_equals(current.text, case.text)
             h.assert_equals(current["start"], case.start_time)
             h.assert_equals(current["end"], case.end_time)
-            h.assert_equals(current.is_secondary, case.secondary)
+            h.assert_equals(current.is_secondary, case.secondary == true or case.secondary == "secondary")
         else
             h.assert_equals(current, nil)
         end

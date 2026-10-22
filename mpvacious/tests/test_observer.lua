@@ -9,6 +9,7 @@ local h = require("helpers")
 local subtitle = require("subtitles.subtitle")
 local subtitles_observer = require("subtitles.observer")
 local Menu = require("menu.menu")
+local fixtures = require("tests.fixtures")
 
 --- Construct a secondary subtitle with the real class methods and metatable.
 local function make_test_secondary_sub(text, start_time, end_time)
@@ -82,12 +83,61 @@ local function test_autocopy_toggle_refreshes_open_menu()
     h.assert_equals(redraws, 2)
 end
 
---- Run observer instance, selection, and menu-refresh regressions.
+--- Supply visible subtitle tracks with independent delays for isolated observer tests.
+local function make_observer_api_test_properties()
+    return {
+        ["sub-text"] = "Primary",
+        ["sub-start"] = 10,
+        ["sub-end"] = 12,
+        ["secondary-sub-text"] = "Secondary",
+        ["secondary-sub-start"] = 11,
+        ["secondary-sub-end"] = 13,
+        ["sub-delay"] = 2,
+        ["secondary-sub-delay"] = 1,
+        ["audio-delay"] = 0.5,
+    }
+end
+
+--- Register callbacks only on the supplied API and collect its independently delayed tracks.
+local function test_injected_api_observers_and_history()
+    local properties = make_observer_api_test_properties()
+    local api, observers = fixtures.make_subtitle_observer_test_api(properties)
+    local observer = subtitles_observer.new { mp = api }
+    observer.init({}, fixtures.make_config_manager { autoclip = false, autoclip_method = "clipboard" })
+    for _, name in ipairs { "sub-text", "secondary-sub-text" } do
+        h.assert_equals(observers[name].format, "string")
+        observers[name].callback()
+    end
+    properties["sub-text"], properties["secondary-sub-text"] = nil, nil
+    local primary, secondary = observer.all_subs_until_now()
+    h.assert_equals(#primary, 1)
+    h.assert_equals(#secondary, 1)
+    h.assert_equals(primary[1].text, "Primary")
+    h.assert_equals({ primary[1]["start"], primary[1]["end"], primary[1].is_secondary }, { 11.5, 13.5, false })
+    h.assert_equals(secondary[1].text, "Secondary")
+    h.assert_equals({ secondary[1]["start"], secondary[1]["end"], secondary[1].is_secondary }, { 11.5, 13.5, true })
+end
+
+--- Read current subtitles through each observer's own API for either collection entry point.
+local function test_injected_api_current_collection()
+    for _, method in ipairs { "collect_from_current", "collect_from_all_dialogues" } do
+        local api = fixtures.make_subtitle_observer_test_api(make_observer_api_test_properties())
+        local observer = subtitles_observer.new { mp = api }
+        local collected = observer[method](1)
+        h.assert_equals(collected.text, "Primary")
+        h.assert_equals(collected.secondary, "Secondary")
+        h.assert_equals({ collected["start"], collected["end"] }, { 11.5, 13.5 })
+    end
+end
+
+--- Run observer instance, selection, API-injection, and menu-refresh regressions.
 local function run_tests()
     test_instances_keep_recorded_subs_isolated()
     test_import_subs_separates_tracks_and_clear_resets_selection()
     test_autoclip_method_state_is_isolated()
     test_autocopy_toggle_refreshes_open_menu()
+    test_injected_api_observers_and_history()
+    test_injected_api_current_collection()
 end
 
 return {

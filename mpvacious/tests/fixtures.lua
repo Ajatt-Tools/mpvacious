@@ -903,4 +903,15 @@ function this.make_job_lifecycle_test_callback(state, job, reentrant)
     end)
 end
 
+--- Supply isolated subtitle properties and record observer registrations without changing mp.
+function this.make_subtitle_observer_test_api(properties)
+    local api = this.make_mp_property_reader(properties)
+    local observers = {}
+    --- Retain the registered callback so tests can deliver property changes explicitly.
+    api.observe_property = function(name, format, callback)
+        observers[name] = { format = format, callback = callback }
+    end
+    return api, observers
+end
+
 return this
