@@ -174,10 +174,6 @@ function this.is_non_empty_str(value)
     return type(value) == "string" and value ~= ""
 end
 
-function this.contains_non_latin_letters(str)
-    return str:match("[^%c%p%s%w—]")
-end
-
 function this.capitalize_first_letter(string)
     return string:gsub("^%l", string.upper)
 end

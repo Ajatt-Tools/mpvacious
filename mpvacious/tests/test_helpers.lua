@@ -843,12 +843,50 @@ local function test_text_nonpositive_widths()
     end
 end
 
+--- Clamp the byte-count estimate to the available bytes, including at a noninitial index.
+local function assert_utf8_char_bytes_test_case(first_byte, expected_width)
+    for available = 1, 5 do
+        local text = "x" .. string.char(first_byte) .. string.rep(string.char(0x80), available - 1)
+        h.assert_equals(h.utf8_char_bytes(text, 2), math.min(available, expected_width))
+    end
+end
+
+--- Preserve width estimation for every possible first byte, including malformed leading bytes.
+local function test_utf8_char_bytes_boundaries()
+    for _, case in ipairs {
+        { first = 0x00, last = 0xBF, width = 1 },
+        { first = 0xC0, last = 0xDF, width = 2 },
+        { first = 0xE0, last = 0xEF, width = 3 },
+        { first = 0xF0, last = 0xF7, width = 4 },
+        { first = 0xF8, last = 0xFF, width = 1 },
+    } do
+        for first_byte = case.first, case.last do
+            assert_utf8_char_bytes_test_case(first_byte, case.width)
+        end
+    end
+end
+
+--- Estimate actual ASCII, accented Latin, kana, and supplementary characters at their byte offsets.
+local function test_utf8_char_bytes_characters()
+    for _, case in ipairs {
+        { character = "A", width = 1 },
+        { character = "é", width = 2 },
+        { character = "あ", width = 3 },
+        { character = "𠀀", width = 4 },
+    } do
+        h.assert_equals(h.utf8_char_bytes(case.character, 1), case.width)
+        h.assert_equals(h.utf8_char_bytes("prefix" .. case.character, #"prefix" + 1), case.width)
+    end
+end
+
 --- Run the shared helper regression suite.
 local function run_tests()
     test_utf8_byte_count_contract()
     test_utf8_iterator_contract()
     test_text_width_and_separator_defaults()
     test_text_nonpositive_widths()
+    test_utf8_char_bytes_boundaries()
+    test_utf8_char_bytes_characters()
     test_map_preserves_keys_and_input()
     test_map_preserves_false_values()
     test_map_omits_nil_results()

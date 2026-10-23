@@ -6,6 +6,7 @@ Observer waits for subtitles to appear on the screen and adds them to a list.
 ]]
 
 local h = require("helpers")
+local utf8 = require("utils.utf8")
 local timings = require("utils.timings")
 local sub_list = require("subtitles.sub_list")
 local subtitle = require("subtitles.subtitle")
@@ -245,12 +246,19 @@ local function make_subtitles_observer(components)
         return text
     end
 
+    --- Remove spaces from CJK text only when enabled and no Latin letters are present.
     function public.maybe_remove_all_spaces(str)
-        if private.config.nuke_spaces == true and h.contains_non_latin_letters(str) then
-            return h.remove_all_spaces(str)
-        else
+        if private.config.nuke_spaces ~= true then
             return str
         end
+        -- Latin word boundaries remain meaningful even in otherwise Japanese text.
+        if utf8.contains_latin_letters(str) then
+            return str
+        end
+        if utf8.contains_cjk_letters(str) then
+            return h.remove_all_spaces(str)
+        end
+        return str
     end
 
     function public.copy_current_primary_to_clipboard()
