@@ -56,11 +56,11 @@ local function make_sub_list()
         end
         return collector.get_all_as_string()
     end
-    --- Collect up to n_subs cues starting from start_sub and return them as one Subtitle
-    --- spanning from start_sub's start to the last collected cue's end. Collection stops
-    --- early at the first gap of MAX_SUB_GAP_SECONDS or more between consecutive cues.
+    --- Collect up to n_subs subtitles starting from start_sub and return them as one Subtitle
+    --- spanning from start_sub's start to the last collected subtitle's end. Collection stops
+    --- early at the first gap of MAX_SUB_GAP_SECONDS or more between consecutive subtitles.
     --- Text is joined by the speech collector, which removes boundary line overlap
-    --- between consecutive time-overlapping cues.
+    --- between consecutive time-overlapping subtitles.
     function public.collect_n_subs(start_sub, n_subs)
         local collector = speech_collector.new()
         local end_sub = start_sub
@@ -80,13 +80,13 @@ local function make_sub_list()
 
     --- Return the text of all subs overlapping the given time window, as one line.
     --- Used to align secondary (translation) text with the primary text's time span:
-    --- primary and secondary cues have independent timings, so collecting secondary
-    --- text by line count or by the currently visible cue would misalign it with the
+    --- primary and secondary subtitles have independent timings, so collecting secondary
+    --- text by line count or by the currently visible subtitle would misalign it with the
     --- primary text. Small boundary intersections are treated as timing noise.
-    --- Boundary overlap between consecutive cues is removed by the speech collector,
+    --- Boundary overlap between consecutive subtitles is removed by the speech collector,
     --- and the result is flattened to a single whitespace-collapsed, trimmed line.
-    --- `window` is the selected primary Subtitle. Normal cues must overlap at least
-    --- half of the shorter cue; cues shorter than one second must overlap by 75%.
+    --- `window` is the selected primary Subtitle. Normal subtitles must overlap at least
+    --- half of the shorter subtitle. Subtitles shorter than one second must overlap by 75%.
     function public.get_overlapping_text(window)
         local collector = speech_collector.new()
         for _, sub in ipairs(subs_list) do
