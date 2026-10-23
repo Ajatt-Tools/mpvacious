@@ -59,27 +59,31 @@ local function make_subtitle(text, start_time, end_time)
     return Subtitle:from_text(text, start_time, end_time)
 end
 
---- Collect the visible subtitle with audio-relative delays applied.
---- mp_api defaults to mp; callers may supply an mp-compatible API.
-local function make_current(is_secondary, mp_api)
-    return Subtitle:now(is_secondary, mp_api)
+--- Collect the visible primary or secondary subtitle using named options.
+--- Set delay to true for audio-relative timings. Otherwise timestamps remain raw.
+--- mp_api defaults to mp, and is_secondary accepts Boolean or named track selectors.
+local function make_current(kwargs)
+    return Subtitle:now(kwargs)
 end
 
---- Return the currently displayed primary or secondary subtitle with mpv delays applied.
-function Subtitle:now(is_secondary, mp_api)
-    mp_api = mp_api or mp
-    local prefix = make_prefix(is_secondary)
+--- Read a visible subtitle, applying its audio-relative offset only when kwargs.delay is true.
+--- The caller's options remain unchanged, and omitted delay leaves applied_delay unset.
+function Subtitle:now(kwargs)
+    local mp_api = kwargs.mp_api or mp
+    local prefix = make_prefix(kwargs.is_secondary)
     local this = self:new {
         ["text"] = mp_api.get_property(prefix .. "sub-text"),
         ["start"] = mp_api.get_property_number(prefix .. "sub-start"),
         ["end"] = mp_api.get_property_number(prefix .. "sub-end"),
         ["is_secondary"] = prefix == "secondary-",
     }
-    if this:is_valid() then
-        return this:delay(subtitle_delay(is_secondary, mp_api))
-    else
+    if not this:is_valid() then
         return nil
     end
+    if kwargs.delay then
+        return this:delay(subtitle_delay(kwargs.is_secondary, mp_api))
+    end
+    return this
 end
 
 --- Apply and record one effective timing offset, rejecting a second application even after zero delay.
