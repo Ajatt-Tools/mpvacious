@@ -155,17 +155,23 @@ local function make_subtitles_observer(components)
     --- Private methods
 
     local function append_primary_sub()
-        local current_sub = subtitle.make_current("primary", mp_api)
+        local current_sub = subtitle.make_current { is_secondary = false, mp_api = mp_api, delay = true }
         private.all_dialogs.insert(current_sub)
-        if private.append_dialogue and private.dialogs.insert(current_sub) then
+        if not private.append_dialogue then
+            return
+        end
+        if private.dialogs.insert(current_sub) then
             private.menu:update()
         end
     end
 
     local function append_secondary_sub()
-        local current_secondary = subtitle.make_current("secondary", mp_api)
+        local current_secondary = subtitle.make_current { is_secondary = true, mp_api = mp_api, delay = true }
         private.all_secondary_dialogs.insert(current_secondary)
-        if private.append_dialogue and private.secondary_dialogs.insert(subtitle.make_current("secondary", mp_api)) then
+        if not private.append_dialogue then
+            return
+        end
+        if private.secondary_dialogs.insert(current_secondary) then
             private.menu:update()
         end
     end
@@ -264,8 +270,8 @@ local function make_subtitles_observer(components)
     end
 
     function public.collect_from_all_dialogues(n_lines)
-        local current_sub = subtitle.make_current("primary", mp_api)
-        local current_secondary_sub = subtitle.make_current("secondary", mp_api)
+        local current_sub = subtitle.make_current { is_secondary = false, mp_api = mp_api, delay = true }
+        local current_secondary_sub = subtitle.make_current { is_secondary = true, mp_api = mp_api, delay = true }
         private.all_dialogs.insert(current_sub)
         private.all_secondary_dialogs.insert(current_secondary_sub)
         if current_sub == nil then
@@ -285,10 +291,12 @@ local function make_subtitles_observer(components)
         --- Return all recorded subtitle lines as one subtitle object.
         --- The caller has to call subs_observer.clear() afterwards.
         if private.dialogs.is_empty() then
-            private.dialogs.insert(subtitle.make_current("primary", mp_api))
+            private.dialogs.insert(subtitle.make_current { is_secondary = false, mp_api = mp_api, delay = true })
         end
         if private.secondary_dialogs.is_empty() then
-            private.secondary_dialogs.insert(subtitle.make_current("secondary", mp_api))
+            private.secondary_dialogs.insert(
+                subtitle.make_current { is_secondary = true, mp_api = mp_api, delay = true }
+            )
         end
         local combined =
             subtitle.make_subtitle(private.dialogs.get_text(), public.get_timing("start"), public.get_timing("end"))
@@ -307,7 +315,7 @@ local function make_subtitles_observer(components)
     end
 
     function public.set_manual_timing_to_sub(position)
-        local sub = subtitle.make_current("primary", mp_api)
+        local sub = subtitle.make_current { is_secondary = false, mp_api = mp_api, delay = true }
         if sub then
             private.user_timings.set(position, sub[position] - mp_api.get_property("audio-delay"))
             h.notify(h.capitalize_first_letter(position) .. " time has been set.")
@@ -319,7 +327,7 @@ local function make_subtitles_observer(components)
 
     function public.set_to_current_sub()
         public.clear()
-        if subtitle.make_current("primary", mp_api) then
+        if subtitle.make_current { is_secondary = false, mp_api = mp_api, delay = true } then
             start_appending()
             h.notify("Timings have been set to the current sub.", "info", 2)
         else
@@ -351,8 +359,10 @@ local function make_subtitles_observer(components)
     end
 
     function public.all_subs_until_now()
-        private.all_dialogs.insert(subtitle.make_current("primary", mp_api))
-        private.all_secondary_dialogs.insert(subtitle.make_current("secondary", mp_api))
+        private.all_dialogs.insert(subtitle.make_current { is_secondary = false, mp_api = mp_api, delay = true })
+        private.all_secondary_dialogs.insert(
+            subtitle.make_current { is_secondary = true, mp_api = mp_api, delay = true }
+        )
         return private.all_dialogs.get_subs_list(), private.all_secondary_dialogs.get_subs_list()
     end
 
