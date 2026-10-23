@@ -33,10 +33,6 @@ function Subtitle:clone()
     return Subtitle:new(h.shallow_copy(self))
 end
 
-function Subtitle:from_text(text, start_time, end_time)
-    return self:new { ["text"] = text, ["start"] = start_time, ["end"] = end_time }
-end
-
 --- Resolve a named track or legacy Boolean selector to its mpv property prefix.
 local function make_prefix(is_secondary)
     if is_secondary and is_secondary ~= "primary" then
@@ -52,6 +48,10 @@ local function subtitle_delay(is_secondary, mp_api)
     mp_api = mp_api or mp
     local delay_property = make_prefix(is_secondary) .. "sub-delay"
     return mp_api.get_property_native(delay_property) - mp_api.get_property_native("audio-delay")
+end
+
+function Subtitle:from_text(text, start_time, end_time)
+    return self:new { ["text"] = text, ["start"] = start_time, ["end"] = end_time }
 end
 
 --- Create a subtitle from its text and start/end timestamps.
