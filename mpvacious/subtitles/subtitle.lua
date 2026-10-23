@@ -79,9 +79,15 @@ function Subtitle:now(is_secondary, mp_api)
     end
 end
 
+--- Apply and record one effective timing offset, rejecting a second application even after zero delay.
+--- Raw subtitles have no applied_delay value. Clones retain an already applied numeric offset.
 function Subtitle:delay(delay)
+    if self.applied_delay ~= nil then
+        error("subtitle delay has already been applied", 2)
+    end
     self["start"] = self["start"] + delay
     self["end"] = self["end"] + delay
+    self.applied_delay = delay
     return self
 end
 
