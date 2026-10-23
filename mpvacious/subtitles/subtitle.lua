@@ -16,6 +16,9 @@ local Subtitle = {
     ["start"] = -1,
     ["end"] = -1,
     ["is_secondary"] = false,
+    -- Effective subtitle-minus-audio offset already applied to the timestamps.
+    -- Nil means raw timings. Zero means an adjustment was applied with no shift.
+    ["applied_delay"] = nil,
 }
 
 function Subtitle:new(o)
