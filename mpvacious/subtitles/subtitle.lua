@@ -42,11 +42,11 @@ local function make_prefix(is_secondary)
     end
 end
 
---- Return the selected subtitle track's delay relative to the audio track.
---- mp_api defaults to mp; tests may provide an mp-compatible stub.
-local function subtitle_delay(is_secondary, mp_api)
-    mp_api = mp_api or mp
-    local delay_property = make_prefix(is_secondary) .. "sub-delay"
+--- Return subtitle delay minus audio delay.
+--- Options: is_secondary (track selector), mp_api (default: mp).
+local function get_effective_delay(kwargs)
+    local mp_api = kwargs.mp_api or mp
+    local delay_property = make_prefix(kwargs.is_secondary) .. "sub-delay"
     return mp_api.get_property_native(delay_property) - mp_api.get_property_native("audio-delay")
 end
 
@@ -59,15 +59,14 @@ local function make_subtitle(text, start_time, end_time)
     return Subtitle:from_text(text, start_time, end_time)
 end
 
---- Collect the visible primary or secondary subtitle using named options.
---- Set delay to true for audio-relative timings. Otherwise timestamps remain raw.
---- mp_api defaults to mp, and is_secondary accepts Boolean or named track selectors.
+--- Read the visible subtitle, optionally adjusting its raw timestamps relative to audio.
+--- Options: is_secondary (track selector), mp_api (default: mp), delay (default: false).
 local function make_current(kwargs)
     return Subtitle:now(kwargs)
 end
 
---- Read a visible subtitle, applying its audio-relative offset only when kwargs.delay is true.
---- The caller's options remain unchanged, and omitted delay leaves applied_delay unset.
+--- Read a visible subtitle, applying its effective offset only when delay is true.
+--- Options: is_secondary (track selector), mp_api (default: mp), delay (default: false).
 function Subtitle:now(kwargs)
     local mp_api = kwargs.mp_api or mp
     local prefix = make_prefix(kwargs.is_secondary)
@@ -81,7 +80,7 @@ function Subtitle:now(kwargs)
         return nil
     end
     if kwargs.delay then
-        return this:delay(subtitle_delay(kwargs.is_secondary, mp_api))
+        return this:delay(get_effective_delay(kwargs))
     end
     return this
 end
@@ -166,7 +165,7 @@ end
 
 return {
     Subtitle = Subtitle,
-    subtitle_delay = subtitle_delay,
+    get_effective_delay = get_effective_delay,
     make_subtitle = make_subtitle,
     make_current = make_current,
 }
