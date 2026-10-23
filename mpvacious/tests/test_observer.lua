@@ -82,12 +82,41 @@ local function test_autocopy_toggle_refreshes_open_menu()
     h.assert_equals(redraws, 2)
 end
 
+local function make_nuke_spaces_observer(enabled)
+    local observer = subtitles_observer.new()
+    observer.init(nil, {
+        fail_if_not_ready = function() end,
+        config = function()
+            return { nuke_spaces = enabled, autoclip = false, autoclip_method = "clipboard" }
+        end,
+    })
+    return observer
+end
+
+--- Latin letters, including accented Latin text, should retain spaces.
+local function test_nuke_spaces_preserves_latin_text()
+    local detect_non_latin_letters = h.contains_non_latin_letters
+    h.contains_non_latin_letters = function() return true end
+
+    local observer = make_nuke_spaces_observer(true)
+    h.assert_equals(observer.maybe_remove_all_spaces("héllo héllo"), "héllo héllo")
+    h.assert_equals(observer.maybe_remove_all_spaces("é é"), "é é")
+    h.assert_equals(observer.maybe_remove_all_spaces("č č"), "č č")
+    h.assert_equals(observer.maybe_remove_all_spaces("ắ ắ"), "ắ ắ")
+    h.assert_equals(observer.maybe_remove_all_spaces("日本 語"), "日本語")
+
+    local disabled = make_nuke_spaces_observer(false)
+    h.assert_equals(disabled.maybe_remove_all_spaces("日本 語"), "日本 語")
+    h.contains_non_latin_letters = detect_non_latin_letters
+end
+
 --- Run observer instance, selection, and menu-refresh regressions.
 local function run_tests()
     test_instances_keep_recorded_subs_isolated()
     test_import_subs_separates_tracks_and_clear_resets_selection()
     test_autoclip_method_state_is_isolated()
     test_autocopy_toggle_refreshes_open_menu()
+    test_nuke_spaces_preserves_latin_text()
 end
 
 return {

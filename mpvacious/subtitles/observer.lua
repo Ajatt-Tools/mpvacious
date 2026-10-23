@@ -99,6 +99,54 @@ local function apply_custom_trim(text)
     return h.trim(text)
 end
 
+local function is_latin_letter_codepoint(codepoint)
+    return (codepoint >= 0x0041 and codepoint <= 0x005A)
+        or (codepoint >= 0x0061 and codepoint <= 0x007A)
+        or (codepoint >= 0x00C0 and codepoint <= 0x00D6)
+        or (codepoint >= 0x00D8 and codepoint <= 0x00F6)
+        or (codepoint >= 0x00F8 and codepoint <= 0x00FF)
+        or (codepoint >= 0x0100 and codepoint <= 0x024F)
+        or (codepoint >= 0x1E00 and codepoint <= 0x1EFF)
+        or (codepoint >= 0x2C60 and codepoint <= 0x2C7F)
+        or (codepoint >= 0xA720 and codepoint <= 0xA7FF)
+        or (codepoint >= 0xAB30 and codepoint <= 0xAB6F)
+end
+
+local function utf8_codepoint_at(str, index)
+    local first, second, third = str:byte(index, index + 2)
+    if first < 0x80 then
+        return first, 1
+    elseif first >= 0xC2 and first <= 0xDF and second and second >= 0x80 and second <= 0xBF then
+        return (first - 0xC0) * 0x40 + second - 0x80, 2
+    elseif
+        first >= 0xE0
+        and first <= 0xEF
+        and second
+        and second >= 0x80
+        and second <= 0xBF
+        and third
+        and third >= 0x80
+        and third <= 0xBF
+    then
+        return (first - 0xE0) * 0x1000 + (second - 0x80) * 0x40 + third - 0x80, 3
+    elseif first >= 0xF0 and first <= 0xF4 then
+        return nil, 4
+    end
+    return nil, 1
+end
+
+local function contains_latin_letters(str)
+    local index = 1
+    while index <= #str do
+        local codepoint, width = utf8_codepoint_at(str, index)
+        if codepoint and is_latin_letter_codepoint(codepoint) then
+            return true
+        end
+        index = index + width
+    end
+    return false
+end
+
 ------------------------------------------------------------
 --- Public
 
@@ -229,7 +277,11 @@ local function make_subtitles_observer()
     end
 
     function public.maybe_remove_all_spaces(str)
-        if private.config.nuke_spaces == true and h.contains_non_latin_letters(str) then
+        if
+            private.config.nuke_spaces == true
+            and h.contains_non_latin_letters(str)
+            and not contains_latin_letters(str)
+        then
             return h.remove_all_spaces(str)
         else
             return str
