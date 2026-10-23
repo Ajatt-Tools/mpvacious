@@ -147,8 +147,8 @@ local function test_delay_preserves_raw_clone_source()
 end
 
 --- Supply independent subtitle and audio delays for timing tests.
-local function make_mp_stub_for_tests()
-    local delays = { ["sub-delay"] = 10, ["secondary-sub-delay"] = 3, ["audio-delay"] = 1 }
+local function make_mp_stub_for_tests(delays)
+    delays = delays or { ["sub-delay"] = 10, ["secondary-sub-delay"] = 3, ["audio-delay"] = 1 }
     --- Return the requested timing offset.
     local function get_property_native(name)
         return delays[name]
@@ -157,7 +157,7 @@ local function make_mp_stub_for_tests()
 end
 
 --- Apply each subtitle track's delay relative to audio.
-local function test_subtitle_delay()
+local function test_get_effective_delay()
     local mp_stub = make_mp_stub_for_tests()
     local cases = {
         { is_secondary = false, expected_start = 10, expected_end = 11 },
@@ -167,9 +167,29 @@ local function test_subtitle_delay()
         { expected_start = 10, expected_end = 11 },
     }
     for _, case in ipairs(cases) do
-        local shifted = subtitle.make_subtitle("Line", 1, 2):delay(subtitle.subtitle_delay(case.is_secondary, mp_stub))
+        local options = { is_secondary = case.is_secondary, mp_api = mp_stub }
+        local original = h.shallow_copy(options)
+        local shifted = subtitle.make_subtitle("Line", 1, 2):delay(subtitle.get_effective_delay(options))
         h.assert_equals(shifted["start"], case.expected_start)
         h.assert_equals(shifted["end"], case.expected_end)
+        h.assert_equals(options, original)
+    end
+end
+
+--- Preserve zero and negative effective offsets for independently delayed subtitle tracks.
+local function test_get_effective_delay_offsets()
+    for _, case in ipairs {
+        { primary = -2, secondary = 1, audio = 0.5, expected_primary = -2.5, expected_secondary = 0.5 },
+        { primary = 1, secondary = 1, audio = 1, expected_primary = 0, expected_secondary = 0 },
+        { primary = 0, secondary = -3, audio = -1, expected_primary = 1, expected_secondary = -2 },
+    } do
+        local mp_api = make_mp_stub_for_tests {
+            ["sub-delay"] = case.primary,
+            ["secondary-sub-delay"] = case.secondary,
+            ["audio-delay"] = case.audio,
+        }
+        h.assert_equals(subtitle.get_effective_delay { is_secondary = false, mp_api = mp_api }, case.expected_primary)
+        h.assert_equals(subtitle.get_effective_delay { is_secondary = true, mp_api = mp_api }, case.expected_secondary)
     end
 end
 
@@ -216,7 +236,10 @@ local function test_make_current()
             h.assert_equals(current["start"], case.start_time)
             h.assert_equals(current["end"], case.end_time)
             h.assert_equals(current.is_secondary, case.secondary == true or case.secondary == "secondary")
-            h.assert_equals(current.applied_delay, subtitle.subtitle_delay(case.secondary, mp_api))
+            h.assert_equals(
+                current.applied_delay,
+                subtitle.get_effective_delay { is_secondary = case.secondary, mp_api = mp_api }
+            )
         else
             h.assert_equals(current, nil)
         end
@@ -304,7 +327,8 @@ local function run_tests()
     test_delay_records_applied_offset()
     test_delay_rejects_reapplication()
     test_delay_preserves_raw_clone_source()
-    test_subtitle_delay()
+    test_get_effective_delay()
+    test_get_effective_delay_offsets()
     test_make_current()
     test_make_current_raw_options()
     test_make_current_options_without_visible_subtitle()
