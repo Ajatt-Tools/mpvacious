@@ -98,6 +98,54 @@ local function test_set_timings()
     end
 end
 
+--- Record positive, negative, and zero offsets while retaining direct timestamp access and chaining.
+local function test_delay_records_applied_offset()
+    for _, offset in ipairs { 0, 1.5, -2 } do
+        local sub = subtitle.make_subtitle("Line", 10, 12)
+        h.assert_equals(sub.applied_delay, nil)
+        h.assert_equals(rawequal(sub:delay(offset), sub), true)
+        h.assert_equals(sub["start"], 10 + offset)
+        h.assert_equals(sub["end"], 12 + offset)
+        h.assert_equals(sub.applied_delay, offset)
+        h.assert_equals(sub:duration(), 2)
+    end
+end
+
+--- Reject another offset without modifying the already adjusted subtitle.
+local function assert_repeated_delay_test_rejected(sub, offset)
+    local original = h.shallow_copy(sub)
+    local success, message = pcall(sub.delay, sub, offset)
+    h.assert_equals(success, false)
+    h.assert_equals(h.is_substr(message, "subtitle delay has already been applied"), true)
+    h.assert_equals(h.shallow_copy(sub), original)
+end
+
+--- A second application is forbidden for original and cloned subtitles, including zero offsets.
+local function test_delay_rejects_reapplication()
+    for _, first_offset in ipairs { 0, 1.5, -2 } do
+        for _, second_offset in ipairs { 0, first_offset, -first_offset } do
+            local sub = subtitle.make_subtitle("Line", 10, 12):delay(first_offset)
+            assert_repeated_delay_test_rejected(sub, second_offset)
+            local copy = sub:clone()
+            h.assert_equals(copy.applied_delay, first_offset)
+            assert_repeated_delay_test_rejected(copy, second_offset)
+        end
+    end
+end
+
+--- Delaying a raw clone leaves its source raw and eligible for its own independent adjustment.
+local function test_delay_preserves_raw_clone_source()
+    for _, offset in ipairs { 0, 1.5, -2 } do
+        local original = subtitle.make_subtitle("Line", 10, 12)
+        local copy = original:clone():delay(offset)
+        h.assert_equals(original.applied_delay, nil)
+        h.assert_equals({ original["start"], original["end"] }, { 10, 12 })
+        original:delay(offset + 1)
+        h.assert_equals(copy.applied_delay, offset)
+        h.assert_equals({ copy["start"], copy["end"] }, { 10 + offset, 12 + offset })
+    end
+end
+
 --- Supply independent subtitle and audio delays for timing tests.
 local function make_mp_stub_for_tests()
     local delays = { ["sub-delay"] = 10, ["secondary-sub-delay"] = 3, ["audio-delay"] = 1 }
@@ -161,12 +209,14 @@ local function test_make_current()
         { secondary = "primary", visible = false },
         { secondary = "secondary", visible = false },
     } do
-        local current = subtitle.make_current(case.secondary, make_current_subtitle_test_api(case.visible))
+        local mp_api = make_current_subtitle_test_api(case.visible)
+        local current = subtitle.make_current(case.secondary, mp_api)
         if case.visible then
             h.assert_equals(current.text, case.text)
             h.assert_equals(current["start"], case.start_time)
             h.assert_equals(current["end"], case.end_time)
             h.assert_equals(current.is_secondary, case.secondary == true or case.secondary == "secondary")
+            h.assert_equals(current.applied_delay, subtitle.subtitle_delay(case.secondary, mp_api))
         else
             h.assert_equals(current, nil)
         end
@@ -208,6 +258,9 @@ local function run_tests()
     test_can_expand_with()
     test_expand_end_time()
     test_set_timings()
+    test_delay_records_applied_offset()
+    test_delay_rejects_reapplication()
+    test_delay_preserves_raw_clone_source()
     test_subtitle_delay()
     test_make_current()
     test_clone()
