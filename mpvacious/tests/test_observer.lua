@@ -130,6 +130,54 @@ local function test_injected_api_current_collection()
     end
 end
 
+--- Initialize one observer with optional selection recording and observable text reads and redraws.
+local function make_append_subtitle_test_context(recording)
+    local properties = make_observer_api_test_properties()
+    local api, observers, reads = fixtures.make_subtitle_observer_test_api(properties)
+    local state = { update_count = 0 }
+    local observer = subtitles_observer.new { mp = api }
+    observer.init(
+        fixtures.make_subtitle_observer_test_menu(state),
+        fixtures.make_config_manager { autoclip = false, autoclip_method = "clipboard" }
+    )
+    if recording then observer.set_to_current_sub() end
+    return { observer = observer, properties = properties, observers = observers, reads = reads, state = state }
+end
+
+--- Read a callback's subtitle once, storing it in history and only updating an active selection.
+local function assert_append_subtitle_test_case(case, recording)
+    local ctx = make_append_subtitle_test_context(recording)
+    local before = ctx.state.update_count
+    ctx.reads[case.property] = 0
+    ctx.properties[case.property] = "Next subtitle"
+    ctx.properties["sub-start"], ctx.properties["secondary-sub-start"] = 20, 20
+    ctx.properties["sub-end"], ctx.properties["secondary-sub-end"] = 22, 22
+    ctx.observers[case.property].callback()
+    h.assert_equals(ctx.reads[case.property], 1)
+    local selected = ctx.observer[case.selection]()
+    local histories = { ctx.observer.all_subs_until_now() }
+    local expected_history, expected_selected, expected_updates = 1, 0, before
+    if recording then
+        expected_history, expected_selected, expected_updates = 2, 2, before + 1
+    end
+    h.assert_equals(#histories[case.history], expected_history)
+    h.assert_equals(#selected, expected_selected)
+    h.assert_equals(ctx.state.update_count, expected_updates)
+    h.assert_equals(histories[case.history][expected_history].text, "Next subtitle")
+end
+
+--- Primary and secondary callbacks use the same early-return policy with or without recording.
+local function test_append_subtitle_reads_once()
+    for _, recording in ipairs { false, true } do
+        for _, case in ipairs {
+            { property = "sub-text", selection = "recorded_subs", history = 1 },
+            { property = "secondary-sub-text", selection = "recorded_secondary_subs", history = 2 },
+        } do
+            assert_append_subtitle_test_case(case, recording)
+        end
+    end
+end
+
 --- Run observer instance, selection, API-injection, and menu-refresh regressions.
 local function run_tests()
     test_instances_keep_recorded_subs_isolated()
@@ -138,6 +186,7 @@ local function run_tests()
     test_autocopy_toggle_refreshes_open_menu()
     test_injected_api_observers_and_history()
     test_injected_api_current_collection()
+    test_append_subtitle_reads_once()
 end
 
 return {

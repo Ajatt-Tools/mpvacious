@@ -903,15 +903,30 @@ function this.make_job_lifecycle_test_callback(state, job, reentrant)
     end)
 end
 
+--- Count observer menu updates without rendering an OSD.
+function this.make_subtitle_observer_test_menu(state)
+    return {
+        --- Record a redraw requested by an accepted subtitle selection.
+        update = function() state.update_count = state.update_count + 1 end,
+    }
+end
+
 --- Supply isolated subtitle properties and record observer registrations without changing mp.
 function this.make_subtitle_observer_test_api(properties)
     local api = this.make_mp_property_reader(properties)
     local observers = {}
+    local reads = {}
+    local get_property = api.get_property
+    --- Count text reads so observer tests can detect redundant subtitle collection.
+    api.get_property = function(name)
+        reads[name] = (reads[name] or 0) + 1
+        return get_property(name)
+    end
     --- Retain the registered callback so tests can deliver property changes explicitly.
     api.observe_property = function(name, format, callback)
         observers[name] = { format = format, callback = callback }
     end
-    return api, observers
+    return api, observers, reads
 end
 
 return this

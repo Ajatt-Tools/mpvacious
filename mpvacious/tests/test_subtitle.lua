@@ -210,7 +210,7 @@ local function test_make_current()
         { secondary = "secondary", visible = false },
     } do
         local mp_api = make_current_subtitle_test_api(case.visible)
-        local current = subtitle.make_current(case.secondary, mp_api)
+        local current = subtitle.make_current { is_secondary = case.secondary, mp_api = mp_api, delay = true }
         if case.visible then
             h.assert_equals(current.text, case.text)
             h.assert_equals(current["start"], case.start_time)
@@ -219,6 +219,49 @@ local function test_make_current()
             h.assert_equals(current.applied_delay, subtitle.subtitle_delay(case.secondary, mp_api))
         else
             h.assert_equals(current, nil)
+        end
+    end
+end
+
+--- Read raw cues without requiring delay properties or modifying the caller's options.
+local function assert_raw_current_test_case(case, delay)
+    local mp_api = make_current_subtitle_test_api(true)
+    mp_api.get_property_native = nil
+    local options = { is_secondary = case.selector, mp_api = mp_api, delay = delay }
+    local original = h.shallow_copy(options)
+    local current = subtitle.make_current(options)
+    h.assert_equals(current.text, case.text)
+    h.assert_equals({ current["start"], current["end"] }, { case.start_time, case.end_time })
+    h.assert_equals(current.is_secondary, case.secondary)
+    h.assert_equals(current.applied_delay, nil)
+    h.assert_equals(current:duration(), case.end_time - case.start_time)
+    h.assert_equals(h.shallow_copy(subtitle.Subtitle:now(options)), h.shallow_copy(current))
+    h.assert_equals(options, original)
+end
+
+--- False or omitted delay preserves source timestamps for Boolean, named, and default selectors.
+local function test_make_current_raw_options()
+    for _, case in ipairs {
+        { selector = false, secondary = false, text = "Primary", start_time = 1, end_time = 2 },
+        { selector = true, secondary = true, text = "Secondary", start_time = 4, end_time = 6 },
+        { selector = "primary", secondary = false, text = "Primary", start_time = 1, end_time = 2 },
+        { selector = "secondary", secondary = true, text = "Secondary", start_time = 4, end_time = 6 },
+        { secondary = false, text = "Primary", start_time = 1, end_time = 2 },
+    } do
+        assert_raw_current_test_case(case, false)
+        assert_raw_current_test_case(case, nil)
+    end
+end
+
+--- Missing timing properties reject raw and adjusted reads before consulting delay properties.
+local function test_make_current_options_without_visible_cue()
+    for _, delay in ipairs { false, true } do
+        for _, selector in ipairs { false, true, "primary", "secondary" } do
+            local mp_api = make_current_subtitle_test_api(false)
+            mp_api.get_property_native = nil
+            local options = { is_secondary = selector, mp_api = mp_api, delay = delay }
+            h.assert_equals(subtitle.make_current(options), nil)
+            h.assert_equals(subtitle.Subtitle:now(options), nil)
         end
     end
 end
@@ -263,6 +306,8 @@ local function run_tests()
     test_delay_preserves_raw_clone_source()
     test_subtitle_delay()
     test_make_current()
+    test_make_current_raw_options()
+    test_make_current_options_without_visible_cue()
     test_clone()
 end
 
