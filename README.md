@@ -613,7 +613,7 @@ sudo pacman -S stylua
 Before committing, run `make format` to format code.
 Use `make format-check` to check without modifying files.
 
-## Running tests
+### Running tests
 
 The fastest way to run tests is with Lua or `luajit` directly (no mpv or media file required):
 Run these commands from the repository root.
@@ -637,6 +637,18 @@ MPVACIOUS_TEST=TRUE mpv --vo=null --ao=null --frames=1 'av://lavfi:testsrc=durat
 
 The results will be printed to the console.
 Confirm that mpv prints `TESTS PASSED`.
+
+### Issues and pull requests
+
+Do not create issues or pull requests
+until you've discussed your intentions with us first in the
+[chat](https://ajatt.top/blog/join-our-community.html).
+
+You may open an issue after we've discussed it and agreed that it would be worth submitting one.
+
+Before starting a new PR,
+reach out in the chat and explain what you want to accomplish
+so you don't spend time writing code that won't be accepted.
 
 ## Custom Subtitle Filtering
 
