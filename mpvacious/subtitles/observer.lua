@@ -110,11 +110,15 @@ local function make_subtitles_observer(components)
     local public = {}
     local private = {}
 
+    -- User selection (advanced menu)
     private.dialogs = sub_list.new()
     private.secondary_dialogs = sub_list.new()
+    -- Global dialog recorder (subtitle selection menu)
     private.all_dialogs = sub_list.new()
     private.all_secondary_dialogs = sub_list.new()
+    -- Manually set timings (advanced menu)
     private.user_timings = timings.new()
+    -- Options
     private.autoclip_method = new_autoclip_method_selector.new()
     private.append_dialogue = false
     private.autoclip_enabled = false
