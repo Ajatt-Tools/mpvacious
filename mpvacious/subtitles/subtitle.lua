@@ -80,16 +80,20 @@ function Subtitle:now(kwargs)
         return nil
     end
     if kwargs.delay then
-        return this:delay(get_effective_delay(kwargs))
+        return this:delay()
     end
     return this
 end
 
 --- Apply and record one effective timing offset, rejecting a second application even after zero delay.
 --- Raw subtitles have no applied_delay value. Clones retain an already applied numeric offset.
-function Subtitle:delay(delay)
+--- mp_api is optional and only provided by tests.
+function Subtitle:delay(delay, mp_api)
     if self.applied_delay ~= nil then
         error("subtitle delay has already been applied", 2)
+    end
+    if delay == nil or type(delay) ~= "number" then
+        delay = get_effective_delay{ is_secondary = self.is_secondary, mp_api = mp_api or mp, }
     end
     self["start"] = self["start"] + delay
     self["end"] = self["end"] + delay
