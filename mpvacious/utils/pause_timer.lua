@@ -7,19 +7,22 @@ Pause timer stops playback when reaching a set timing.
 
 local mp = require("mp")
 
-local function make_pause_timer()
+--- Create an independent playback stop timer with an optional isolated mpv API.
+local function make_pause_timer(components)
+    components = components or {}
+    local mp_api = components.mp or mp
     local pub = {}
     local stop_time = -1
 
     --- Observe playback time until it passes the supplied stop boundary.
     function pub.set_stop_time(time)
         stop_time = time
-        mp.observe_property("time-pos", "number", pub.check_stop)
+        mp_api.observe_property("time-pos", "number", pub.check_stop)
     end
 
     --- Cancel this timer's playback observer and discard its stop boundary.
     function pub.stop()
-        mp.unobserve_property(pub.check_stop)
+        mp_api.unobserve_property(pub.check_stop)
         stop_time = -1
     end
 
@@ -27,7 +30,7 @@ local function make_pause_timer()
     function pub.check_stop(_, time)
         if time > stop_time then
             pub.stop()
-            mp.set_property("pause", "yes")
+            mp_api.set_property("pause", "yes")
         end
     end
 
