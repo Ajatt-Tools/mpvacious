@@ -39,12 +39,14 @@ function OSD:tab()
     return self:append([[\h\h\h\h]])
 end
 
+--- Set a numeric font size and append its ASS tag.
 function OSD:fsize(size)
     h.assert_type(size, "number")
     self.font_size = size
     return self:append("{\\fs"):append(size):append("}")
 end
 
+--- Set a nonempty font name and append its ASS tag.
 function OSD:font(name)
     h.assert_type(name, "string")
     if h.is_empty(name) then
@@ -54,12 +56,14 @@ function OSD:font(name)
     return self:append("{\\fn"):append(name):append("}")
 end
 
+--- Set a numeric border width and append its ASS tag.
 function OSD:border(size)
     h.assert_type(size, "number")
     self.border_size = size
     return self:append(string.format("{\\bord%.3f}", size))
 end
 
+--- Append a position after validating both numeric coordinates.
 function OSD:pos(x, y)
     h.assert_type(x, "number")
     h.assert_type(y, "number")
@@ -76,6 +80,7 @@ function OSD:get_text()
     return table.concat(self.messages)
 end
 
+--- Append a text-color tag from a string containing an RGB hexadecimal code.
 function OSD:color(code)
     h.assert_type(code, "string")
     return self:append("{\\1c&H"):append(code:sub(5, 6)):append(code:sub(3, 4)):append(code:sub(1, 2)):append("&}")

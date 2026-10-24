@@ -6,6 +6,7 @@ Switch cycles between values in a table.
 ]]
 local h = require("helpers")
 
+--- Create a value switch from a required table of selectable states.
 local make_switch = function(states)
     h.assert_type(states, "table")
     local self = {
@@ -36,6 +37,7 @@ local make_switch = function(states)
             end
         end
     end
+    --- Select a numeric index, clamping it to the available state range.
     local function set_index(index)
         h.assert_type(index, "number")
         self.current_state = h.clamp(index, 1, #self.states)

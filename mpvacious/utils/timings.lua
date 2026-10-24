@@ -15,7 +15,7 @@ local new_timings = function()
         h.assert_in(position, { "start", "end" })
         return self[position] >= 0
     end
-    --- Store one supported timing boundary without accepting arbitrary state keys.
+    --- Store a numeric timing at one supported boundary, including negative unset values.
     local set = function(position, time)
         h.assert_in(position, { "start", "end" })
         h.assert_type(time, "number")
