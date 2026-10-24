@@ -6,28 +6,31 @@ Pause timer stops playback when reaching a set timing.
 ]]
 
 local mp = require("mp")
-local stop_time = -1
-local check_stop
 
-local set_stop_time = function(time)
-    stop_time = time
-    mp.observe_property("time-pos", "number", check_stop)
-end
+local function make_pause_timer()
+    local pub = {}
+    local stop_time = -1
 
-local stop = function()
-    mp.unobserve_property(check_stop)
-    stop_time = -1
-end
-
-check_stop = function(_, time)
-    if time > stop_time then
-        stop()
-        mp.set_property("pause", "yes")
+    function pub.set_stop_time(time)
+        stop_time = time
+        mp.observe_property("time-pos", "number", pub.check_stop)
     end
+
+    function pub.stop()
+        mp.unobserve_property(pub.check_stop)
+        stop_time = -1
+    end
+
+    function pub.check_stop(_, time)
+        if time > stop_time then
+            pub.stop()
+            mp.set_property("pause", "yes")
+        end
+    end
+
+    return pub
 end
 
 return {
-    set_stop_time = set_stop_time,
-    check_stop = check_stop,
-    stop = stop,
+    new = make_pause_timer,
 }

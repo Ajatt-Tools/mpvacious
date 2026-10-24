@@ -7,13 +7,14 @@ Provides additional methods for controlling playback.
 
 local mp = require("mp")
 local h = require("helpers")
-local pause_timer = require("utils.pause_timer")
+local make_pause_timer = require("utils.pause_timer")
 local subtitle = require("subtitles.subtitle")
 
 --- Create playback controls with independent subtitle-waiting state.
 local function make_play_control()
     local self = {}
     local pub = {}
+    self.pause_timer = make_pause_timer.new()
     self.current_sub = nil
 
     ------------------------------------------------------------
@@ -21,7 +22,7 @@ local function make_play_control()
 
     --- Schedule a pause just before the adjusted subtitle end.
     local function stop_at_the_end(sub)
-        pause_timer.set_stop_time(sub["end"] - 0.050)
+        self.pause_timer.set_stop_time(sub["end"] - 0.050)
         h.notify("Playing till the end of the sub...", "info", 3)
     end
 
@@ -72,7 +73,7 @@ local function make_play_control()
         if pause then
             mp.set_property("pause", "yes")
         end
-        pause_timer.stop()
+        self.pause_timer.stop()
     end
 
     --- Rewind slightly inside the visible primary subtitle's adjusted start time.
@@ -83,7 +84,7 @@ local function make_play_control()
             return
         end
         mp.commandv("seek", sub["start"] + 0.015, "absolute")
-        pause_timer.stop()
+        self.pause_timer.stop()
     end
 
     return pub
