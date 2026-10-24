@@ -18,6 +18,7 @@ local modules = {
     "tests.test_snapshot",
     "tests.test_encoder",
     "tests.test_subtitle",
+    "tests.test_play_control",
     "tests.test_note_update_context",
     "tests.test_forvo",
     "tests.test_note_update_guard",
