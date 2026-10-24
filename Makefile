@@ -28,10 +28,18 @@ format-check:
 # Target-specific exported variable, inherited by test recipes and prerequisites.
 # Exercise literal percent signs in tag substitutions in every test runtime.
 test: export SUBS2SRS_TAGS := literal%1%%100%
+# Share the selected installation layout with standalone and real-mpv directory tests.
+test: export MPV_CONFIG_DIR := $(PREFIX)
 test:
+	@if [ ! -L "$(PREFIX)/scripts/$(PROJECT)" ] || [ ! -f "$(PREFIX)/scripts/$(PROJECT)/main.lua" ]; then \
+		printf '%s\n' 'Run bash scripts/symlink.sh first, using the same mpv config directory as PREFIX.' >&2; \
+		exit 1; \
+	fi
 	lua tests/run.lua
 	luajit tests/run.lua
-	MPVACIOUS_TEST=TRUE mpv --vo=null --ao=null --frames=1 'av://lavfi:testsrc=duration=2:size=320x240:rate=1'
+	# Keep the development symlink path so config-directory inference retains the installed layout.
+	MPVACIOUS_TEST=TRUE mpv --no-config --load-scripts=no --script="$(PREFIX)/scripts/$(PROJECT)" \
+		--vo=null --ao=null --frames=1 'av://lavfi:testsrc=duration=2:size=320x240:rate=1'
 
 version:
 	[ -n "$(VERSION)" ] || exit 1
