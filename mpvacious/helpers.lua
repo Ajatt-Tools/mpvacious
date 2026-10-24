@@ -550,6 +550,7 @@ function this.equal(first, last)
     return are_two_values_equal(first, last)
 end
 
+--- Return loaded tracks of one supported mpv track type.
 function this.get_loaded_tracks(track_type)
     this.assert_in(track_type, { "audio", "sub", "video" })
     --- Return all sub tracks, audio tracks, etc.

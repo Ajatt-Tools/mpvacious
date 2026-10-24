@@ -14,6 +14,7 @@ local make_switch = function(states)
     local function get()
         return self.states[self.current_state]
     end
+    --- Cycle exactly one position backward or forward, wrapping at the ends.
     local function change_menu_item(step)
         h.assert_in(step, { -1, 1 })
         self.current_state = self.current_state + step

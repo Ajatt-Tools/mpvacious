@@ -70,6 +70,7 @@ function OSD:pos(x, y)
     return self:append(string.format("{\\pos(%d,%d)}", x, y))
 end
 
+--- Append one of ASS's nine numeric alignment positions and return this builder.
 function OSD:align(number)
     h.assert_in(number, { 1, 2, 3, 4, 5, 6, 7, 8, 9 })
     return self:append("{\\an"):append(number):append("}")

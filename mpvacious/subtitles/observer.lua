@@ -266,6 +266,7 @@ local function make_subtitles_observer(components)
         return private.user_timings.is_set("start") or private.user_timings.is_set("end")
     end
 
+    --- Return a supported manual or recorded timing boundary, or -1 when unavailable.
     function public.get_timing(position)
         h.assert_in(position, { "start", "end" })
         if private.user_timings.is_set(position) then
@@ -316,6 +317,7 @@ local function make_subtitles_observer(components)
         }
     end
 
+    --- Set a supported timing boundary from the current audio-relative playback position.
     function public.set_manual_timing(position)
         h.assert_in(position, { "start", "end" })
         private.user_timings.set(position, mp_api.get_property_number("time-pos") - mp_api.get_property("audio-delay"))

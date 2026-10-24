@@ -7,16 +7,20 @@ Object that remembers manually set timings.
 
 local h = require("helpers")
 
+--- Create independent manual start/end timing storage.
 local new_timings = function()
     local self = { ["start"] = -1, ["end"] = -1 }
+    --- Report whether the selected timing boundary has been set.
     local is_set = function(position)
         h.assert_in(position, { "start", "end" })
         return self[position] >= 0
     end
+    --- Store one supported timing boundary without accepting arbitrary state keys.
     local set = function(position, time)
         h.assert_in(position, { "start", "end" })
         self[position] = time
     end
+    --- Return the selected timing boundary.
     local get = function(position)
         h.assert_in(position, { "start", "end" })
         return self[position]
