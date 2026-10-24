@@ -615,15 +615,28 @@ Use `make format-check` to check without modifying files.
 
 ### Running tests
 
-Run the complete Lua, LuaJIT, and headless-mpv test matrix from the repository root:
+Install a development symlink, then run the complete Lua, LuaJIT,
+and headless-mpv test matrix from the repository root:
 
 ```bash
+bash scripts/symlink.sh
 make test
 ```
 
-The mpv path requires mpvacious installed as an mpv script.
+The test target requires the development symlink created by `scripts/symlink.sh`.
+It loads that path explicitly with unrelated scripts and mpv user configuration disabled,
+so the installed layout is preserved while the checkout is tested.
+The target exports its selected `PREFIX` as `MPV_CONFIG_DIR` for consistent directory tests in all runtimes.
+For a custom mpv configuration directory, use the same directory for both commands:
+
+```bash
+MPV_CONFIG_DIR=/path/to/mpv-config bash scripts/symlink.sh
+make test PREFIX=/path/to/mpv-config
+```
+
 The results will be printed to the console.
-Confirm that mpv prints `TESTS PASSED`.
+`mpv` prints `TESTS PASSED` on success and exits with a nonzero status on a caught test failure,
+causing `make test` to fail.
 
 ### Issues and pull requests
 
