@@ -30,6 +30,10 @@ local function make_pause_timer(components)
 
     --- Pause playback after crossing the stop boundary and unregister this timer.
     function pub.check_stop(_, time)
+        -- mpv can report an unavailable playback property during loading or teardown.
+        if type(time) ~= "number" then
+            return
+        end
         if time > stop_time then
             pub.stop()
             mp_api.set_property("pause", "yes")
