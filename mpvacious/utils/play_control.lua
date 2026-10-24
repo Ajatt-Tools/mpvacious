@@ -34,6 +34,14 @@ local function make_play_control()
         end
     end
 
+    --- Convert direction string to mpv step value.
+    local function get_mpv_step(direction)
+        if direction == "backward" then
+            return "-1"
+        end
+        return "1"
+    end
+
     ------------------------------------------------------------
     --- Public
 
@@ -59,7 +67,7 @@ local function make_play_control()
 
     --- Seek between subtitle boundaries, optionally pausing and cancelling the stop timer.
     function pub.sub_seek(direction, pause)
-        mp.commandv("sub_seek", direction == "backward" and "-1" or "1")
+        mp.commandv("sub_seek", get_mpv_step(direction))
         mp.commandv("seek", "0.015", "relative+exact")
         if pause then
             mp.set_property("pause", "yes")
