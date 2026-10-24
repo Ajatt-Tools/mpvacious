@@ -156,6 +156,19 @@ local function make_mp_stub_for_tests(delays)
     return { get_property_native = get_property_native }
 end
 
+--- An omitted numeric offset uses the subtitle's track and the explicitly supplied API.
+local function test_delay_uses_injected_default_offset()
+    for _, is_secondary in ipairs { false, true } do
+        local mp_api = make_mp_stub_for_tests { ["sub-delay"] = -2, ["secondary-sub-delay"] = 1, ["audio-delay"] = 1 }
+        local sub = subtitle.Subtitle:new { text = "Line", ["start"] = 10, ["end"] = 12, is_secondary = is_secondary }
+        local expected = -3
+        if is_secondary then expected = 0 end
+        h.assert_equals(rawequal(sub:delay(nil, mp_api), sub), true)
+        h.assert_equals(sub.applied_delay, expected)
+        h.assert_equals({ sub["start"], sub["end"] }, { 10 + expected, 12 + expected })
+    end
+end
+
 --- Apply each subtitle track's delay relative to audio.
 local function test_get_effective_delay()
     local mp_stub = make_mp_stub_for_tests()
@@ -333,6 +346,7 @@ local function run_tests()
     test_delay_rejects_reapplication()
     test_delay_preserves_raw_clone_source()
     test_get_effective_delay()
+    test_delay_uses_injected_default_offset()
     test_get_effective_delay_offsets()
     test_make_current()
     test_make_current_raw_options()
