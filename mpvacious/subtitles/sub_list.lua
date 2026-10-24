@@ -46,6 +46,7 @@ local function make_sub_list()
         end
         return subs_list[#subs_list][position]
     end
+
     --- Return collected subtitle text with adjacent boundary lines deduplicated.
     function public.get_text()
         -- Dedup applies to every list (primary, secondary), collapsing adjacent
@@ -56,6 +57,7 @@ local function make_sub_list()
         end
         return collector.get_all_as_string()
     end
+
     --- Collect up to n_subs subtitles starting from start_sub and return them as one Subtitle
     --- spanning from start_sub's start to the last collected subtitle's end. Collection stops
     --- early at the first gap of MAX_SUB_GAP_SECONDS or more between consecutive subtitles.
@@ -97,13 +99,13 @@ local function make_sub_list()
         return flatten_subtitle_text(collector.get_all_as_string())
     end
 
-    -- Event-level guard and expansion.
-    -- The same sub event is offered repeatedly (on every sub change and on
-    -- every collect call); exact duplicates (same text and timing) are skipped.
-    -- An adjacent same-text event (overlapping or touching in time) expands
-    -- the last recorded sub's end time.
-    -- Text-overlap cleanup for multiline expansion is intentionally delayed
-    -- until get_text()/collect_n_subs(), where the selected output window is known.
+    --- Event-level guard and expansion.
+    --- The same sub event is offered repeatedly (on every sub change and on
+    --- every collect call); exact duplicates (same text and timing) are skipped.
+    --- An adjacent same-text event (overlapping or touching in time) expands
+    --- the last recorded sub's end time.
+    --- Text-overlap cleanup for multiline expansion is intentionally delayed
+    --- until get_text()/collect_n_subs(), where the selected output window is known.
     --- Insert a subtitle, skipping duplicate events and expanding adjacent ones.
     function public.insert(sub)
         if sub == nil or h.is_empty(sub.text) then
@@ -125,6 +127,7 @@ local function make_sub_list()
         table.insert(subs_list, (#subs_list - #n_latest_subs) + h.find_insertion_point(n_latest_subs, sub), sub)
         return true
     end
+
     --- Return a detached list of the collected subtitle objects.
     function public.get_subs_list()
         -- Return a shallow copy so callers can't mutate the internal list.
@@ -134,6 +137,7 @@ local function make_sub_list()
         end
         return copy
     end
+
     --- Report whether any subtitles have been collected.
     function public.is_empty()
         return h.is_empty(subs_list)
