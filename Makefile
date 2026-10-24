@@ -14,7 +14,7 @@ EXAMPLE_CONFIG      := $(PROJECT)/config/default_config.conf
 EXAMPLE_CONFIG_COPY := $(RELEASE_DIR)/$(PACKAGE).conf
 VERSION_FILE        := $(PROJECT)/version.json
 
-.PHONY: all docs install uninstall clean version format format-check
+.PHONY: all docs install uninstall clean version format format-check test
 
 all: $(ZIP) $(EXAMPLE_CONFIG_COPY)
 docs: $(DOCS)
@@ -24,6 +24,11 @@ format:
 
 format-check:
 	bash scripts/format.sh --check
+
+test:
+	lua tests/run.lua
+	luajit tests/run.lua
+	MPVACIOUS_TEST=TRUE mpv --vo=null --ao=null --frames=1 'av://lavfi:testsrc=duration=2:size=320x240:rate=1'
 
 version:
 	[ -n "$(VERSION)" ] || exit 1
