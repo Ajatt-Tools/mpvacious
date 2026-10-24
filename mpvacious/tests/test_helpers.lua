@@ -636,6 +636,42 @@ local function test_get_active_track()
     end
 end
 
+--- Membership assertions accept listed values without modifying the allowed table.
+local function test_assert_in_accepts_members()
+    for _, case in ipairs {
+        { value = "start", allowed = { "start", "end" } },
+        { value = "end", allowed = { "start", "end" } },
+        { value = false, allowed = { false, true } },
+        { value = 0, allowed = { 0, 1 } },
+        { value = "end", allowed = { [3] = "end" } },
+        { value = "start", allowed = { boundary = "start" } },
+    } do
+        local original = h.shallow_copy(case.allowed)
+        h.assert_equals(h.assert_in(case.value, case.allowed), nil)
+        h.assert_equals(case.allowed, original)
+    end
+end
+
+--- Rejected membership reports the caller and both values, including nil and empty allowed sets.
+local function test_assert_in_rejects_nonmembers()
+    for _, case in ipairs {
+        { value = "middle", allowed = { "start", "end" } },
+        { value = "", allowed = { "start", "end" } },
+        { allowed = { "start", "end" } },
+        { value = false, allowed = { "start", "end" } },
+        { value = "start", allowed = {} },
+        { allowed = {} },
+    } do
+        local original = h.shallow_copy(case.allowed)
+        local success, message = pcall(function() h.assert_in(case.value, case.allowed) end)
+        h.assert_equals(success, false)
+        local expected = string.format("Expected one of %s, got %s", h.repr(case.allowed), h.repr(case.value))
+        h.assert_equals(h.is_substr(message, expected), true)
+        h.assert_equals(message:match("test_helpers%.lua:%d+: Expected one of ") ~= nil, true)
+        h.assert_equals(case.allowed, original)
+    end
+end
+
 --- Run the shared helper regression suite.
 local function run_tests()
     test_map_preserves_keys_and_input()
@@ -677,6 +713,8 @@ local function run_tests()
     test_str_replace()
     test_notify_ignores_empty_messages()
     test_get_active_track()
+    test_assert_in_accepts_members()
+    test_assert_in_rejects_nonmembers()
 end
 
 return {
