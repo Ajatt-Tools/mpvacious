@@ -156,16 +156,23 @@ local function make_mp_stub_for_tests(delays)
     return { get_property_native = get_property_native }
 end
 
---- An omitted numeric offset uses the subtitle's track and the explicitly supplied API.
+--- An implicit offset uses the subtitle's track and the explicitly supplied API.
+local function assert_default_delay_test_case(is_secondary, value)
+    local mp_api = make_mp_stub_for_tests { ["sub-delay"] = -2, ["secondary-sub-delay"] = 1, ["audio-delay"] = 1 }
+    local sub = subtitle.Subtitle:new { text = "Line", ["start"] = 10, ["end"] = 12, is_secondary = is_secondary }
+    local expected = -3
+    if is_secondary then expected = 0 end
+    h.assert_equals(rawequal(sub:delay(value, mp_api), sub), true)
+    h.assert_equals(sub.applied_delay, expected)
+    h.assert_equals({ sub["start"], sub["end"] }, { 10 + expected, 12 + expected })
+end
+
+--- Omitted and nonnumeric offsets retain the documented fallback without numeric-string coercion.
 local function test_delay_uses_injected_default_offset()
     for _, is_secondary in ipairs { false, true } do
-        local mp_api = make_mp_stub_for_tests { ["sub-delay"] = -2, ["secondary-sub-delay"] = 1, ["audio-delay"] = 1 }
-        local sub = subtitle.Subtitle:new { text = "Line", ["start"] = 10, ["end"] = 12, is_secondary = is_secondary }
-        local expected = -3
-        if is_secondary then expected = 0 end
-        h.assert_equals(rawequal(sub:delay(nil, mp_api), sub), true)
-        h.assert_equals(sub.applied_delay, expected)
-        h.assert_equals({ sub["start"], sub["end"] }, { 10 + expected, 12 + expected })
+        for _, case in ipairs { {}, { value = false }, { value = "2" }, { value = {} }, { value = h.noop } } do
+            assert_default_delay_test_case(is_secondary, case.value)
+        end
     end
 end
 

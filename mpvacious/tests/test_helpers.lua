@@ -507,12 +507,13 @@ local function test_adjacent_items()
     h.assert_equals(_items(h.adjacent_items({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 1, 3, 3)), { 1, 2, 3, 4, 5, 6, 7 })
 end
 
---- Verify GNU configuration and script directory conventions.
+--- Verify the selected GNU installation's configuration and script directory conventions.
 local function test_dirs()
     -- GNU only:
     if h.is_gnu() then
-        h.assert_equals(h.find_mpv_scripts_dir(), utils.join_path(os.getenv("HOME") or "~", ".config/mpv/scripts"))
-        h.assert_equals(h.find_mpv_config_directory(), utils.join_path(os.getenv("HOME") or "~", ".config/mpv"))
+        local config_dir = os.getenv("MPV_CONFIG_DIR") or utils.join_path(os.getenv("HOME") or "~", ".config/mpv")
+        h.assert_equals(h.find_mpv_scripts_dir(), utils.join_path(config_dir, "scripts"))
+        h.assert_equals(h.find_mpv_config_directory(), config_dir)
     end
 end
 

@@ -109,7 +109,8 @@ local function return_default(_, default)
 end
 
 local function get_script_directory()
-    return (os.getenv("HOME") or "~") .. "/.config/mpv/scripts/mpvacious"
+    local config_dir = os.getenv("MPV_CONFIG_DIR") or ((os.getenv("HOME") or "~") .. "/.config/mpv")
+    return config_dir .. "/scripts/mpvacious"
 end
 
 local function create_osd_overlay()
