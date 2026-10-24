@@ -125,6 +125,9 @@ local function make_confirmation(mp_api)
     --- Present a Yes/No prompt unless another handler is active or still closing.
     function public.confirm(options)
         if not self.active_request then
+            h.assert_type(options, "table")
+            h.assert_type(options.prompt, "string")
+            h.assert_type(options.on_accept, "function")
             self.active_request = make_request {
                 mp_api = mp_api,
                 prompt = options.prompt,

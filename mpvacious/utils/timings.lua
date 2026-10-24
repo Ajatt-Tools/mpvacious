@@ -18,6 +18,7 @@ local new_timings = function()
     --- Store one supported timing boundary without accepting arbitrary state keys.
     local set = function(position, time)
         h.assert_in(position, { "start", "end" })
+        h.assert_type(time, "number")
         self[position] = time
     end
     --- Return the selected timing boundary.

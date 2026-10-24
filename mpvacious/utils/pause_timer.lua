@@ -6,6 +6,7 @@ Pause timer stops playback when reaching a set timing.
 ]]
 
 local mp = require("mp")
+local h = require("helpers")
 
 --- Create an independent playback stop timer with an optional isolated mpv API.
 local function make_pause_timer(components)
@@ -16,6 +17,7 @@ local function make_pause_timer(components)
 
     --- Observe playback time until it passes the supplied stop boundary.
     function pub.set_stop_time(time)
+        h.assert_type(time, "number")
         stop_time = time
         mp_api.observe_property("time-pos", "number", pub.check_stop)
     end

@@ -159,18 +159,21 @@ local function make_completion_collector()
 
     --- Set the number of callbacks in this batch before starting work.
     function public.count(count)
+        h.assert_type(count, "number")
         private.count = count
         return public
     end
 
     --- Register the aggregate error handler.
     function public.on_failure(on_failure_fn)
+        h.assert_type(on_failure_fn, "function")
         private.on_failure = on_failure_fn
         return public
     end
 
     --- Register the handler for a batch with no errors.
     function public.on_success(on_success_fn)
+        h.assert_type(on_success_fn, "function")
         private.on_success = on_success_fn
         return public
     end

@@ -40,14 +40,13 @@ function OSD:tab()
 end
 
 function OSD:fsize(size)
-    if h.is_empty(size) then
-        error("invalid size")
-    end
+    h.assert_type(size, "number")
     self.font_size = size
     return self:append("{\\fs"):append(size):append("}")
 end
 
 function OSD:font(name)
+    h.assert_type(name, "string")
     if h.is_empty(name) then
         error("invalid name")
     end
@@ -56,17 +55,14 @@ function OSD:font(name)
 end
 
 function OSD:border(size)
-    if h.is_empty(size) then
-        error("invalid size")
-    end
+    h.assert_type(size, "number")
     self.border_size = size
     return self:append(string.format("{\\bord%.3f}", size))
 end
 
 function OSD:pos(x, y)
-    if h.is_empty(x) or h.is_empty(y) then
-        error(string.format("invalid pos: %s,%s", tostring(x), tostring(y)))
-    end
+    h.assert_type(x, "number")
+    h.assert_type(y, "number")
     return self:append(string.format("{\\pos(%d,%d)}", x, y))
 end
 
@@ -81,6 +77,7 @@ function OSD:get_text()
 end
 
 function OSD:color(code)
+    h.assert_type(code, "string")
     return self:append("{\\1c&H"):append(code:sub(5, 6)):append(code:sub(3, 4)):append(code:sub(1, 2)):append("&}")
 end
 

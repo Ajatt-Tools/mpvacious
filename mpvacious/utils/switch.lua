@@ -7,6 +7,7 @@ Switch cycles between values in a table.
 local h = require("helpers")
 
 local make_switch = function(states)
+    h.assert_type(states, "table")
     local self = {
         states = states,
         current_state = 1,
@@ -36,6 +37,7 @@ local make_switch = function(states)
         end
     end
     local function set_index(index)
+        h.assert_type(index, "number")
         self.current_state = h.clamp(index, 1, #self.states)
     end
     local function get_index()

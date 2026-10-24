@@ -150,6 +150,8 @@ end
 
 --- Replace both timing boundaries and return this subtitle for chaining.
 function Subtitle:set_timings(start_time, end_time)
+    h.assert_type(start_time, "number")
+    h.assert_type(end_time, "number")
     self["start"] = start_time
     self["end"] = end_time
     return self
