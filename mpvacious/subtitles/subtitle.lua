@@ -87,7 +87,7 @@ end
 
 --- Apply and record one effective timing offset, rejecting a second application even after zero delay.
 --- Raw subtitles have no applied_delay value. Clones retain an already applied numeric offset.
---- mp_api is optional and only provided by tests.
+--- Omitted or nonnumeric offsets use the selected track's effective delay. mp_api defaults to mpv.
 function Subtitle:delay(delay, mp_api)
     if self.applied_delay ~= nil then
         error("subtitle delay has already been applied", 2)

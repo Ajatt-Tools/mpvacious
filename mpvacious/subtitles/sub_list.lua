@@ -101,12 +101,11 @@ local function make_sub_list()
     end
 
     --- Event-level guard and expansion.
-    --- The same sub event is offered repeatedly (on every sub change and on
-    --- every collect call); exact duplicates (same text and timing) are skipped.
-    --- An adjacent same-text event (overlapping or touching in time) expands
-    --- the last recorded sub's end time.
-    --- Text-overlap cleanup for multiline expansion is intentionally delayed
-    --- until get_text()/collect_n_subs(), where the selected output window is known.
+    --- The same sub event is offered repeatedly (on every sub change and on every collect call).
+    --- Exact duplicates (same text and timing) are skipped.
+    --- An adjacent same-text event (overlapping or touching in time) expands the last recorded sub's end time.
+    --- Text-overlap cleanup for multiline expansion is intentionally delayed until get_text()/collect_n_subs(),
+    --- where the selected output window is known.
     --- Insert a subtitle, skipping duplicate events and expanding adjacent ones.
     function public.insert(sub)
         if sub == nil or h.is_empty(sub.text) then
