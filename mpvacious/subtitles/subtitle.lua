@@ -93,7 +93,7 @@ function Subtitle:delay(delay, mp_api)
         error("subtitle delay has already been applied", 2)
     end
     if delay == nil or type(delay) ~= "number" then
-        delay = get_effective_delay{ is_secondary = self.is_secondary, mp_api = mp_api or mp, }
+        delay = get_effective_delay { is_secondary = self.is_secondary, mp_api = mp_api or mp }
     end
     self["start"] = self["start"] + delay
     self["end"] = self["end"] + delay
