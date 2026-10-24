@@ -25,6 +25,9 @@ format:
 format-check:
 	bash scripts/format.sh --check
 
+# Target-specific exported variable, inherited by test recipes and prerequisites.
+# Exercise literal percent signs in tag substitutions in every test runtime.
+test: export SUBS2SRS_TAGS := literal%1%%100%
 test:
 	lua tests/run.lua
 	luajit tests/run.lua
