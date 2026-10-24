@@ -307,6 +307,25 @@ local function test_make_current_options_without_visible_subtitle()
     end
 end
 
+--- Validate both numeric boundaries before changing either subtitle timestamp.
+local function test_set_timings_rejects_invalid_types_atomically()
+    for _, case in ipairs {
+        { first = "10", last = 20 },
+        { first = 10, last = "20" },
+        { last = 20 },
+        { first = 10 },
+        { first = false, last = 20 },
+        { first = 10, last = {} },
+    } do
+        local sub = subtitle.make_subtitle("Line", 1, 2)
+        local original = h.shallow_copy(sub)
+        local success, message = pcall(sub.set_timings, sub, case.first, case.last)
+        h.assert_equals(success, false)
+        h.assert_equals(h.is_substr(message, "Expected type number, got "), true)
+        h.assert_equals(h.shallow_copy(sub), original)
+    end
+end
+
 --- Verify clones preserve methods and all fields while owning their scalar values.
 local function test_clone()
     for _, case in ipairs { { text = "Primary" }, { text = "" }, {} } do
@@ -342,6 +361,7 @@ local function run_tests()
     test_can_expand_with()
     test_expand_end_time()
     test_set_timings()
+    test_set_timings_rejects_invalid_types_atomically()
     test_delay_records_applied_offset()
     test_delay_rejects_reapplication()
     test_delay_preserves_raw_clone_source()

@@ -237,6 +237,37 @@ local function test_playback_instances_keep_waiting_state()
     h.assert_equals(ctx.state.observers[timer_callback], nil)
 end
 
+--- Invalid stop boundaries must not replace an active timer's numeric boundary.
+local function test_pause_timer_rejects_invalid_stop_times()
+    local ctx = make_play_control_test_context()
+    local timer = pause_timer.new { mp = ctx.mp }
+    timer.set_stop_time(10)
+    local original = h.deep_copy(ctx.state)
+    for _, case in ipairs { {}, { value = "20" }, { value = false }, { value = {} } } do
+        local success, message = pcall(timer.set_stop_time, case.value)
+        h.assert_equals(success, false)
+        h.assert_equals(h.is_substr(message, "Expected type number, got " .. type(case.value)), true)
+        h.assert_equals(ctx.state, original)
+    end
+    timer.check_stop("time-pos", 11)
+    h.assert_equals(ctx.state.writes, { { "pause", "yes" } })
+    h.assert_equals(ctx.state.observers, {})
+end
+
+--- Unavailable or malformed external playback events must leave an active timer intact.
+local function test_pause_timer_ignores_unavailable_time()
+    local ctx = make_play_control_test_context()
+    local timer = pause_timer.new { mp = ctx.mp }
+    timer.set_stop_time(10)
+    local original = h.deep_copy(ctx.state)
+    for _, case in ipairs { {}, { value = false }, { value = "11" }, { value = {} } } do
+        timer.check_stop("time-pos", case.value)
+        h.assert_equals(ctx.state, original)
+    end
+    timer.check_stop("time-pos", 11)
+    h.assert_equals(ctx.state.writes, { { "pause", "yes" } })
+end
+
 --- Run playback-control and pause-timer regressions in both test environments.
 local function run_tests()
     test_instances_own_command_tables()
@@ -247,6 +278,8 @@ local function run_tests()
     test_pause_timer_instances_are_independent()
     test_pause_timer_stop_and_restart()
     test_playback_instances_keep_waiting_state()
+    test_pause_timer_rejects_invalid_stop_times()
+    test_pause_timer_ignores_unavailable_time()
 end
 
 return { run_tests = run_tests }

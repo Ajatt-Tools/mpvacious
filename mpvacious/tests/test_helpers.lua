@@ -700,6 +700,42 @@ local function test_assert_in_rejects_nonmembers()
     end
 end
 
+--- Accept exact Lua type names without treating tables as metatable-based classes.
+local function test_assert_type_accepts_builtin_types()
+    for _, case in ipairs {
+        { expected = "nil" },
+        { value = false, expected = "boolean" },
+        { value = 0, expected = "number" },
+        { value = -1.5, expected = "number" },
+        { value = "", expected = "string" },
+        { value = {}, expected = "table" },
+        { value = h.noop, expected = "function" },
+        { value = coroutine.create(h.noop), expected = "thread" },
+        { value = io.stdout, expected = "userdata" },
+    } do
+        h.assert_equals(h.assert_type(case.value, case.expected), nil)
+    end
+end
+
+--- Report expected and actual types at the caller for mismatched values.
+local function test_assert_type_rejects_wrong_types()
+    for _, case in ipairs {
+        { expected = "number", actual = "nil" },
+        { value = false, expected = "number", actual = "boolean" },
+        { value = "10", expected = "number", actual = "string" },
+        { value = {}, expected = "number", actual = "table" },
+        { value = 0, expected = "boolean", actual = "number" },
+    } do
+        local success, message = pcall(function() h.assert_type(case.value, case.expected) end)
+        h.assert_equals(success, false)
+        h.assert_equals(
+            h.is_substr(message, string.format("Expected type %s, got %s", case.expected, case.actual)),
+            true
+        )
+        h.assert_equals(message:match("test_helpers%.lua:%d+: Expected type ") ~= nil, true)
+    end
+end
+
 --- Run the shared helper regression suite.
 local function run_tests()
     test_map_preserves_keys_and_input()
@@ -744,6 +780,8 @@ local function run_tests()
     test_get_active_track()
     test_assert_in_accepts_members()
     test_assert_in_rejects_nonmembers()
+    test_assert_type_accepts_builtin_types()
+    test_assert_type_rejects_wrong_types()
 end
 
 return {

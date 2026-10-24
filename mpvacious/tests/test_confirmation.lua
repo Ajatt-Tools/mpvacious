@@ -211,6 +211,37 @@ local function test_confirmation_cancellation_paths()
     end
 end
 
+--- Reject malformed incoming requests before allocating a timer or occupying the controller.
+local function assert_invalid_confirmation_options_test_case(case)
+    local state = { terminated = 0, timer_kills = 0, timers = {} }
+    local confirmation = make_confirmation(make_fake_mp_api(state))
+    local success, message = pcall(confirmation.confirm, case.options)
+    h.assert_equals(success, false)
+    h.assert_equals(h.is_substr(message, "Expected type " .. case.expected .. ", got "), true)
+    h.assert_equals(state.timers, {})
+    h.assert_equals(state.options, nil)
+    h.assert_equals(state.warning, nil)
+    h.assert_equals(state.notifications, {})
+    confirmation.confirm { prompt = "Valid", on_accept = h.noop }
+    h.assert_equals(state.options.prompt, "Valid")
+    h.assert_equals(#state.timers, 1)
+end
+
+--- A new prompt requires a table, string prompt, and acceptance function.
+local function test_confirmation_argument_types()
+    for _, case in ipairs {
+        { expected = "table" },
+        { options = false, expected = "table" },
+        { options = "Prompt", expected = "table" },
+        { options = {}, expected = "string" },
+        { options = { prompt = false, on_accept = h.noop }, expected = "string" },
+        { options = { prompt = "Prompt" }, expected = "function" },
+        { options = { prompt = "Prompt", on_accept = {} }, expected = "function" },
+    } do
+        assert_invalid_confirmation_options_test_case(case)
+    end
+end
+
 --- Ignore repeated prompt requests without closing, resolving, or queueing the first.
 local function test_confirmation_ignores_requests_while_active()
     local state, confirmation = confirmation_fixture("First")
@@ -218,6 +249,7 @@ local function test_confirmation_ignores_requests_while_active()
     for _ = 1, 3 do
         confirmation.confirm { prompt = "Ignored", on_accept = h.as_callback(error, "ignored prompt was accepted") }
     end
+    h.assert_equals(pcall(confirmation.confirm, nil), true)
     h.assert_equals(rawequal(state.options, first_options), true)
     h.assert_equals({ #state.timers, state.terminated, state.timer_kills }, { 1, 0, 0 })
     state.options.submit(1)
@@ -265,6 +297,7 @@ local function run_confirmation_test_closing_scenario(resolve_request)
     local old_options, old_timeout = state.options, get_confirmation_test_timeout(state)
     resolve_request(state, confirmation)
     local accepted = state.accepted
+    h.assert_equals(pcall(confirmation.confirm, nil), true)
     confirmation.confirm { prompt = "Ignored", on_accept = h.as_callback(error, "closing prompt was replaced") }
     h.assert_equals(rawequal(state.options, old_options), true)
     h.assert_equals(#state.timers, 1)
@@ -306,6 +339,7 @@ local function run_tests()
     test_acceptance_failure_closes_prompt()
     test_confirmation_cancellation_paths()
     test_confirmation_silent_cancellation()
+    test_confirmation_argument_types()
     test_confirmation_ignores_requests_while_active()
     test_confirmation_ignores_requests_while_closing()
     test_synchronous_closure_releases_request()
