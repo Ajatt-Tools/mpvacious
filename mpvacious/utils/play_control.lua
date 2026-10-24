@@ -10,6 +10,7 @@ local h = require("helpers")
 local pause_timer = require("utils.pause_timer")
 local subtitle = require("subtitles.subtitle")
 
+--- Create playback controls with independent subtitle-waiting state.
 local function make_play_control()
     local self = {}
     local pub = {}
@@ -18,11 +19,13 @@ local function make_play_control()
     ------------------------------------------------------------
     --- Private
 
+    --- Schedule a pause just before the adjusted subtitle end.
     local function stop_at_the_end(sub)
         pause_timer.set_stop_time(sub["end"] - 0.050)
         h.notify("Playing till the end of the sub...", "info", 3)
     end
 
+    --- Stop at the next visible subtitle, ignoring absent and unchanged events.
     local function check_sub()
         local sub = subtitle.make_current { is_secondary = false, delay = true }
         if sub and sub ~= self.current_sub then
@@ -34,6 +37,7 @@ local function make_play_control()
     ------------------------------------------------------------
     --- Public
 
+    --- Replay the visible primary subtitle using audio-relative seek and stop timings.
     function pub.play_till_sub_end()
         local sub = subtitle.make_current { is_secondary = false, delay = true }
         if sub == nil then
@@ -45,6 +49,7 @@ local function make_play_control()
         stop_at_the_end(sub)
     end
 
+    --- Watch the primary subtitle track and play until the next subtitle ends.
     function pub.play_till_next_sub_end()
         self.current_sub = subtitle.make_current { is_secondary = false, delay = true }
         mp.observe_property("sub-text", "string", check_sub)
@@ -52,6 +57,7 @@ local function make_play_control()
         h.notify("Waiting till next sub...", "info", 10)
     end
 
+    --- Seek between subtitle boundaries, optionally pausing and cancelling the stop timer.
     function pub.sub_seek(direction, pause)
         mp.commandv("sub_seek", direction == "backward" and "-1" or "1")
         mp.commandv("seek", "0.015", "relative+exact")
@@ -61,6 +67,7 @@ local function make_play_control()
         pause_timer.stop()
     end
 
+    --- Rewind slightly inside the visible primary subtitle's adjusted start time.
     function pub.sub_rewind()
         local sub = subtitle.make_current { is_secondary = false, delay = true }
         if sub == nil then
