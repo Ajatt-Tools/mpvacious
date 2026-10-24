@@ -11,16 +11,19 @@ local function make_pause_timer()
     local pub = {}
     local stop_time = -1
 
+    --- Observe playback time until it passes the supplied stop boundary.
     function pub.set_stop_time(time)
         stop_time = time
         mp.observe_property("time-pos", "number", pub.check_stop)
     end
 
+    --- Cancel this timer's playback observer and discard its stop boundary.
     function pub.stop()
         mp.unobserve_property(pub.check_stop)
         stop_time = -1
     end
 
+    --- Pause playback after crossing the stop boundary and unregister this timer.
     function pub.check_stop(_, time)
         if time > stop_time then
             pub.stop()

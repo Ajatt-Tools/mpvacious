@@ -10,7 +10,7 @@ local h = require("helpers")
 local make_pause_timer = require("utils.pause_timer")
 local subtitle = require("subtitles.subtitle")
 
---- Create playback controls with independent subtitle-waiting state.
+--- Create playback controls with independent state and optional mpv and notifier dependencies.
 local function make_play_control()
     local self = {}
     local pub = {}

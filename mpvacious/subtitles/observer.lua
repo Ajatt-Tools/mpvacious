@@ -271,6 +271,7 @@ local function make_subtitles_observer(components)
         return -1
     end
 
+    --- Collect up to n_lines primary subtitles with overlapping secondary text and adjusted timings.
     function public.collect_from_all_dialogues(n_lines)
         local current_sub = subtitle.make_current { is_secondary = false, mp_api = mp_api, delay = true }
         local current_secondary_sub = subtitle.make_current { is_secondary = true, mp_api = mp_api, delay = true }
@@ -289,9 +290,9 @@ local function make_subtitles_observer(components)
         }
     end
 
+    --- Return all recorded subtitle lines as one subtitle object.
+    --- The caller has to call subs_observer.clear() afterward.
     function public.collect_from_current()
-        --- Return all recorded subtitle lines as one subtitle object.
-        --- The caller has to call subs_observer.clear() afterwards.
         if private.dialogs.is_empty() then
             private.dialogs.insert(subtitle.make_current { is_secondary = false, mp_api = mp_api, delay = true })
         end
@@ -316,6 +317,7 @@ local function make_subtitles_observer(components)
         start_appending()
     end
 
+    --- Set a manual timing boundary from the currently visible primary subtitle.
     function public.set_manual_timing_to_sub(position)
         local sub = subtitle.make_current { is_secondary = false, mp_api = mp_api, delay = true }
         if sub then
@@ -327,6 +329,7 @@ local function make_subtitles_observer(components)
         end
     end
 
+    --- Replace the selection with the current subtitle and begin recording subsequent events.
     function public.set_to_current_sub()
         public.clear()
         if subtitle.make_current { is_secondary = false, mp_api = mp_api, delay = true } then
@@ -360,6 +363,7 @@ local function make_subtitles_observer(components)
         return private.append_dialogue
     end
 
+    --- Include visible subtitles and return detached primary and secondary history lists.
     function public.all_subs_until_now()
         private.all_dialogs.insert(subtitle.make_current { is_secondary = false, mp_api = mp_api, delay = true })
         private.all_secondary_dialogs.insert(

@@ -2,7 +2,7 @@
 Copyright: Ajatt-Tools and contributors; https://github.com/Ajatt-Tools
 License: GNU GPL, version 3 or later; http://www.gnu.org/licenses/gpl.html
 
-Playback-control construction tests.
+Playback-control construction and timing tests.
 ]]
 
 local h = require("helpers")

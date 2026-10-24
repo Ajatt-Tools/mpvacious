@@ -94,7 +94,7 @@ local function make_config_mgr()
         self.config = h.shallow_copy(defaults.get_default())
         self.profiles = h.shallow_copy(defaults.profiles)
 
-        -- 'subs2srs' is the main profile, it is always loaded. 'active profile' overrides it afterwards.
+        -- 'subs2srs' is the main profile, it is always loaded. 'active profile' overrides it afterward.
         -- initial state is saved to another table to maintain consistency when cycling through incomplete profiles.
         read_profile_list()
         read_default_config()
