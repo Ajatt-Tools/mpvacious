@@ -449,6 +449,7 @@ function this.notify(message, level, duration)
         return
     end
     level = level or "info"
+    this.assert_in(level, { "fatal", "error", "warn", "info", "v", "debug", "trace" })
     duration = duration or 1
     msg[level](message)
     mp.osd_message(message, duration)
@@ -456,7 +457,7 @@ end
 
 --- Return the selected audio, subtitle, or video track, if track metadata is available.
 function this.get_active_track(track_type, mp_api)
-    -- track_type == audio|sub|video
+    this.assert_in(track_type, { "audio", "sub", "video" })
     -- Allow isolated metadata reads without modifying the shared mp API.
     mp_api = mp_api or mp
     for _, track in pairs(mp_api.get_property_native("track-list") or {}) do
@@ -550,6 +551,7 @@ function this.equal(first, last)
 end
 
 function this.get_loaded_tracks(track_type)
+    this.assert_in(track_type, { "audio", "sub", "video" })
     --- Return all sub tracks, audio tracks, etc.
     local function tracks_equal(track)
         return track.type == track_type

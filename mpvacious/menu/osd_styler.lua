@@ -71,6 +71,7 @@ function OSD:pos(x, y)
 end
 
 function OSD:align(number)
+    h.assert_in(number, { 1, 2, 3, 4, 5, 6, 7, 8, 9 })
     return self:append("{\\an"):append(number):append("}")
 end
 

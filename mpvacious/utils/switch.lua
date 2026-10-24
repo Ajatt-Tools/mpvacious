@@ -15,7 +15,7 @@ local make_switch = function(states)
         return self.states[self.current_state]
     end
     local function change_menu_item(step)
-        --- step = -1 or +1
+        h.assert_in(step, { -1, 1 })
         self.current_state = self.current_state + step
         if self.current_state < 1 then
             self.current_state = #self.states

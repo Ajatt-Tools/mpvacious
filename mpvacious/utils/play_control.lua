@@ -71,6 +71,7 @@ local function make_play_control(components)
 
     --- Seek between subtitle boundaries, optionally pausing and cancelling the stop timer.
     function pub.sub_seek(direction, pause)
+        h.assert_in(direction, { "backward", "forward" })
         mp_api.commandv("sub_seek", get_mpv_step(direction))
         mp_api.commandv("seek", "0.015", "relative+exact")
         if pause then

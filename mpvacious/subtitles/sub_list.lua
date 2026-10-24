@@ -41,6 +41,7 @@ local function make_sub_list()
 
     --- Return the start or end time of the selected subtitles.
     function public.get_time(position)
+        h.assert_in(position, { "start", "end" })
         if position == "start" then
             return subs_list[1][position]
         end

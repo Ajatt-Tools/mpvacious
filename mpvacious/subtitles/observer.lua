@@ -267,6 +267,7 @@ local function make_subtitles_observer(components)
     end
 
     function public.get_timing(position)
+        h.assert_in(position, { "start", "end" })
         if private.user_timings.is_set(position) then
             return private.user_timings.get(position)
         elseif not private.dialogs.is_empty() then
@@ -316,6 +317,7 @@ local function make_subtitles_observer(components)
     end
 
     function public.set_manual_timing(position)
+        h.assert_in(position, { "start", "end" })
         private.user_timings.set(position, mp_api.get_property_number("time-pos") - mp_api.get_property("audio-delay"))
         h.notify(h.capitalize_first_letter(position) .. " time has been set.")
         start_appending()
@@ -323,6 +325,7 @@ local function make_subtitles_observer(components)
 
     --- Set a manual timing boundary from the currently visible primary subtitle.
     function public.set_manual_timing_to_sub(position)
+        h.assert_in(position, { "start", "end" })
         local sub = subtitle.make_current { is_secondary = false, mp_api = mp_api, delay = true }
         if sub then
             private.user_timings.set(position, sub[position] - mp_api.get_property("audio-delay"))
