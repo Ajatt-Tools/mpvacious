@@ -154,6 +154,7 @@ local function make_subtitles_observer(components)
     ------------------------------------------------------------
     --- Private methods
 
+    --- Record the visible primary subtitle, redrawing only when selection recording changes it.
     local function append_primary_sub()
         local current_sub = subtitle.make_current { is_secondary = false, mp_api = mp_api, delay = true }
         private.all_dialogs.insert(current_sub)
@@ -165,6 +166,7 @@ local function make_subtitles_observer(components)
         end
     end
 
+    --- Record the visible secondary subtitle once and update an active selection when it changes.
     local function append_secondary_sub()
         local current_secondary = subtitle.make_current { is_secondary = true, mp_api = mp_api, delay = true }
         private.all_secondary_dialogs.insert(current_secondary)
