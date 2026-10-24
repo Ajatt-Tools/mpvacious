@@ -721,6 +721,7 @@ end
 ------------------------------------------------------------
 --- Tests
 
+--- Run the requested test suites and propagate their result through mpv's exit status.
 local function pcall_tests()
     if os.getenv("MPVACIOUS_TEST") == "TRUE" then
         -- at this point, other tests in submodules should have been finished.
@@ -730,10 +731,11 @@ local function pcall_tests()
         if not success then
             mp.msg.error("TESTS FAILED")
             mp.msg.error(err)
+            mp.commandv("quit", "1")
         else
             mp.msg.warn("TESTS PASSED")
+            mp.commandv("quit", "0")
         end
-        mp.commandv("quit")
     end
 end
 
