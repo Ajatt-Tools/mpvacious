@@ -80,7 +80,7 @@ function Subtitle:now(kwargs)
         return nil
     end
     if kwargs.delay then
-        return this:delay()
+        return this:delay(nil, mp_api)
     end
     return this
 end
