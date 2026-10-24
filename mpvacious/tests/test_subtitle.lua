@@ -223,7 +223,7 @@ local function test_make_current()
     end
 end
 
---- Read raw cues without requiring delay properties or modifying the caller's options.
+--- Read raw subtitles without requiring delay properties or modifying the caller's options.
 local function assert_raw_current_test_case(case, delay)
     local mp_api = make_current_subtitle_test_api(true)
     mp_api.get_property_native = nil
@@ -254,7 +254,7 @@ local function test_make_current_raw_options()
 end
 
 --- Missing timing properties reject raw and adjusted reads before consulting delay properties.
-local function test_make_current_options_without_visible_cue()
+local function test_make_current_options_without_visible_subtitle()
     for _, delay in ipairs { false, true } do
         for _, selector in ipairs { false, true, "primary", "secondary" } do
             local mp_api = make_current_subtitle_test_api(false)
@@ -307,7 +307,7 @@ local function run_tests()
     test_subtitle_delay()
     test_make_current()
     test_make_current_raw_options()
-    test_make_current_options_without_visible_cue()
+    test_make_current_options_without_visible_subtitle()
     test_clone()
 end
 

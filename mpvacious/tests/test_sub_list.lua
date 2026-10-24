@@ -14,7 +14,7 @@ local function numbered_sub(index)
     return subtitle.make_subtitle("Line " .. index, index, index + 1)
 end
 
---- Fill a subtitle list with numbered test cues.
+--- Fill a subtitle list with numbered test subtitles.
 local function make_numbered_sub_list(first_index, last_index)
     local subs = sub_list.new()
     for i = first_index, last_index do
@@ -125,7 +125,7 @@ local function test_insert_uses_recent_lookup_window()
     h.assert_equals(subs.insert(subtitle.make_subtitle("Line 4", 4.04, 5.04)), true)
 end
 
---- Keep events sorted when inserting between existing cues.
+--- Keep events sorted when inserting between existing subtitles.
 local function test_insert_preserves_sorted_order()
     local subs = make_numbered_sub_list(0, 29)
     h.assert_equals(subs.insert(subtitle.make_subtitle("Line 5.5", 5.5, 6.5)), true)
@@ -158,26 +158,26 @@ end
 local function make_get_text_test_cases()
     return {
         {
-            cues = { { "First line", 0, 2 }, { "First line\nSecond line", 1, 3 } },
+            subtitles = { { "First line", 0, 2 }, { "First line\nSecond line", 1, 3 } },
             expected = "First line\nSecond line",
         },
-        -- The second cue is rejected by insert()'s event-level guard.
-        { cues = { { "Same line", 0, 2 }, { "Same line", 0.04, 2.04 } }, expected = "Same line" },
-        { cues = { { "Same line", 0, 1 }, { "Same line", 3, 4 } }, expected = "Same line\nSame line" },
-        { cues = { { "Yes", 0, 1 }, { "No", 1, 2 }, { "Yes", 2, 3 } }, expected = "Yes\nNo\nYes" },
+        -- The second subtitle is rejected by insert()'s event-level guard.
+        { subtitles = { { "Same line", 0, 2 }, { "Same line", 0.04, 2.04 } }, expected = "Same line" },
+        { subtitles = { { "Same line", 0, 1 }, { "Same line", 3, 4 } }, expected = "Same line\nSame line" },
+        { subtitles = { { "Yes", 0, 1 }, { "No", 1, 2 }, { "Yes", 2, 3 } }, expected = "Yes\nNo\nYes" },
         -- A repeated line outside the adjacent suffix/prefix boundary must be kept.
         -- The old global seen-set approach dropped the final "X" here.
-        { cues = { { "X", 0, 1 }, { "Y", 1, 2 }, { "Y\nX", 2, 3 } }, expected = "X\nY\nX" },
-        { cues = { { "Yes\nNo", 0, 2 }, { "No\nMaybe", 2, 4 } }, expected = "Yes\nNo\nMaybe" },
-        { cues = { { "First line\n\nSecond line", 0, 2 } }, expected = "First line\n\nSecond line" },
-        -- Dedup only applies at boundaries between cues, not within one cue.
-        { cues = { { "A\nA", 0, 2 } }, expected = "A\nA" },
+        { subtitles = { { "X", 0, 1 }, { "Y", 1, 2 }, { "Y\nX", 2, 3 } }, expected = "X\nY\nX" },
+        { subtitles = { { "Yes\nNo", 0, 2 }, { "No\nMaybe", 2, 4 } }, expected = "Yes\nNo\nMaybe" },
+        { subtitles = { { "First line\n\nSecond line", 0, 2 } }, expected = "First line\n\nSecond line" },
+        -- Dedup only applies at boundaries between subtitles, not within one subtitle.
+        { subtitles = { { "A\nA", 0, 2 } }, expected = "A\nA" },
         {
-            cues = { { "First line\r\nSecond line\rThird line", 0, 2 } },
+            subtitles = { { "First line\r\nSecond line\rThird line", 0, 2 } },
             expected = "First line\nSecond line\nThird line",
         },
         -- A trailing newline must not introduce a spurious blank line.
-        { cues = { { "First line\nSecond line\n", 0, 2 } }, expected = "First line\nSecond line" },
+        { subtitles = { { "First line\nSecond line\n", 0, 2 } }, expected = "First line\nSecond line" },
     }
 end
 
@@ -185,8 +185,8 @@ end
 local function test_get_text()
     for _, case in ipairs(make_get_text_test_cases()) do
         local subs = sub_list.new()
-        for _, cue in ipairs(case.cues) do
-            subs.insert(subtitle.make_subtitle(h.unpack(cue)))
+        for _, entry in ipairs(case.subtitles) do
+            subs.insert(subtitle.make_subtitle(h.unpack(entry)))
         end
         h.assert_equals(subs.get_text(), case.expected)
     end
@@ -217,7 +217,7 @@ local function test_collect_n_subs_repeated_lines()
     h.assert_equals(repeated_subs.collect_n_subs(repeated_subs.get_subs_list()[1], 3).text, "Yes\nNo\nYes\nAgain")
 end
 
---- Count a covered cue even when it contributes no new text.
+--- Count a covered subtitle even when it contributes no new text.
 local function test_collect_n_subs_covered_line()
     -- A sub fully covered by the previous suffix still counts toward n_lines,
     -- so end_sub (used for the card's end timing) advances past it.
@@ -232,7 +232,7 @@ local function test_collect_n_subs_covered_line()
     h.assert_equals(combined["end"], 3)
 end
 
---- Build overlap scenarios at ordinary and short-cue timing thresholds.
+--- Build overlap scenarios at ordinary and short-subtitle timing thresholds.
 local function make_overlap_thresholds_cases()
     return {
         { sub = subtitle.make_subtitle("", 1, 3), window = subtitle.make_subtitle("", 0, 2), expected = true }, -- 50%
@@ -254,7 +254,7 @@ local function make_overlap_thresholds_cases()
     }
 end
 
---- Exercise ordinary, short-cue, and zero-duration overlap thresholds.
+--- Exercise ordinary, short-subtitle, and zero-duration overlap thresholds.
 local function test_overlap_thresholds()
     for _, case in ipairs(make_overlap_thresholds_cases()) do
         h.assert_equals(sub_list.overlaps_enough(case.sub, case.window), case.expected)
