@@ -574,6 +574,14 @@ function this.assert_in(value, allowed_values)
     end
 end
 
+--- Raise an error at the caller when value has an unexpected built-in Lua type.
+function this.assert_type(value, expected_type)
+    local actual_type = type(value)
+    if actual_type ~= expected_type then
+        error(string.format("Expected type %s, got %s", expected_type, actual_type), 2)
+    end
+end
+
 function this.deep_copy(obj, seen)
     -- Handle non-tables and previously-seen tables.
     if type(obj) ~= "table" then
