@@ -563,6 +563,13 @@ function this.assert_equals(actual, expected)
     end
 end
 
+--- Raise an error at the caller when value is not among the allowed values.
+function this.assert_in(value, allowed_values)
+    if not this.contains(allowed_values, value) then
+        error(string.format("Expected one of %s, got %s", this.repr(allowed_values), this.repr(value)), 2)
+    end
+end
+
 function this.deep_copy(obj, seen)
     -- Handle non-tables and previously-seen tables.
     if type(obj) ~= "table" then
