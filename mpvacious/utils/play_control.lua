@@ -10,61 +10,70 @@ local h = require("helpers")
 local pause_timer = require("utils.pause_timer")
 local subtitle = require("subtitles.subtitle")
 
-local current_sub
+local function make_play_control()
+    local self = {}
+    local pub = {}
+    self.current_sub = nil
 
-local function stop_at_the_end(sub)
-    pause_timer.set_stop_time(sub["end"] - 0.050)
-    h.notify("Playing till the end of the sub...", "info", 3)
-end
+    ------------------------------------------------------------
+    --- Private
 
-local function play_till_sub_end()
-    local sub = subtitle.make_current { is_secondary = false, delay = true }
-    if sub == nil then
-        h.notify("No subtitle is currently playing", "error", 5)
-        return
+    local function stop_at_the_end(sub)
+        pause_timer.set_stop_time(sub["end"] - 0.050)
+        h.notify("Playing till the end of the sub...", "info", 3)
     end
-    mp.commandv("seek", sub["start"], "absolute")
-    mp.set_property("pause", "no")
-    stop_at_the_end(sub)
-end
 
-local function sub_seek(direction, pause)
-    mp.commandv("sub_seek", direction == "backward" and "-1" or "1")
-    mp.commandv("seek", "0.015", "relative+exact")
-    if pause then
-        mp.set_property("pause", "yes")
+    local function check_sub()
+        local sub = subtitle.make_current { is_secondary = false, delay = true }
+        if sub and sub ~= self.current_sub then
+            mp.unobserve_property(check_sub)
+            stop_at_the_end(sub)
+        end
     end
-    pause_timer.stop()
-end
 
-local function sub_rewind()
-    local sub = subtitle.make_current { is_secondary = false, delay = true }
-    if sub == nil then
-        h.notify("No subtitle is currently visible", "error", 5)
-        return
-    end
-    mp.commandv("seek", sub["start"] + 0.015, "absolute")
-    pause_timer.stop()
-end
+    ------------------------------------------------------------
+    --- Public
 
-local function check_sub()
-    local sub = subtitle.make_current { is_secondary = false, delay = true }
-    if sub and sub ~= current_sub then
-        mp.unobserve_property(check_sub)
+    function pub.play_till_sub_end()
+        local sub = subtitle.make_current { is_secondary = false, delay = true }
+        if sub == nil then
+            h.notify("No subtitle is currently playing", "error", 5)
+            return
+        end
+        mp.commandv("seek", sub["start"], "absolute")
+        mp.set_property("pause", "no")
         stop_at_the_end(sub)
     end
-end
 
-local function play_till_next_sub_end()
-    current_sub = subtitle.make_current { is_secondary = false, delay = true }
-    mp.observe_property("sub-text", "string", check_sub)
-    mp.set_property("pause", "no")
-    h.notify("Waiting till next sub...", "info", 10)
+    function pub.play_till_next_sub_end()
+        self.current_sub = subtitle.make_current { is_secondary = false, delay = true }
+        mp.observe_property("sub-text", "string", check_sub)
+        mp.set_property("pause", "no")
+        h.notify("Waiting till next sub...", "info", 10)
+    end
+
+    function pub.sub_seek(direction, pause)
+        mp.commandv("sub_seek", direction == "backward" and "-1" or "1")
+        mp.commandv("seek", "0.015", "relative+exact")
+        if pause then
+            mp.set_property("pause", "yes")
+        end
+        pause_timer.stop()
+    end
+
+    function pub.sub_rewind()
+        local sub = subtitle.make_current { is_secondary = false, delay = true }
+        if sub == nil then
+            h.notify("No subtitle is currently visible", "error", 5)
+            return
+        end
+        mp.commandv("seek", sub["start"] + 0.015, "absolute")
+        pause_timer.stop()
+    end
+
+    return pub
 end
 
 return {
-    play_till_sub_end = play_till_sub_end,
-    play_till_next_sub_end = play_till_next_sub_end,
-    sub_seek = sub_seek,
-    sub_rewind = sub_rewind,
+    new = make_play_control,
 }
