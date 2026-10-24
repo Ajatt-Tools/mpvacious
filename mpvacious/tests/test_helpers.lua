@@ -609,6 +609,34 @@ local function test_notify_ignores_empty_messages()
     end
 end
 
+--- Verify canonical log dispatch and OSD rendering through the standalone recording mocks.
+local function assert_notification_test_dispatch(calls, case)
+    local before_log, before_osd = #calls.logs, #calls.osd
+    h.notify("Notification regression", case.level, case.duration)
+    h.assert_equals(#calls.logs, before_log + 1)
+    h.assert_equals(#calls.osd, before_osd + 1)
+    h.assert_equals(calls.logs[#calls.logs], { case.expected_level or case.level, "Notification regression" })
+    h.assert_equals(calls.osd[#calls.osd], { "Notification regression", case.expected_duration or case.duration })
+end
+
+--- Exercise every canonical level, including v, without adding production-only injection arguments.
+local function test_notify_canonical_log_dispatch()
+    -- Real-mpv runs use actual APIs rather than the standalone setup's recording mocks.
+    local setup = package.loaded["tests.setup"]
+    if type(setup) ~= "table" then return end
+    for _, level in ipairs { "fatal", "error", "warn", "info", "v", "debug", "trace" } do
+        assert_notification_test_dispatch(setup.notification_calls, { level = level, duration = 2.5 })
+    end
+    for _, case in ipairs {
+        { expected_level = "info", expected_duration = 1 },
+        { level = "v", duration = 0 },
+        { duration = 2.5, expected_level = "info" },
+        { level = "info", expected_duration = 1 },
+    } do
+        assert_notification_test_dispatch(setup.notification_calls, case)
+    end
+end
+
 --- Read isolated track metadata without modifying the supplied records.
 local function assert_active_track_test_case(case, track_type)
     local original = h.deep_copy(case.tracks)
@@ -712,6 +740,7 @@ local function run_tests()
     test_remove_html_tags()
     test_str_replace()
     test_notify_ignores_empty_messages()
+    test_notify_canonical_log_dispatch()
     test_get_active_track()
     test_assert_in_accepts_members()
     test_assert_in_rejects_nonmembers()

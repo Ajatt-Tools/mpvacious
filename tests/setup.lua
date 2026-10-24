@@ -164,6 +164,18 @@ local function add_timeout(seconds, callback)
     return make_inert_timer()
 end
 
+local notification_calls = { logs = {}, osd = {} }
+
+--- Record canonical log dispatch without printing expected test notifications.
+local function record_notification_test_log(level, message)
+    table.insert(notification_calls.logs, { level, message })
+end
+
+--- Record notification text and duration without rendering an OSD.
+local function record_notification_test_osd(message, duration)
+    table.insert(notification_calls.osd, { message, duration })
+end
+
 local mp_stub = {
     get_property = return_nil,
     get_property_number = return_default,
@@ -179,7 +191,7 @@ local mp_stub = {
     add_forced_key_binding = noop,
     remove_key_binding = noop,
     create_osd_overlay = create_osd_overlay,
-    osd_message = noop,
+    osd_message = record_notification_test_osd,
     command_native = command_native,
     command_native_async = noop,
     commandv = noop,
@@ -187,6 +199,7 @@ local mp_stub = {
 }
 
 local mp_msg_stub = {
+    log = record_notification_test_log,
     info = noop,
     warn = log_warn,
     error = log_error,
@@ -221,3 +234,6 @@ package.loaded["mp.msg"] = mp_msg_stub
 package.loaded["mp.utils"] = mp_utils_stub
 package.loaded["mp.options"] = mp_options_stub
 package.loaded["mp.input"] = mp_input_stub
+
+-- Standalone-only recording is inspected without replacing shared API functions in tests.
+return { notification_calls = notification_calls }
