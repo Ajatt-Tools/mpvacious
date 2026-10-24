@@ -929,4 +929,27 @@ function this.make_subtitle_observer_test_api(properties)
     return api, observers, reads
 end
 
+--- Record playback commands and observer ownership on an isolated property reader.
+function this.make_playback_test_api(options)
+    local state = options.state
+    local api = this.make_mp_property_reader(options.properties)
+    --- Record a seek or other playback command without changing real playback.
+    api.commandv = function(...) table.insert(state.commands, { ... }) end
+    --- Record property writes and make them visible to later reads.
+    api.set_property = function(name, value)
+        options.properties[name] = value
+        table.insert(state.writes, { name, value })
+    end
+    --- Keep each callback as a separate registration, including shared property names.
+    api.observe_property = function(name, format, callback)
+        state.observers[callback] = { name = name, format = format }
+    end
+    --- Remove only the supplied callback so sibling timers remain registered.
+    api.unobserve_property = function(callback)
+        state.observers[callback] = nil
+        table.insert(state.unobserved, callback)
+    end
+    return api
+end
+
 return this
