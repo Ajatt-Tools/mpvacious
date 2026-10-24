@@ -452,7 +452,7 @@ function this.notify(message, level, duration)
     -- Canonical log levels: https://mpv.io/manual/stable/#mp-msg-functions
     this.assert_in(level, { "fatal", "error", "warn", "info", "v", "debug", "trace" })
     duration = duration or 1
-    msg[level](message)
+    msg.log(level, message)
     mp.osd_message(message, duration)
 end
 
