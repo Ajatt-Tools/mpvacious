@@ -166,14 +166,60 @@ local function assert_append_subtitle_test_case(case, recording)
     h.assert_equals(histories[case.history][expected_history].text, "Next subtitle")
 end
 
+--- Describe the primary and secondary callback boundaries without sharing mutable scenarios.
+local function make_append_callback_test_cases()
+    return {
+        { property = "sub-text", prefix = "sub-", selection = "recorded_subs", history = 1 },
+        {
+            property = "secondary-sub-text",
+            prefix = "secondary-sub-",
+            selection = "recorded_secondary_subs",
+            history = 2,
+        },
+    }
+end
+
 --- Primary and secondary callbacks use the same early-return policy with or without recording.
 local function test_append_subtitle_reads_once()
     for _, recording in ipairs { false, true } do
-        for _, case in ipairs {
-            { property = "sub-text", selection = "recorded_subs", history = 1 },
-            { property = "secondary-sub-text", selection = "recorded_secondary_subs", history = 2 },
-        } do
+        for _, case in ipairs(make_append_callback_test_cases()) do
             assert_append_subtitle_test_case(case, recording)
+        end
+    end
+end
+
+--- Capture detached history, selection, and redraw state before delivering an inert callback.
+local function snapshot_append_subtitle_test_state(ctx)
+    return h.deep_copy {
+        histories = { ctx.observer.all_subs_until_now() },
+        primary = ctx.observer.recorded_subs(),
+        secondary = ctx.observer.recorded_secondary_subs(),
+        updates = ctx.state.update_count,
+    }
+end
+
+--- Duplicate events and disappearing subtitles must not change history, selection, or redraws.
+local function assert_inert_append_subtitle_test_case(case, recording, disappeared)
+    local ctx = make_append_subtitle_test_context(recording)
+    local before = snapshot_append_subtitle_test_state(ctx)
+    if disappeared then
+        for _, suffix in ipairs { "text", "start", "end" } do
+            ctx.properties[case.prefix .. suffix] = nil
+        end
+    end
+    ctx.reads[case.property] = 0
+    ctx.observers[case.property].callback()
+    h.assert_equals(ctx.reads[case.property], 1)
+    h.assert_equals(snapshot_append_subtitle_test_state(ctx), before)
+end
+
+--- Exercise both track callbacks with and without an active recording selection.
+local function test_append_subtitle_inert_events()
+    for _, recording in ipairs { false, true } do
+        for _, disappeared in ipairs { false, true } do
+            for _, case in ipairs(make_append_callback_test_cases()) do
+                assert_inert_append_subtitle_test_case(case, recording, disappeared)
+            end
         end
     end
 end
@@ -187,6 +233,7 @@ local function run_tests()
     test_injected_api_observers_and_history()
     test_injected_api_current_collection()
     test_append_subtitle_reads_once()
+    test_append_subtitle_inert_events()
 end
 
 return {

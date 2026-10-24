@@ -216,6 +216,24 @@ local function make_current_subtitle_test_api(visible)
     }
 end
 
+--- Verify one adjusted track read or the absence of subtitle timings.
+local function assert_make_current_test_case(case)
+    local mp_api = make_current_subtitle_test_api(case.visible)
+    local current = subtitle.make_current { is_secondary = case.secondary, mp_api = mp_api, delay = true }
+    if case.visible then
+        h.assert_equals(current.text, case.text)
+        h.assert_equals(current["start"], case.start_time)
+        h.assert_equals(current["end"], case.end_time)
+        h.assert_equals(current.is_secondary, case.secondary == true or case.secondary == "secondary")
+        h.assert_equals(
+            current.applied_delay,
+            subtitle.get_effective_delay { is_secondary = case.secondary, mp_api = mp_api }
+        )
+    else
+        h.assert_equals(current, nil)
+    end
+end
+
 --- Collect visible tracks with delays applied and reject absent subtitle timings.
 local function test_make_current()
     for _, case in ipairs {
@@ -229,20 +247,7 @@ local function test_make_current()
         { secondary = "primary", visible = false },
         { secondary = "secondary", visible = false },
     } do
-        local mp_api = make_current_subtitle_test_api(case.visible)
-        local current = subtitle.make_current { is_secondary = case.secondary, mp_api = mp_api, delay = true }
-        if case.visible then
-            h.assert_equals(current.text, case.text)
-            h.assert_equals(current["start"], case.start_time)
-            h.assert_equals(current["end"], case.end_time)
-            h.assert_equals(current.is_secondary, case.secondary == true or case.secondary == "secondary")
-            h.assert_equals(
-                current.applied_delay,
-                subtitle.get_effective_delay { is_secondary = case.secondary, mp_api = mp_api }
-            )
-        else
-            h.assert_equals(current, nil)
-        end
+        assert_make_current_test_case(case)
     end
 end
 
