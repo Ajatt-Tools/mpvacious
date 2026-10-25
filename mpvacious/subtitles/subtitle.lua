@@ -21,8 +21,10 @@ local Subtitle = {
     ["applied_delay"] = nil,
 }
 
+--- Use the supplied table as a subtitle instance, defaulting nil or false to an empty table.
 function Subtitle:new(o)
     o = o or {}
+    h.assert_type(o, "table")
     setmetatable(o, self)
     self.__index = self
     return o

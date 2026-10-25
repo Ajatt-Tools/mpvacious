@@ -8,6 +8,39 @@ Subtitle construction, comparison, and timing tests.
 local h = require("helpers")
 local subtitle = require("subtitles.subtitle")
 
+--- Preserve supplied table identity and fields while installing subtitle methods.
+local function test_constructor_preserves_table()
+    for _, options in ipairs { {}, { text = "Line", ["start"] = 0, ["end"] = 1, extra = "retained" } } do
+        local original = h.shallow_copy(options)
+        local instance = subtitle.Subtitle:new(options)
+        h.assert_equals(rawequal(instance, options), true)
+        h.assert_equals(rawequal(getmetatable(options), subtitle.Subtitle), true)
+        h.assert_equals(instance, original)
+        h.assert_equals(type(instance.clone), "function")
+    end
+end
+
+--- Retain the constructor's nil and false defaults, creating fresh default instances.
+local function test_constructor_defaults()
+    for _, case in ipairs { {}, { value = false } } do
+        local first = subtitle.Subtitle:new(case.value)
+        local second = subtitle.Subtitle:new(case.value)
+        h.assert_equals(rawequal(first, second), false)
+        h.assert_equals({ first.text, first["start"], first["end"] }, { "", -1, -1 })
+    end
+end
+
+--- Reject non-table options before changing a prototype's method lookup state.
+local function test_constructor_rejects_invalid_options()
+    local prototype = subtitle.Subtitle:new {}
+    for _, value in ipairs { true, 0, 1, "", "subtitle", h.noop } do
+        local success, message = pcall(function() prototype:new(value) end)
+        h.assert_equals(success, false)
+        h.assert_equals(h.is_substr(message, "Expected type table, got " .. type(value)), true)
+        h.assert_equals(rawget(prototype, "__index"), nil)
+    end
+end
+
 --- Compare subtitle events within the timing tolerance.
 local function test_is_same_event()
     h.assert_equals(
@@ -361,6 +394,9 @@ end
 
 --- Run subtitle comparison, construction, cloning, and timing tests.
 local function run_tests()
+    test_constructor_preserves_table()
+    test_constructor_defaults()
+    test_constructor_rejects_invalid_options()
     test_is_same_event()
     test_eq_uses_same_event()
     test_time_overlap()
