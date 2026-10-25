@@ -7,6 +7,7 @@ Test suites
 
 local modules = {
     "tests.test_helpers",
+    "tests.test_filename_factory",
     "tests.test_argument_validation",
     "tests.test_observer",
     "tests.test_encoder_utils",

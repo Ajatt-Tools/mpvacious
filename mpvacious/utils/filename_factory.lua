@@ -10,27 +10,24 @@ local h = require("helpers")
 
 local filename
 
+--- Limit a media basename to Anki's byte budget, reserving the supplied or default suffix.
 local anki_compatible_length = (function()
     -- Anki forcibly mutilates all filenames longer than 119 bytes when you run `Tools->Check Media...`.
     local allowed_bytes = 119
     local timestamp_bytes = #"_99h99m99s999ms-99h99m99s999ms.webp"
 
     return function(str, timestamp)
-        -- if timestamp provided, recalculate limit_bytes
-        local limit_bytes = allowed_bytes - (timestamp and #timestamp or timestamp_bytes)
+        -- The generated suffix includes timestamps and the extension and must fit on its own.
+        local limit_bytes = allowed_bytes - timestamp_bytes
+        if timestamp then
+            limit_bytes = allowed_bytes - #timestamp
+        end
 
         if #str <= limit_bytes then
             return str
         end
 
-        local bytes_per_char = h.contains_non_latin_letters(str) and #"車" or #"z"
-        local limit_chars = math.floor(limit_bytes / bytes_per_char)
-
-        if limit_chars == limit_bytes then
-            return str:sub(1, limit_bytes)
-        end
-
-        return h.str_limit(str, limit_chars)
+        return h.str_limit_bytes(str, limit_bytes)
     end
 end)()
 
@@ -78,4 +75,5 @@ mp.register_event("file-loaded", make_media_filename)
 
 return {
     make_filename = make_filename,
+    anki_compatible_length = anki_compatible_length,
 }

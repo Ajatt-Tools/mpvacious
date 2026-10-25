@@ -821,6 +821,22 @@ function this.str_limit_width(str, width_budget, wide_char_width)
     return table.concat(ret)
 end
 
+--- Return the longest prefix within the byte budget without splitting a UTF-8 character.
+function this.str_limit_bytes(str, max_bytes)
+    this.assert_type(str, "string")
+    this.assert_type(max_bytes, "number")
+    local bytes_count = 0
+    local cutoff_point = 0
+    for _, char in this.utf8_iter(str) do
+        bytes_count = bytes_count + #char
+        if bytes_count > max_bytes then
+            return str:sub(1, cutoff_point)
+        end
+        cutoff_point = bytes_count
+    end
+    return str
+end
+
 --- Return true if the UTF-8 character is wider than ASCII in the OSD font (e.g. CJK).
 --- A byte length of 3 or 4 means a wide character; everything else is narrow.
 function this.is_cjk_heuristic(utf8_chr)

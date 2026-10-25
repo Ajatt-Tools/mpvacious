@@ -517,6 +517,55 @@ local function test_dirs()
     end
 end
 
+local BYTE_LIMIT_TEST_CASES = {
+    { text = "", budget = 0, expected = "" },
+    { text = "abc", budget = -1, expected = "" },
+    { text = "abc", budget = 0, expected = "" },
+    { text = "abc", budget = 2, expected = "ab" },
+    { text = "abc", budget = 3, expected = "abc" },
+    { text = "abc", budget = 4, expected = "abc" },
+    { text = "éé", budget = 1, expected = "" },
+    { text = "éé", budget = 2, expected = "é" },
+    { text = "éé", budget = 3, expected = "é" },
+    { text = "éé", budget = 4, expected = "éé" },
+    { text = "日本", budget = 2, expected = "" },
+    { text = "日本", budget = 3, expected = "日" },
+    { text = "日本", budget = 5, expected = "日" },
+    { text = "日本", budget = 6, expected = "日本" },
+    { text = "😊😊", budget = 3, expected = "" },
+    { text = "😊😊", budget = 4, expected = "😊" },
+    { text = "😊😊", budget = 7, expected = "😊" },
+    { text = "😊😊", budget = 8, expected = "😊😊" },
+    { text = "Aé車😊", budget = 5, expected = "Aé" },
+    { text = "Aé車😊", budget = 6, expected = "Aé車" },
+    { text = "Aé車😊", budget = 9, expected = "Aé車" },
+    { text = "Aé車😊", budget = 10, expected = "Aé車😊" },
+}
+
+--- Limit actual bytes while retaining complete UTF-8 characters and returning only a string.
+local function test_str_limit_bytes()
+    for _, case in ipairs(BYTE_LIMIT_TEST_CASES) do
+        local result = h.str_limit_bytes(case.text, case.budget)
+        h.assert_equals(result, case.expected)
+        h.assert_equals(#result <= math.max(case.budget, 0), true)
+        h.assert_equals(select("#", h.str_limit_bytes(case.text, case.budget)), 1)
+    end
+end
+
+--- Reject incorrect argument types before attempting byte counting.
+local function test_str_limit_bytes_argument_validation()
+    for _, case in ipairs {
+        { budget = 2 },
+        { text = false, budget = 2 },
+        { text = 1, budget = 2 },
+        { text = "abc" },
+        { text = "abc", budget = "2" },
+        { text = "abc", budget = false },
+    } do
+        h.assert_equals(pcall(h.str_limit_bytes, case.text, case.budget), false)
+    end
+end
+
 --- Verify character-count limits preserve Unicode and mark truncation.
 local function test_str_limit()
     -- Test str limit
@@ -766,6 +815,8 @@ local function run_tests()
     test_islice()
     test_dirs()
     test_str_limit()
+    test_str_limit_bytes()
+    test_str_limit_bytes_argument_validation()
     test_str_limit_width()
     test_normalize_newlines()
     test_split_lines()
