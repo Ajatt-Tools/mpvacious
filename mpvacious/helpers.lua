@@ -822,6 +822,7 @@ function this.str_limit_width(str, width_budget, wide_char_width)
 end
 
 --- Return the longest prefix within the byte budget without splitting a UTF-8 character.
+--- Nonpositive budgets return an empty string. Raise for non-string input or a nonnumeric budget.
 function this.str_limit_bytes(str, max_bytes)
     this.assert_type(str, "string")
     this.assert_type(max_bytes, "number")

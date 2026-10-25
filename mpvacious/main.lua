@@ -55,6 +55,7 @@ local make_note_exporter = require("anki.note_exporter")
 local subtitle = require("subtitles.subtitle")
 local make_release_checker = require("utils.release_checker")
 local make_encoder = require("encoder.encoder")
+local make_filename_factory = require("utils.filename_factory")
 
 local quick_creation_opts = {
     _n_lines = nil,
@@ -99,7 +100,9 @@ local cfg_mgr = make_cfg_mgr.new()
 local ankiconnect = make_ankiconnect.new()
 local release_checker = make_release_checker.new()
 local subs_observer = make_subtitles_observer.new()
-local encoder = make_encoder.new()
+-- Own one file-load observer and share its cache with transaction-local encoders.
+local filename_factory = make_filename_factory.new()
+local encoder = make_encoder.new { filename_factory = filename_factory }
 local forvo = make_forvo.new()
 local play_control = make_play_control.new()
 

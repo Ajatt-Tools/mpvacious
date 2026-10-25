@@ -17,6 +17,7 @@ local subtitle = require("subtitles.subtitle")
 local executables = require("encoder.executables")
 local eutils = require("encoder.utils")
 local note_update_context = require("anki.note_update_context")
+local make_filename_factory = require("utils.filename_factory")
 
 local MEDIA_FIELDS_FOR_TEST = { snapshot = "image_field", audio = "audio_field" }
 
@@ -119,8 +120,8 @@ end
 local function test_encoder_instances_are_isolated()
     local first_config = make_backend_test_config("webp", "webp", false)
     local second_config = make_backend_test_config("jpg", "webp", true)
-    local first = encoder.new()
-    local second = encoder.new()
+    local first = encoder.new(fixtures.make_recording_encoder_components({}))
+    local second = encoder.new(fixtures.make_recording_encoder_components({}))
     first.init(fixtures.make_config_manager(first_config))
     second.init(fixtures.make_config_manager(second_config))
     h.assert_equals(first.encoder() == second.encoder(), false)
@@ -212,7 +213,7 @@ end
 --- Verify instance construction returns public methods and selects the supplied backend.
 local function assert_encoder_constructor_test_case(use_ffmpeg)
     local original_config = make_backend_test_config("webp", "webp", not use_ffmpeg)
-    local original = encoder.new()
+    local original = encoder.new(fixtures.make_recording_encoder_components({}))
     h.assert_equals(original.init(fixtures.make_config_manager(original_config)), original)
     local config = make_backend_test_config("jpg", "webp", use_ffmpeg)
     local fresh = original.new(snapshot.new(fixtures.make_config_manager(config)))
@@ -274,13 +275,61 @@ end
 
 --- Reject construction from an unready manager without changing the original encoder.
 local function test_encoder_constructor_requires_ready_manager()
-    local original = encoder.new().init(fixtures.make_config_manager(make_backend_test_config("jpg", "webp", false)))
+    local original = encoder
+        .new(fixtures.make_recording_encoder_components({}))
+        .init(fixtures.make_config_manager(make_backend_test_config("jpg", "webp", false)))
     local cfg_mgr = fixtures.make_config_manager({})
     cfg_mgr.fail_if_not_ready = h.as_callback(error, "config not loaded")
     local success, error = pcall(original.new, cfg_mgr)
     h.assert_equals(success, false)
     h.assert_equals(h.is_substr(error, "config not loaded"), true)
     assert_backend_test_codecs(original.encoder(), "mjpeg", "libwebp")
+end
+
+--- Construct parent and transaction encoders sharing one real factory on an isolated event API.
+local function make_shared_filename_encoder_test_context(use_ffmpeg)
+    local api, state = fixtures.make_filename_factory_test_api("Original.mkv")
+    local components = fixtures.make_recording_encoder_components({})
+    components.filename_factory = make_filename_factory.new(api)
+    components.has_audio_track = function() return true end
+    local config = make_backend_test_config("jpg", "webp", use_ffmpeg)
+    local cfg_mgr = fixtures.make_config_manager(config)
+    local original = encoder.new(components).init(cfg_mgr)
+    return { original = original, fresh = original.new(snapshot.new(cfg_mgr)), state = state, config = config }
+end
+
+--- Check both job kinds consume the shared cache without creating additional observers.
+local function assert_shared_filename_encoder_test_jobs(ctx, prefix)
+    local sub = subtitle.make_subtitle("Line", 0, 1)
+    for _, instance in ipairs { ctx.original, ctx.fresh } do
+        h.assert_equals(instance.snapshot.create_job(sub, 0).filename, prefix .. "_00m00s000ms.jpg")
+        h.assert_equals(
+            instance.audio.create_job(sub, 0).filename,
+            prefix .. "_00m00s000ms_00m01s000ms" .. ctx.config.audio_extension
+        )
+    end
+    h.assert_equals(#ctx.state.events, 1)
+end
+
+--- Preserve one factory through encoder clones and reflect file changes in both owners' jobs.
+local function test_encoder_instances_share_filename_factory()
+    for _, use_ffmpeg in ipairs { false, true } do
+        local ctx = make_shared_filename_encoder_test_context(use_ffmpeg)
+        h.assert_equals(#ctx.state.events, 1)
+        ctx.state.events[1].callback()
+        assert_shared_filename_encoder_test_jobs(ctx, "original")
+        ctx.state.filename = "Next.mkv"
+        ctx.state.events[1].callback()
+        assert_shared_filename_encoder_test_jobs(ctx, "next")
+    end
+end
+
+--- Require the caller-owned factory rather than registering a fallback file observer.
+local function test_encoder_requires_filename_factory()
+    h.assert_equals(pcall(encoder.new), false)
+    for _, factory in ipairs { false, "factory", {}, { make_filename = false } } do
+        h.assert_equals(pcall(encoder.new, { filename_factory = factory }), false)
+    end
 end
 
 --- Build a normalization profile with distinctive original encoding and user arguments.
@@ -996,6 +1045,8 @@ local function run_tests()
     test_encoder_instance_output_directories()
     test_snapshot_job_captures_explicit_timestamp()
     test_encoder_constructor_requires_ready_manager()
+    test_encoder_instances_share_filename_factory()
+    test_encoder_requires_filename_factory()
     test_loudnorm_profile_isolation()
     test_ffmpeg_consumer_builds_fresh_arguments()
     test_ffmpeg_external_audio_source()

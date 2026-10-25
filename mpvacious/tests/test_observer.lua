@@ -224,6 +224,34 @@ local function test_append_subtitle_inert_events()
     end
 end
 
+--- Exercise real clipboard preparation with the legacy whitespace filter enabled or disabled.
+local function assert_clipboard_space_filter_test_case(case)
+    local api = fixtures.make_subtitle_observer_test_api({})
+    local observer = subtitles_observer.new { mp = api }
+    observer.init(
+        {},
+        fixtures.make_config_manager {
+            autoclip = false,
+            autoclip_method = "clipboard",
+            clipboard_trim_enabled = false,
+            nuke_spaces = case.enabled,
+        }
+    )
+    h.assert_equals(observer.clipboard_prepare(case.text), case.expected)
+end
+
+--- Enabled whitespace filtering must retain its live helper dependency without crashing.
+local function test_clipboard_space_filtering()
+    for _, case in ipairs {
+        { enabled = true, text = "日 本", expected = "日本" },
+        { enabled = false, text = "日 本", expected = "日 本" },
+        { enabled = true, text = "Latin words", expected = "Latin words" },
+        { enabled = false, text = "Latin words", expected = "Latin words" },
+    } do
+        assert_clipboard_space_filter_test_case(case)
+    end
+end
+
 --- Run observer instance, selection, API-injection, and menu-refresh regressions.
 local function run_tests()
     test_instances_keep_recorded_subs_isolated()
@@ -234,6 +262,7 @@ local function run_tests()
     test_injected_api_current_collection()
     test_append_subtitle_reads_once()
     test_append_subtitle_inert_events()
+    test_clipboard_space_filtering()
 end
 
 return {

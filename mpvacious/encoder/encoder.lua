@@ -8,7 +8,6 @@ Encoder creates audio clips and snapshots, both animated and static.
 local mp = require("mp")
 local utils = require("mp.utils")
 local h = require("helpers")
-local filename_factory = require("utils.filename_factory")
 local msg = require("mp.msg")
 local exec = require("encoder.executables")
 local mpv_encoder = require("encoder.mpv")
@@ -125,7 +124,7 @@ local function make_snapshot_job(opts)
     -- Dependencies (API)
     local mp_api = opts.mp_api or mp
     local get_active_track = opts.get_active_track or h.get_active_track
-    local filenames = opts.filename_factory or filename_factory
+    local filenames = opts.filename_factory -- required field
     local subprocess = opts.subprocess or h.subprocess
     local logger = opts.logger or msg
 
@@ -238,7 +237,7 @@ end
 local function make_audioclip_job(opts)
     -- Dependencies (API)
     local mp_api = opts.mp_api or mp
-    local filenames = opts.filename_factory or filename_factory
+    local filenames = opts.filename_factory -- required field
     local subprocess = opts.subprocess or h.subprocess
     local logger = opts.logger or msg
 
@@ -370,15 +369,19 @@ end
 ------------------------------------------------------------
 --- public interface
 
---- Create an encoder instance with independent backend and output-directory state.
+--- Create an encoder with independent backend/output state and a required shared filename factory.
 local function make_encoder(components)
     components = components or {}
+    h.assert_type(components.filename_factory, "table") -- required field
+    h.assert_type(components.filename_factory.make_filename, "function")
+
     local subprocess = components.subprocess or h.subprocess
     local has_video_track = components.has_video_track or h.has_video_track
     local has_audio_track = components.has_audio_track or h.has_audio_track
     local get_active_track = components.get_active_track or h.get_active_track
-    local filenames = components.filename_factory or filename_factory
+    local filename_factory = components.filename_factory
     local mp_api = components.mp or mp
+
     -- Contains the state of the encoder
     local self = {
         config = nil,
@@ -417,7 +420,7 @@ local function make_encoder(components)
             get_active_track = get_active_track,
             mp_api = mp_api,
             cfg_mgr = self.cfg_mgr,
-            filename_factory = filenames,
+            filename_factory = filename_factory,
             output_dir_path = self.output_dir_path,
             backend = self.encoder,
             subprocess = subprocess,

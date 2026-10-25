@@ -9,6 +9,24 @@ local h = require("helpers")
 
 local this = {}
 
+--- Supply a mutable filename and capture file-load callbacks without changing the shared mp API.
+function this.make_filename_factory_test_api(filename)
+    local state = { filename = filename, events = {}, reads = 0 }
+    local api = {}
+    --- Read the current filename only when the factory handles a file-load event.
+    function api.get_property(name)
+        if name == "filename" then
+            state.reads = state.reads + 1
+            return state.filename
+        end
+    end
+    --- Keep registrations visible so tests can verify callback ownership and lifetime.
+    function api.register_event(name, callback)
+        table.insert(state.events, { name = name, callback = callback })
+    end
+    return api, state
+end
+
 --- Return an AnkiConnect client that records the requested IDs and supplies a response.
 function this.make_note_fields_client(state, make_client, scenario)
     local client = make_client()
