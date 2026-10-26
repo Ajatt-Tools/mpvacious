@@ -117,7 +117,9 @@ end
 --- Fold an array in index order by calling reducer(accumulator, value) for each entry.
 --- Default initial to zero when omitted or nil. Like ipairs, stop at the first missing index.
 function this.reduce(values, reducer, initial)
-    if initial == nil then initial = 0 end
+    if initial == nil then
+        initial = 0
+    end
     local accumulator = initial
     for _, value in ipairs(values) do
         accumulator = reducer(accumulator, value)
