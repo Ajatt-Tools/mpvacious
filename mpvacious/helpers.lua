@@ -739,12 +739,19 @@ function this.maybe_require(module_name)
     return loaded_module
 end
 
-function this.find_insertion_point(list, new)
+--- Return the insertion index after equal values using binary search.
+--- Comparison is done using the function less_than.
+function this.find_insertion_point(list, new, less_than)
+    if less_than == nil then
+        less_than = default_less_than
+    end
+    this.assert_type(list, "table")
+    this.assert_type(less_than, "function")
     local low = 1
     local high = #list + 1
     while low < high do
         local mid = math.floor((low + high) / 2)
-        if list[mid] > new then
+        if less_than(new, list[mid]) then
             high = mid
         else
             low = mid + 1
