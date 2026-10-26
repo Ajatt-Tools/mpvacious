@@ -622,14 +622,26 @@ function this.join_lists(...)
     return result
 end
 
-function this.join_two_sorted_lists(a1, a2)
+--- Compare two values using operator <.
+local function default_less_than(first, second)
+    return first < second
+end
+
+--- Merge sorted lists using their ordering or a supplied comparison function.
+--- Comparison is done using the function less_than.
+function this.join_two_sorted_lists(a1, a2, less_than)
+    if less_than == nil then
+        less_than = default_less_than
+    end
+    this.assert_type(less_than, "function")
+
     -- take two sorted lists and output one sorted list.
     local result = {}
     local idx1, idx2 = 1, 1
 
     -- Merge elements while both lists have elements
     while idx1 <= #a1 and idx2 <= #a2 do
-        if a1[idx1] < a2[idx2] then
+        if less_than(a1[idx1], a2[idx2]) then
             table.insert(result, a1[idx1])
             idx1 = idx1 + 1
         else
