@@ -786,8 +786,69 @@ local function test_assert_type_rejects_wrong_types()
     end
 end
 
+--- Preserve valid byte counts and permissive handling of truncated or malformed UTF-8 chunks.
+local function test_utf8_byte_count_contract()
+    for _, case in ipairs {
+        { text = "A", index = 1, expected = 1, wide = false },
+        { text = "é", index = 1, expected = 2, wide = false },
+        { text = "日", index = 1, expected = 3, wide = true },
+        { text = "😊", index = 1, expected = 4, wide = true },
+        { text = string.char(0xE3, 0x81), index = 1, expected = 2, wide = false },
+        { text = string.char(0xF5, 0x80, 0x80, 0x80), index = 1, expected = 4, wide = true },
+        { text = string.char(0xFF), index = 1, expected = 1, wide = false },
+    } do
+        h.assert_equals(h.utf8_char_bytes(case.text, case.index), case.expected)
+        h.assert_equals(h.utf8_char_bytes("x" .. case.text, case.index + 1), case.expected)
+        h.assert_equals(h.is_cjk_heuristic(case.text), case.wide)
+    end
+    h.assert_equals(h.is_cjk_heuristic(""), false)
+end
+
+--- Keep byte offsets, empty iteration, and malformed chunks unchanged after entry-point validation.
+local function test_utf8_iterator_contract()
+    local malformed = string.char(0xE3, 0x20, 0x81)
+    for _, case in ipairs {
+        { text = "", expected = {} },
+        { text = "Aé日😊", expected = { { 1, "A" }, { 2, "é" }, { 4, "日" }, { 7, "😊" } } },
+        { text = malformed .. "A", expected = { { 1, malformed }, { 4, "A" } } },
+        { text = string.char(0xC3), expected = { { 1, string.char(0xC3) } } },
+    } do
+        local actual = {}
+        for index, character in h.utf8_iter(case.text) do
+            table.insert(actual, { index, character })
+        end
+        h.assert_equals(actual, case.expected)
+    end
+end
+
+--- Retain nil/false defaults, explicit zero widths, and empty or custom separators.
+local function test_text_width_and_separator_defaults()
+    for _, case in ipairs { {}, { value = false } } do
+        h.assert_equals(h.str_limit_width("日a", 2, case.value), "日…")
+        h.assert_equals(h.str_limit_width("日a", 3, case.value), "日a")
+        h.assert_equals(h.str_wrap("abcd", 2, case.value), "ab\ncd")
+    end
+    h.assert_equals(h.str_limit_width("日日", 0, 0), "日日")
+    h.assert_equals(h.str_wrap("abcd", 2, ""), "abcd")
+    h.assert_equals(h.str_wrap("abcd", 2, "|"), "ab|cd")
+end
+
+--- Preserve nonpositive width behavior instead of introducing new numeric-range restrictions.
+local function test_text_nonpositive_widths()
+    for _, budget in ipairs { 0, -1 } do
+        h.assert_equals(h.str_limit("ab", budget), "…")
+        h.assert_equals(h.str_limit_width("ab", budget), "…")
+        h.assert_equals(h.str_to_lines("ab", budget), { "a", "b" })
+        h.assert_equals(h.str_wrap("ab", budget), "a\nb")
+    end
+end
+
 --- Run the shared helper regression suite.
 local function run_tests()
+    test_utf8_byte_count_contract()
+    test_utf8_iterator_contract()
+    test_text_width_and_separator_defaults()
+    test_text_nonpositive_widths()
     test_map_preserves_keys_and_input()
     test_map_preserves_false_values()
     test_map_omits_nil_results()

@@ -278,6 +278,56 @@ local function test_completion_collector_argument_types()
     end
 end
 
+--- Describe text entry points with empty text where possible to exercise fast-path validation.
+local function make_text_helper_argument_test_cases()
+    return {
+        { fn = h.utf8_char_bytes, args = { "A", 1 }, types = { "string", "number" } },
+        { fn = h.utf8_iter, args = { "" }, types = { "string" } },
+        { fn = h.is_cjk_heuristic, args = { "" }, types = { "string" } },
+        { fn = h.str_limit, args = { "", 1 }, types = { "string", "number" } },
+        { fn = h.str_limit_width, args = { "", 1 }, types = { "string", "number" } },
+        { fn = h.str_to_lines, args = { "", 1 }, types = { "string", "number" } },
+        { fn = h.str_wrap, args = { "", 1 }, types = { "string", "number" } },
+    }
+end
+
+--- Preserve nil argument positions and keep each rejected call's arguments independent.
+local function make_text_argument_test_callback(case, index)
+    return function(value)
+        local args = h.shallow_copy(case.args)
+        args[index] = value
+        return case.fn(h.unpack(args, 1, math.max(#case.args, index)))
+    end
+end
+
+--- Validate arguments at the entry point, including iterator construction before iteration starts.
+local function test_text_helper_required_arguments()
+    for _, case in ipairs(make_text_helper_argument_test_cases()) do
+        for index, expected_type in ipairs(case.types) do
+            local callback = make_text_argument_test_callback(case, index)
+            for _, invalid in ipairs(make_wrong_type_argument_test_cases(expected_type)) do
+                assert_type_argument_test_rejected(callback, invalid.value, expected_type)
+            end
+        end
+    end
+end
+
+--- Preserve nil/false defaults while rejecting other incorrect optional values before empty-text returns.
+local function test_text_helper_optional_arguments()
+    for _, case in ipairs {
+        { fn = h.str_limit_width, args = { "", 1 }, expected_type = "number" },
+        { fn = h.str_wrap, args = { "", 1 }, expected_type = "string" },
+    } do
+        local callback = make_text_argument_test_callback(case, 3)
+        for _, invalid in ipairs(make_wrong_type_argument_test_cases(case.expected_type)) do
+            if invalid.value ~= nil and invalid.value ~= false then
+                assert_type_argument_test_rejected(callback, invalid.value, case.expected_type)
+            end
+        end
+        assert_type_argument_test_rejected(callback, true, case.expected_type)
+    end
+end
+
 --- Run runtime argument-validation regressions in both standalone and real-mpv test paths.
 local function run_tests()
     test_invalid_timing_boundaries()
@@ -293,6 +343,8 @@ local function run_tests()
     test_valid_osd_types()
     test_switch_argument_types()
     test_completion_collector_argument_types()
+    test_text_helper_required_arguments()
+    test_text_helper_optional_arguments()
 end
 
 return { run_tests = run_tests }
