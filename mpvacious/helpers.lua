@@ -8,6 +8,7 @@ Various helper functions.
 local mp = require("mp")
 local msg = require("mp.msg")
 local utils = require("mp.utils")
+local utf8_constants = require("utils.utf8_constants")
 local this = {}
 
 this.unpack = unpack or table.unpack
@@ -765,13 +766,13 @@ function this.utf8_char_bytes(str, i)
     this.assert_type(i, "number")
     local char_byte = str:byte(i)
     local max_bytes = #str - i + 1
-    if char_byte < 0xC0 then
+    if char_byte < utf8_constants.MULTIBYTE_CHARACTER_RULES[2].first_byte_offset then
         return math.min(max_bytes, 1)
-    elseif char_byte < 0xE0 then
+    elseif char_byte < utf8_constants.MULTIBYTE_CHARACTER_RULES[3].first_byte_offset then
         return math.min(max_bytes, 2)
-    elseif char_byte < 0xF0 then
+    elseif char_byte < utf8_constants.MULTIBYTE_CHARACTER_RULES[4].first_byte_offset then
         return math.min(max_bytes, 3)
-    elseif char_byte < 0xF8 then
+    elseif char_byte < utf8_constants.FOUR_BYTE_FIRST_BYTE_LIMIT then
         return math.min(max_bytes, 4)
     else
         return math.min(max_bytes, 1)
