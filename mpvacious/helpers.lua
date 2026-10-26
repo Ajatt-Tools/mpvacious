@@ -762,9 +762,11 @@ function this.is_lower(s)
     return string.lower(s) == s
 end
 
---- Get byte count of utf-8 character at index i in str
+--- Estimate the UTF-8 character byte count at index i, clamped to the available bytes.
 --- https://github.com/tomasklaen/uosc/blob/bc6cf419ba820a80df33960789813dad8e6f34a2/src/uosc/lib/text.lua#L52
 function this.utf8_char_bytes(str, i)
+    this.assert_type(str, "string")
+    this.assert_type(i, "number")
     local char_byte = str:byte(i)
     local max_bytes = #str - i + 1
     if char_byte < 0xC0 then
@@ -784,6 +786,7 @@ end
 --- Iterates over utf-8 characters instead of bytes
 --- https://github.com/tomasklaen/uosc/blob/bc6cf419ba820a80df33960789813dad8e6f34a2/src/uosc/lib/text.lua#L72
 function this.utf8_iter(str)
+    this.assert_type(str, "string")
     local byte_start = 1
     return function()
         local start = byte_start
@@ -805,8 +808,12 @@ end
 --- CJK characters count as 2 by default; narrower characters count as 1.
 --- An ellipsis ("…") is appended after the budget is exhausted when truncating,
 --- so the result can exceed width_budget by the ellipsis's width.
+--- Omitted or false wide_char_width defaults to 2.
 function this.str_limit_width(str, width_budget, wide_char_width)
     wide_char_width = wide_char_width or CharWidth.wide
+    this.assert_type(str, "string")
+    this.assert_type(width_budget, "number")
+    this.assert_type(wide_char_width, "number")
     local ret = {}
     local used_budget = 0
     for _, char in this.utf8_iter(str) do
@@ -822,7 +829,7 @@ function this.str_limit_width(str, width_budget, wide_char_width)
 end
 
 --- Return the longest prefix within the byte budget without splitting a UTF-8 character.
---- Nonpositive budgets return an empty string. Raise for non-string input or a nonnumeric budget.
+--- Nonpositive budgets return an empty string.
 function this.str_limit_bytes(str, max_bytes)
     this.assert_type(str, "string")
     this.assert_type(max_bytes, "number")
@@ -841,6 +848,7 @@ end
 --- Return true if the UTF-8 character is wider than ASCII in the OSD font (e.g. CJK).
 --- A byte length of 3 or 4 means a wide character; everything else is narrow.
 function this.is_cjk_heuristic(utf8_chr)
+    this.assert_type(utf8_chr, "string")
     return #utf8_chr > 2
 end
 
@@ -851,6 +859,8 @@ end
 --- A character wider than n_chars is placed on its own line.
 --- Whitespace at a wrap point is consumed.
 function this.str_to_lines(str, n_chars)
+    this.assert_type(str, "string")
+    this.assert_type(n_chars, "number")
     local lines = {}
     local current_line = {}
     local current_line_length = 0
@@ -906,8 +916,12 @@ function this.str_to_lines(str, n_chars)
     return lines
 end
 
+--- Wrap text with the supplied string separator, defaulting nil or false to a newline.
 function this.str_wrap(str, n_chars, separator)
     separator = separator or "\n"
+    this.assert_type(str, "string")
+    this.assert_type(n_chars, "number")
+    this.assert_type(separator, "string")
     return table.concat(this.str_to_lines(str, n_chars), separator)
 end
 
