@@ -224,35 +224,69 @@ local function test_append_subtitle_inert_events()
     end
 end
 
---- Exercise real clipboard preparation with the legacy whitespace filter enabled or disabled.
-local function assert_clipboard_space_filter_test_case(case)
+--- Initialize clipboard preparation without registering observers on the shared mp API.
+local function make_nuke_spaces_test_observer(enabled)
     local api = fixtures.make_subtitle_observer_test_api({})
     local observer = subtitles_observer.new { mp = api }
     observer.init(
         {},
         fixtures.make_config_manager {
+            nuke_spaces = enabled,
             autoclip = false,
             autoclip_method = "clipboard",
             clipboard_trim_enabled = false,
-            nuke_spaces = case.enabled,
         }
     )
-    h.assert_equals(observer.clipboard_prepare(case.text), case.expected)
+    return observer
 end
 
---- Enabled whitespace filtering must retain its live helper dependency without crashing.
-local function test_clipboard_space_filtering()
-    for _, case in ipairs {
-        { enabled = true, text = "日 本", expected = "日本" },
-        { enabled = false, text = "日 本", expected = "日 本" },
-        { enabled = true, text = "Latin words", expected = "Latin words" },
-        { enabled = false, text = "Latin words", expected = "Latin words" },
-    } do
-        assert_clipboard_space_filter_test_case(case)
+local NUKE_SPACES_TEST_CASES = {
+    { text = "日 本", enabled = "日本" },
+    { text = "Latin words", enabled = "Latin words" },
+    { text = "日本 語", enabled = "日本語" },
+    { text = "こんにちは 世界", enabled = "こんにちは世界" },
+    { text = "カタ カナ", enabled = "カタカナ" },
+    { text = "ｶﾀ ｶﾅ", enabled = "ｶﾀｶﾅ" },
+    { text = "한 국어", enabled = "한국어" },
+    { text = "𠀀 語", enabled = "𠀀語" },
+    { text = "日本\t語", enabled = "日本語" },
+    { text = "日本 語 123 😊", enabled = "日本語123😊" },
+    { text = "hello world", enabled = "hello world" },
+    { text = "héllo héllo", enabled = "héllo héllo" },
+    { text = "é é", enabled = "é é" },
+    { text = "č č", enabled = "č č" },
+    { text = "ắ ắ", enabled = "ắ ắ" },
+    { text = "é 日本 語", enabled = "é 日本 語" },
+    { text = "hello 日本 語", enabled = "hello 日本 語" },
+    { text = "日本 語 é", enabled = "日本 語 é" },
+    { text = "ɐ 日本 語", enabled = "ɐ 日本 語" },
+    { text = "Ａ 日本 語", enabled = "Ａ 日本 語" },
+    { text = "𐞀 日本 語", enabled = "𐞀 日本 語" },
+    { text = "привет мир", enabled = "привет мир" },
+    { text = "γειά σου", enabled = "γειά σου" },
+    { text = "مرحبا بالعالم", enabled = "مرحبا بالعالم" },
+    { text = "123 ! 😊", enabled = "123 ! 😊" },
+    { text = "× ÷ 日本 語", enabled = "×÷日本語" },
+    { text = "ꭥ 日本 語", enabled = "ꭥ日本語" }, -- U+AB65 is Greek, despite its block name.
+    { text = "", enabled = "" },
+}
+
+--- Exercise the real detection and clipboard path with the heuristic enabled and disabled.
+local function test_nuke_spaces_script_policy()
+    for _, enabled in ipairs { true, false } do
+        local observer = make_nuke_spaces_test_observer(enabled)
+        for _, case in ipairs(NUKE_SPACES_TEST_CASES) do
+            local expected = case.text
+            if enabled then
+                expected = case.enabled
+            end
+            h.assert_equals(observer.maybe_remove_all_spaces(case.text), expected)
+            h.assert_equals(observer.clipboard_prepare(case.text), expected)
+        end
     end
 end
 
---- Run observer instance, selection, API-injection, and menu-refresh regressions.
+--- Run observer instance, selection, API-injection, clipboard, and menu-refresh regressions.
 local function run_tests()
     test_instances_keep_recorded_subs_isolated()
     test_import_subs_separates_tracks_and_clear_resets_selection()
@@ -262,7 +296,7 @@ local function run_tests()
     test_injected_api_current_collection()
     test_append_subtitle_reads_once()
     test_append_subtitle_inert_events()
-    test_clipboard_space_filtering()
+    test_nuke_spaces_script_policy()
 end
 
 return {
