@@ -278,6 +278,7 @@ local function make_subtitles_observer(components)
     function public.get_timing(position)
         h.assert_in(position, { "start", "end" })
         if private.user_timings.is_set(position) then
+            -- If a timing is set, it is guaranteed to be non-nil.
             return private.user_timings.get(position)
         elseif not private.dialogs.is_empty() then
             return private.dialogs.get_time(position)

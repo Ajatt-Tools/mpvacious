@@ -8,29 +8,34 @@ Object that remembers manually set timings.
 local h = require("helpers")
 
 --- Create independent manual start/end timing storage.
-local new_timings = function()
-    local self = { ["start"] = -1, ["end"] = -1 }
-    --- Report whether the selected timing boundary has been set.
-    local is_set = function(position)
+local function new_timings()
+    local self = {
+        -- nil is used for unset values. negative numbers are supported.
+        ["start"] = nil,
+        ["end"] = nil,
+    }
+    local pub = {}
+
+    --- Return whether the boundary was explicitly set.
+    function pub.is_set(position)
         h.assert_in(position, { "start", "end" })
-        return self[position] >= 0
+        return self[position] ~= nil
     end
-    --- Store a numeric timing at one supported boundary, including negative unset values.
-    local set = function(position, time)
+
+    --- Store a numeric raw timestamp at a supported boundary.
+    function pub.set(position, time)
         h.assert_in(position, { "start", "end" })
         h.assert_type(time, "number")
         self[position] = time
     end
-    --- Return the selected timing boundary.
-    local get = function(position)
+
+    --- Return a stored boundary or -1 when it has not been set.
+    function pub.get(position)
         h.assert_in(position, { "start", "end" })
         return self[position]
     end
-    return {
-        is_set = is_set,
-        set = set,
-        get = get,
-    }
+
+    return pub
 end
 
 return {
