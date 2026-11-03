@@ -35,7 +35,7 @@ this.get_default = function()
         -- The user should not modify anything below.
 
         -- Common
-        nuke_spaces = false, -- remove all spaces from the primary subtitles on exported anki cards and when copying text to clipboard.
+        nuke_spaces = true, -- remove all spaces from the primary subtitles on exported anki cards and when copying text to clipboard.
         clipboard_trim_enabled = true, -- remove unnecessary characters from strings before copying to the clipboard
         use_ffmpeg = false, -- if set to true, use ffmpeg to create audio clips and snapshots. by default use mpv.
         reload_config_before_card_creation = true, -- for convenience, read config file from disk before a card is made.
