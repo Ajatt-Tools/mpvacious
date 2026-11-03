@@ -9,8 +9,21 @@ local h = require("helpers")
 local defaults = require("config.defaults")
 local cfg_utils = require("config.utils")
 
+--- Enable space removal by default without overwriting an explicit Boolean setting.
+local function test_nuke_spaces_default_and_overrides()
+    h.assert_equals(defaults.get_default().nuke_spaces, true)
+    for _, enabled in ipairs { false, true } do
+        local config = defaults.get_default()
+        config.nuke_spaces = enabled
+        cfg_utils.validate_config(config)
+        h.assert_equals(config.nuke_spaces, enabled)
+        h.assert_equals(defaults.get_default().nuke_spaces, true)
+    end
+end
+
 --- Run config default and validation tests.
 local function run_tests()
+    test_nuke_spaces_default_and_overrides()
     h.assert_equals(defaults.get_default().menu_max_shown_lines, 1)
     local formatted = cfg_utils.format_default_config("subs2srs", "option=value\n")
     h.assert_equals(formatted:match("^# Written by subs2srs on .-%.\n(.*)$"), "option=value\n")

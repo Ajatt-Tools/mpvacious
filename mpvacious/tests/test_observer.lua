@@ -10,6 +10,7 @@ local subtitle = require("subtitles.subtitle")
 local subtitles_observer = require("subtitles.observer")
 local Menu = require("menu.menu")
 local fixtures = require("tests.fixtures")
+local defaults = require("config.defaults")
 
 --- Construct a secondary subtitle with the real class methods and metatable.
 local function make_test_secondary_sub(text, start_time, end_time)
@@ -286,6 +287,56 @@ local function test_nuke_spaces_script_policy()
     end
 end
 
+--- Manual negative timestamps override recorded timings until the selection is cleared.
+local function assert_manual_timing_fallback_test_case(position, time)
+    local ctx = make_append_subtitle_test_context(false)
+    ctx.properties["sub-text"], ctx.properties["secondary-sub-text"] = nil, nil
+    ctx.observer.import_subs { subtitle.make_subtitle("Recorded", 10, 20) }
+    h.assert_equals({ ctx.observer.get_timing("start"), ctx.observer.get_timing("end") }, { 10, 20 })
+    h.assert_equals(ctx.observer.user_altered(), false)
+    ctx.properties["time-pos"] = time + ctx.properties["audio-delay"]
+    ctx.observer.set_manual_timing(position)
+    h.assert_equals(ctx.observer.get_timing(position), time)
+    h.assert_equals(ctx.observer.user_altered(), true)
+    local other_position, other_time = "end", 20
+    if position == "end" then
+        other_position, other_time = "start", 10
+    end
+    h.assert_equals(ctx.observer.get_timing(other_position), other_time)
+    ctx.observer.clear()
+    h.assert_equals({ ctx.observer.get_timing("start"), ctx.observer.get_timing("end") }, { -1, -1 })
+    h.assert_equals(ctx.observer.user_altered(), false)
+end
+
+--- Retain recorded fallback for unset boundaries while honoring negative and zero manual values.
+local function test_manual_timing_fallback()
+    for _, position in ipairs { "start", "end" } do
+        for _, time in ipairs { -2.5, -1, 0, 3 } do
+            assert_manual_timing_fallback_test_case(position, time)
+        end
+    end
+end
+
+--- An omitted setting removes spaces in the reported Japanese sentence, while false opts out.
+local function test_default_nuke_spaces_policy()
+    local text = "確定申告 どうしよう…。 いや もちろん申告する。 納税もするけど"
+    local compacted = "確定申告どうしよう…。いやもちろん申告する。納税もするけど"
+    for _, case in ipairs {
+        { expected = compacted },
+        { enabled = false, expected = text },
+        { enabled = true, expected = compacted },
+    } do
+        local config = defaults.get_default()
+        if case.enabled ~= nil then
+            config.nuke_spaces = case.enabled
+        end
+        local api = fixtures.make_subtitle_observer_test_api({})
+        local observer = subtitles_observer.new { mp = api }
+        observer.init({}, fixtures.make_config_manager(config))
+        h.assert_equals(observer.clipboard_prepare(text), case.expected)
+    end
+end
+
 --- Run observer instance, selection, API-injection, clipboard, and menu-refresh regressions.
 local function run_tests()
     test_instances_keep_recorded_subs_isolated()
@@ -297,6 +348,8 @@ local function run_tests()
     test_append_subtitle_reads_once()
     test_append_subtitle_inert_events()
     test_nuke_spaces_script_policy()
+    test_manual_timing_fallback()
+    test_default_nuke_spaces_policy()
 end
 
 return {

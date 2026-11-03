@@ -22,14 +22,14 @@ local function new_timings()
         return self[position] ~= nil
     end
 
-    --- Store a numeric raw timestamp at a supported boundary.
+    --- Store a numeric timestamp at a supported boundary.
     function pub.set(position, time)
         h.assert_in(position, { "start", "end" })
         h.assert_type(time, "number")
         self[position] = time
     end
 
-    --- Return a stored boundary or -1 when it has not been set.
+    --- Return a stored boundary or nil when it has not been set.
     function pub.get(position)
         h.assert_in(position, { "start", "end" })
         return self[position]

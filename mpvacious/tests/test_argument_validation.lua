@@ -86,7 +86,7 @@ local function test_invalid_timing_boundaries()
     end
 end
 
---- Valid start/end reads and writes retain their previous timing semantics.
+--- Keep explicitly stored negative and zero timestamps distinguishable from unset boundaries.
 local function test_valid_timing_boundaries()
     local ctx = make_boundary_validation_test_context()
     for _, case in ipairs { { position = "start", time = 10 }, { position = "end", time = 20 } } do
@@ -95,10 +95,29 @@ local function test_valid_timing_boundaries()
         h.assert_equals(ctx.subs.get_time(case.position), case.time)
         h.assert_equals(ctx.observer.get_timing(case.position), case.time)
         ctx.manual.set(case.position, -1)
-        h.assert_equals(ctx.manual.is_set(case.position), false)
+        h.assert_equals(ctx.manual.is_set(case.position), true)
+        h.assert_equals(ctx.manual.get(case.position), -1)
         ctx.manual.set(case.position, 0)
         h.assert_equals(ctx.manual.is_set(case.position), true)
         h.assert_equals(ctx.manual.get(case.position), 0)
+    end
+end
+
+--- Initialize both boundaries as unset and preserve independent storage for each instance.
+local function test_unset_and_numeric_timing_boundaries()
+    for _, position in ipairs { "start", "end" } do
+        for _, time in ipairs { -2.5, -1, 0, 3 } do
+            local manual, sibling = timings.new(), timings.new()
+            for _, boundary in ipairs { "start", "end" } do
+                h.assert_equals(manual.get(boundary), nil)
+                h.assert_equals(manual.is_set(boundary), false)
+            end
+            manual.set(position, time)
+            h.assert_equals(manual.get(position), time)
+            h.assert_equals(manual.is_set(position), true)
+            h.assert_equals(sibling.get(position), nil)
+            h.assert_equals(sibling.is_set(position), false)
+        end
     end
 end
 
@@ -328,10 +347,40 @@ local function test_text_helper_optional_arguments()
     end
 end
 
+--- Invalid comparators are rejected even when empty inputs would never call them.
+local function test_sorted_helper_comparator_types()
+    for _, callback in ipairs {
+        function(value) return h.join_two_sorted_lists({}, {}, value) end,
+        function(value) return h.find_insertion_point({}, 1, value) end,
+    } do
+        for _, case in ipairs(make_wrong_type_argument_test_cases("function")) do
+            if case.value ~= nil then
+                assert_type_argument_test_rejected(callback, case.value, "function")
+            end
+        end
+    end
+    h.assert_equals(h.join_two_sorted_lists({}, {}, nil), {})
+    h.assert_equals(h.find_insertion_point({}, 1, nil), 1)
+end
+
+--- Reject invalid lookup lists before binary search inspects their length or elements.
+local function test_insertion_list_types()
+    for _, case in ipairs(make_wrong_type_argument_test_cases("table")) do
+        assert_type_argument_test_rejected(
+            function(value)
+                return h.find_insertion_point(value, 1)
+            end,
+            case.value,
+            "table"
+        )
+    end
+end
+
 --- Run runtime argument-validation regressions in both standalone and real-mpv test paths.
 local function run_tests()
     test_invalid_timing_boundaries()
     test_valid_timing_boundaries()
+    test_unset_and_numeric_timing_boundaries()
     test_timing_values_require_numbers()
     test_invalid_playback_directions()
     test_invalid_track_types()
@@ -345,6 +394,8 @@ local function run_tests()
     test_completion_collector_argument_types()
     test_text_helper_required_arguments()
     test_text_helper_optional_arguments()
+    test_sorted_helper_comparator_types()
+    test_insertion_list_types()
 end
 
 return { run_tests = run_tests }

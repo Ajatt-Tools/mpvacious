@@ -879,8 +879,82 @@ local function test_utf8_char_bytes_characters()
     end
 end
 
+--- Order numeric test values from largest to smallest without relying on the default comparator.
+local function compare_descending_test_values(first, second)
+    return first > second
+end
+
+--- Compare record ranks while treating differently labeled records of the same rank as equivalent.
+local function compare_test_record_ranks(first, second)
+    return first.rank < second.rank
+end
+
+--- Construct labeled records so comparator-equivalent values remain distinguishable in assertions.
+local function make_ranked_comparator_test_records(prefix, ranks)
+    local records = {}
+    for index, rank in ipairs(ranks) do
+        table.insert(records, { rank = rank, label = prefix .. tostring(index) })
+    end
+    return records
+end
+
+--- Merge descending lists, including duplicates and empty inputs, without changing either source.
+local function test_sorted_merge_custom_comparator()
+    for _, case in ipairs {
+        { first = { 9, 5, 1 }, second = { 8, 5, 0 }, expected = { 9, 8, 5, 5, 1, 0 } },
+        { first = {}, second = { 3, 1 }, expected = { 3, 1 } },
+        { first = { 3, 1 }, second = {}, expected = { 3, 1 } },
+        { first = {}, second = {}, expected = {} },
+    } do
+        local original = h.deep_copy { case.first, case.second }
+        local result = h.join_two_sorted_lists(case.first, case.second, compare_descending_test_values)
+        h.assert_equals(result, case.expected)
+        h.assert_equals({ case.first, case.second }, original)
+        h.assert_equals(rawequal(result, case.first) or rawequal(result, case.second), false)
+    end
+end
+
+--- Preserve within-list order and the existing second-list-first rule for equivalent records.
+local function test_sorted_merge_equivalent_records()
+    local first = make_ranked_comparator_test_records("a", { 1, 1, 2 })
+    local second = make_ranked_comparator_test_records("b", { 1, 2, 2 })
+    local original = h.deep_copy { first, second }
+    local result = h.join_two_sorted_lists(first, second, compare_test_record_ranks)
+    h.assert_equals(h.map(result, function(record) return record.label end), { "b1", "a1", "a2", "b2", "b3", "a3" })
+    h.assert_equals({ first, second }, original)
+end
+
+--- Find an upper-bound position in descending order, including both ends and equal-value runs.
+local function test_insertion_custom_comparator()
+    for _, case in ipairs {
+        { list = { 9, 7, 7, 3 }, value = 10, expected = 1 },
+        { list = { 9, 7, 7, 3 }, value = 8, expected = 2 },
+        { list = { 9, 7, 7, 3 }, value = 7, expected = 4 },
+        { list = { 9, 7, 7, 3 }, value = 3, expected = 5 },
+        { list = { 9, 7, 7, 3 }, value = 0, expected = 5 },
+        { list = {}, value = 7, expected = 1 },
+    } do
+        local original = h.deep_copy(case.list)
+        h.assert_equals(h.find_insertion_point(case.list, case.value, compare_descending_test_values), case.expected)
+        h.assert_equals(case.list, original)
+    end
+end
+
+--- Insert after comparator-equivalent records without requiring record comparison metamethods.
+local function test_insertion_equivalent_records()
+    local records = make_ranked_comparator_test_records("existing", { 1, 2, 2, 4 })
+    local value = { rank = 2, label = "new" }
+    local original = h.deep_copy { records, value }
+    h.assert_equals(h.find_insertion_point(records, value, compare_test_record_ranks), 4)
+    h.assert_equals({ records, value }, original)
+end
+
 --- Run the shared helper regression suite.
 local function run_tests()
+    test_sorted_merge_custom_comparator()
+    test_sorted_merge_equivalent_records()
+    test_insertion_custom_comparator()
+    test_insertion_equivalent_records()
     test_utf8_byte_count_contract()
     test_utf8_iterator_contract()
     test_text_width_and_separator_defaults()

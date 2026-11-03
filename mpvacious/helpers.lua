@@ -628,7 +628,7 @@ local function default_less_than(first, second)
 end
 
 --- Merge sorted lists using their ordering or a supplied comparison function.
---- Comparison is done using the function less_than.
+--- Both lists must use the same strict ordering. Equivalent values from a2 come first.
 function this.join_two_sorted_lists(a1, a2, less_than)
     if less_than == nil then
         less_than = default_less_than
@@ -740,7 +740,7 @@ function this.maybe_require(module_name)
 end
 
 --- Return the insertion index after equal values using binary search.
---- Comparison is done using the function less_than.
+--- The list must be sorted using the supplied strict ordering, or operator < by default.
 function this.find_insertion_point(list, new, less_than)
     if less_than == nil then
         less_than = default_less_than
